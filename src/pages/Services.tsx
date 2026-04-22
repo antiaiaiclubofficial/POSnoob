@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Dog, Cat } from 'lucide-react';
 import { useStore, Service } from '@/store/useStore';
 import ServiceModal from '@/components/ServiceModal';
 
@@ -26,11 +26,11 @@ const Services = () => {
         <div className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-4xl font-extrabold mb-1">Services Management</h1>
-            <p className="text-gray-400 font-medium">Update pricing and service details</p>
+            <p className="text-gray-400 font-medium">Configure flexible pricing and custom sizes</p>
           </div>
           <button 
             onClick={handleAdd}
-            className="bg-[#1A1F3D] text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-[#2A3152] transition-colors"
+            className="bg-[#1A1F3D] text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-[#2A3152] transition-colors shadow-lg shadow-[#1A1F3D]/10"
           >
             <Plus size={20} /> Add Service
           </button>
@@ -40,9 +40,9 @@ const Services = () => {
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Service Name</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Price (S/M/L)</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Category</th>
+                <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Service</th>
+                <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Dog Prices</th>
+                <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cat Prices</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
@@ -50,30 +50,38 @@ const Services = () => {
               {services.map((service) => (
                 <tr key={service.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="px-8 py-6">
-                    <p className="font-bold">{service.title}</p>
-                    <p className="text-[10px] text-gray-400 font-medium truncate max-w-xs">{service.description}</p>
+                    <p className="font-bold text-[#1A1F3D]">{service.title}</p>
+                    <span className="bg-gray-100 px-2 py-0.5 rounded text-[9px] font-black text-gray-500 uppercase">{service.category}</span>
                   </td>
                   <td className="px-8 py-6">
-                    <span className="text-gray-600 font-bold">
-                      {typeof service.prices === 'object' 
-                        ? `$${service.prices.S} / $${service.prices.M} / $${service.prices.L}`
-                        : `$${service.prices}`}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {Object.entries(service.prices.dog).map(([size, price]) => (
+                        <span key={size} className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold border border-blue-100">
+                          {size}: ${price}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-8 py-6">
-                    <span className="bg-gray-100 px-3 py-1 rounded-full text-[10px] font-bold text-gray-500 uppercase tracking-wider">{service.category}</span>
+                    <div className="flex flex-wrap gap-1">
+                      {Object.entries(service.prices.cat).map(([size, price]) => (
+                        <span key={size} className="text-[10px] bg-pink-50 text-pink-600 px-2 py-1 rounded-lg font-bold border border-pink-100">
+                          {size}: ${price}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex justify-end gap-2">
                       <button 
                         onClick={() => handleEdit(service)}
-                        className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-lg transition-colors"
+                        className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-100 rounded-xl transition-all"
                       >
                         <Edit2 size={18} />
                       </button>
                       <button 
                         onClick={() => deleteService(service.id)}
-                        className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                       >
                         <Trash2 size={18} />
                       </button>

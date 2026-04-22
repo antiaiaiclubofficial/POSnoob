@@ -39,7 +39,11 @@ export interface Service {
   title: string;
   description: string;
   category: string;
-  prices: { S: number; M: number; L: number } | number;
+  // โครงสร้างราคาใหม่: แยกตามประเภทสัตว์ และระบุขนาดที่ต้องการเองได้
+  prices: {
+    dog: Record<string, number>;
+    cat: Record<string, number>;
+  };
 }
 
 export interface QueueItem {
@@ -62,7 +66,7 @@ export interface CartItem {
   petId: string;
   petName: string;
   ownerName: string;
-  size?: 'S' | 'M' | 'L';
+  size?: string;
   queueItemId?: string;
 }
 
@@ -139,10 +143,28 @@ const INITIAL_CUSTOMERS: Customer[] = [
 ];
 
 const INITIAL_SERVICES: Service[] = [
-  { id: "svc-1", icon: "grooming", title: "Full Grooming", description: "Haircut, bath, brush, nails, and ears.", category: "Grooming", prices: { S: 45, M: 55, L: 75 } },
-  { id: "svc-2", icon: "bath", title: "Bath & Brush", description: "Deep clean shampoo, blow dry, and brushing.", category: "Hygiene", prices: { S: 35, M: 45, L: 60 } },
-  { id: "svc-3", icon: "nail", title: "Nail Trim", description: "Professional trimming and filing.", category: "Quick Service", prices: 15 },
-  { id: "svc-4", icon: "deshedding", title: "De-Shedding", description: "Furminator treatment to reduce shedding.", category: "Special", prices: { S: 25, M: 35, L: 50 } }
+  { 
+    id: "svc-1", 
+    icon: "grooming", 
+    title: "Full Grooming", 
+    description: "Haircut, bath, brush, nails, and ears.", 
+    category: "Grooming", 
+    prices: { 
+      dog: { S: 45, M: 55, L: 75 },
+      cat: { Standard: 50 }
+    } 
+  },
+  { 
+    id: "svc-2", 
+    icon: "bath", 
+    title: "Bath & Brush", 
+    description: "Deep clean shampoo, blow dry, and brushing.", 
+    category: "Hygiene", 
+    prices: { 
+      dog: { S: 35, M: 45, L: 60 },
+      cat: { Standard: 40 }
+    } 
+  }
 ];
 
 export const useStore = create<AppState>((set, get) => ({
