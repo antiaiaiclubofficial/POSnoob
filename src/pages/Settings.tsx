@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Store, Globe, Save, ShieldCheck, TrendingUp, Percent, Tag } from 'lucide-react';
+import { Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel } from '@/store/useStore';
 import { toast } from 'sonner';
 
@@ -59,8 +59,8 @@ const Settings = () => {
                       <TrendingUp size={16} className="text-purple-300" />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-1">
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-1 h-4">
                         <Tag size={10} /> Tier Display Name
                       </label>
                       <input 
@@ -71,19 +71,21 @@ const Settings = () => {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider">Min. Spent ($)</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-1 h-4">
+                          <DollarSign size={10} /> Min. Spent ($)
+                        </label>
                         <input 
                           type="number"
-                          className="w-full bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-purple-500/20" 
+                          className="w-full bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-purple-500/20 disabled:opacity-50" 
                           value={rule.minSpent}
                           onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))}
                           disabled={rule.level === 'Standard'}
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-1">
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-1 h-4">
                           <Percent size={10} /> Discount (%)
                         </label>
                         <input 
