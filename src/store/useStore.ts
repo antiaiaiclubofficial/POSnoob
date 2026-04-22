@@ -66,7 +66,7 @@ interface AppState {
   queue: QueueItem[];
   selectedOwner: Customer | null;
   activePet: Pet | null;
-  activeQueueItemId: string | null; // เพิ่มเพื่อจำคิวที่กำลังประมวลผล
+  activeQueueItemId: string | null;
   
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
@@ -74,12 +74,17 @@ interface AppState {
   updateServicePrice: (id: string, prices: Service['prices']) => void;
   selectOwner: (owner: Customer | null) => void;
   setActivePet: (pet: Pet | null) => void;
-  setActiveQueueItem: (id: string | null) => void; // ฟังก์ชันเซ็ต ID คิว
+  setActiveQueueItem: (id: string | null) => void;
   
   addBooking: (booking: Omit<QueueItem, 'id'>) => void;
   updateQueueStatus: (id: string, status: QueueStatus) => void;
   removeQueueItem: (id: string) => void;
   markAsPaid: (queueItemId: string) => void;
+
+  // Customer Actions
+  addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'totalSpent'>) => void;
+  updateCustomer: (id: string, customer: Partial<Customer>) => void;
+  addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
 }
 
 const INITIAL_CUSTOMERS: Customer[] = [
@@ -152,5 +157,28 @@ export const useStore = create<AppState>((set) => ({
   })),
   markAsPaid: (id) => set((state) => ({
     queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q)
+  })),
+
+  // Customer Implementations
+  addCustomer: (customerData) => set((state) => ({
+    customers: [
+      ...state.customers,
+      {
+        ...customerData,
+        id: 'c' + Math.random().toString(36).substr(2, 4),
+        points: 0,
+        pets: [],
+        totalSpent: 0
+      }
+    ]
+  })),
+  updateCustomer: (id, customerData) => set((state) => ({
+    customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c)
+  })),
+  addPet: (customerId, petData) => set((state) => ({
+    customers: state.customers.map(c => c.id === customerId ? {
+      ...c,
+      pets: [...c.pets, { ...petData, id: 'p' + Math.random().toString(36).substr(2, 4) }]
+    } : c)
   })),
 }));

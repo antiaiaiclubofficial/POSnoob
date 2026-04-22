@@ -2,14 +2,21 @@
 
 import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Search, Mail, Phone, Plus, Shield, Dog, Cat, Info, MapPin, User } from 'lucide-react';
+import { Search, Mail, Phone, Plus, Shield, Dog, Cat, Info, MapPin, User, Edit3 } from 'lucide-react';
 import { useStore, Customer } from '@/store/useStore';
 import { cn } from '@/lib/utils';
+import CustomerModal from '@/components/CustomerModal';
+import PetModal from '@/components/PetModal';
 
 const Customers = () => {
   const { customers } = useStore();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(customers[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Modals state
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isPetModalOpen, setIsPetModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -17,6 +24,18 @@ const Customers = () => {
   );
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+
+  const handleEditCustomer = () => {
+    if (selectedCustomer) {
+      setEditingCustomer(selectedCustomer);
+      setIsCustomerModalOpen(true);
+    }
+  };
+
+  const handleAddNewClient = () => {
+    setEditingCustomer(null);
+    setIsCustomerModalOpen(true);
+  };
 
   return (
     <div className="flex h-screen bg-[#F5F6FA] text-[#1A1F3D] overflow-hidden">
@@ -59,7 +78,10 @@ const Customers = () => {
           </div>
 
           <div className="p-6 border-t border-gray-50">
-            <button className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-bold py-4 rounded-2xl flex items-center justify-center gap-2">
+            <button 
+              onClick={handleAddNewClient}
+              className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-bold py-4 rounded-2xl flex items-center justify-center gap-2"
+            >
               <Plus size={20} /> Add New Client
             </button>
           </div>
@@ -77,7 +99,15 @@ const Customers = () => {
                       {selectedCustomer.name.charAt(0)}
                     </div>
                     <div>
-                      <h2 className="text-3xl font-black mb-1">{selectedCustomer.name}</h2>
+                      <div className="flex items-center gap-3">
+                        <h2 className="text-3xl font-black mb-1">{selectedCustomer.name}</h2>
+                        <button 
+                          onClick={handleEditCustomer}
+                          className="p-2 hover:bg-gray-50 rounded-lg text-gray-400 transition-colors"
+                        >
+                          <Edit3 size={18} />
+                        </button>
+                      </div>
                       <div className="flex gap-4">
                         <span className="flex items-center gap-1.5 text-sm text-gray-400 font-medium">
                           <Phone size={14} /> {selectedCustomer.phone}
@@ -91,7 +121,9 @@ const Customers = () => {
                   <div className="text-right">
                     <div className={cn(
                       "inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold uppercase tracking-wider mb-2",
-                      selectedCustomer.membership === 'Gold' ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600"
+                      selectedCustomer.membership === 'Gold' ? "bg-amber-100 text-amber-700" : 
+                      selectedCustomer.membership === 'Silver' ? "bg-blue-50 text-blue-700" :
+                      selectedCustomer.membership === 'VIP' ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"
                     )}>
                       <Shield size={14} /> {selectedCustomer.membership} Membership
                     </div>
@@ -118,7 +150,10 @@ const Customers = () => {
               {/* Pets Section */}
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-black">Owned Pets ({selectedCustomer.pets.length})</h3>
-                <button className="bg-[#1A1F3D] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+                <button 
+                  onClick={() => setIsPetModalOpen(true)}
+                  className="bg-[#1A1F3D] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2"
+                >
                   <Plus size={16} /> Register New Pet
                 </button>
               </div>
@@ -147,9 +182,6 @@ const Customers = () => {
                         <strong>Note:</strong> {pet.notes}
                       </div>
                     </div>
-                    <button className="self-center p-4 bg-[#F5F6FA] text-gray-400 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity">
-                      Edit Profile
-                    </button>
                   </div>
                 ))}
               </div>
@@ -162,6 +194,20 @@ const Customers = () => {
           )}
         </div>
       </main>
+
+      {/* Modals */}
+      {isCustomerModalOpen && (
+        <CustomerModal 
+          customer={editingCustomer} 
+          onClose={() => setIsCustomerModalOpen(false)} 
+        />
+      )}
+      {isPetModalOpen && selectedCustomer && (
+        <PetModal 
+          customerId={selectedCustomer.id} 
+          onClose={() => setIsPetModalOpen(false)} 
+        />
+      )}
     </div>
   );
 };
