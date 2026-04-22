@@ -7,7 +7,8 @@ import {
   BarChart3, 
   HelpCircle, 
   LogOut,
-  ShoppingBag
+  ShoppingBag,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from 'react-router-dom';
@@ -18,6 +19,7 @@ const menuItems = [
   { icon: Scissors, label: 'Services', path: '/services' },
   { icon: Users, label: 'Customers', path: '/customers' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
+  { icon: SettingsIcon, label: 'Settings', path: '/settings' },
 ];
 
 const Sidebar = () => {
