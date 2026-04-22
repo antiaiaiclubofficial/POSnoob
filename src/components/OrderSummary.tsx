@@ -1,7 +1,17 @@
 "use client";
 
 import React from 'react';
-import { Scissors, Zap, CreditCard, QrCode, Banknote, Trash2, Bath, ShieldCheck } from 'lucide-react';
+import { 
+  Scissors, 
+  Zap, 
+  CreditCard, 
+  QrCode, 
+  Banknote, 
+  Trash2, 
+  Bath, 
+  ShieldCheck,
+  ShoppingBag 
+} from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 
@@ -43,7 +53,7 @@ const OrderSummary = () => {
       <div className="flex-1 space-y-6 overflow-y-auto pr-2">
         {cart.length === 0 ? (
           <div className="text-center py-10 opacity-40">
-            <ShoppingBag className="mx-auto mb-2" />
+            <ShoppingBag className="mx-auto mb-2" size={48} />
             <p className="text-sm font-medium">Your cart is empty</p>
           </div>
         ) : (
