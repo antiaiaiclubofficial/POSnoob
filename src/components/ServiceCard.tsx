@@ -11,7 +11,7 @@ interface ServiceCardProps {
 }
 
 const ServiceCard = ({ service }: ServiceCardProps) => {
-  const { addToCart, selectedPet } = useStore();
+  const { addToCart, activePet, selectedOwner } = useStore();
   const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L'>('M');
   
   const isSizeBased = typeof service.prices === 'object';
@@ -25,8 +25,8 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
   }[service.icon as ServiceIcon];
 
   const handleAdd = () => {
-    if (!selectedPet) {
-      toast.error("Please select a pet first");
+    if (!activePet || !selectedOwner) {
+      toast.error("Please select a customer first");
       return;
     }
 
@@ -35,18 +35,18 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       icon: service.icon,
       title: `${service.title}${isSizeBased ? ` (${selectedSize})` : ''}`,
       price: currentPrice,
-      petId: selectedPet.pet.id,
-      petName: selectedPet.pet.name,
-      ownerName: selectedPet.owner.name,
+      petId: activePet.id,
+      petName: activePet.name,
+      ownerName: selectedOwner.name,
       size: isSizeBased ? selectedSize : undefined
     });
-    toast.success(`Added ${service.title} for ${selectedPet.pet.name}`);
+    toast.success(`Added ${service.title} for ${activePet.name}`);
   };
 
   return (
     <div className={cn(
       "bg-white rounded-[32px] p-6 flex flex-col h-full transition-all duration-300 border border-transparent group",
-      !selectedPet ? "opacity-60 grayscale-[0.5]" : "hover:shadow-xl hover:border-gray-100"
+      !activePet ? "opacity-60 grayscale-[0.5]" : "hover:shadow-xl hover:border-gray-100"
     )}>
       <div className="flex justify-between items-start mb-6">
         <div className="w-12 h-12 bg-[#F5F6FA] rounded-xl flex items-center justify-center">
@@ -68,7 +68,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
           {(['S', 'M', 'L'] as const).map((size) => (
             <button
               key={size}
-              disabled={!selectedPet}
+              disabled={!activePet}
               onClick={() => setSelectedSize(size)}
               className={cn(
                 "flex-1 py-2 px-1 text-[10px] font-bold uppercase rounded-xl transition-all",
@@ -83,10 +83,10 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
 
       <button 
         onClick={handleAdd}
-        disabled={!selectedPet}
+        disabled={!activePet}
         className="w-full bg-[#0A0F2C] text-white font-bold py-3 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 hover:bg-[#1a1f3d] disabled:bg-gray-200 disabled:text-gray-400"
       >
-        <Plus size={18} /> {selectedPet ? 'Add to Cart' : 'Select Pet First'}
+        <Plus size={18} /> {activePet ? `Add for ${activePet.name}` : 'Select Pet First'}
       </button>
     </div>
   );

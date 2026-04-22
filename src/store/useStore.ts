@@ -49,16 +49,15 @@ interface AppState {
   services: Service[];
   customers: Customer[];
   cart: CartItem[];
-  selectedPet: { pet: Pet; owner: Customer } | null;
+  selectedOwner: Customer | null;
+  activePet: Pet | null;
   
-  // Actions
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
   clearCart: () => void;
   updateServicePrice: (id: string, prices: Service['prices']) => void;
-  selectPet: (pet: Pet, owner: Customer) => void;
-  addCustomer: (customer: Customer) => void;
-  addPetToCustomer: (customerId: string, pet: Pet) => void;
+  selectOwner: (owner: Customer | null) => void;
+  setActivePet: (pet: Pet | null) => void;
 }
 
 const INITIAL_CUSTOMERS: Customer[] = [
@@ -71,26 +70,8 @@ const INITIAL_CUSTOMERS: Customer[] = [
     points: 450,
     totalSpent: 1250,
     pets: [
-      {
-        id: 'p1',
-        name: 'Bella',
-        species: 'Dog',
-        breed: 'Golden Retriever',
-        age: '3 years',
-        weight: '25kg',
-        notes: 'Sensitive skin',
-        image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=64&h=64&fit=crop'
-      },
-      {
-        id: 'p2',
-        name: 'Rocky',
-        species: 'Dog',
-        breed: 'Bulldog',
-        age: '1 year',
-        weight: '18kg',
-        notes: 'Very energetic',
-        image: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=64&h=64&fit=crop'
-      }
+      { id: 'p1', name: 'Bella', species: 'Dog', breed: 'Golden Retriever', age: '3 years', weight: '25kg', notes: 'Sensitive skin', image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=64&h=64&fit=crop' },
+      { id: 'p2', name: 'Rocky', species: 'Dog', breed: 'Bulldog', age: '1 year', weight: '18kg', notes: 'Very energetic', image: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=64&h=64&fit=crop' }
     ]
   },
   {
@@ -102,16 +83,7 @@ const INITIAL_CUSTOMERS: Customer[] = [
     points: 120,
     totalSpent: 450,
     pets: [
-      {
-        id: 'p3',
-        name: 'Max',
-        species: 'Dog',
-        breed: 'Beagle',
-        age: '5 years',
-        weight: '12kg',
-        notes: 'Loves treats',
-        image: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=64&h=64&fit=crop'
-      }
+      { id: 'p3', name: 'Max', species: 'Dog', breed: 'Beagle', age: '5 years', weight: '12kg', notes: 'Loves treats', image: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=64&h=64&fit=crop' }
     ]
   }
 ];
@@ -127,7 +99,8 @@ export const useStore = create<AppState>((set) => ({
   services: INITIAL_SERVICES,
   customers: INITIAL_CUSTOMERS,
   cart: [],
-  selectedPet: null,
+  selectedOwner: null,
+  activePet: null,
   
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
   removeFromCart: (index) => set((state) => ({ cart: state.cart.filter((_, i) => i !== index) })),
@@ -135,9 +108,9 @@ export const useStore = create<AppState>((set) => ({
   updateServicePrice: (id, prices) => set((state) => ({
     services: state.services.map(s => s.id === id ? { ...s, prices } : s)
   })),
-  selectPet: (pet, owner) => set({ selectedPet: { pet, owner } }),
-  addCustomer: (customer) => set((state) => ({ customers: [...state.customers, customer] })),
-  addPetToCustomer: (customerId, pet) => set((state) => ({
-    customers: state.customers.map(c => c.id === customerId ? { ...c, pets: [...c.pets, pet] } : c)
-  })),
+  selectOwner: (owner) => set({ 
+    selectedOwner: owner, 
+    activePet: owner ? owner.pets[0] : null 
+  }),
+  setActivePet: (pet) => set({ activePet: pet }),
 }));
