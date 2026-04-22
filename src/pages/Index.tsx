@@ -4,11 +4,12 @@ import React from 'react';
 import Sidebar from '@/components/Sidebar';
 import ServiceCard from '@/components/ServiceCard';
 import OrderSummary from '@/components/OrderSummary';
-import { Search, UserPlus } from 'lucide-react';
+import CustomerSearch from '@/components/CustomerSearch';
+import { UserPlus, X, Search } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 
 const Index = () => {
-  const { currentPet, services } = useStore();
+  const { selectedPet, services, selectPet } = useStore();
 
   return (
     <div className="flex h-screen bg-[#F5F6FA] text-[#1A1F3D] overflow-hidden">
@@ -22,40 +23,47 @@ const Index = () => {
           </div>
           <button className="flex items-center gap-2 bg-white px-6 py-3 rounded-2xl shadow-sm text-sm font-bold border border-gray-50 hover:bg-gray-50 transition-colors">
             <UserPlus size={18} />
-            Walk-in Customer
+            Quick New Client
           </button>
         </header>
 
         <div className="px-10 mb-8 flex items-center gap-6 shrink-0">
-          <div className="flex-1 relative">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search customers, pets or phone"
-              className="w-full bg-white pl-16 pr-6 py-5 rounded-[24px] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1A1F3D]/10 transition-all font-medium"
-            />
-          </div>
+          <CustomerSearch />
           
-          {currentPet && (
-            <div className="flex items-center gap-3 bg-white/50 px-6 py-2 rounded-full border border-gray-100">
-              <div className="flex -space-x-2">
-                <img src={currentPet.image} alt={currentPet.name} className="w-10 h-10 rounded-full border-2 border-white object-cover" />
-                <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-400">+1</div>
-              </div>
+          {selectedPet && (
+            <div className="flex items-center gap-4 bg-[#1A1F3D] text-white pl-4 pr-2 py-2 rounded-full shadow-lg animate-in fade-in slide-in-from-right-4">
               <div className="text-left">
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Current Queue:</p>
-                <p className="text-xs font-bold">{currentPet.name} ({currentPet.breed})</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Active Client:</p>
+                <p className="text-xs font-bold">{selectedPet.pet.name} ({selectedPet.owner.name})</p>
               </div>
+              <button 
+                onClick={() => selectPet(null as any, null as any)}
+                className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+              >
+                <X size={14} />
+              </button>
             </div>
           )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-10 pb-10 scrollbar-hide">
-          <div className="grid grid-cols-2 gap-8">
-            {services.map((service) => (
-              <ServiceCard key={service.id} service={service} />
-            ))}
-          </div>
+          {!selectedPet && (
+            <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-6">
+                <Search size={40} className="text-gray-400" />
+              </div>
+              <h2 className="text-2xl font-bold mb-2">Ready to Start?</h2>
+              <p className="text-gray-500 max-w-xs">Search for a customer or pet above to begin adding services to the cart.</p>
+            </div>
+          )}
+          
+          {selectedPet && (
+            <div className="grid grid-cols-2 gap-8 animate-in fade-in zoom-in-95 duration-300">
+              {services.map((service) => (
+                <ServiceCard key={service.id} service={service} />
+              ))}
+            </div>
+          )}
         </div>
       </main>
 

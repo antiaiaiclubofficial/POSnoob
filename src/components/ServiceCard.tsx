@@ -11,7 +11,7 @@ interface ServiceCardProps {
 }
 
 const ServiceCard = ({ service }: ServiceCardProps) => {
-  const { addToCart, currentPet } = useStore();
+  const { addToCart, selectedPet } = useStore();
   const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L'>('M');
   
   const isSizeBased = typeof service.prices === 'object';
@@ -25,26 +25,36 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
   }[service.icon as ServiceIcon];
 
   const handleAdd = () => {
+    if (!selectedPet) {
+      toast.error("Please select a pet first");
+      return;
+    }
+
     addToCart({
       id: service.id,
       icon: service.icon,
       title: `${service.title}${isSizeBased ? ` (${selectedSize})` : ''}`,
       price: currentPrice,
-      petName: currentPet?.name || 'Walk-in',
+      petId: selectedPet.pet.id,
+      petName: selectedPet.pet.name,
+      ownerName: selectedPet.owner.name,
       size: isSizeBased ? selectedSize : undefined
     });
-    toast.success(`Added ${service.title} to cart`);
+    toast.success(`Added ${service.title} for ${selectedPet.pet.name}`);
   };
 
   return (
-    <div className="bg-white rounded-[32px] p-6 flex flex-col h-full transition-all duration-300 hover:shadow-xl border border-transparent group">
+    <div className={cn(
+      "bg-white rounded-[32px] p-6 flex flex-col h-full transition-all duration-300 border border-transparent group",
+      !selectedPet ? "opacity-60 grayscale-[0.5]" : "hover:shadow-xl hover:border-gray-100"
+    )}>
       <div className="flex justify-between items-start mb-6">
         <div className="w-12 h-12 bg-[#F5F6FA] rounded-xl flex items-center justify-center">
           <IconComponent className="text-[#1A1F3D] w-6 h-6" />
         </div>
         <div className="text-right">
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">
-            {isSizeBased ? 'Starting From' : 'Fixed Price'}
+            {isSizeBased ? 'Based on Size' : 'Fixed Price'}
           </p>
           <p className="text-2xl font-bold text-[#1A1F3D]">${currentPrice}</p>
         </div>
@@ -58,13 +68,14 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
           {(['S', 'M', 'L'] as const).map((size) => (
             <button
               key={size}
+              disabled={!selectedPet}
               onClick={() => setSelectedSize(size)}
               className={cn(
                 "flex-1 py-2 px-1 text-[10px] font-bold uppercase rounded-xl transition-all",
                 selectedSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:text-gray-600"
               )}
             >
-              {size === 'S' ? 'SMALL' : size === 'M' ? 'MEDIUM' : 'LARGE'}
+              {size === 'S' ? 'Small' : size === 'M' ? 'Medium' : 'Large'}
             </button>
           ))}
         </div>
@@ -72,9 +83,10 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
 
       <button 
         onClick={handleAdd}
-        className="w-full bg-[#0A0F2C] text-white font-bold py-3 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 hover:bg-[#1a1f3d]"
+        disabled={!selectedPet}
+        className="w-full bg-[#0A0F2C] text-white font-bold py-3 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 hover:bg-[#1a1f3d] disabled:bg-gray-200 disabled:text-gray-400"
       >
-        <Plus size={18} /> Add to Cart
+        <Plus size={18} /> {selectedPet ? 'Add to Cart' : 'Select Pet First'}
       </button>
     </div>
   );
