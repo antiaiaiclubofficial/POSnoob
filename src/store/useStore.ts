@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export type ServiceIcon = 'grooming' | 'bath' | 'nail' | 'deshedding';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
-export type QueueStatus = 'Waiting' | 'In Progress' | 'Completed';
+export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 
 export interface Pet {
   id: string;
