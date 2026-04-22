@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 export type ServiceIcon = 'grooming' | 'bath' | 'nail' | 'deshedding';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
+export type QueueStatus = 'Waiting' | 'In Progress' | 'Completed';
 
 export interface Pet {
   id: string;
@@ -34,6 +35,17 @@ export interface Service {
   prices: { S: number; M: number; L: number } | number;
 }
 
+export interface QueueItem {
+  id: string;
+  petId: string;
+  petName: string;
+  ownerName: string;
+  serviceName: string;
+  time: string;
+  status: QueueStatus;
+  image: string;
+}
+
 export interface CartItem {
   id: string;
   icon: ServiceIcon;
@@ -49,6 +61,7 @@ interface AppState {
   services: Service[];
   customers: Customer[];
   cart: CartItem[];
+  queue: QueueItem[];
   selectedOwner: Customer | null;
   activePet: Pet | null;
   
@@ -58,6 +71,11 @@ interface AppState {
   updateServicePrice: (id: string, prices: Service['prices']) => void;
   selectOwner: (owner: Customer | null) => void;
   setActivePet: (pet: Pet | null) => void;
+  
+  // Queue Actions
+  addBooking: (booking: Omit<QueueItem, 'id'>) => void;
+  updateQueueStatus: (id: string, status: QueueStatus) => void;
+  removeQueueItem: (id: string) => void;
 }
 
 const INITIAL_CUSTOMERS: Customer[] = [
@@ -95,10 +113,16 @@ const INITIAL_SERVICES: Service[] = [
   { id: "svc-4", icon: "deshedding", title: "De-Shedding", description: "Furminator treatment to reduce shedding.", category: "Special", prices: { S: 25, M: 35, L: 50 } }
 ];
 
+const INITIAL_QUEUE: QueueItem[] = [
+  { id: 'q1', petId: 'p1', petName: 'Bella', ownerName: 'John Doe', serviceName: 'Full Grooming', time: '10:00', status: 'In Progress', image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=64&h=64&fit=crop' },
+  { id: 'q2', petId: 'p3', petName: 'Max', ownerName: 'Sarah Smith', serviceName: 'Bath & Brush', time: '11:00', status: 'Waiting', image: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=64&h=64&fit=crop' }
+];
+
 export const useStore = create<AppState>((set) => ({
   services: INITIAL_SERVICES,
   customers: INITIAL_CUSTOMERS,
   cart: [],
+  queue: INITIAL_QUEUE,
   selectedOwner: null,
   activePet: null,
   
@@ -108,9 +132,16 @@ export const useStore = create<AppState>((set) => ({
   updateServicePrice: (id, prices) => set((state) => ({
     services: state.services.map(s => s.id === id ? { ...s, prices } : s)
   })),
-  selectOwner: (owner) => set({ 
-    selectedOwner: owner, 
-    activePet: owner ? owner.pets[0] : null 
-  }),
+  selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null }),
   setActivePet: (pet) => set({ activePet: pet }),
+
+  addBooking: (booking) => set((state) => ({
+    queue: [...state.queue, { ...booking, id: Math.random().toString(36).substr(2, 9) }].sort((a, b) => a.time.localeCompare(b.time))
+  })),
+  updateQueueStatus: (id, status) => set((state) => ({
+    queue: state.queue.map(q => q.id === id ? { ...q, status } : q)
+  })),
+  removeQueueItem: (id) => set((state) => ({
+    queue: state.queue.filter(q => q.id !== id)
+  })),
 }));
