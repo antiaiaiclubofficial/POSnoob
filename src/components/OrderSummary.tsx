@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, ChevronRight
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, Check, Save
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -10,6 +10,13 @@ import { toast } from 'sonner';
 const OrderSummary = () => {
   const { cart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules } = useStore();
   const [newWeight, setNewWeight] = useState('');
+  const [isWeightSaved, setIsWeightSaved] = useState(false);
+
+  // รีเซ็ตสถานะปุ่มเมื่อเปลี่ยนสัตว์เลี้ยง
+  useEffect(() => {
+    setNewWeight('');
+    setIsWeightSaved(false);
+  }, [activePet]);
 
   const subtotal = cart.reduce((acc, item) => acc + item.price, 0);
   const userTier = selectedOwner ? tierRules.find(r => r.level === selectedOwner.membership) : null;
@@ -18,14 +25,27 @@ const OrderSummary = () => {
   const tax = (subtotal - discountAmount) * 0.08;
   const total = subtotal - discountAmount + tax;
 
+  const handleSaveWeight = () => {
+    if (!newWeight || !activePet || !selectedOwner) {
+      toast.error("Please enter weight");
+      return;
+    }
+    updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
+    setIsWeightSaved(true);
+    toast.success(`Updated ${activePet.name}'s weight to ${newWeight} kg`);
+    
+    // หลังจาก 2 วินาทีให้กลับเป็นปุ่ม Save ปกติ
+    setTimeout(() => setIsWeightSaved(false), 2000);
+  };
+
   const handlePayment = () => {
     if (cart.length === 0 || !selectedOwner) {
       toast.error("Cart or customer missing");
       return;
     }
 
-    // อัปเดตน้ำหนักถ้ามีการกรอกมา
-    if (newWeight && activePet) {
+    // ถ้าน้ำหนักยังไม่ได้กดบันทึก ให้บันทึกไปพร้อมจ่ายเงินด้วย
+    if (newWeight && activePet && !isWeightSaved) {
       updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
     }
 
@@ -35,6 +55,7 @@ const OrderSummary = () => {
     toast.success(`Checkout Complete! $${total.toFixed(2)} paid.`);
     clearCart();
     setNewWeight('');
+    setIsWeightSaved(false);
   };
 
   return (
@@ -50,9 +71,9 @@ const OrderSummary = () => {
         </div>
       </div>
 
-      {/* Weight Update Field - แสดงผลด้านบนสุดเมื่อเลือกสัตว์เลี้ยง */}
+      {/* Weight Update Field with dedicated Save button */}
       {activePet && (
-        <div className="mb-8 p-5 bg-[#F5F6FA] rounded-[28px] border border-blue-100/50 shadow-sm">
+        <div className="mb-8 p-5 bg-[#F5F6FA] rounded-[28px] border border-blue-100/50 shadow-sm transition-all">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
@@ -71,18 +92,34 @@ const OrderSummary = () => {
             </div>
           </div>
           
-          <div className="relative">
-            <input 
-              type="number" 
-              step="0.1"
-              placeholder="Enter current weight..."
-              className="w-full bg-white border-2 border-transparent focus:border-blue-500/20 rounded-2xl px-5 py-4 text-sm font-black transition-all outline-none"
-              value={newWeight}
-              onChange={(e) => setNewWeight(e.target.value)}
-            />
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-              <span className="text-[10px] font-black text-gray-300 uppercase">KG</span>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input 
+                type="number" 
+                step="0.1"
+                placeholder="0.0"
+                className="w-full bg-white border-2 border-transparent focus:border-blue-500/20 rounded-2xl px-5 py-3.5 text-sm font-black transition-all outline-none"
+                value={newWeight}
+                onChange={(e) => {
+                  setNewWeight(e.target.value);
+                  setIsWeightSaved(false);
+                }}
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <span className="text-[10px] font-black text-gray-300 uppercase">KG</span>
+              </div>
             </div>
+            <button
+              onClick={handleSaveWeight}
+              disabled={!newWeight || isWeightSaved}
+              className={`px-4 rounded-2xl transition-all flex items-center justify-center ${
+                isWeightSaved 
+                ? "bg-green-500 text-white" 
+                : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 active:scale-95 disabled:bg-gray-200 disabled:shadow-none"
+              }`}
+            >
+              {isWeightSaved ? <Check size={18} /> : <Save size={18} />}
+            </button>
           </div>
         </div>
       )}
