@@ -82,7 +82,11 @@ interface AppState {
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
   clearCart: () => void;
-  updateServicePrice: (id: string, prices: Service['prices']) => void;
+  
+  addService: (service: Omit<Service, 'id'>) => void;
+  updateService: (id: string, service: Partial<Service>) => void;
+  deleteService: (id: string) => void;
+  
   selectOwner: (owner: Customer | null) => void;
   setActivePet: (pet: Pet | null) => void;
   setActiveQueueItem: (id: string | null) => void;
@@ -165,9 +169,17 @@ export const useStore = create<AppState>((set, get) => ({
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
   removeFromCart: (index) => set((state) => ({ cart: state.cart.filter((_, i) => i !== index) })),
   clearCart: () => set({ cart: [], activeQueueItemId: null }),
-  updateServicePrice: (id, prices) => set((state) => ({
-    services: state.services.map(s => s.id === id ? { ...s, prices } : s)
+  
+  addService: (serviceData) => set((state) => ({
+    services: [...state.services, { ...serviceData, id: 'svc-' + Math.random().toString(36).substr(2, 5) }]
   })),
+  updateService: (id, serviceData) => set((state) => ({
+    services: state.services.map(s => s.id === id ? { ...s, ...serviceData } : s)
+  })),
+  deleteService: (id) => set((state) => ({
+    services: state.services.filter(s => s.id !== id)
+  })),
+
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
   setActivePet: (pet) => set({ activePet: pet }),
   setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
