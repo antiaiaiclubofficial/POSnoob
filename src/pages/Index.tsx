@@ -18,37 +18,28 @@ const Index = () => {
     selectOwner, 
     setActivePet, 
     queue, 
-    customers, 
-    addToCart,
-    services: allServices
+    customers,
+    setActiveQueueItem
   } = useStore();
 
-  // กรองตัวที่ Check-in หรือ In Progress แต่ยังไม่จ่ายเงิน
   const pendingCheckout = queue.filter(q => 
     (q.status === 'Checked-in' || q.status === 'In Progress') && !q.isPaid
   );
 
-  const handleQuickAddFromQueue = (item: QueueItem) => {
+  const handleQuickSelectFromQueue = (item: QueueItem) => {
     const owner = customers.find(c => c.name === item.ownerName);
-    const service = allServices.find(s => s.title === item.serviceName);
     
     if (owner) {
+      // 1. เลือกเจ้าของ
       selectOwner(owner);
-      const pet = owner.pets.find(p => p.id === item.petId);
-      if (pet) setActivePet(pet);
       
-      if (service) {
-        addToCart({
-          id: service.id,
-          icon: service.icon,
-          title: service.title,
-          price: typeof service.prices === 'number' ? service.prices : service.prices.M,
-          petId: item.petId,
-          petName: item.petName,
-          ownerName: item.ownerName,
-          queueItemId: item.id
-        });
-        toast.success(`Loaded ${item.petName}'s service for checkout`);
+      // 2. เลือกสัตว์เลี้ยงตัวนั้น
+      const pet = owner.pets.find(p => p.id === item.petId);
+      if (pet) {
+        setActivePet(pet);
+        // 3. จำ ID คิวไว้เพื่อ Mark Paid ตอนจ่ายเงิน
+        setActiveQueueItem(item.id);
+        toast.success(`Selected ${item.petName}. Please add services manually.`);
       }
     }
   };
@@ -92,7 +83,6 @@ const Index = () => {
             )}
           </div>
 
-          {/* แถบ Pending Payment แนวนอน */}
           {pendingCheckout.length > 0 && (
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-orange-500 tracking-wider">Pending Checkout ({pendingCheckout.length})</span>
@@ -100,13 +90,13 @@ const Index = () => {
                 {pendingCheckout.map(item => (
                   <button
                     key={item.id}
-                    onClick={() => handleQuickAddFromQueue(item)}
+                    onClick={() => handleQuickSelectFromQueue(item)}
                     className="flex items-center gap-3 bg-orange-50 hover:bg-orange-100 border border-orange-100 px-4 py-2.5 rounded-2xl shrink-0 transition-all group"
                   >
                     <img src={item.image} className="w-8 h-8 rounded-lg object-cover" />
                     <div className="text-left">
                       <p className="text-xs font-bold text-[#1A1F3D]">{item.petName}</p>
-                      <p className="text-[9px] text-orange-600 font-medium">{item.serviceName}</p>
+                      <p className="text-[9px] text-orange-600 font-medium">Waiting for Services</p>
                     </div>
                     <CreditCard size={14} className="text-orange-400 group-hover:scale-110 transition-transform" />
                   </button>
@@ -122,7 +112,10 @@ const Index = () => {
                 {selectedOwner.pets.map(pet => (
                   <button
                     key={pet.id}
-                    onClick={() => setActivePet(pet)}
+                    onClick={() => {
+                      setActivePet(pet);
+                      setActiveQueueItem(null); // ล้างคิวเชื่อมโยงถ้าเลือกสัตว์เลี้ยงแมนนวลเอง
+                    }}
                     className={cn(
                       "flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all border",
                       activePet?.id === pet.id 

@@ -44,7 +44,7 @@ export interface QueueItem {
   time: string;
   status: QueueStatus;
   image: string;
-  isPaid?: boolean; // เพิ่มสถานะการชำระเงิน
+  isPaid?: boolean;
 }
 
 export interface CartItem {
@@ -56,7 +56,7 @@ export interface CartItem {
   petName: string;
   ownerName: string;
   size?: 'S' | 'M' | 'L';
-  queueItemId?: string; // เชื่อมโยงกับ Queue
+  queueItemId?: string;
 }
 
 interface AppState {
@@ -66,6 +66,7 @@ interface AppState {
   queue: QueueItem[];
   selectedOwner: Customer | null;
   activePet: Pet | null;
+  activeQueueItemId: string | null; // เพิ่มเพื่อจำคิวที่กำลังประมวลผล
   
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
@@ -73,12 +74,12 @@ interface AppState {
   updateServicePrice: (id: string, prices: Service['prices']) => void;
   selectOwner: (owner: Customer | null) => void;
   setActivePet: (pet: Pet | null) => void;
+  setActiveQueueItem: (id: string | null) => void; // ฟังก์ชันเซ็ต ID คิว
   
-  // Queue Actions
   addBooking: (booking: Omit<QueueItem, 'id'>) => void;
   updateQueueStatus: (id: string, status: QueueStatus) => void;
   removeQueueItem: (id: string) => void;
-  markAsPaid: (queueItemId: string) => void; // ฟังก์ชัน Mark ว่าจ่ายเงินแล้ว
+  markAsPaid: (queueItemId: string) => void;
 }
 
 const INITIAL_CUSTOMERS: Customer[] = [
@@ -128,15 +129,17 @@ export const useStore = create<AppState>((set) => ({
   queue: INITIAL_QUEUE,
   selectedOwner: null,
   activePet: null,
+  activeQueueItemId: null,
   
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
   removeFromCart: (index) => set((state) => ({ cart: state.cart.filter((_, i) => i !== index) })),
-  clearCart: () => set({ cart: [] }),
+  clearCart: () => set({ cart: [], activeQueueItemId: null }),
   updateServicePrice: (id, prices) => set((state) => ({
     services: state.services.map(s => s.id === id ? { ...s, prices } : s)
   })),
-  selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null }),
+  selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
   setActivePet: (pet) => set({ activePet: pet }),
+  setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
 
   addBooking: (booking) => set((state) => ({
     queue: [...state.queue, { ...booking, id: Math.random().toString(36).substr(2, 9), isPaid: false }].sort((a, b) => a.time.localeCompare(b.time))

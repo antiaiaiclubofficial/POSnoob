@@ -11,7 +11,7 @@ interface ServiceCardProps {
 }
 
 const ServiceCard = ({ service }: ServiceCardProps) => {
-  const { addToCart, activePet, selectedOwner } = useStore();
+  const { addToCart, activePet, selectedOwner, activeQueueItemId } = useStore();
   const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L'>('M');
   
   const isSizeBased = typeof service.prices === 'object';
@@ -38,7 +38,8 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       petId: activePet.id,
       petName: activePet.name,
       ownerName: selectedOwner.name,
-      size: isSizeBased ? selectedSize : undefined
+      size: isSizeBased ? selectedSize : undefined,
+      queueItemId: activeQueueItemId || undefined // แนบ ID คิวไปด้วยถ้ามี
     });
     toast.success(`Added ${service.title} for ${activePet.name}`);
   };
