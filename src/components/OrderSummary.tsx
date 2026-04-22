@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import { 
-  Scissors, Bath, Zap, ShieldCheck, ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, History
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, ChevronRight
 } from 'lucide-react';
-import { useStore, CartItem } from '@/store/useStore';
+import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 
 const OrderSummary = () => {
-  const { cart, removeFromCart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules } = useStore();
+  const { cart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules } = useStore();
   const [newWeight, setNewWeight] = useState('');
 
   const subtotal = cart.reduce((acc, item) => acc + item.price, 0);
@@ -50,37 +50,56 @@ const OrderSummary = () => {
         </div>
       </div>
 
-      <div className="flex-1 space-y-6 overflow-y-auto pr-2 scrollbar-hide">
+      {/* Weight Update Field - แสดงผลด้านบนสุดเมื่อเลือกสัตว์เลี้ยง */}
+      {activePet && (
+        <div className="mb-8 p-5 bg-[#F5F6FA] rounded-[28px] border border-blue-100/50 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                <Scale size={16} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-gray-400 leading-none mb-1">Check-in Weight</p>
+                <p className="text-xs font-bold text-[#1A1F3D]">{activePet.name}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">Last Record</p>
+              <p className="text-xs font-black text-blue-600">
+                {activePet.weightHistory[activePet.weightHistory.length - 1]?.value || '0'} kg
+              </p>
+            </div>
+          </div>
+          
+          <div className="relative">
+            <input 
+              type="number" 
+              step="0.1"
+              placeholder="Enter current weight..."
+              className="w-full bg-white border-2 border-transparent focus:border-blue-500/20 rounded-2xl px-5 py-4 text-sm font-black transition-all outline-none"
+              value={newWeight}
+              onChange={(e) => setNewWeight(e.target.value)}
+            />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <span className="text-[10px] font-black text-gray-300 uppercase">KG</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
         {cart.length === 0 ? (
-          <div className="text-center py-10 opacity-40">
-            <ShoppingBag className="mx-auto mb-2" size={48} />
-            <p className="text-sm font-medium">Cart is empty</p>
+          <div className="h-full flex flex-col items-center justify-center text-center opacity-30 py-10">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <ShoppingBag size={32} className="text-gray-400" />
+            </div>
+            <p className="text-sm font-bold text-gray-500">Cart is empty</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Weight Update Field */}
-            {activePet && (
-              <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <Scale size={14} className="text-blue-600" />
-                  <p className="text-[10px] font-black uppercase text-blue-600">Update {activePet.name}'s Weight</p>
-                </div>
-                <div className="relative">
-                  <input 
-                    type="number" 
-                    step="0.1"
-                    placeholder={`Current: ${activePet.weightHistory[activePet.weightHistory.length-1]?.value} kg`}
-                    className="w-full bg-white border-none rounded-xl px-4 py-2.5 text-xs font-bold focus:ring-2 focus:ring-blue-500/20"
-                    value={newWeight}
-                    onChange={(e) => setNewWeight(e.target.value)}
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-300">KG</span>
-                </div>
-              </div>
-            )}
-
+          <div className="space-y-4">
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Services</p>
             {cart.map((item, idx) => (
-              <div key={`${item.id}-${idx}`} className="flex items-center gap-4 group">
+              <div key={`${item.id}-${idx}`} className="flex items-center gap-4 p-3 bg-white hover:bg-gray-50 rounded-2xl transition-colors border border-transparent hover:border-gray-100">
                 <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center shrink-0">
                   <Dog className="text-[#1A1F3D] w-5 h-5" />
                 </div>
@@ -97,12 +116,17 @@ const OrderSummary = () => {
 
       <div className="pt-8 space-y-3 border-t border-dashed border-gray-200 mt-auto">
         {tierDiscountPercent > 0 && (
-          <div className="flex justify-between text-xs text-green-600 font-bold bg-green-50 px-3 py-2 rounded-xl">
-            <span className="flex items-center gap-1"><ArrowDownCircle size={14}/> Member Discount</span>
+          <div className="flex justify-between items-center text-xs text-green-600 font-bold bg-green-50 px-4 py-3 rounded-2xl">
+            <span className="flex items-center gap-2">
+              <div className="w-5 h-5 bg-green-100 rounded-md flex items-center justify-center">
+                <ArrowDownCircle size={12}/>
+              </div>
+              Member Discount ({tierDiscountPercent}%)
+            </span>
             <span>-${discountAmount.toFixed(2)}</span>
           </div>
         )}
-        <div className="flex justify-between items-end pt-2">
+        <div className="flex justify-between items-end pt-2 px-2">
           <span className="text-xl font-bold text-[#1A1F3D]">Total</span>
           <span className="text-3xl font-extrabold text-[#1A1F3D]">${total.toFixed(2)}</span>
         </div>
@@ -110,7 +134,8 @@ const OrderSummary = () => {
 
       <button 
         onClick={handlePayment}
-        className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-extrabold py-5 rounded-3xl flex items-center justify-center gap-3 mt-8 shadow-lg shadow-[#D9ED5F]/20 transition-all active:scale-95"
+        disabled={cart.length === 0}
+        className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] disabled:bg-gray-100 disabled:text-gray-300 text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 mt-8 shadow-xl shadow-[#D9ED5F]/20 transition-all active:scale-95"
       >
         <Banknote size={24} /> Pay and Checkout
       </button>
