@@ -11,7 +11,8 @@ import {
   Calendar as CalendarIcon,
   Trash2,
   Undo2,
-  UserCheck
+  UserCheck,
+  BadgeCheck
 } from 'lucide-react';
 import { useStore, QueueItem, QueueStatus } from '@/store/useStore';
 import BookingModal from '@/components/BookingModal';
@@ -79,7 +80,6 @@ const Queue = () => {
           </button>
         </header>
 
-        {/* Stats Bar - Updated to 4 Groups */}
         <div className="px-10 mb-8 grid grid-cols-4 gap-4 shrink-0">
           {[
             { label: 'Waiting', count: stats.waiting, status: 'Waiting' as QueueStatus },
@@ -104,7 +104,6 @@ const Queue = () => {
           })}
         </div>
 
-        {/* List Content */}
         <div className="flex-1 overflow-y-auto px-10 pb-10 scrollbar-hide">
           <div className="space-y-4">
             {filteredQueue.length === 0 ? (
@@ -132,7 +131,6 @@ const Queue = () => {
                         <img src={item.image} className="w-16 h-16 rounded-[20px] object-cover" />
                         <div className={cn(
                           "absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center",
-                          config.bg.replace('bg-', 'bg-').split(' ')[0],
                           config.color.replace('text-', 'bg-')
                         )}>
                           <StatusIcon size={12} className="text-white" />
@@ -144,6 +142,11 @@ const Queue = () => {
                           <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full uppercase", config.bg, config.color)}>
                             {item.status}
                           </span>
+                          {item.isPaid && (
+                            <span className="bg-green-100 text-green-700 text-[8px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-tighter">
+                              <BadgeCheck size={10} /> Paid
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-gray-400 font-medium">
                           {item.serviceName} • Owner: <span className="text-gray-600 font-bold">{item.ownerName}</span>
@@ -158,7 +161,6 @@ const Queue = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {/* Undo Button */}
                         {prevStatus && (
                           <button 
                             onClick={() => updateQueueStatus(item.id, prevStatus)}
@@ -169,7 +171,6 @@ const Queue = () => {
                           </button>
                         )}
 
-                        {/* Next Status Button */}
                         {nextStatus && (
                           <button 
                             onClick={() => updateQueueStatus(item.id, nextStatus)}

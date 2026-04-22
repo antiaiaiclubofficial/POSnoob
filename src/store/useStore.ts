@@ -44,6 +44,7 @@ export interface QueueItem {
   time: string;
   status: QueueStatus;
   image: string;
+  isPaid?: boolean; // เพิ่มสถานะการชำระเงิน
 }
 
 export interface CartItem {
@@ -55,6 +56,7 @@ export interface CartItem {
   petName: string;
   ownerName: string;
   size?: 'S' | 'M' | 'L';
+  queueItemId?: string; // เชื่อมโยงกับ Queue
 }
 
 interface AppState {
@@ -76,6 +78,7 @@ interface AppState {
   addBooking: (booking: Omit<QueueItem, 'id'>) => void;
   updateQueueStatus: (id: string, status: QueueStatus) => void;
   removeQueueItem: (id: string) => void;
+  markAsPaid: (queueItemId: string) => void; // ฟังก์ชัน Mark ว่าจ่ายเงินแล้ว
 }
 
 const INITIAL_CUSTOMERS: Customer[] = [
@@ -114,8 +117,8 @@ const INITIAL_SERVICES: Service[] = [
 ];
 
 const INITIAL_QUEUE: QueueItem[] = [
-  { id: 'q1', petId: 'p1', petName: 'Bella', ownerName: 'John Doe', serviceName: 'Full Grooming', time: '10:00', status: 'In Progress', image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=64&h=64&fit=crop' },
-  { id: 'q2', petId: 'p3', petName: 'Max', ownerName: 'Sarah Smith', serviceName: 'Bath & Brush', time: '11:00', status: 'Waiting', image: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=64&h=64&fit=crop' }
+  { id: 'q1', petId: 'p1', petName: 'Bella', ownerName: 'John Doe', serviceName: 'Full Grooming', time: '10:00', status: 'In Progress', image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=64&h=64&fit=crop', isPaid: false },
+  { id: 'q2', petId: 'p3', petName: 'Max', ownerName: 'Sarah Smith', serviceName: 'Bath & Brush', time: '11:00', status: 'Waiting', image: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=64&h=64&fit=crop', isPaid: false }
 ];
 
 export const useStore = create<AppState>((set) => ({
@@ -136,12 +139,15 @@ export const useStore = create<AppState>((set) => ({
   setActivePet: (pet) => set({ activePet: pet }),
 
   addBooking: (booking) => set((state) => ({
-    queue: [...state.queue, { ...booking, id: Math.random().toString(36).substr(2, 9) }].sort((a, b) => a.time.localeCompare(b.time))
+    queue: [...state.queue, { ...booking, id: Math.random().toString(36).substr(2, 9), isPaid: false }].sort((a, b) => a.time.localeCompare(b.time))
   })),
   updateQueueStatus: (id, status) => set((state) => ({
     queue: state.queue.map(q => q.id === id ? { ...q, status } : q)
   })),
   removeQueueItem: (id) => set((state) => ({
     queue: state.queue.filter(q => q.id !== id)
+  })),
+  markAsPaid: (id) => set((state) => ({
+    queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q)
   })),
 }));

@@ -5,22 +5,63 @@ import Sidebar from '@/components/Sidebar';
 import ServiceCard from '@/components/ServiceCard';
 import OrderSummary from '@/components/OrderSummary';
 import CustomerSearch from '@/components/CustomerSearch';
-import { UserPlus, X, Search, Home } from 'lucide-react';
-import { useStore } from '@/store/useStore';
+import { UserPlus, X, Search, Home, CreditCard, Dog } from 'lucide-react';
+import { useStore, QueueItem } from '@/store/useStore';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const Index = () => {
-  const { selectedOwner, activePet, services, selectOwner, setActivePet } = useStore();
+  const { 
+    selectedOwner, 
+    activePet, 
+    services, 
+    selectOwner, 
+    setActivePet, 
+    queue, 
+    customers, 
+    addToCart,
+    services: allServices
+  } = useStore();
+
+  // กรองตัวที่ Check-in หรือ In Progress แต่ยังไม่จ่ายเงิน
+  const pendingCheckout = queue.filter(q => 
+    (q.status === 'Checked-in' || q.status === 'In Progress') && !q.isPaid
+  );
+
+  const handleQuickAddFromQueue = (item: QueueItem) => {
+    const owner = customers.find(c => c.name === item.ownerName);
+    const service = allServices.find(s => s.title === item.serviceName);
+    
+    if (owner) {
+      selectOwner(owner);
+      const pet = owner.pets.find(p => p.id === item.petId);
+      if (pet) setActivePet(pet);
+      
+      if (service) {
+        addToCart({
+          id: service.id,
+          icon: service.icon,
+          title: service.title,
+          price: typeof service.prices === 'number' ? service.prices : service.prices.M,
+          petId: item.petId,
+          petName: item.petName,
+          ownerName: item.ownerName,
+          queueItemId: item.id
+        });
+        toast.success(`Loaded ${item.petName}'s service for checkout`);
+      }
+    }
+  };
 
   return (
     <div className="flex h-screen bg-[#F5F6FA] text-[#1A1F3D] overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="px-10 py-8 flex justify-between items-center shrink-0">
+        <header className="px-10 py-6 flex justify-between items-center shrink-0">
           <div>
             <h1 className="text-2xl font-extrabold text-[#1A1F3D]">Checkout</h1>
-            <p className="text-xs text-gray-400 font-medium">Add services for the entire household</p>
+            <p className="text-xs text-gray-400 font-medium">Add services or process pending payments</p>
           </div>
           <button className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm text-xs font-bold border border-gray-50 hover:bg-gray-50 transition-colors">
             <UserPlus size={14} />
@@ -51,8 +92,31 @@ const Index = () => {
             )}
           </div>
 
+          {/* แถบ Pending Payment แนวนอน */}
+          {pendingCheckout.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-black uppercase text-orange-500 tracking-wider">Pending Checkout ({pendingCheckout.length})</span>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {pendingCheckout.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleQuickAddFromQueue(item)}
+                    className="flex items-center gap-3 bg-orange-50 hover:bg-orange-100 border border-orange-100 px-4 py-2.5 rounded-2xl shrink-0 transition-all group"
+                  >
+                    <img src={item.image} className="w-8 h-8 rounded-lg object-cover" />
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-[#1A1F3D]">{item.petName}</p>
+                      <p className="text-[9px] text-orange-600 font-medium">{item.serviceName}</p>
+                    </div>
+                    <CreditCard size={14} className="text-orange-400 group-hover:scale-110 transition-transform" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {selectedOwner && (
-            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm animate-in fade-in slide-in-from-top-2 border border-gray-50/50">
+            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-50/50">
               <span className="text-[9px] font-black uppercase text-gray-400 px-3">Select Pet:</span>
               <div className="flex gap-1.5">
                 {selectedOwner.pets.map(pet => (
@@ -82,7 +146,7 @@ const Index = () => {
                 <Search size={32} className="text-gray-400" />
               </div>
               <h2 className="text-xl font-bold mb-1">Select a Household</h2>
-              <p className="text-sm text-gray-500 max-w-xs">Start by searching for a customer to add services.</p>
+              <p className="text-sm text-gray-500 max-w-xs">Start by searching or selecting a pet from the pending bar.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-6 animate-in fade-in zoom-in-95 duration-300">

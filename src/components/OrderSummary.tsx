@@ -17,7 +17,7 @@ import { useStore, CartItem } from '@/store/useStore';
 import { toast } from 'sonner';
 
 const OrderSummary = () => {
-  const { cart, removeFromCart, clearCart, selectedOwner } = useStore();
+  const { cart, removeFromCart, clearCart, selectedOwner, markAsPaid } = useStore();
   
   const subtotal = cart.reduce((acc, item) => acc + item.price, 0);
   const tax = subtotal * 0.08;
@@ -33,7 +33,6 @@ const OrderSummary = () => {
     }
   };
 
-  // Group cart items by pet name
   const groupedCart = cart.reduce((acc, item) => {
     if (!acc[item.petName]) acc[item.petName] = [];
     acc[item.petName].push(item);
@@ -45,6 +44,14 @@ const OrderSummary = () => {
       toast.error("Cart is empty");
       return;
     }
+
+    // Mark paid for all items in cart that are linked to queue
+    cart.forEach(item => {
+      if (item.queueItemId) {
+        markAsPaid(item.queueItemId);
+      }
+    });
+
     toast.success(`Payment of $${total.toFixed(2)} successful via ${method}!`);
     clearCart();
   };
@@ -75,12 +82,10 @@ const OrderSummary = () => {
                 <h3 className="text-xs font-black uppercase tracking-widest text-[#1A1F3D]">{petName}</h3>
               </div>
               <div className="space-y-4">
-                {items.map((item) => {
+                {items.map((item, idx) => {
                   const Icon = getIcon(item.icon);
-                  // Find original index for removal
-                  const originalIndex = cart.findIndex(c => c === item);
                   return (
-                    <div key={`${item.petId}-${item.id}-${originalIndex}`} className="flex items-center gap-4 group">
+                    <div key={`${item.id}-${idx}`} className="flex items-center gap-4 group">
                       <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center shrink-0">
                         <Icon className="text-[#1A1F3D] w-5 h-5" />
                       </div>
@@ -90,7 +95,7 @@ const OrderSummary = () => {
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-[#1A1F3D] text-sm">${item.price.toFixed(2)}</span>
                         <button 
-                          onClick={() => removeFromCart(originalIndex)}
+                          onClick={() => removeFromCart(idx)}
                           className="text-red-400 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <Trash2 size={14} />
