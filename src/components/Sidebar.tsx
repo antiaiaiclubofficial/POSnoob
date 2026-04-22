@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from 'react-router-dom';
+import { useStore } from '@/store/useStore';
 
 const menuItems = [
   { icon: ShoppingBag, label: 'Checkout', path: '/' },
@@ -24,15 +25,22 @@ const menuItems = [
 
 const Sidebar = () => {
   const location = useLocation();
+  const { shopName, shopLogo } = useStore();
 
   return (
     <div className="w-64 h-full bg-[#F8F9FD] flex flex-col p-6 border-r border-gray-100 shrink-0">
       <div className="flex items-center gap-3 mb-10 px-2">
-        <div className="w-10 h-10 bg-[#1A1F3D] rounded-xl flex items-center justify-center">
-          <Scissors className="text-white w-6 h-6" />
+        <div className="w-10 h-10 bg-[#1A1F3D] rounded-xl flex items-center justify-center overflow-hidden">
+          {shopLogo ? (
+            <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" />
+          ) : (
+            <Scissors className="text-white w-6 h-6" />
+          )}
         </div>
         <div>
-          <h1 className="font-bold text-[#1A1F3D] leading-tight">Tactile Sanctuary</h1>
+          <h1 className="font-bold text-[#1A1F3D] leading-tight truncate w-36" title={shopName}>
+            {shopName}
+          </h1>
           <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">Premium Pet Care</p>
         </div>
       </div>

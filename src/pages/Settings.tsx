@@ -1,17 +1,24 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign } from 'lucide-react';
+import { Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign, Image, Trash2, Upload } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel } from '@/store/useStore';
 import { toast } from 'sonner';
 
 const Settings = () => {
-  const { tierRules, updateTierRules } = useStore();
+  const { tierRules, updateTierRules, shopName, shopLogo, updateBusinessProfile } = useStore();
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
+  const [localShopName, setLocalShopName] = useState(shopName);
+  const [localShopLogo, setLocalShopLogo] = useState<string | null>(shopLogo);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
     updateTierRules(localTierRules);
+    updateBusinessProfile({ 
+      shopName: localShopName, 
+      shopLogo: localShopLogo 
+    });
     toast.success("Settings saved successfully!");
   };
 
@@ -19,6 +26,18 @@ const Settings = () => {
     setLocalTierRules(prev => prev.map(r => 
       r.level === level ? { ...r, [field]: value } : r
     ));
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLocalShopLogo(reader.result as string);
+        toast.success("Logo uploaded!");
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -39,7 +58,71 @@ const Settings = () => {
             </button>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-8 pb-10">
+            {/* Business Profile */}
+            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                  <Store size={24} />
+                </div>
+                <h2 className="text-xl font-bold">Business Profile</h2>
+              </div>
+              
+              <div className="space-y-8">
+                <div className="flex items-center gap-8">
+                  <div className="relative group">
+                    <div className="w-32 h-32 bg-[#F5F6FA] rounded-[32px] flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-200 group-hover:border-blue-400 transition-all">
+                      {localShopLogo ? (
+                        <img src={localShopLogo} alt="Logo Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-center p-4">
+                          <Image size={24} className="mx-auto text-gray-300 mb-2" />
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Logo</p>
+                        </div>
+                      )}
+                    </div>
+                    {localShopLogo && (
+                      <button 
+                        onClick={() => setLocalShopLogo(null)}
+                        className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute -bottom-2 right-2 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Upload size={14} />
+                    </button>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept="image/*" 
+                      onChange={handleLogoUpload} 
+                    />
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Shop Name</label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold focus:ring-2 focus:ring-blue-500/20" 
+                        value={localShopName}
+                        onChange={(e) => setLocalShopName(e.target.value)}
+                        placeholder="Enter shop name..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Contact Email</label>
+                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" defaultValue="hello@tactilesanctuary.com" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Membership Tier Rules */}
             <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
               <div className="flex items-center gap-3 mb-8">
                 <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
@@ -98,26 +181,6 @@ const Settings = () => {
                     </div>
                   </div>
                 ))}
-              </div>
-            </section>
-
-            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                  <Store size={24} />
-                </div>
-                <h2 className="text-xl font-bold">Business Profile</h2>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Shop Name</label>
-                  <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" defaultValue="Tactile Sanctuary" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Contact Email</label>
-                  <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" defaultValue="hello@tactilesanctuary.com" />
-                </div>
               </div>
             </section>
           </div>

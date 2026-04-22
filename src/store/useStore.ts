@@ -30,7 +30,7 @@ export interface TierRule {
   level: MembershipLevel;
   label: string;
   minSpent: number;
-  discount: number; // Percentage discount
+  discount: number;
 }
 
 export interface Service {
@@ -67,6 +67,8 @@ export interface CartItem {
 }
 
 interface AppState {
+  shopName: string;
+  shopLogo: string | null;
   services: Service[];
   customers: Customer[];
   cart: CartItem[];
@@ -76,6 +78,7 @@ interface AppState {
   activePet: Pet | null;
   activeQueueItemId: string | null;
   
+  updateBusinessProfile: (profile: { shopName?: string, shopLogo?: string | null }) => void;
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
   clearCart: () => void;
@@ -138,21 +141,27 @@ const INITIAL_SERVICES: Service[] = [
   { id: "svc-4", icon: "deshedding", title: "De-Shedding", description: "Furminator treatment to reduce shedding.", category: "Special", prices: { S: 25, M: 35, L: 50 } }
 ];
 
-const INITIAL_QUEUE: QueueItem[] = [
-  { id: 'q1', petId: 'p1', petName: 'Bella', ownerName: 'John Doe', serviceName: 'Full Grooming', time: '10:00', status: 'In Progress', image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=64&h=64&fit=crop', isPaid: false },
-  { id: 'q2', petId: 'p3', petName: 'Max', ownerName: 'Sarah Smith', serviceName: 'Bath & Brush', time: '11:00', status: 'Waiting', image: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=64&h=64&fit=crop', isPaid: false }
-];
-
 export const useStore = create<AppState>((set, get) => ({
+  shopName: "Tactile Sanctuary",
+  shopLogo: null,
   services: INITIAL_SERVICES,
   customers: INITIAL_CUSTOMERS,
   cart: [],
-  queue: INITIAL_QUEUE,
+  queue: [
+    { id: 'q1', petId: 'p1', petName: 'Bella', ownerName: 'John Doe', serviceName: 'Full Grooming', time: '10:00', status: 'In Progress', image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=64&h=64&fit=crop', isPaid: false },
+    { id: 'q2', petId: 'p3', petName: 'Max', ownerName: 'Sarah Smith', serviceName: 'Bath & Brush', time: '11:00', status: 'Waiting', image: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=64&h=64&fit=crop', isPaid: false }
+  ],
   tierRules: INITIAL_TIER_RULES,
   selectedOwner: null,
   activePet: null,
   activeQueueItemId: null,
   
+  updateBusinessProfile: (profile) => set((state) => ({
+    ...state,
+    shopName: profile.shopName ?? state.shopName,
+    shopLogo: profile.shopLogo !== undefined ? profile.shopLogo : state.shopLogo
+  })),
+
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
   removeFromCart: (index) => set((state) => ({ cart: state.cart.filter((_, i) => i !== index) })),
   clearCart: () => set({ cart: [], activeQueueItemId: null }),
@@ -206,10 +215,8 @@ export const useStore = create<AppState>((set, get) => ({
       if (c.id === customerId) {
         const newSpent = c.totalSpent + amount;
         const newPoints = c.points + Math.floor(amount);
-        
         const sortedRules = [...tierRules].sort((a, b) => b.minSpent - a.minSpent);
         const newMembership = sortedRules.find(r => newSpent >= r.minSpent)?.level || 'Standard';
-
         return {
           ...c,
           totalSpent: newSpent,
@@ -219,9 +226,7 @@ export const useStore = create<AppState>((set, get) => ({
       }
       return c;
     });
-
     set({ customers: updatedCustomers });
-    
     const currentSelected = get().selectedOwner;
     if (currentSelected?.id === customerId) {
       set({ selectedOwner: updatedCustomers.find(c => c.id === customerId) || null });
