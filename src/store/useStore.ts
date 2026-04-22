@@ -26,6 +26,11 @@ export interface Customer {
   totalSpent: number;
 }
 
+export interface TierRule {
+  level: MembershipLevel;
+  minSpent: number;
+}
+
 export interface Service {
   id: string;
   icon: ServiceIcon;
@@ -64,6 +69,7 @@ interface AppState {
   customers: Customer[];
   cart: CartItem[];
   queue: QueueItem[];
+  tierRules: TierRule[];
   selectedOwner: Customer | null;
   activePet: Pet | null;
   activeQueueItemId: string | null;
@@ -85,7 +91,16 @@ interface AppState {
   addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'totalSpent'>) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
+  processPayment: (customerId: string, amount: number) => void;
+  updateTierRules: (rules: TierRule[]) => void;
 }
+
+const INITIAL_TIER_RULES: TierRule[] = [
+  { level: 'Standard', minSpent: 0 },
+  { level: 'Silver', minSpent: 500 },
+  { level: 'Gold', minSpent: 1500 },
+  { level: 'VIP', minSpent: 5000 },
+];
 
 const INITIAL_CUSTOMERS: Customer[] = [
   {
@@ -127,11 +142,12 @@ const INITIAL_QUEUE: QueueItem[] = [
   { id: 'q2', petId: 'p3', petName: 'Max', ownerName: 'Sarah Smith', serviceName: 'Bath & Brush', time: '11:00', status: 'Waiting', image: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=64&h=64&fit=crop', isPaid: false }
 ];
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
   services: INITIAL_SERVICES,
   customers: INITIAL_CUSTOMERS,
   cart: [],
   queue: INITIAL_QUEUE,
+  tierRules: INITIAL_TIER_RULES,
   selectedOwner: null,
   activePet: null,
   activeQueueItemId: null,
@@ -159,7 +175,6 @@ export const useStore = create<AppState>((set) => ({
     queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q)
   })),
 
-  // Customer Implementations
   addCustomer: (customerData) => set((state) => ({
     customers: [
       ...state.customers,
@@ -181,4 +196,36 @@ export const useStore = create<AppState>((set) => ({
       pets: [...c.pets, { ...petData, id: 'p' + Math.random().toString(36).substr(2, 4) }]
     } : c)
   })),
+
+  updateTierRules: (rules) => set({ tierRules: rules }),
+
+  processPayment: (customerId, amount) => {
+    const { customers, tierRules } = get();
+    const updatedCustomers = customers.map(c => {
+      if (c.id === customerId) {
+        const newSpent = c.totalSpent + amount;
+        const newPoints = c.points + Math.floor(amount);
+        
+        // Find highest matching tier based on new spent
+        const sortedRules = [...tierRules].sort((a, b) => b.minSpent - a.minSpent);
+        const newMembership = sortedRules.find(r => newSpent >= r.minSpent)?.level || 'Standard';
+
+        return {
+          ...c,
+          totalSpent: newSpent,
+          points: newPoints,
+          membership: newMembership as MembershipLevel
+        };
+      }
+      return c;
+    });
+
+    set({ customers: updatedCustomers });
+    
+    // Update selectedOwner if it was the one who paid
+    const currentSelected = get().selectedOwner;
+    if (currentSelected?.id === customerId) {
+      set({ selectedOwner: updatedCustomers.find(c => c.id === customerId) || null });
+    }
+  }
 }));

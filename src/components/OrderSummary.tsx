@@ -17,7 +17,7 @@ import { useStore, CartItem } from '@/store/useStore';
 import { toast } from 'sonner';
 
 const OrderSummary = () => {
-  const { cart, removeFromCart, clearCart, selectedOwner, markAsPaid } = useStore();
+  const { cart, removeFromCart, clearCart, selectedOwner, markAsPaid, processPayment } = useStore();
   
   const subtotal = cart.reduce((acc, item) => acc + item.price, 0);
   const tax = subtotal * 0.08;
@@ -45,14 +45,22 @@ const OrderSummary = () => {
       return;
     }
 
-    // Mark paid for all items in cart that are linked to queue
+    if (!selectedOwner) {
+      toast.error("No customer selected");
+      return;
+    }
+
+    // 1. Process stats & auto-promotion
+    processPayment(selectedOwner.id, total);
+
+    // 2. Mark queue items as paid
     cart.forEach(item => {
       if (item.queueItemId) {
         markAsPaid(item.queueItemId);
       }
     });
 
-    toast.success(`Payment of $${total.toFixed(2)} successful via ${method}!`);
+    toast.success(`Payment of $${total.toFixed(2)} successful! Tier updated if qualified.`);
     clearCart();
   };
 
@@ -61,7 +69,14 @@ const OrderSummary = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-2xl font-bold text-[#1A1F3D]">Order Summary</h2>
-          {selectedOwner && <p className="text-[10px] text-gray-400 font-bold uppercase">{selectedOwner.name}'s Family</p>}
+          {selectedOwner && (
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] text-gray-400 font-bold uppercase">{selectedOwner.name}'s Family</p>
+              <span className="text-[8px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-black uppercase">
+                {selectedOwner.membership}
+              </span>
+            </div>
+          )}
         </div>
         <span className="bg-[#E5E7EB] text-[#1A1F3D] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
           {cart.length} Items
