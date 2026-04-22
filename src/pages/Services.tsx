@@ -1,8 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Check, X } from 'lucide-react';
+import { useStore, Service } from '@/store/useStore';
+import { toast } from 'sonner';
 
 const Services = () => {
+  const { services, updateServicePrice } = useStore();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPrices, setEditPrices] = useState<{S: string, M: string, L: string} | string>("");
+
+  const startEdit = (service: Service) => {
+    setEditingId(service.id);
+    if (typeof service.prices === 'object') {
+      setEditPrices({
+        S: service.prices.S.toString(),
+        M: service.prices.M.toString(),
+        L: service.prices.L.toString()
+      });
+    } else {
+      setEditPrices(service.prices.toString());
+    }
+  };
+
+  const handleSave = (id: string) => {
+    let newPrices: Service['prices'];
+    if (typeof editPrices === 'object') {
+      newPrices = {
+        S: Number(editPrices.S),
+        M: Number(editPrices.M),
+        L: Number(editPrices.L)
+      };
+    } else {
+      newPrices = Number(editPrices);
+    }
+    updateServicePrice(id, newPrices);
+    setEditingId(null);
+    toast.success("Price updated successfully");
+  };
+
   return (
     <div className="flex h-screen bg-[#F5F6FA] text-[#1A1F3D] overflow-hidden">
       <Sidebar />
@@ -22,29 +57,68 @@ const Services = () => {
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Service Name</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Base Price</th>
+                <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Price (S/M/L)</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Category</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
                 <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {[
-                { name: 'Full Grooming', price: '$45', category: 'Grooming', status: 'Active' },
-                { name: 'Bath & Brush', price: '$35', category: 'Hygiene', status: 'Active' },
-                { name: 'Nail Trim', price: '$15', category: 'Quick Service', status: 'Active' },
-              ].map((service, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-8 py-6 font-bold">{service.name}</td>
-                  <td className="px-8 py-6 text-gray-600">{service.price}</td>
+              {services.map((service) => (
+                <tr key={service.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-8 py-6 font-bold">{service.title}</td>
+                  <td className="px-8 py-6">
+                    {editingId === service.id ? (
+                      <div className="flex gap-2">
+                        {typeof editPrices === 'object' ? (
+                          <>
+                            <input 
+                              className="w-16 border rounded px-2 py-1 text-sm" 
+                              value={editPrices.S} 
+                              onChange={e => setEditPrices({...editPrices, S: e.target.value})}
+                              placeholder="S"
+                            />
+                            <input 
+                              className="w-16 border rounded px-2 py-1 text-sm" 
+                              value={editPrices.M} 
+                              onChange={e => setEditPrices({...editPrices, M: e.target.value})}
+                              placeholder="M"
+                            />
+                            <input 
+                              className="w-16 border rounded px-2 py-1 text-sm" 
+                              value={editPrices.L} 
+                              onChange={e => setEditPrices({...editPrices, L: e.target.value})}
+                              placeholder="L"
+                            />
+                          </>
+                        ) : (
+                          <input 
+                            className="w-24 border rounded px-2 py-1 text-sm" 
+                            value={editPrices as string} 
+                            onChange={e => setEditPrices(e.target.value)}
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-600 font-medium">
+                        {typeof service.prices === 'object' 
+                          ? `$${service.prices.S} / $${service.prices.M} / $${service.prices.L}`
+                          : `$${service.prices}`}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-8 py-6">
                     <span className="bg-gray-100 px-3 py-1 rounded-full text-xs font-medium">{service.category}</span>
                   </td>
-                  <td className="px-8 py-6 text-green-500 font-medium">{service.status}</td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex justify-end gap-2">
-                      <button className="p-2 text-gray-400 hover:text-[#1A1F3D]"><Edit2 size={18} /></button>
-                      <button className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={18} /></button>
+                      {editingId === service.id ? (
+                        <>
+                          <button onClick={() => handleSave(service.id)} className="p-2 text-green-500 hover:bg-green-50 rounded-lg"><Check size={18} /></button>
+                          <button onClick={() => setEditingId(null)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><X size={18} /></button>
+                        </>
+                      ) : (
+                        <button onClick={() => startEdit(service)} className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-lg"><Edit2 size={18} /></button>
+                      )}
                     </div>
                   </td>
                 </tr>

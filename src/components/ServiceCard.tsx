@@ -1,43 +1,39 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Scissors, Bath, ShieldCheck, Zap, Plus } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { useStore, Service } from '@/store/useStore';
+import { useStore, Service, ServiceIcon } from '@/store/useStore';
 import { toast } from 'sonner';
 
 interface ServiceCardProps {
-  id: string;
-  icon: 'grooming' | 'bath' | 'nail' | 'deshedding';
-  title: string;
-  description: string;
-  priceType: 'starting' | 'fixed';
-  price: number;
-  sizes?: string[];
+  service: Service;
 }
 
-const ServiceCard = ({ 
-  id,
-  icon, 
-  title, 
-  description, 
-  priceType, 
-  price, 
-  sizes = []
-}: ServiceCardProps) => {
-  const addToCart = useStore((state) => state.addToCart);
+const ServiceCard = ({ service }: ServiceCardProps) => {
+  const { addToCart, currentPet } = useStore();
+  const [selectedSize, setSelectedSize] = useState<'S' | 'M' | 'L'>('M');
   
+  const isSizeBased = typeof service.prices === 'object';
+  const currentPrice = isSizeBased ? service.prices[selectedSize] : service.prices;
+
   const IconComponent = {
     grooming: Scissors,
     bath: Bath,
     nail: Zap,
     deshedding: ShieldCheck
-  }[icon];
+  }[service.icon as ServiceIcon];
 
   const handleAdd = () => {
-    const service: Service = { id, icon, title, price, description };
-    addToCart(service);
-    toast.success(`Added ${title} to cart`);
+    addToCart({
+      id: service.id,
+      icon: service.icon,
+      title: `${service.title}${isSizeBased ? ` (${selectedSize})` : ''}`,
+      price: currentPrice,
+      petName: currentPet?.name || 'Walk-in',
+      size: isSizeBased ? selectedSize : undefined
+    });
+    toast.success(`Added ${service.title} to cart`);
   };
 
   return (
@@ -48,26 +44,27 @@ const ServiceCard = ({
         </div>
         <div className="text-right">
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">
-            {priceType === 'starting' ? 'Starting From' : 'Fixed Price'}
+            {isSizeBased ? 'Starting From' : 'Fixed Price'}
           </p>
-          <p className="text-2xl font-bold text-[#1A1F3D]">${price}</p>
+          <p className="text-2xl font-bold text-[#1A1F3D]">${currentPrice}</p>
         </div>
       </div>
 
-      <h3 className="text-xl font-bold text-[#1A1F3D] mb-2">{title}</h3>
-      <p className="text-sm text-gray-400 leading-relaxed mb-6 flex-grow">{description}</p>
+      <h3 className="text-xl font-bold text-[#1A1F3D] mb-2">{service.title}</h3>
+      <p className="text-sm text-gray-400 leading-relaxed mb-6 flex-grow">{service.description}</p>
 
-      {sizes.length > 0 && (
+      {isSizeBased && (
         <div className="bg-[#F5F6FA] p-1 rounded-2xl flex gap-1 mb-4">
-          {sizes.map((size) => (
+          {(['S', 'M', 'L'] as const).map((size) => (
             <button
               key={size}
+              onClick={() => setSelectedSize(size)}
               className={cn(
                 "flex-1 py-2 px-1 text-[10px] font-bold uppercase rounded-xl transition-all",
-                size === 'MEDIUM' || size === 'M' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:text-gray-600"
+                selectedSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:text-gray-600"
               )}
             >
-              {size}
+              {size === 'S' ? 'SMALL' : size === 'M' ? 'MEDIUM' : 'LARGE'}
             </button>
           ))}
         </div>

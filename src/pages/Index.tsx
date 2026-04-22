@@ -8,7 +8,7 @@ import { Search, UserPlus } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 
 const Index = () => {
-  const currentPet = useStore((state) => state.currentPet);
+  const { currentPet, services } = useStore();
 
   return (
     <div className="flex h-screen bg-[#F5F6FA] text-[#1A1F3D] overflow-hidden">
@@ -52,41 +52,9 @@ const Index = () => {
 
         <div className="flex-1 overflow-y-auto px-10 pb-10 scrollbar-hide">
           <div className="grid grid-cols-2 gap-8">
-            <ServiceCard 
-              id="svc-1"
-              icon="grooming"
-              title="Full Grooming"
-              description="Haircut, bath, brush, nails, and ears."
-              priceType="starting"
-              price={45}
-              sizes={['SMALL', 'MEDIUM', 'LARGE']}
-            />
-            <ServiceCard 
-              id="svc-2"
-              icon="bath"
-              title="Bath & Brush"
-              description="Deep clean shampoo, blow dry, and brushing."
-              priceType="starting"
-              price={35}
-              sizes={['SMALL', 'MEDIUM', 'LARGE']}
-            />
-            <ServiceCard 
-              id="svc-3"
-              icon="nail"
-              title="Nail Trim"
-              description="Professional trimming and filing."
-              priceType="fixed"
-              price={15}
-            />
-            <ServiceCard 
-              id="svc-4"
-              icon="deshedding"
-              title="De-Shedding"
-              description="Furminator treatment to reduce shedding."
-              priceType="starting"
-              price={25}
-              sizes={['S', 'M', 'L']}
-            />
+            {services.map((service) => (
+              <ServiceCard key={service.id} service={service} />
+            ))}
           </div>
         </div>
       </main>
