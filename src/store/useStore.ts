@@ -107,6 +107,7 @@ interface AppState {
   addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'totalSpent'>) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
+  updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
   processPayment: (customerId: string, amount: number) => void;
   updateTierRules: (rules: TierRule[]) => void;
@@ -225,6 +226,12 @@ export const useStore = create<AppState>((set, get) => ({
     customers: state.customers.map(c => c.id === customerId ? {
       ...c,
       pets: [...c.pets, { ...petData, id: 'p' + Math.random().toString(36).substr(2, 4) }]
+    } : c)
+  })),
+  updatePet: (customerId, petId, petData) => set((state) => ({
+    customers: state.customers.map(c => c.id === customerId ? {
+      ...c,
+      pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
     } : c)
   })),
   updatePetWeight: (customerId, petId, weight) => set((state) => ({

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { Search, Mail, Phone, Plus, Shield, Dog, Cat, Info, User, Edit3, TrendingUp, History } from 'lucide-react';
-import { useStore, Customer } from '@/store/useStore';
+import { useStore, Customer, Pet } from '@/store/useStore';
 import { calculateAge } from '@/utils/petData';
 import { cn } from '@/lib/utils';
 import CustomerModal from '@/components/CustomerModal';
@@ -17,7 +17,7 @@ const Customers = () => {
   
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isPetModalOpen, setIsPetModalOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingPet, setEditingPet] = useState<Pet | null>(null);
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -25,6 +25,16 @@ const Customers = () => {
   );
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+
+  const handleEditPet = (pet: Pet) => {
+    setEditingPet(pet);
+    setIsPetModalOpen(true);
+  };
+
+  const handleAddPet = () => {
+    setEditingPet(null);
+    setIsPetModalOpen(true);
+  };
 
   return (
     <div className="flex h-screen bg-[#F5F6FA] text-[#1A1F3D] overflow-hidden">
@@ -101,7 +111,7 @@ const Customers = () => {
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-2xl font-black">Pet Health Hub</h3>
                 <button 
-                  onClick={() => setIsPetModalOpen(true)}
+                  onClick={handleAddPet}
                   className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"
                 >
                   <Plus size={16} /> Register Pet
@@ -110,7 +120,15 @@ const Customers = () => {
 
               <div className="space-y-8">
                 {selectedCustomer.pets.map(pet => (
-                  <div key={pet.id} className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden flex">
+                  <div key={pet.id} className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden flex relative group">
+                    <button 
+                      onClick={() => handleEditPet(pet)}
+                      className="absolute top-6 right-6 p-3 bg-gray-50 text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-2xl transition-all shadow-sm opacity-0 group-hover:opacity-100"
+                      title="Edit Profile"
+                    >
+                      <Edit3 size={18} />
+                    </button>
+
                     <div className="w-1/3 p-8 border-r border-gray-50 bg-[#F8F9FD]/50">
                       <img src={pet.image} className="w-32 h-32 rounded-[28px] object-cover mx-auto mb-4 border-4 border-white shadow-lg" />
                       <div className="text-center">
@@ -171,7 +189,13 @@ const Customers = () => {
       </main>
 
       {isCustomerModalOpen && <CustomerModal onClose={() => setIsCustomerModalOpen(false)} />}
-      {isPetModalOpen && selectedCustomer && <PetModal customerId={selectedCustomer.id} onClose={() => setIsPetModalOpen(false)} />}
+      {isPetModalOpen && selectedCustomer && (
+        <PetModal 
+          customerId={selectedCustomer.id} 
+          pet={editingPet}
+          onClose={() => setIsPetModalOpen(false)} 
+        />
+      )}
     </div>
   );
 };
