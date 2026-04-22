@@ -28,7 +28,9 @@ export interface Customer {
 
 export interface TierRule {
   level: MembershipLevel;
+  label: string;
   minSpent: number;
+  discount: number; // Percentage discount
 }
 
 export interface Service {
@@ -87,7 +89,6 @@ interface AppState {
   removeQueueItem: (id: string) => void;
   markAsPaid: (queueItemId: string) => void;
 
-  // Customer Actions
   addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'totalSpent'>) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
@@ -96,10 +97,10 @@ interface AppState {
 }
 
 const INITIAL_TIER_RULES: TierRule[] = [
-  { level: 'Standard', minSpent: 0 },
-  { level: 'Silver', minSpent: 500 },
-  { level: 'Gold', minSpent: 1500 },
-  { level: 'VIP', minSpent: 5000 },
+  { level: 'Standard', label: 'Standard', minSpent: 0, discount: 0 },
+  { level: 'Silver', label: 'Silver Member', minSpent: 500, discount: 5 },
+  { level: 'Gold', label: 'Gold Member', minSpent: 1500, discount: 10 },
+  { level: 'VIP', label: 'VIP Exclusive', minSpent: 5000, discount: 15 },
 ];
 
 const INITIAL_CUSTOMERS: Customer[] = [
@@ -206,7 +207,6 @@ export const useStore = create<AppState>((set, get) => ({
         const newSpent = c.totalSpent + amount;
         const newPoints = c.points + Math.floor(amount);
         
-        // Find highest matching tier based on new spent
         const sortedRules = [...tierRules].sort((a, b) => b.minSpent - a.minSpent);
         const newMembership = sortedRules.find(r => newSpent >= r.minSpent)?.level || 'Standard';
 
@@ -222,7 +222,6 @@ export const useStore = create<AppState>((set, get) => ({
 
     set({ customers: updatedCustomers });
     
-    // Update selectedOwner if it was the one who paid
     const currentSelected = get().selectedOwner;
     if (currentSelected?.id === customerId) {
       set({ selectedOwner: updatedCustomers.find(c => c.id === customerId) || null });

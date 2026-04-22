@@ -11,17 +11,24 @@ import {
   Bath, 
   ShieldCheck,
   ShoppingBag,
-  Dog 
+  Dog,
+  ArrowDownCircle
 } from 'lucide-react';
 import { useStore, CartItem } from '@/store/useStore';
 import { toast } from 'sonner';
 
 const OrderSummary = () => {
-  const { cart, removeFromCart, clearCart, selectedOwner, markAsPaid, processPayment } = useStore();
+  const { cart, removeFromCart, clearCart, selectedOwner, markAsPaid, processPayment, tierRules } = useStore();
   
   const subtotal = cart.reduce((acc, item) => acc + item.price, 0);
-  const tax = subtotal * 0.08;
-  const total = subtotal + tax;
+  
+  // Get Tier Benefits
+  const userTier = selectedOwner ? tierRules.find(r => r.level === selectedOwner.membership) : null;
+  const tierDiscountPercent = userTier?.discount || 0;
+  const discountAmount = (subtotal * tierDiscountPercent) / 100;
+  
+  const tax = (subtotal - discountAmount) * 0.08;
+  const total = subtotal - discountAmount + tax;
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -50,17 +57,15 @@ const OrderSummary = () => {
       return;
     }
 
-    // 1. Process stats & auto-promotion
     processPayment(selectedOwner.id, total);
 
-    // 2. Mark queue items as paid
     cart.forEach(item => {
       if (item.queueItemId) {
         markAsPaid(item.queueItemId);
       }
     });
 
-    toast.success(`Payment of $${total.toFixed(2)} successful! Tier updated if qualified.`);
+    toast.success(`Payment of $${total.toFixed(2)} successful! Tier benefit applied.`);
     clearCart();
   };
 
@@ -70,10 +75,10 @@ const OrderSummary = () => {
         <div>
           <h2 className="text-2xl font-bold text-[#1A1F3D]">Order Summary</h2>
           {selectedOwner && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mt-1">
               <p className="text-[10px] text-gray-400 font-bold uppercase">{selectedOwner.name}'s Family</p>
-              <span className="text-[8px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-black uppercase">
-                {selectedOwner.membership}
+              <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
+                {userTier?.label || selectedOwner.membership}
               </span>
             </div>
           )}
@@ -125,15 +130,24 @@ const OrderSummary = () => {
         )}
       </div>
 
-      <div className="pt-8 space-y-4 border-t border-dashed border-gray-200 mt-auto">
+      <div className="pt-8 space-y-3 border-t border-dashed border-gray-200 mt-auto">
         <div className="flex justify-between text-sm text-gray-500 font-medium">
           <span>Subtotal</span>
           <span>${subtotal.toFixed(2)}</span>
         </div>
+        
+        {tierDiscountPercent > 0 && (
+          <div className="flex justify-between text-sm text-green-600 font-bold bg-green-50 px-3 py-2 rounded-xl">
+            <span className="flex items-center gap-1"><ArrowDownCircle size={14}/> {userTier?.label} ({tierDiscountPercent}%)</span>
+            <span>-${discountAmount.toFixed(2)}</span>
+          </div>
+        )}
+
         <div className="flex justify-between text-sm text-gray-500 font-medium">
           <span>Tax (8%)</span>
           <span>${tax.toFixed(2)}</span>
         </div>
+        
         <div className="flex justify-between items-end pt-2">
           <span className="text-xl font-bold text-[#1A1F3D]">Total</span>
           <span className="text-3xl font-extrabold text-[#1A1F3D]">${total.toFixed(2)}</span>
@@ -148,14 +162,6 @@ const OrderSummary = () => {
           <Banknote size={24} />
           Pay and Check-out
         </button>
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <button onClick={() => handlePayment('Card')} className="py-3 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 hover:text-[#1A1F3D] hover:border-[#1A1F3D] transition-all">
-            <CreditCard size={18} />
-          </button>
-          <button onClick={() => handlePayment('QR')} className="py-3 border border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 hover:text-[#1A1F3D] hover:border-[#1A1F3D] transition-all">
-            <QrCode size={18} />
-          </button>
-        </div>
       </div>
     </div>
   );

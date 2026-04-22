@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Store, Globe, Save, ShieldCheck, TrendingUp } from 'lucide-react';
+import { Store, Globe, Save, ShieldCheck, TrendingUp, Percent, Tag } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel } from '@/store/useStore';
 import { toast } from 'sonner';
 
@@ -15,9 +15,9 @@ const Settings = () => {
     toast.success("Settings saved successfully!");
   };
 
-  const updateRuleValue = (level: MembershipLevel, value: string) => {
+  const updateRule = (level: MembershipLevel, field: keyof TierRule, value: any) => {
     setLocalTierRules(prev => prev.map(r => 
-      r.level === level ? { ...r, minSpent: Number(value) } : r
+      r.level === level ? { ...r, [field]: value } : r
     ));
   };
 
@@ -40,42 +40,65 @@ const Settings = () => {
           </div>
 
           <div className="space-y-8">
-            {/* Membership Tier Rules */}
             <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
               <div className="flex items-center gap-3 mb-8">
                 <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
                   <ShieldCheck size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">Auto-Promotion Rules</h2>
-                  <p className="text-xs text-gray-400">Set the minimum total spent required to reach each tier</p>
+                  <h2 className="text-xl font-bold">Auto-Promotion Rules & Benefits</h2>
+                  <p className="text-xs text-gray-400">Configure tier names, thresholds, and discounts</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {localTierRules.map((rule) => (
-                  <div key={rule.level} className="p-5 bg-[#F5F6FA] rounded-2xl border border-transparent hover:border-purple-200 transition-all group">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-xs font-black uppercase tracking-widest text-purple-600">{rule.level}</span>
-                      <TrendingUp size={16} className="text-purple-300 group-hover:text-purple-500 transition-colors" />
+                  <div key={rule.level} className="p-6 bg-[#F5F6FA] rounded-2xl border border-transparent hover:border-purple-200 transition-all group space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 opacity-60">{rule.level} (System ID)</span>
+                      <TrendingUp size={16} className="text-purple-300" />
                     </div>
+
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Min. Total Spent ($)</label>
+                      <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-1">
+                        <Tag size={10} /> Tier Display Name
+                      </label>
                       <input 
-                        type="number"
-                        className="w-full bg-white border-none rounded-xl px-4 py-3 text-sm font-bold shadow-sm focus:ring-2 focus:ring-purple-500/20" 
-                        value={rule.minSpent}
-                        onChange={(e) => updateRuleValue(rule.level, e.target.value)}
-                        disabled={rule.level === 'Standard'}
+                        type="text"
+                        className="w-full bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-purple-500/20" 
+                        value={rule.label}
+                        onChange={(e) => updateRule(rule.level, 'label', e.target.value)}
                       />
                     </div>
-                    {rule.level === 'Standard' && <p className="text-[9px] text-gray-400 mt-2 italic">* Default entry level</p>}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider">Min. Spent ($)</label>
+                        <input 
+                          type="number"
+                          className="w-full bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-purple-500/20" 
+                          value={rule.minSpent}
+                          onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))}
+                          disabled={rule.level === 'Standard'}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-1">
+                          <Percent size={10} /> Discount (%)
+                        </label>
+                        <input 
+                          type="number"
+                          className="w-full bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-purple-500/20" 
+                          value={rule.discount}
+                          onChange={(e) => updateRule(rule.level, 'discount', Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             </section>
 
-            {/* Business Profile */}
             <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
               <div className="flex items-center gap-3 mb-8">
                 <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
@@ -92,29 +115,6 @@ const Settings = () => {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Contact Email</label>
                   <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" defaultValue="hello@tactilesanctuary.com" />
-                </div>
-              </div>
-            </section>
-
-            {/* System Preferences */}
-            <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
-                  <Globe size={24} />
-                </div>
-                <h2 className="text-xl font-bold">System Preferences</h2>
-              </div>
-              
-              <div className="space-y-6">
-                <div className="flex items-center justify-between py-4 border-b border-gray-50">
-                  <div>
-                    <h4 className="font-bold">Currency Symbol</h4>
-                    <p className="text-xs text-gray-400">Used for all pricing display</p>
-                  </div>
-                  <select className="bg-[#F5F6FA] border-none rounded-xl px-4 py-2 text-sm font-bold">
-                    <option value="USD">USD ($)</option>
-                    <option value="THB">THB (฿)</option>
-                  </select>
                 </div>
               </div>
             </section>
