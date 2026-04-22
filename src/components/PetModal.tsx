@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { X, Dog, Cat, Info, Camera, Scale } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Dog, Cat, Info, Camera, Scale, Upload, Trash2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 
@@ -12,6 +12,7 @@ interface PetModalProps {
 
 const PetModal = ({ customerId, onClose }: PetModalProps) => {
   const { addPet } = useStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: '',
     species: 'Dog' as 'Dog' | 'Cat' | 'Other',
@@ -21,6 +22,17 @@ const PetModal = ({ customerId, onClose }: PetModalProps) => {
     notes: '',
     image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
   });
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, image: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +61,38 @@ const PetModal = ({ customerId, onClose }: PetModalProps) => {
 
         <form onSubmit={handleSubmit} className="p-8 space-y-5">
           <div className="space-y-4">
+            {/* Image Upload Section */}
+            <div className="flex justify-center mb-2">
+              <div className="relative group">
+                <div 
+                  className="w-28 h-28 bg-[#F5F6FA] rounded-[32px] overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center group-hover:border-[#1A1F3D]/20 transition-all"
+                >
+                  {formData.image ? (
+                    <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-center">
+                      <Camera size={24} className="mx-auto text-gray-300 mb-1" />
+                      <p className="text-[8px] font-black uppercase text-gray-400">Photo</p>
+                    </div>
+                  )}
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#1A1F3D] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                >
+                  <Upload size={14} />
+                </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handleImageUpload} 
+                />
+              </div>
+            </div>
+
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Pet Name</label>
@@ -110,7 +154,7 @@ const PetModal = ({ customerId, onClose }: PetModalProps) => {
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Medical/Care Notes</label>
               <textarea 
-                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5 h-24 resize-none"
+                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5 h-20 resize-none"
                 value={formData.notes}
                 onChange={e => setFormData({...formData, notes: e.target.value})}
                 placeholder="Any allergies or special needs..."
@@ -118,7 +162,7 @@ const PetModal = ({ customerId, onClose }: PetModalProps) => {
             </div>
           </div>
 
-          <button className="w-full bg-[#1A1F3D] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all mt-4">
+          <button className="w-full bg-[#1A1F3D] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all mt-4 hover:bg-[#2A3152] shadow-xl shadow-[#1A1F3D]/10">
             Register Pet
           </button>
         </form>
