@@ -106,6 +106,11 @@ export interface CartItem {
 interface AppState {
   shopName: string;
   shopLogo: string | null;
+  shopAddress: string;
+  shopPhone: string;
+  shopLineId: string;
+  receiptHeader: string;
+  
   services: Service[];
   customers: Customer[];
   cart: CartItem[];
@@ -123,7 +128,14 @@ interface AppState {
   closeTime: string;
   disabledSlots: string[];
   
-  updateBusinessProfile: (profile: { shopName?: string, shopLogo?: string | null }) => void;
+  updateBusinessProfile: (profile: { 
+    shopName?: string, 
+    shopLogo?: string | null,
+    shopAddress?: string,
+    shopPhone?: string,
+    shopLineId?: string,
+    receiptHeader?: string
+  }) => void;
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
   clearCart: () => void;
@@ -204,6 +216,11 @@ const INITIAL_SERVICES: Service[] = [
 export const useStore = create<AppState>((set, get) => ({
   shopName: "Tactile Sanctuary",
   shopLogo: null,
+  shopAddress: "123 Pet Street, Bangkok, Thailand",
+  shopPhone: "02-xxx-xxxx",
+  shopLineId: "@tactilesanctuary",
+  receiptHeader: "Thank you for visiting us!",
+  
   services: INITIAL_SERVICES,
   customers: INITIAL_CUSTOMERS,
   cart: [],
@@ -215,7 +232,7 @@ export const useStore = create<AppState>((set, get) => ({
   activeQueueItemId: null,
   
   slotDuration: 30,
-  maxCapacity: 2, // เริ่มต้นรับได้ 2 ตัวต่อ Slot
+  maxCapacity: 2,
   openTime: "09:00",
   closeTime: "19:00",
   disabledSlots: [],
@@ -223,7 +240,11 @@ export const useStore = create<AppState>((set, get) => ({
   updateBusinessProfile: (profile) => set((state) => ({
     ...state,
     shopName: profile.shopName ?? state.shopName,
-    shopLogo: profile.shopLogo !== undefined ? profile.shopLogo : state.shopLogo
+    shopLogo: profile.shopLogo !== undefined ? profile.shopLogo : state.shopLogo,
+    shopAddress: profile.shopAddress ?? state.shopAddress,
+    shopPhone: profile.shopPhone ?? state.shopPhone,
+    shopLineId: profile.shopLineId ?? state.shopLineId,
+    receiptHeader: profile.receiptHeader ?? state.receiptHeader,
   })),
 
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
@@ -246,7 +267,6 @@ export const useStore = create<AppState>((set, get) => ({
 
   addBooking: (booking) => set((state) => ({
     queue: [...state.queue, { ...booking, id: Math.random().toString(36).substr(2, 9), isPaid: false }].sort((a, b) => {
-      // เรียงตามวันที่ก่อน แล้วตามด้วยเวลา
       if (a.date !== b.date) return a.date.localeCompare(b.date);
       return a.time.localeCompare(b.time);
     })

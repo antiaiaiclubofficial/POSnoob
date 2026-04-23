@@ -4,7 +4,8 @@ import React, { useState, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { 
   Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign, 
-  Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Users 
+  Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Users,
+  MapPin, Phone, MessageCircle, FileText
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -17,7 +18,8 @@ import { cn } from '@/lib/utils';
 const Settings = () => {
   const { 
     tierRules, updateTierRules, 
-    shopName, shopLogo, updateBusinessProfile,
+    shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader,
+    updateBusinessProfile,
     services, deleteService,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings
   } = useStore();
@@ -25,6 +27,10 @@ const Settings = () => {
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
   const [localShopName, setLocalShopName] = useState(shopName);
   const [localShopLogo, setLocalShopLogo] = useState<string | null>(shopLogo);
+  const [localShopAddress, setLocalShopAddress] = useState(shopAddress);
+  const [localShopPhone, setLocalShopPhone] = useState(shopPhone);
+  const [localShopLineId, setLocalShopLineId] = useState(shopLineId);
+  const [localReceiptHeader, setLocalReceiptHeader] = useState(receiptHeader);
   
   // Booking settings local state
   const [localSlotDuration, setLocalSlotDuration] = useState(slotDuration);
@@ -43,7 +49,11 @@ const Settings = () => {
     updateTierRules(localTierRules);
     updateBusinessProfile({ 
       shopName: localShopName, 
-      shopLogo: localShopLogo 
+      shopLogo: localShopLogo,
+      shopAddress: localShopAddress,
+      shopPhone: localShopPhone,
+      shopLineId: localShopLineId,
+      receiptHeader: localReceiptHeader
     });
     updateBookingSettings({
       slotDuration: localSlotDuration,
@@ -95,7 +105,7 @@ const Settings = () => {
             </button>
           </div>
 
-          <Tabs defaultValue="booking" className="space-y-8">
+          <Tabs defaultValue="business" className="space-y-8">
             <TabsList className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm w-auto inline-flex gap-1 h-auto">
               <TabsTrigger value="business" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
                 <Store size={16} className="mr-2" /> Business
@@ -111,9 +121,127 @@ const Settings = () => {
               </TabsTrigger>
             </TabsList>
 
+            <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-8">
+              {/* Profile Card */}
+              <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-10">
+                  <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                    <Store size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Business Profile</h2>
+                    <p className="text-xs text-gray-400">Basic identification for your shop</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
+                  <div className="md:col-span-3 flex flex-col items-center">
+                    <div className="relative group">
+                      <div className="w-40 h-40 bg-[#F5F6FA] rounded-[40px] flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-200 group-hover:border-blue-400 transition-all">
+                        {localShopLogo ? (
+                          <img src={localShopLogo} alt="Logo Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="text-center p-4">
+                            <Image size={32} className="mx-auto text-gray-300 mb-2" />
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Shop Logo</p>
+                          </div>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -bottom-2 right-2 w-10 h-10 bg-[#1A1F3D] text-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-all"
+                      >
+                        <Upload size={18} />
+                      </button>
+                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-9 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Shop Name</label>
+                        <div className="relative">
+                          <Store className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                          <input 
+                            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/20" 
+                            value={localShopName}
+                            placeholder="My Pet Shop"
+                            onChange={(e) => setLocalShopName(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Phone Number</label>
+                        <div className="relative">
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                          <input 
+                            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/20" 
+                            value={localShopPhone}
+                            placeholder="02-xxx-xxxx"
+                            onChange={(e) => setLocalShopPhone(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">LINE ID / Social</label>
+                        <div className="relative">
+                          <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                          <input 
+                            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/20" 
+                            value={localShopLineId}
+                            placeholder="@lineid"
+                            onChange={(e) => setLocalShopLineId(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Shop Address</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-4 top-4 text-gray-300" size={18} />
+                        <textarea 
+                          className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/20 h-24 resize-none" 
+                          value={localShopAddress}
+                          placeholder="Full address of your shop..."
+                          onChange={(e) => setLocalShopAddress(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Receipt Config */}
+              <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                    <FileText size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Receipt Configuration</h2>
+                    <p className="text-xs text-gray-400">Settings for printed and digital receipts</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Receipt Header Text</label>
+                  <div className="relative">
+                    <FileText className="absolute left-4 top-4 text-gray-300" size={18} />
+                    <textarea 
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-purple-500/20 h-32 resize-none" 
+                      value={localReceiptHeader}
+                      placeholder="Welcome message, Tax ID, or Legal info..."
+                      onChange={(e) => setLocalReceiptHeader(e.target.value)}
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-400 italic mt-2 ml-2">* This text will appear at the top of every receipt generated for customers.</p>
+                </div>
+              </section>
+            </TabsContent>
+
             <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                {/* Main Settings */}
                 <section className="xl:col-span-2 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                   <div className="flex items-center gap-3 mb-8">
                     <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
@@ -177,7 +305,6 @@ const Settings = () => {
                   </div>
                 </section>
 
-                {/* Slot Manager / Manual Override */}
                 <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                   <div className="mb-6">
                     <h3 className="text-lg font-bold mb-1">Slot Planner</h3>
@@ -195,49 +322,7 @@ const Settings = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                    <Store size={24} />
-                  </div>
-                  <h2 className="text-xl font-bold">Shop Profile</h2>
-                </div>
-                
-                <div className="flex items-center gap-8">
-                  <div className="relative group">
-                    <div className="w-32 h-32 bg-[#F5F6FA] rounded-[32px] flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-200 group-hover:border-blue-400 transition-all">
-                      {localShopLogo ? (
-                        <img src={localShopLogo} alt="Logo Preview" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="text-center p-4">
-                          <Image size={24} className="mx-auto text-gray-300 mb-2" />
-                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Logo</p>
-                        </div>
-                      )}
-                    </div>
-                    <button 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute -bottom-2 right-2 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <Upload size={14} />
-                    </button>
-                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
-                  </div>
-                  <div className="flex-1 space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Shop Name</label>
-                      <input 
-                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold focus:ring-2 focus:ring-blue-500/20" 
-                        value={localShopName}
-                        onChange={(e) => setLocalShopName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </TabsContent>
-
+            {/* Rest of the Tabs (Services, Membership) stay same */}
             <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-8">
