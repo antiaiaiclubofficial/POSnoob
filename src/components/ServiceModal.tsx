@@ -121,6 +121,7 @@ const ServiceModal = ({ service, onClose }: ServiceModalProps) => {
 
         <form onSubmit={handleSubmit} className="p-10">
           <div className="grid grid-cols-2 gap-8 mb-8">
+            {/* Left: Basic Info */}
             <div className="space-y-6">
               <div>
                 <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest flex items-center gap-2">
@@ -157,6 +158,7 @@ const ServiceModal = ({ service, onClose }: ServiceModalProps) => {
               </div>
             </div>
 
+            {/* Right: Pricing Logic */}
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Pricing Structure</label>
               <div className="flex gap-2 p-1.5 bg-[#F5F6FA] rounded-[24px]">
