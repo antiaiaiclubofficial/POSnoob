@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Scissors, Bath, ShieldCheck, Zap, Plus, Dog, Cat, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Scissors, Bath, ShieldCheck, Zap, Plus, Dog, Cat, Sparkles, Check } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useStore, Service, ServiceIcon } from '@/store/useStore';
 import { toast } from 'sonner';
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ServiceCardProps {
   service: Service;
@@ -13,9 +14,20 @@ interface ServiceCardProps {
 const ServiceCard = ({ service }: ServiceCardProps) => {
   const { addToCart, activePet, selectedOwner, activeQueueItemId, currency } = useStore();
   const [selectedSize, setSelectedSize] = useState<string>('');
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
-  // กรองการแสดงผล: แสดงเฉพาะบริการที่ตรงกับสายพันธุ์สัตว์ที่ Active อยู่
-  if (!activePet || activePet.species !== service.targetSpecies) return null;
+  // แยกรายการบริการย่อยจาก description
+  const subServices = useMemo(() => {
+    if (!service.description) return [];
+    // ตัดคำว่า "Includes" ออกถ้ามี และแยกด้วย comma หรือ "and"
+    const cleanDesc = service.description.replace(/^Includes\s+/i, '');
+    return cleanDesc.split(/,|\sand\s/).map(item => item.trim()).filter(item => item !== "");
+  }, [service.description]);
+
+  useEffect(() => {
+    // เลือกทุกรายการเป็นค่าเริ่มต้น
+    setSelectedItems(subServices);
+  }, [subServices]);
 
   const availableSizes = Object.keys(service.prices);
 
@@ -25,7 +37,9 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
     } else {
       setSelectedSize('');
     }
-  }, [activePet, service.id]);
+  }, [activePet, service.id, availableSizes]);
+
+  if (!activePet || activePet.species !== service.targetSpecies) return null;
 
   const currentPrice = selectedSize ? service.prices[selectedSize].price : 0;
   const isFixedPrice = availableSizes.length <= 1;
@@ -38,16 +52,33 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
     spa: Sparkles
   }[service.icon as ServiceIcon] || (service.targetSpecies === 'Dog' ? Dog : Cat);
 
+  const toggleItem = (item: string) => {
+    setSelectedItems(prev => 
+      prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
+    );
+  };
+
   const handleAdd = () => {
     if (!activePet || !selectedOwner) {
       toast.error("Please select a customer first");
       return;
     }
 
+    if (selectedItems.length === 0) {
+      toast.error("Please select at least one service item");
+      return;
+    }
+
+    const itemTitle = isFixedPrice ? service.title : `${service.title} (${selectedSize})`;
+    // สร้างรายละเอียดเพิ่มเติมสำหรับรายการที่เลือก
+    const selectedText = selectedItems.length === subServices.length 
+      ? "" 
+      : ` (Excl: ${subServices.filter(s => !selectedItems.includes(s)).join(', ')})`;
+
     addToCart({
       id: service.id,
       icon: service.icon,
-      title: isFixedPrice ? service.title : `${service.title} (${selectedSize})`,
+      title: itemTitle + selectedText,
       price: currentPrice,
       petId: activePet.id,
       petName: activePet.name,
@@ -73,23 +104,59 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
         </div>
       </div>
 
-      {/* Content: Title & Description */}
-      <div className="mb-8">
-        <h3 className="text-2xl font-black text-[#1A1F3D] mb-2">{service.title}</h3>
-        <p className="text-sm text-gray-400 leading-relaxed font-medium">{service.description}</p>
+      {/* Content: Title */}
+      <div className="mb-4">
+        <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">{service.title}</h3>
       </div>
 
-      {/* Size Selector: Pill Style (Fixed Overflow) */}
+      {/* Sub-services Checkboxes */}
+      <div className="space-y-3 mb-8 flex-1">
+        <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-1">Included Services</p>
+        <div className="space-y-2">
+          {subServices.map((item) => (
+            <div 
+              key={item} 
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-2xl transition-all cursor-pointer border",
+                selectedItems.includes(item) 
+                  ? "bg-blue-50/30 border-blue-100/50" 
+                  : "bg-white border-transparent opacity-40"
+              )}
+              onClick={() => toggleItem(item)}
+            >
+              <div className={cn(
+                "w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all",
+                selectedItems.includes(item) 
+                  ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" 
+                  : "border-gray-200"
+              )}>
+                {selectedItems.includes(item) && <Check size={12} strokeWidth={4} />}
+              </div>
+              <span className={cn(
+                "text-xs font-bold transition-all capitalize",
+                selectedItems.includes(item) ? "text-[#1A1F3D]" : "text-gray-400"
+              )}>
+                {item}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Size Selector */}
       {!isFixedPrice && (
         <div className="bg-[#F5F6FA] p-1.5 rounded-[24px] flex flex-wrap gap-1 mb-8">
           {availableSizes.map((size) => (
             <button
               key={size}
-              onClick={() => setSelectedSize(size)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedSize(size);
+              }}
               className={cn(
                 "flex-1 min-w-[60px] py-2 px-2 text-[9px] font-black uppercase rounded-[18px] transition-all",
                 selectedSize === size 
-                  ? "bg-white text-[#1A1F3D] shadow-sm" 
+                  ? "bg-white text-[#1A1F3D] shadow-sm border border-gray-100" 
                   : "text-gray-400 hover:text-gray-600"
               )}
             >
@@ -102,7 +169,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       {/* Action Button */}
       <button 
         onClick={handleAdd}
-        className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl shadow-[#1A1F3D]/10 mt-auto"
+        className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl shadow-[#1A1F3D]/10"
       >
         <Plus size={20} /> Add for {activePet.name}
       </button>
