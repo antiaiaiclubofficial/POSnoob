@@ -9,11 +9,13 @@ import {
   ShoppingBag,
   Settings as SettingsIcon,
   LayoutDashboard,
-  Scissors
+  Scissors,
+  Menu
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const menuItems = [
   { icon: ShoppingBag, label: 'Checkout', path: '/' },
@@ -23,12 +25,17 @@ const menuItems = [
   { icon: SettingsIcon, label: 'Settings', path: '/settings' },
 ];
 
-const Sidebar = () => {
+interface SidebarProps {
+  className?: string;
+  onClose?: () => void;
+}
+
+export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   const location = useLocation();
   const { shopName, shopLogo } = useStore();
 
   return (
-    <div className="w-64 h-full bg-white flex flex-col p-6 border-r border-gray-100 shrink-0">
+    <div className={cn("w-64 h-full bg-white flex flex-col p-6 border-r border-gray-100 shrink-0", className)}>
       <div className="flex items-center gap-3 mb-10 px-2">
         <div className="w-10 h-10 bg-[#1A1F3D] rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-[#1A1F3D]/10">
           {shopLogo ? (
@@ -52,6 +59,7 @@ const Sidebar = () => {
             <Link
               key={item.path}
               to={item.path}
+              onClick={onClose}
               className={cn(
                 "w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group",
                 isActive 
@@ -75,7 +83,7 @@ const Sidebar = () => {
             className="flex items-center gap-3 text-gray-400 hover:text-[#1A1F3D] transition-colors w-full group"
           >
             <HelpCircle size={18} className="group-hover:rotate-12 transition-transform" />
-            <span className="text-xs font-bold">Support Center</span>
+            <span className="text-xs font-bold">Support</span>
           </a>
           <button className="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors w-full group">
             <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
@@ -84,14 +92,36 @@ const Sidebar = () => {
         </div>
         
         <div className="bg-[#F5F6FA] p-4 rounded-[24px]">
-          <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-2">Logged in as</p>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-[10px] font-black border border-gray-100">A</div>
-            <span className="text-[10px] font-black text-[#1A1F3D]">Admin User</span>
+            <span className="text-[10px] font-black text-[#1A1F3D] truncate">Admin User</span>
           </div>
         </div>
       </div>
     </div>
+  );
+};
+
+const Sidebar = () => {
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <SidebarContent className="hidden lg:flex" />
+      
+      {/* Mobile Trigger */}
+      <div className="lg:hidden fixed top-6 left-6 z-50">
+        <Sheet>
+          <SheetTrigger asChild>
+            <button className="w-12 h-12 bg-white rounded-2xl shadow-lg flex items-center justify-center text-[#1A1F3D] border border-gray-100">
+              <Menu size={24} />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-64 border-none">
+            <SidebarContent className="w-full border-none" />
+          </SheetContent>
+        </Sheet>
+      </div>
+    </>
   );
 };
 

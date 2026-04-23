@@ -2,14 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, Check, Save, CreditCard, Wallet
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, Check, Save, CreditCard, Wallet, X
 } from 'lucide-react';
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import PaymentModal from './PaymentModal';
 
-const OrderSummary = () => {
+interface OrderSummaryProps {
+  isMobile?: boolean;
+}
+
+const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
   const { cart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules, currency } = useStore();
   const [newWeight, setNewWeight] = useState('');
   const [isWeightSaved, setIsWeightSaved] = useState(false);
@@ -68,10 +72,13 @@ const OrderSummary = () => {
   };
 
   return (
-    <div className="w-96 bg-white h-full flex flex-col p-8 border-l border-gray-100 shrink-0">
-      <div className="flex items-center justify-between mb-8">
+    <div className={cn(
+      "bg-white h-full flex flex-col shrink-0",
+      isMobile ? "w-full p-6" : "w-96 p-8 border-l border-gray-100"
+    )}>
+      <div className="flex items-center justify-between mb-6 lg:mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-[#1A1F3D]">Order Summary</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-[#1A1F3D]">Order Summary</h2>
           {selectedOwner && (
             <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter mt-1 inline-block">
               {selectedOwner.membership} MEMBER
@@ -81,7 +88,7 @@ const OrderSummary = () => {
       </div>
 
       {activePet && (
-        <div className="mb-8 p-5 bg-[#F5F6FA] rounded-[28px] border border-blue-100/50 shadow-sm transition-all">
+        <div className="mb-6 lg:mb-8 p-4 lg:p-5 bg-[#F5F6FA] rounded-[28px] border border-blue-100/50 shadow-sm transition-all">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
@@ -100,7 +107,7 @@ const OrderSummary = () => {
                 type="number" 
                 step="0.1"
                 placeholder="0.0"
-                className="w-full bg-white border-none rounded-2xl px-5 py-3.5 text-sm font-black focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+                className="w-full bg-white border-none rounded-2xl px-4 lg:px-5 py-3 lg:py-3.5 text-sm font-black focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
                 value={newWeight}
                 onChange={(e) => {
                   setNewWeight(e.target.value);
@@ -153,7 +160,7 @@ const OrderSummary = () => {
         )}
       </div>
 
-      <div className="pt-8 mb-6 space-y-3">
+      <div className="pt-6 lg:pt-8 mb-4 lg:mb-6 space-y-3">
         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Payment Method</p>
         <div className="flex gap-2">
           {(['Cash', 'Transfer', 'Credit Card'] as PaymentMethod[]).map((method) => {
@@ -169,35 +176,35 @@ const OrderSummary = () => {
                     : "bg-white border-gray-100 text-gray-400 hover:border-gray-300"
                 )}
               >
-                <Icon size={18} />
-                <span className="text-[9px] font-black uppercase">{method}</span>
+                <Icon size={16} />
+                <span className="text-[8px] lg:text-[9px] font-black uppercase">{method}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="pt-6 space-y-3 border-t border-dashed border-gray-200 mt-auto">
+      <div className="pt-4 lg:pt-6 space-y-3 border-t border-dashed border-gray-200 mt-auto">
         {tierDiscountPercent > 0 && (
           <div className="flex justify-between items-center text-xs text-green-600 font-bold bg-green-50 px-4 py-3 rounded-2xl">
             <span className="flex items-center gap-2">
-              <ArrowDownCircle size={12}/> Member Discount ({tierDiscountPercent}%)
+              <ArrowDownCircle size={12}/> Discount ({tierDiscountPercent}%)
             </span>
             <span>-{currency}{discountAmount.toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between items-end pt-2 px-2">
-          <span className="text-xl font-bold text-[#1A1F3D]">Total</span>
-          <span className="text-3xl font-extrabold text-[#1A1F3D]">{currency}{total.toFixed(2)}</span>
+          <span className="text-lg lg:text-xl font-bold text-[#1A1F3D]">Total</span>
+          <span className="text-2xl lg:text-3xl font-extrabold text-[#1A1F3D]">{currency}{total.toFixed(2)}</span>
         </div>
       </div>
 
       <button 
         onClick={handleInitiatePayment}
         disabled={cart.length === 0}
-        className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] disabled:bg-gray-100 disabled:text-gray-300 text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 mt-6 shadow-xl shadow-[#D9ED5F]/20 transition-all active:scale-95"
+        className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] disabled:bg-gray-100 disabled:text-gray-300 text-[#1A1F3D] font-extrabold py-4 lg:py-5 rounded-[28px] flex items-center justify-center gap-3 mt-4 lg:mt-6 shadow-xl shadow-[#D9ED5F]/20 transition-all active:scale-95"
       >
-        <Banknote size={24} /> Pay and Checkout
+        <Banknote size={20} /> Checkout
       </button>
 
       {isPaymentModalOpen && (
