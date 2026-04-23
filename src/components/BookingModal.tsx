@@ -6,7 +6,6 @@ import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import SlotPicker from './SlotPicker';
-import CustomCalendar from './CustomCalendar';
 
 interface BookingModalProps {
   onClose: () => void;
@@ -173,9 +172,15 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
             {/* Date Selection */}
             <div className="space-y-3">
               <label className="text-[10px] font-black uppercase text-gray-400 px-2 tracking-widest flex items-center gap-2">
-                <CalendarIcon size={12} /> Appointment Date
+                <Calendar size={12} /> Appointment Date
               </label>
-              <CustomCalendar selectedDate={date} onSelect={setDate} />
+              <input 
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full bg-white border-none rounded-2xl px-6 py-4 text-sm font-black shadow-sm focus:ring-2 focus:ring-[#1A1F3D]/5"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+              />
             </div>
 
             {/* Time Slots */}
