@@ -11,7 +11,7 @@ interface SlotPickerProps {
 }
 
 const SlotPicker = ({ selectedTime, onSelect }: SlotPickerProps) => {
-  const { queue, slotDuration, openTime, closeTime, disabledSlots, toggleSlotStatus } = useStore();
+  const { queue, slotDuration, openTime, closeTime, disabledSlots, maxCapacity, toggleSlotStatus } = useStore();
 
   // Generate slots
   const slots = React.useMemo(() => {
@@ -33,8 +33,13 @@ const SlotPicker = ({ selectedTime, onSelect }: SlotPickerProps) => {
   }, [openTime, closeTime, slotDuration]);
 
   const getSlotStatus = (time: string) => {
+    // 1. ตรวจสอบว่าโดนเจ้าของร้านปิดแบบ Manual หรือไม่
     if (disabledSlots.includes(time)) return 'closed';
-    if (queue.some(q => q.time === time)) return 'booked';
+    
+    // 2. ตรวจสอบจำนวนคิวที่มีใน Slot นี้
+    const currentBookings = queue.filter(q => q.time === time).length;
+    if (currentBookings >= maxCapacity) return 'booked';
+    
     return 'available';
   };
 
@@ -58,6 +63,7 @@ const SlotPicker = ({ selectedTime, onSelect }: SlotPickerProps) => {
         {slots.map((time) => {
           const status = getSlotStatus(time);
           const isSelected = selectedTime === time;
+          const bookingsInSlot = queue.filter(q => q.time === time).length;
 
           return (
             <button
@@ -77,6 +83,11 @@ const SlotPicker = ({ selectedTime, onSelect }: SlotPickerProps) => {
               )}
             >
               <span className="text-xs font-black">{time}</span>
+              {status === 'available' && bookingsInSlot > 0 && (
+                <span className="text-[7px] font-bold absolute bottom-1 opacity-40">
+                  {bookingsInSlot}/{maxCapacity} Filled
+                </span>
+              )}
               
               {status === 'booked' && (
                 <div className="absolute inset-0 bg-red-50/40 flex items-center justify-center backdrop-blur-[1px]">

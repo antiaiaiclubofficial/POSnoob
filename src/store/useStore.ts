@@ -118,6 +118,7 @@ interface AppState {
   
   // Booking Settings
   slotDuration: number;
+  maxCapacity: number;
   openTime: string;
   closeTime: string;
   disabledSlots: string[];
@@ -148,7 +149,7 @@ interface AppState {
   processPayment: (customerId: string, amount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails']) => void;
   updateTierRules: (rules: TierRule[]) => void;
   
-  updateBookingSettings: (settings: { slotDuration?: number, openTime?: string, closeTime?: string }) => void;
+  updateBookingSettings: (settings: { slotDuration?: number, maxCapacity?: number, openTime?: string, closeTime?: string }) => void;
   toggleSlotStatus: (time: string) => void;
 }
 
@@ -214,6 +215,7 @@ export const useStore = create<AppState>((set, get) => ({
   activeQueueItemId: null,
   
   slotDuration: 30,
+  maxCapacity: 2, // เริ่มต้นรับได้ 2 ตัวต่อ Slot
   openTime: "09:00",
   closeTime: "19:00",
   disabledSlots: [],

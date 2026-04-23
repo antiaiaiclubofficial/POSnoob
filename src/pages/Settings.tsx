@@ -4,12 +4,13 @@ import React, { useState, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { 
   Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign, 
-  Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock 
+  Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Users 
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ServiceModal from '@/components/ServiceModal';
+import SlotPicker from '@/components/SlotPicker';
 import { cn } from '@/lib/utils';
 
 const Settings = () => {
@@ -17,7 +18,7 @@ const Settings = () => {
     tierRules, updateTierRules, 
     shopName, shopLogo, updateBusinessProfile,
     services, deleteService,
-    slotDuration, openTime, closeTime, updateBookingSettings
+    slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings
   } = useStore();
 
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
@@ -26,6 +27,7 @@ const Settings = () => {
   
   // Booking settings local state
   const [localSlotDuration, setLocalSlotDuration] = useState(slotDuration);
+  const [localMaxCapacity, setLocalMaxCapacity] = useState(maxCapacity);
   const [localOpenTime, setLocalOpenTime] = useState(openTime);
   const [localCloseTime, setLocalCloseTime] = useState(closeTime);
 
@@ -44,6 +46,7 @@ const Settings = () => {
     });
     updateBookingSettings({
       slotDuration: localSlotDuration,
+      maxCapacity: localMaxCapacity,
       openTime: localOpenTime,
       closeTime: localCloseTime
     });
@@ -91,7 +94,7 @@ const Settings = () => {
             </button>
           </div>
 
-          <Tabs defaultValue="business" className="space-y-8">
+          <Tabs defaultValue="booking" className="space-y-8">
             <TabsList className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm w-auto inline-flex gap-1 h-auto">
               <TabsTrigger value="business" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
                 <Store size={16} className="mr-2" /> Business
@@ -106,6 +109,94 @@ const Settings = () => {
                 <ShieldCheck size={16} className="mr-2" /> Membership
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {/* Main Settings */}
+                <section className="xl:col-span-2 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
+                      <Clock size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Booking Configuration</h2>
+                      <p className="text-xs text-gray-400">Define your shop hours and slot intervals</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Slot Duration</label>
+                      <div className="flex gap-2">
+                        {[30, 60].map(duration => (
+                          <button
+                            key={duration}
+                            onClick={() => setLocalSlotDuration(duration)}
+                            className={cn(
+                              "flex-1 py-4 rounded-2xl border-2 font-bold transition-all",
+                              localSlotDuration === duration ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" : "bg-white border-gray-100 text-gray-400"
+                            )}
+                          >
+                            {duration} Min
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Max Capacity (Pets/Slot)</label>
+                      <div className="relative">
+                        <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                        <input 
+                          type="number"
+                          className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-orange-500/20"
+                          value={localMaxCapacity}
+                          onChange={e => setLocalMaxCapacity(Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Opening Time</label>
+                      <input 
+                        type="time"
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-4 text-sm font-bold"
+                        value={localOpenTime}
+                        onChange={e => setLocalOpenTime(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Closing Time</label>
+                      <input 
+                        type="time"
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-4 text-sm font-bold"
+                        value={localCloseTime}
+                        onChange={e => setLocalCloseTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Slot Manager / Manual Override */}
+                <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold mb-1">Slot Planner</h3>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Manual Availability Override</p>
+                  </div>
+                  
+                  <SlotPicker selectedTime="" onSelect={() => {}} />
+                  
+                  <div className="mt-6 p-4 bg-[#FFF9F2] rounded-2xl border border-orange-100">
+                    <p className="text-[9px] font-black text-orange-600 uppercase tracking-wider leading-relaxed">
+                      💡 Tip: Right-click on any slot to manually block it (for breaks, cleanup, or full day closure).
+                    </p>
+                  </div>
+                </section>
+              </div>
+            </TabsContent>
 
             <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
@@ -150,61 +241,6 @@ const Settings = () => {
               </section>
             </TabsContent>
 
-            <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
-                    <Clock size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">Booking Configuration</h2>
-                    <p className="text-xs text-gray-400">Define your shop hours and slot intervals</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Slot Duration</label>
-                    <div className="flex gap-2">
-                      {[30, 60].map(duration => (
-                        <button
-                          key={duration}
-                          onClick={() => setLocalSlotDuration(duration)}
-                          className={cn(
-                            "flex-1 py-4 rounded-2xl border-2 font-bold transition-all",
-                            localSlotDuration === duration ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" : "bg-white border-gray-100 text-gray-400"
-                          )}
-                        >
-                          {duration} Min
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Opening Time</label>
-                    <input 
-                      type="time"
-                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-orange-500/20"
-                      value={localOpenTime}
-                      onChange={e => setLocalOpenTime(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Closing Time</label>
-                    <input 
-                      type="time"
-                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-orange-500/20"
-                      value={localCloseTime}
-                      onChange={e => setLocalCloseTime(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </section>
-            </TabsContent>
-
-            {/* Other tabs remain the same but use handleSaveAll in the header */}
             <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-8">
