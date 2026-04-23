@@ -130,19 +130,13 @@ const Services = () => {
                 <div className="mt-auto">
                   <div className="bg-[#1A1F3D] rounded-t-2xl px-6 py-2.5 flex justify-between">
                     <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Pet Size</span>
-                    <div className="flex gap-16">
-                      <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Price ({currency})</span>
-                      <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Duration</span>
-                    </div>
+                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Price ({currency})</span>
                   </div>
                   <div className="bg-[#F8F9FD] rounded-b-2xl border-x border-b border-gray-100 divide-y divide-gray-100">
                     {Object.entries(service.prices).map(([size, info]) => (
                       <div key={size} className="px-6 py-4 flex justify-between items-center">
                         <span className="text-xs font-bold text-gray-600">{size}</span>
-                        <div className="flex gap-16 items-center">
-                          <span className="text-sm font-black text-[#1A1F3D] min-w-[60px] text-right">{currency}{info.price.toLocaleString()}</span>
-                          <span className="text-xs font-bold text-gray-400 min-w-[60px] text-right">{info.duration} min</span>
-                        </div>
+                        <span className="text-sm font-black text-[#1A1F3D]">{currency}{info.price.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>

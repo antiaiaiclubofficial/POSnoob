@@ -196,7 +196,7 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
 
             {/* Pricing Matrix */}
             <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Pricing & Duration Matrix</label>
+              <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Pricing Matrix</label>
               <div className={cn(
                 "rounded-[40px] p-8 border-2 min-h-[440px] flex flex-col",
                 isDog ? "bg-blue-50/20 border-blue-100" : "bg-pink-50/20 border-pink-100"
@@ -204,8 +204,7 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
                 <div className="flex-1 space-y-4 mb-6 max-h-[350px] overflow-y-auto pr-2 scrollbar-hide">
                   <div className="flex gap-3 px-4 mb-2">
                     <span className="flex-1 text-[9px] font-black text-gray-400 uppercase tracking-widest">Pet Size / Breed</span>
-                    <span className="w-24 text-[9px] font-black text-gray-400 uppercase tracking-widest">Price</span>
-                    <span className="w-24 text-[9px] font-black text-gray-400 uppercase tracking-widest">Duration</span>
+                    <span className="w-32 text-[9px] font-black text-gray-400 uppercase tracking-widest">Price</span>
                     <div className="w-10" />
                   </div>
                   
@@ -219,22 +218,13 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
                           placeholder="Small Breed"
                         />
                       </div>
-                      <div className="w-24 relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-gray-300">{currency}</span>
+                      <div className="w-32 relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-gray-300">{currency}</span>
                         <input 
                           type="number"
-                          className="w-full bg-white border-none rounded-[20px] pl-7 pr-3 py-4 text-xs font-black shadow-sm focus:ring-2 focus:ring-[#1A1F3D]/10"
+                          className="w-full bg-white border-none rounded-[20px] pl-8 pr-4 py-4 text-xs font-black shadow-sm focus:ring-2 focus:ring-[#1A1F3D]/10"
                           value={s.price}
                           onChange={e => updateSize(s.id, 'price', Number(e.target.value))}
-                        />
-                      </div>
-                      <div className="w-24 relative">
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-gray-300">min</span>
-                        <input 
-                          type="number"
-                          className="w-full bg-white border-none rounded-[20px] pl-3 pr-7 py-4 text-xs font-black shadow-sm focus:ring-2 focus:ring-[#1A1F3D]/10"
-                          value={s.duration}
-                          onChange={e => updateSize(s.id, 'duration', Number(e.target.value))}
                         />
                       </div>
                       <button 
