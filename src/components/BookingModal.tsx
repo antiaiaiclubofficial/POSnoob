@@ -5,6 +5,7 @@ import { X, Calendar, Clock, Dog, User, Scissors, Search, ChevronDown } from 'lu
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import TimePicker from './TimePicker';
 
 interface BookingModalProps {
   onClose: () => void;
@@ -64,9 +65,9 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
 
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-8 border-b border-gray-50 flex justify-between items-start">
+        <div className="p-8 border-b border-gray-50 flex justify-between items-start shrink-0">
           <div>
             <h2 className="text-3xl font-black text-[#1A1F3D] mb-1">New Booking</h2>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Schedule a pet service</p>
@@ -76,7 +77,7 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide">
           <div className="space-y-6">
             {/* Select Owner with Search */}
             <div className="relative">
@@ -120,7 +121,7 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
               )}
             </div>
 
-            {/* Pet Selection (Shows after owner is selected) */}
+            {/* Pet Selection */}
             {selectedOwner && (
               <div className="animate-in fade-in slide-in-from-top-2">
                 <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Select Pet</label>
@@ -145,42 +146,51 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
               </div>
             )}
 
-            {/* Service & Time Row */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-8">
+              {/* Service Selection */}
               <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Service</label>
-                <div className="relative">
-                  <Scissors className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                  <select 
-                    className="w-full bg-[#F5F6FA] border-none rounded-[20px] pl-14 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5 appearance-none"
-                    value={selectedServiceId}
-                    onChange={(e) => setSelectedServiceId(e.target.value)}
-                  >
-                    <option value="">Service...</option>
-                    {services.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-                  </select>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest">Select Service</label>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
+                  {services.map(s => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSelectedServiceId(s.id)}
+                      className={cn(
+                        "w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left",
+                        selectedServiceId === s.id 
+                          ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-md" 
+                          : "bg-white border-gray-100 hover:border-gray-200"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Scissors size={14} className={selectedServiceId === s.id ? "text-[#D9ED5F]" : "text-gray-300"} />
+                        <span className="text-xs font-bold">{s.title}</span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              {/* Custom Time Picker UI */}
               <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Time</label>
-                <div className="relative">
-                  <Clock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                  <input 
-                    type="time"
-                    className="w-full bg-[#F5F6FA] border-none rounded-[20px] pl-14 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                  />
-                </div>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest">Select Time</label>
+                <TimePicker value={time} onChange={setTime} />
               </div>
             </div>
           </div>
-
-          {/* Submit Button */}
-          <button className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D9ED5F]/20 mt-4 active:scale-95">
-            Confirm Booking
-          </button>
         </form>
+
+        {/* Footer */}
+        <div className="p-8 border-t border-gray-50 bg-gray-50/30 shrink-0">
+          <button 
+            type="submit"
+            onClick={handleSubmit}
+            className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D9ED5F]/20 active:scale-95"
+          >
+            Confirm Booking Appointment
+          </button>
+        </div>
       </div>
     </div>
   );
