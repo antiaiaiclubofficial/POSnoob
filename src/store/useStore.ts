@@ -143,7 +143,12 @@ interface AppState {
   receiptHeader: string;
   currency: string;
   shopIsOpen: boolean;
-  recurringHolidays: number[]; // 0 for Sunday, 1 for Monday...
+  recurringHolidays: number[];
+  
+  // Integrations
+  lineLiffId: string;
+  lineChannelToken: string;
+  smsApiKey: string;
   
   services: Service[];
   customers: Customer[];
@@ -172,7 +177,10 @@ interface AppState {
     receiptHeader?: string,
     currency?: string,
     shopIsOpen?: boolean,
-    recurringHolidays?: number[]
+    recurringHolidays?: number[],
+    lineLiffId?: string,
+    lineChannelToken?: string,
+    smsApiKey?: string
   }) => void;
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
@@ -235,6 +243,9 @@ export const useStore = create<AppState>((set, get) => ({
   currency: "฿",
   shopIsOpen: true,
   recurringHolidays: [],
+  lineLiffId: "",
+  lineChannelToken: "",
+  smsApiKey: "",
   
   services: [],
   customers: [],
@@ -265,6 +276,9 @@ export const useStore = create<AppState>((set, get) => ({
     currency: profile.currency ?? state.currency,
     shopIsOpen: profile.shopIsOpen ?? state.shopIsOpen,
     recurringHolidays: profile.recurringHolidays ?? state.recurringHolidays,
+    lineLiffId: profile.lineLiffId ?? state.lineLiffId,
+    lineChannelToken: profile.lineChannelToken ?? state.lineChannelToken,
+    smsApiKey: profile.smsApiKey ?? state.smsApiKey,
   })),
 
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { 
-  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, MapPin, Phone, MessageSquare, Receipt, Calendar, AlertCircle
+  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, MapPin, Phone, MessageSquare, Receipt, Calendar, AlertCircle, Share2, Smartphone, Send
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ServiceModal from '@/components/ServiceModal';
 import SlotPicker from '@/components/SlotPicker';
 import TimePicker from '@/components/TimePicker';
+import BroadcastModal from '@/components/BroadcastModal';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 
@@ -27,6 +28,7 @@ const Settings = () => {
   const { 
     tierRules, updateTierRules, 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader, currency, shopIsOpen, recurringHolidays,
+    lineLiffId, lineChannelToken, smsApiKey,
     updateBusinessProfile,
     services, deleteService, toggleServiceActive,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings
@@ -43,10 +45,16 @@ const Settings = () => {
   const [localShopIsOpen, setLocalShopIsOpen] = useState(shopIsOpen);
   const [localRecurringHolidays, setLocalRecurringHolidays] = useState<number[]>(recurringHolidays);
   
+  const [localLineLiffId, setLocalLineLiffId] = useState(lineLiffId);
+  const [localLineChannelToken, setLocalLineChannelToken] = useState(lineChannelToken);
+  const [localSmsApiKey, setLocalSmsApiKey] = useState(smsApiKey);
+
   const [localSlotDuration, setLocalSlotDuration] = useState(slotDuration);
   const [localMaxCapacity, setLocalMaxCapacity] = useState(maxCapacity);
   const [localOpenTime, setLocalOpenTime] = useState(openTime);
   const [localCloseTime, setLocalCloseTime] = useState(closeTime);
+
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -70,7 +78,10 @@ const Settings = () => {
       receiptHeader: localReceiptHeader,
       currency: localCurrency,
       shopIsOpen: localShopIsOpen,
-      recurringHolidays: localRecurringHolidays
+      recurringHolidays: localRecurringHolidays,
+      lineLiffId: localLineLiffId,
+      lineChannelToken: localLineChannelToken,
+      smsApiKey: localSmsApiKey
     });
     updateBookingSettings({
       slotDuration: localSlotDuration,
@@ -117,17 +128,25 @@ const Settings = () => {
   return (
     <main className="flex-1 p-10 overflow-y-auto scrollbar-hide">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-10">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-6">
           <div>
             <h1 className="text-4xl font-black mb-1">Settings</h1>
             <p className="text-gray-400 font-medium">Manage your shop configurations and business rules</p>
           </div>
-          <button 
-            onClick={handleSaveAll}
-            className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-[#2A3152] transition-all shadow-xl shadow-[#1A1F3D]/10 active:scale-95"
-          >
-            <Save size={18} /> Save All Changes
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={() => setIsBroadcastModalOpen(true)}
+              className="bg-white border border-gray-100 text-[#1A1F3D] px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
+            >
+              <Send size={18} className="text-blue-500" /> Messaging Center
+            </button>
+            <button 
+              onClick={handleSaveAll}
+              className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-[#2A3152] transition-all shadow-xl shadow-[#1A1F3D]/10 active:scale-95"
+            >
+              <Save size={18} /> Save All
+            </button>
+          </div>
         </div>
 
         <Tabs defaultValue="business" className="space-y-8">
@@ -140,6 +159,9 @@ const Settings = () => {
             </TabsTrigger>
             <TabsTrigger value="services" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
               <Scissors size={16} className="mr-2" /> Services
+            </TabsTrigger>
+            <TabsTrigger value="integrations" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+              <Share2 size={16} className="mr-2" /> Integrations
             </TabsTrigger>
             <TabsTrigger value="membership" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
               <ShieldCheck size={16} className="mr-2" /> Membership
@@ -227,15 +249,91 @@ const Settings = () => {
                         );
                       })}
                    </div>
-                   <div className="mt-6 flex items-center gap-3 text-orange-600 bg-orange-50 p-4 rounded-2xl border border-orange-100">
-                      <AlertCircle size={16} className="shrink-0" />
-                      <p className="text-[10px] font-bold leading-relaxed">
-                        Clients won't be able to book appointments on these days. Selected days will be greyed out in the booking calendar.
-                      </p>
-                   </div>
                 </div>
               </section>
             </div>
+          </TabsContent>
+
+          <TabsContent value="integrations" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* LINE Integration */}
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-14 h-14 bg-green-50 text-green-600 rounded-[22px] flex items-center justify-center">
+                      <MessageSquare size={28} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">LINE LIFF Connect</h2>
+                      <p className="text-xs text-gray-400">Power your booking system via LINE</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">LIFF ID</label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold font-mono" 
+                        placeholder="16xxxxxxxx-xxxxxxxx"
+                        value={localLineLiffId} 
+                        onChange={(e) => setLocalLineLiffId(e.target.value)} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Channel Access Token</label>
+                      <textarea 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold font-mono h-24 resize-none" 
+                        placeholder="Enter your Long-lived token..."
+                        value={localLineChannelToken} 
+                        onChange={(e) => setLocalLineChannelToken(e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="bg-green-50 p-6 rounded-[28px] border border-green-100">
+                    <h4 className="text-[10px] font-black text-green-700 uppercase tracking-widest mb-2">How to connect?</h4>
+                    <p className="text-[10px] text-green-600 leading-relaxed font-medium">
+                      1. Go to LINE Developers Console<br/>
+                      2. Create a LIFF App and set Endpoint URL to your app URL<br/>
+                      3. Copy LIFF ID and Messaging Channel Token here
+                    </p>
+                  </div>
+                </section>
+
+                {/* SMS Integration */}
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-[22px] flex items-center justify-center">
+                      <Smartphone size={28} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">SMS Gateway</h2>
+                      <p className="text-xs text-gray-400">Transactional alerts for clients</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">API Key / Token</label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold font-mono" 
+                        placeholder="Enter SMS Provider API Key..."
+                        value={localSmsApiKey} 
+                        onChange={(e) => setLocalSmsApiKey(e.target.value)} 
+                      />
+                    </div>
+                    <div className="p-8 border-2 border-dashed border-gray-100 rounded-[28px] text-center">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Messaging Credits</p>
+                      <h3 className="text-3xl font-black text-[#1A1F3D]">2,450</h3>
+                      <p className="text-[8px] text-gray-300 font-bold uppercase mt-1">Remaining Units</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                    <AlertCircle className="text-blue-500 shrink-0" size={18} />
+                    <p className="text-[10px] font-bold text-blue-600">SMS will be used as a fallback if LINE delivery fails or for non-LINE users.</p>
+                  </div>
+                </section>
+             </div>
           </TabsContent>
 
           <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -358,6 +456,74 @@ const Settings = () => {
                 ))}
              </div>
           </TabsContent>
+
+          <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+             <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-10">
+                <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                  <ShieldCheck size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Membership Tier Logic</h2>
+                  <p className="text-xs text-gray-400">Define rewards and progression rules for your clients</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {localTierRules.map((rule) => {
+                  const tier = getTierIcon(rule.level);
+                  const Icon = tier.icon;
+                  return (
+                    <div key={rule.level} className="relative group bg-[#F5F6FA] p-8 rounded-[32px] border border-transparent hover:border-purple-100 transition-all">
+                      <div className={cn("absolute -top-4 -left-4 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", tier.bg, tier.color)}>
+                        <Icon size={24} />
+                      </div>
+                      
+                      <div className="space-y-6">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Public Label</label>
+                            <input 
+                              className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-black text-[#1A1F3D] focus:ring-2 focus:ring-purple-500/10" 
+                              value={rule.label} 
+                              onChange={(e) => updateRule(rule.level, 'label', e.target.value)} 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Min. Spending</label>
+                            <div className="relative">
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs font-bold">{currency}</span>
+                              <input 
+                                type="number"
+                                className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-[#1A1F3D]" 
+                                value={rule.minSpent} 
+                                onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))} 
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Benefit Discount</label>
+                            <div className="relative">
+                              <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                              <input 
+                                type="number"
+                                className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-green-600" 
+                                value={rule.discount} 
+                                onChange={(e) => updateRule(rule.level, 'discount', Number(e.target.value))} 
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -367,6 +533,10 @@ const Settings = () => {
           defaultSpecies={speciesTab}
           onClose={() => setIsServiceModalOpen(false)} 
         />
+      )}
+
+      {isBroadcastModalOpen && (
+        <BroadcastModal onClose={() => setIsBroadcastModalOpen(false)} />
       )}
     </main>
   );
