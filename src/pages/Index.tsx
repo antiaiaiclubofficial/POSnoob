@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from 'react';
-import Sidebar from '@/components/Sidebar';
 import ServiceCard from '@/components/ServiceCard';
 import OrderSummary from '@/components/OrderSummary';
 import CustomerSearch from '@/components/CustomerSearch';
@@ -46,9 +45,7 @@ const Index = () => {
   const cartTotal = cart.reduce((acc, item) => acc + item.price, 0);
 
   return (
-    <div className="flex h-screen bg-[#F8F9FD] text-[#1A1F3D] overflow-hidden relative">
-      <Sidebar />
-
+    <div className="flex-1 flex overflow-hidden">
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="px-6 lg:px-10 py-6 lg:py-8 flex justify-between items-center shrink-0">
           <div className="pl-14 lg:pl-0">
@@ -65,7 +62,6 @@ const Index = () => {
         </header>
 
         <div className="px-6 lg:px-10 space-y-6 shrink-0 mb-6 lg:mb-8">
-          {/* Step 1: Search & Identification */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <CustomerSearch />
             
@@ -85,7 +81,6 @@ const Index = () => {
             )}
           </div>
 
-          {/* Pending Bar */}
           {pendingCheckout.length > 0 && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="flex items-center gap-2 mb-3">
@@ -114,7 +109,6 @@ const Index = () => {
             </div>
           )}
 
-          {/* Step 2: Pet Selection */}
           {selectedOwner && (
             <div className="bg-white p-2 rounded-[24px] shadow-sm border border-gray-100 flex flex-wrap items-center gap-2 animate-in fade-in duration-500">
               <div className="px-4 py-2 text-[10px] font-black uppercase text-gray-400 tracking-wider border-r border-gray-50 hidden sm:block">Select Member</div>
@@ -161,12 +155,10 @@ const Index = () => {
         </div>
       </main>
 
-      {/* Desktop Order Summary */}
       <div className="hidden lg:block">
         <OrderSummary />
       </div>
 
-      {/* Mobile Cart Trigger */}
       {cart.length > 0 && (
         <div className="lg:hidden fixed bottom-6 right-6 z-40">
           <Sheet>
