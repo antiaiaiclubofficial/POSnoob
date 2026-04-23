@@ -5,7 +5,6 @@ import { Scissors, Bath, ShieldCheck, Zap, Plus, Dog, Cat, Sparkles, Check } fro
 import { cn } from "@/lib/utils";
 import { useStore, Service, ServiceIcon } from '@/store/useStore';
 import { toast } from 'sonner';
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface ServiceCardProps {
   service: Service;
@@ -19,25 +18,26 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
   // แยกรายการบริการย่อยจาก description
   const subServices = useMemo(() => {
     if (!service.description) return [];
-    // ตัดคำว่า "Includes" ออกถ้ามี และแยกด้วย comma หรือ "and"
     const cleanDesc = service.description.replace(/^Includes\s+/i, '');
     return cleanDesc.split(/,|\sand\s/).map(item => item.trim()).filter(item => item !== "");
   }, [service.description]);
+
+  // ใช้ useMemo เพื่อให้ reference ของ availableSizes นิ่ง ป้องกันบัครีเซ็ตค่า
+  const availableSizes = useMemo(() => Object.keys(service.prices), [service.prices]);
 
   useEffect(() => {
     // เลือกทุกรายการเป็นค่าเริ่มต้น
     setSelectedItems(subServices);
   }, [subServices]);
 
-  const availableSizes = Object.keys(service.prices);
-
   useEffect(() => {
+    // ตั้งค่าเริ่มต้นเมื่อเปลี่ยนสัตว์เลี้ยงหรือเปลี่ยนบริการ
     if (availableSizes.length > 0) {
       setSelectedSize(availableSizes[0]);
     } else {
       setSelectedSize('');
     }
-  }, [activePet, service.id, availableSizes]);
+  }, [activePet?.id, service.id, availableSizes]);
 
   if (!activePet || activePet.species !== service.targetSpecies) return null;
 
@@ -70,7 +70,6 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
     }
 
     const itemTitle = isFixedPrice ? service.title : `${service.title} (${selectedSize})`;
-    // สร้างรายละเอียดเพิ่มเติมสำหรับรายการที่เลือก
     const selectedText = selectedItems.length === subServices.length 
       ? "" 
       : ` (Excl: ${subServices.filter(s => !selectedItems.includes(s)).join(', ')})`;
@@ -109,35 +108,30 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
         <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">{service.title}</h3>
       </div>
 
-      {/* Sub-services Checkboxes */}
+      {/* Sub-services Checkboxes (Wrapped layout) */}
       <div className="space-y-3 mb-8 flex-1">
         <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-1">Included Services</p>
-        <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
           {subServices.map((item) => (
             <div 
               key={item} 
               className={cn(
-                "flex items-center gap-3 p-3 rounded-2xl transition-all cursor-pointer border",
+                "flex items-center gap-2 px-3 py-2 rounded-xl transition-all cursor-pointer border text-[10px] font-bold",
                 selectedItems.includes(item) 
-                  ? "bg-blue-50/30 border-blue-100/50" 
-                  : "bg-white border-transparent opacity-40"
+                  ? "bg-blue-50/50 border-blue-100 text-[#1A1F3D]" 
+                  : "bg-white border-gray-50 text-gray-400 opacity-60"
               )}
               onClick={() => toggleItem(item)}
             >
               <div className={cn(
-                "w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all",
+                "w-3.5 h-3.5 rounded-md border flex items-center justify-center transition-all",
                 selectedItems.includes(item) 
                   ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" 
                   : "border-gray-200"
               )}>
-                {selectedItems.includes(item) && <Check size={12} strokeWidth={4} />}
+                {selectedItems.includes(item) && <Check size={8} strokeWidth={4} />}
               </div>
-              <span className={cn(
-                "text-xs font-bold transition-all capitalize",
-                selectedItems.includes(item) ? "text-[#1A1F3D]" : "text-gray-400"
-              )}>
-                {item}
-              </span>
+              <span className="capitalize">{item}</span>
             </div>
           ))}
         </div>
@@ -149,10 +143,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
           {availableSizes.map((size) => (
             <button
               key={size}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedSize(size);
-              }}
+              onClick={() => setSelectedSize(size)}
               className={cn(
                 "flex-1 min-w-[60px] py-2 px-2 text-[9px] font-black uppercase rounded-[18px] transition-all",
                 selectedSize === size 
