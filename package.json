@@ -48,6 +48,7 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
+    "framer-motion": "11.5.6",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
@@ -67,7 +68,7 @@
   },
   "devDependencies": {
     "@dyad-sh/react-vite-component-tagger": "^0.8.0",
-    "@eslint/js": "^9.9.0",
+    "@eslint/js": "11.5.6",
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.5.5",
     "@types/react": "^18.3.3",
