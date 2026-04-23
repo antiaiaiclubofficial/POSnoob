@@ -58,7 +58,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
     }
 
-    processPayment(selectedOwner.id, total, cart, paymentMethod, details);
+    processPayment(selectedOwner.id, total, discountAmount, cart, paymentMethod, details);
     
     cart.forEach(item => {
       if (item.queueItemId) markAsPaid(item.queueItemId);

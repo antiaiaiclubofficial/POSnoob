@@ -5,6 +5,7 @@ export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card';
 export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
+export type BookingType = 'Appointment' | 'Walk-in';
 
 export interface Staff {
   id: string;
@@ -64,11 +65,15 @@ export interface Transaction {
   id: string;
   date: string;
   amount: number;
+  discountAmount: number;
   customerId: string;
   customerName: string;
   species: ('Dog' | 'Cat' | 'Other')[];
   paymentMethod: PaymentMethod;
+  bookingType: BookingType;
   itemsCount: number;
+  staffName?: string; // Groomer who performed the service
+  processedBy: string; // Admin/Cashier who took payment
   paymentDetails?: {
     cashReceived?: number;
     change?: number;
@@ -126,6 +131,7 @@ export interface CartItem {
   ownerName: string;
   size?: string;
   queueItemId?: string;
+  staffName?: string;
 }
 
 interface AppState {
@@ -187,7 +193,7 @@ interface AppState {
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
   updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
-  processPayment: (customerId: string, amount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails']) => void;
+  processPayment: (customerId: string, amount: number, discount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails']) => void;
   updateTierRules: (rules: TierRule[]) => void;
   
   addStaff: (staff: Omit<Staff, 'id'>) => void;
@@ -329,14 +335,19 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateTierRules: (rules) => set({ tierRules: rules }),
 
-  processPayment: (customerId, amount, items, method = 'Cash', details) => {
+  processPayment: (customerId, amount, discount, items, method = 'Cash', details) => {
     const { customers, tierRules, transactions, addLog } = get();
     const today = new Date().toISOString().split('T')[0];
+    
+    // ตรวจสอบว่ามีรายการใดที่เป็นการจองหรือไม่
+    const isAppointment = items.some(item => !!item.queueItemId);
+    const bookingType: BookingType = isAppointment ? 'Appointment' : 'Walk-in';
     
     const newTransaction: Transaction = {
       id: 'tx-' + Math.random().toString(36).substr(2, 9),
       date: today,
       amount: amount,
+      discountAmount: discount,
       customerId: customerId,
       customerName: customers.find(c => c.id === customerId)?.name || 'Unknown',
       species: Array.from(new Set(items.map(item => {
@@ -345,7 +356,10 @@ export const useStore = create<AppState>((set, get) => ({
         return pet?.species || 'Other';
       }))),
       paymentMethod: method,
+      bookingType,
       itemsCount: items.length,
+      processedBy: 'Admin User',
+      staffName: items[0]?.staffName || 'Sarah Wilson', // ตัวอย่าง: ช่าง Sarah ดูแล
       paymentDetails: details
     };
 
