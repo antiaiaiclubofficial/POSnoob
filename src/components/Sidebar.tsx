@@ -15,9 +15,10 @@ import {
   History
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { toast } from 'sonner';
 
 const menuItems = [
   { icon: ShoppingBag, label: 'Checkout', path: '/' },
@@ -36,12 +37,20 @@ interface SidebarProps {
 
 export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   const location = useLocation();
-  const { shopName, shopLogo } = useStore();
+  const navigate = useNavigate();
+  const { shopName, shopLogo, logout } = useStore();
+
+  const handleLogout = () => {
+    logout();
+    toast.info("Logged out successfully.");
+    navigate('/login');
+    if (onClose) onClose();
+  };
 
   return (
     <div className={cn(
       "h-full bg-white flex flex-col border-r border-gray-100 shrink-0 transition-all duration-300 ease-in-out overflow-hidden group/sidebar z-50",
-      "w-[88px] hover:w-64", // หุบเหลือ 88px และกางเป็น 64 (256px) เมื่อ Hover
+      "w-[88px] hover:w-64",
       className
     )}>
       {/* Logo Section */}
@@ -98,7 +107,10 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
             <HelpCircle size={20} className="shrink-0 group-hover:rotate-12 transition-transform" />
             <span className="text-xs font-bold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Support</span>
           </a>
-          <button className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-red-500 transition-colors w-full group overflow-hidden whitespace-nowrap">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-red-500 transition-colors w-full group overflow-hidden whitespace-nowrap"
+          >
             <LogOut size={20} className="shrink-0 group-hover:-translate-x-1 transition-transform" />
             <span className="text-xs font-bold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Sign Out</span>
           </button>
@@ -122,7 +134,7 @@ const Sidebar = () => {
       {/* Desktop Sidebar */}
       <SidebarContent className="hidden lg:flex" />
       
-      {/* Mobile Trigger (Always use full drawer on mobile for usability) */}
+      {/* Mobile Trigger */}
       <div className="lg:hidden fixed top-6 left-6 z-50">
         <Sheet>
           <SheetTrigger asChild>
@@ -131,30 +143,7 @@ const Sidebar = () => {
             </button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-64 border-none">
-            {/* On mobile, we force the sidebar to be expanded (w-64) inside the sheet */}
-            <div className="w-64 h-full bg-white flex flex-col border-none group/sidebar-mobile">
-               <div className="flex items-center gap-4 mb-10 px-6 pt-8 shrink-0">
-                  <div className="w-10 h-10 bg-[#1A1F3D] rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-[#1A1F3D]/10">
-                    <Scissors className="text-white w-5 h-5" />
-                  </div>
-                  <div>
-                    <h1 className="font-black text-[#1A1F3D] leading-tight truncate text-sm">Tactile Sanctuary</h1>
-                    <p className="text-[9px] text-gray-400 font-black tracking-widest uppercase opacity-60">Premium Care</p>
-                  </div>
-               </div>
-               <nav className="flex-1 space-y-2 px-4 overflow-y-auto scrollbar-hide">
-                  {menuItems.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-400 hover:bg-gray-50 hover:text-[#1A1F3D]"
-                    >
-                      <item.icon size={20} />
-                      <span className="text-xs">{item.label}</span>
-                    </Link>
-                  ))}
-               </nav>
-            </div>
+            <SidebarContent onClose={() => {}} className="w-64" />
           </SheetContent>
         </Sheet>
       </div>

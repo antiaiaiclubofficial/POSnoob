@@ -135,6 +135,7 @@ export interface CartItem {
 }
 
 interface AppState {
+  isAuthenticated: boolean;
   shopName: string;
   shopLogo: string | null;
   shopAddress: string;
@@ -145,7 +146,6 @@ interface AppState {
   shopIsOpen: boolean;
   recurringHolidays: number[];
   
-  // Integrations
   lineLiffId: string;
   lineChannelToken: string;
   
@@ -166,6 +166,9 @@ interface AppState {
   openTime: string;
   closeTime: string;
   disabledSlots: string[];
+  
+  login: (id: string, pass: string) => boolean;
+  logout: () => void;
   
   updateBusinessProfile: (profile: { 
     shopName?: string, 
@@ -232,6 +235,7 @@ const INITIAL_LOGS: ActivityLog[] = [
 ];
 
 export const useStore = create<AppState>((set, get) => ({
+  isAuthenticated: false,
   shopName: "Tactile Sanctuary",
   shopLogo: null,
   shopAddress: "123 Pet Street, Bangkok, Thailand",
@@ -261,6 +265,16 @@ export const useStore = create<AppState>((set, get) => ({
   openTime: "09:00",
   closeTime: "19:00",
   disabledSlots: [],
+
+  login: (id, pass) => {
+    if (id === 'admin' && pass === '1234') {
+      set({ isAuthenticated: true });
+      return true;
+    }
+    return false;
+  },
+  
+  logout: () => set({ isAuthenticated: false }),
   
   updateBusinessProfile: (profile) => set((state) => ({
     ...state,
