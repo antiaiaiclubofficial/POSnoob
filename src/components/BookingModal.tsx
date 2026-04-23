@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { X, Calendar, Clock, Dog, User, Scissors, Search, ChevronDown } from 'lucide-react';
+import { X, Calendar as CalendarIcon, User, Scissors, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import SlotPicker from './SlotPicker';
+import { DayPicker } from 'react-day-picker';
+import { format } from 'date-fns';
 
 interface BookingModalProps {
   onClose: () => void;
@@ -20,7 +22,7 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
   const [selectedOwnerId, setSelectedOwnerId] = useState('');
   const [selectedPetId, setSelectedPetId] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [time, setTime] = useState('');
 
   // Derived Data
@@ -45,29 +47,31 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPet || !selectedService || !date || !time) {
+    if (!selectedPet || !selectedService || !selectedDate || !time) {
       toast.error("Please select a pet, service, date and time slot");
       return;
     }
+
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
     addBooking({
       petId: selectedPet.id,
       petName: selectedPet.name,
       ownerName: selectedOwner?.name || '',
       serviceName: selectedService.title,
-      date: date,
+      date: dateStr,
       time: time,
       status: 'Waiting',
       image: selectedPet.image
     });
 
-    toast.success(`Booking confirmed for ${selectedPet.name} on ${date} at ${time}`);
+    toast.success(`Booking confirmed for ${selectedPet.name} on ${dateStr} at ${time}`);
     onClose();
   };
 
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[95vh]">
+      <div className="bg-white w-full max-w-5xl rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[95vh]">
         {/* Header */}
         <div className="p-10 border-b border-gray-50 flex justify-between items-start shrink-0">
           <div>
@@ -80,8 +84,8 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-          {/* Left Panel: Selection */}
-          <div className="w-full md:w-[350px] p-10 border-r border-gray-50 space-y-8 overflow-y-auto scrollbar-hide">
+          {/* Left Panel: Selection (Owner, Pet, Service) */}
+          <div className="w-full md:w-[350px] p-10 border-r border-gray-50 space-y-8 overflow-y-auto scrollbar-hide bg-white">
             {/* Select Owner */}
             <div className="relative">
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Pet Owner</label>
@@ -132,7 +136,7 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
                         "flex flex-col items-center p-3 rounded-2xl border transition-all gap-2",
                         selectedPetId === pet.id 
                           ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-md" 
-                          : "bg-white border-gray-100 hover:border-gray-200 text-gray-600"
+                          : "bg-[#F8F9FD] border-transparent hover:border-gray-200 text-gray-600"
                       )}
                     >
                       <img src={pet.image} className="w-10 h-10 rounded-xl object-cover" />
@@ -156,7 +160,7 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
                       "w-full flex items-center gap-3 p-4 rounded-2xl border transition-all text-left",
                       selectedServiceId === s.id 
                         ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-md" 
-                        : "bg-white border-gray-100 hover:border-gray-200"
+                        : "bg-[#F8F9FD] border-transparent hover:border-gray-200"
                     )}
                   >
                     <Scissors size={14} className={selectedServiceId === s.id ? "text-[#D9ED5F]" : "text-gray-300"} />
@@ -167,34 +171,81 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
             </div>
           </div>
 
-          {/* Right Panel: Date & Slot */}
-          <div className="flex-1 p-10 bg-[#F8F9FD] overflow-y-auto scrollbar-hide space-y-8">
-            {/* Date Selection */}
-            <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase text-gray-400 px-2 tracking-widest flex items-center gap-2">
-                <Calendar size={12} /> Appointment Date
-              </label>
-              <input 
-                type="date"
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full bg-white border-none rounded-2xl px-6 py-4 text-sm font-black shadow-sm focus:ring-2 focus:ring-[#1A1F3D]/5"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-              />
+          {/* Right Panel: Date & Slot Picker */}
+          <div className="flex-1 p-10 bg-[#F8F9FD] overflow-y-auto scrollbar-hide flex flex-col gap-10">
+            {/* Custom Styled Calendar */}
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100/50">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center text-[#1A1F3D]">
+                  <CalendarIcon size={16} />
+                </div>
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Select Date</span>
+              </div>
+              
+              <div className="flex justify-center">
+                <DayPicker
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  disabled={{ before: new Date() }}
+                  classNames={{
+                    months: "w-full",
+                    month: "w-full space-y-4",
+                    caption: "flex justify-center relative items-center mb-4",
+                    caption_label: "text-sm font-black text-[#1A1F3D] uppercase tracking-widest",
+                    nav: "flex items-center",
+                    nav_button: "h-8 w-8 bg-[#F5F6FA] hover:bg-gray-100 rounded-xl flex items-center justify-center transition-colors",
+                    nav_button_previous: "absolute left-1",
+                    nav_button_next: "absolute right-1",
+                    table: "w-full border-collapse space-y-1",
+                    head_row: "flex w-full justify-between mb-2",
+                    head_cell: "text-gray-300 w-9 font-black text-[9px] uppercase",
+                    row: "flex w-full justify-between mt-1",
+                    cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
+                    day: "h-9 w-9 p-0 font-bold rounded-xl transition-all hover:bg-gray-50 flex items-center justify-center",
+                    day_selected: "bg-[#D9ED5F] text-[#1A1F3D] hover:bg-[#D9ED5F] shadow-lg shadow-[#D9ED5F]/20",
+                    day_today: "text-[#1A1F3D] border-2 border-[#D9ED5F]/30",
+                    day_outside: "text-gray-100 opacity-50",
+                    day_disabled: "text-gray-100 opacity-50 cursor-not-allowed",
+                  }}
+                  components={{
+                    IconLeft: () => <ChevronLeft size={14} />,
+                    IconRight: () => <ChevronRight size={14} />,
+                  }}
+                />
+              </div>
             </div>
 
             {/* Time Slots */}
-            <SlotPicker selectedTime={time} onSelect={setTime} />
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100/50">
+              <SlotPicker selectedTime={time} onSelect={setTime} />
+            </div>
           </div>
         </div>
 
         {/* Footer */}
         <div className="p-10 border-t border-gray-50 bg-white shrink-0">
+          <div className="flex items-center justify-between mb-6 px-2">
+            <div className="flex gap-4">
+              {selectedDate && (
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Selected Date</span>
+                  <span className="text-sm font-black text-[#1A1F3D]">{format(selectedDate, 'PPP')}</span>
+                </div>
+              )}
+              {time && (
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Time Slot</span>
+                  <span className="text-sm font-black text-[#1A1F3D]">{time}</span>
+                </div>
+              )}
+            </div>
+          </div>
           <button 
             type="submit"
             onClick={handleSubmit}
-            className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-5 rounded-[28px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D9ED5F]/20 active:scale-95 disabled:bg-gray-100 disabled:text-gray-300"
-            disabled={!selectedPet || !selectedService || !date || !time}
+            className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-5 rounded-[28px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D9ED5F]/20 active:scale-95 disabled:bg-gray-100 disabled:text-gray-300 disabled:shadow-none"
+            disabled={!selectedPet || !selectedService || !selectedDate || !time}
           >
             Confirm Appointment
           </button>
