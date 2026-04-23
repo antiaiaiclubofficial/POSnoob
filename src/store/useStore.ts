@@ -72,8 +72,8 @@ export interface Transaction {
   paymentMethod: PaymentMethod;
   bookingType: BookingType;
   itemsCount: number;
-  staffName?: string; // Groomer who performed the service
-  processedBy: string; // Admin/Cashier who took payment
+  staffName?: string;
+  processedBy: string;
   paymentDetails?: {
     cashReceived?: number;
     change?: number;
@@ -142,6 +142,8 @@ interface AppState {
   shopLineId: string;
   receiptHeader: string;
   currency: string;
+  shopIsOpen: boolean;
+  recurringHolidays: number[]; // 0 for Sunday, 1 for Monday...
   
   services: Service[];
   customers: Customer[];
@@ -168,7 +170,9 @@ interface AppState {
     shopPhone?: string,
     shopLineId?: string,
     receiptHeader?: string,
-    currency?: string
+    currency?: string,
+    shopIsOpen?: boolean,
+    recurringHolidays?: number[]
   }) => void;
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
@@ -229,6 +233,8 @@ export const useStore = create<AppState>((set, get) => ({
   shopLineId: "@tactilesanctuary",
   receiptHeader: "Thank you for visiting us!",
   currency: "฿",
+  shopIsOpen: true,
+  recurringHolidays: [],
   
   services: [],
   customers: [],
@@ -257,6 +263,8 @@ export const useStore = create<AppState>((set, get) => ({
     shopLineId: profile.shopLineId ?? state.shopLineId,
     receiptHeader: profile.receiptHeader ?? state.receiptHeader,
     currency: profile.currency ?? state.currency,
+    shopIsOpen: profile.shopIsOpen ?? state.shopIsOpen,
+    recurringHolidays: profile.recurringHolidays ?? state.recurringHolidays,
   })),
 
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
@@ -339,7 +347,6 @@ export const useStore = create<AppState>((set, get) => ({
     const { customers, tierRules, transactions, addLog } = get();
     const today = new Date().toISOString().split('T')[0];
     
-    // ตรวจสอบว่ามีรายการใดที่เป็นการจองหรือไม่
     const isAppointment = items.some(item => !!item.queueItemId);
     const bookingType: BookingType = isAppointment ? 'Appointment' : 'Walk-in';
     
@@ -359,7 +366,7 @@ export const useStore = create<AppState>((set, get) => ({
       bookingType,
       itemsCount: items.length,
       processedBy: 'Admin User',
-      staffName: items[0]?.staffName || 'Sarah Wilson', // ตัวอย่าง: ช่าง Sarah ดูแล
+      staffName: items[0]?.staffName || 'Sarah Wilson',
       paymentDetails: details
     };
 

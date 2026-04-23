@@ -2,9 +2,9 @@
 
 import React, { useState, useRef } from 'react';
 import { 
-  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, MapPin, Phone, MessageSquare, Receipt,
+  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, MapPin, Phone, MessageSquare, Receipt, Calendar, AlertCircle
 } from 'lucide-react';
-import { useStore, TierRule, MembershipLevel, Service, ServiceIcon } from '@/store/useStore';
+import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ServiceModal from '@/components/ServiceModal';
@@ -13,10 +13,20 @@ import TimePicker from '@/components/TimePicker';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 
+const DAYS_OF_WEEK = [
+  { label: 'Sun', value: 0 },
+  { label: 'Mon', value: 1 },
+  { label: 'Tue', value: 2 },
+  { label: 'Wed', value: 3 },
+  { label: 'Thu', value: 4 },
+  { label: 'Fri', value: 5 },
+  { label: 'Sat', value: 6 },
+];
+
 const Settings = () => {
   const { 
     tierRules, updateTierRules, 
-    shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader, currency,
+    shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader, currency, shopIsOpen, recurringHolidays,
     updateBusinessProfile,
     services, deleteService, toggleServiceActive,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings
@@ -30,6 +40,8 @@ const Settings = () => {
   const [localShopLineId, setLocalShopLineId] = useState(shopLineId);
   const [localReceiptHeader, setLocalReceiptHeader] = useState(receiptHeader);
   const [localCurrency, setLocalCurrency] = useState(currency);
+  const [localShopIsOpen, setLocalShopIsOpen] = useState(shopIsOpen);
+  const [localRecurringHolidays, setLocalRecurringHolidays] = useState<number[]>(recurringHolidays);
   
   const [localSlotDuration, setLocalSlotDuration] = useState(slotDuration);
   const [localMaxCapacity, setLocalMaxCapacity] = useState(maxCapacity);
@@ -56,7 +68,9 @@ const Settings = () => {
       shopPhone: localShopPhone,
       shopLineId: localShopLineId,
       receiptHeader: localReceiptHeader,
-      currency: localCurrency
+      currency: localCurrency,
+      shopIsOpen: localShopIsOpen,
+      recurringHolidays: localRecurringHolidays
     });
     updateBookingSettings({
       slotDuration: localSlotDuration,
@@ -65,6 +79,14 @@ const Settings = () => {
       closeTime: localCloseTime
     });
     toast.success("All settings saved successfully!");
+  };
+
+  const toggleHoliday = (dayValue: number) => {
+    setLocalRecurringHolidays(prev => 
+      prev.includes(dayValue) 
+        ? prev.filter(d => d !== dayValue) 
+        : [...prev, dayValue]
+    );
   };
 
   const updateRule = (level: MembershipLevel, field: keyof TierRule, value: any) => {
@@ -127,13 +149,24 @@ const Settings = () => {
           <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                    <Store size={24} />
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                      <Store size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Shop Management</h2>
+                      <p className="text-xs text-gray-400">Current status and contact info</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold">Shop Information</h2>
-                    <p className="text-xs text-gray-400">Basic details for your business</p>
+                  <div className={cn(
+                    "flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all",
+                    localShopIsOpen ? "bg-green-50 border-green-100" : "bg-red-50 border-red-100"
+                  )}>
+                    <span className={cn("text-[10px] font-black uppercase tracking-widest", localShopIsOpen ? "text-green-600" : "text-red-600")}>
+                      {localShopIsOpen ? 'Open' : 'Closed'}
+                    </span>
+                    <Switch checked={localShopIsOpen} onCheckedChange={setLocalShopIsOpen} className="data-[state=checked]:bg-green-600" />
                   </div>
                 </div>
                 
@@ -159,59 +192,47 @@ const Settings = () => {
                       <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopLineId} onChange={(e) => setLocalShopLineId(e.target.value)} />
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                      Currency Symbol
-                    </label>
-                    <select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold appearance-none" value={localCurrency} onChange={(e) => setLocalCurrency(e.target.value)}>
-                      <option value="฿">THB (฿)</option>
-                      <option value="$">USD ($)</option>
-                    </select>
-                  </div>
                 </div>
               </section>
 
               <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-                <div className="flex flex-col items-center mb-4">
-                  <div className="relative group">
-                    <div className="w-40 h-40 bg-[#F5F6FA] rounded-[40px] flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-200 group-hover:border-blue-400 transition-all">
-                      {localShopLogo ? (
-                        <img src={localShopLogo} alt="Logo Preview" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="text-center p-4">
-                          <Image size={32} className="mx-auto text-gray-300 mb-2" />
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Shop Logo</p>
-                        </div>
-                      )}
-                    </div>
-                    <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 right-2 w-10 h-10 bg-[#1A1F3D] text-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-all">
-                      <Upload size={18} />
-                    </button>
-                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => setLocalShopLogo(reader.result as string);
-                        reader.readAsDataURL(file);
-                      }
-                    }} />
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                    <Calendar size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Weekly Holidays</h2>
+                    <p className="text-xs text-gray-400">Recurring days the shop is closed</p>
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                      <MapPin size={12} /> Shop Address
-                    </label>
-                    <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none" value={localShopAddress} onChange={(e) => setLocalShopAddress(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                      <Receipt size={12} /> Receipt Header
-                    </label>
-                    <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localReceiptHeader} onChange={(e) => setLocalReceiptHeader(e.target.value)} />
-                  </div>
+                <div className="bg-[#F5F6FA] p-6 rounded-[32px]">
+                   <div className="grid grid-cols-4 gap-3">
+                      {DAYS_OF_WEEK.map((day) => {
+                        const isHoliday = localRecurringHolidays.includes(day.value);
+                        return (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => toggleHoliday(day.value)}
+                            className={cn(
+                              "py-3 rounded-xl text-[10px] font-black transition-all border-2",
+                              isHoliday 
+                                ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20" 
+                                : "bg-white border-white text-gray-400 hover:border-gray-200"
+                            )}
+                          >
+                            {day.label}
+                          </button>
+                        );
+                      })}
+                   </div>
+                   <div className="mt-6 flex items-center gap-3 text-orange-600 bg-orange-50 p-4 rounded-2xl border border-orange-100">
+                      <AlertCircle size={16} className="shrink-0" />
+                      <p className="text-[10px] font-bold leading-relaxed">
+                        Clients won't be able to book appointments on these days. Selected days will be greyed out in the booking calendar.
+                      </p>
+                   </div>
                 </div>
               </section>
             </div>
@@ -335,83 +356,7 @@ const Settings = () => {
                     </div>
                   </div>
                 ))}
-                
-                <button 
-                  onClick={handleAddService}
-                  className="bg-transparent border-2 border-dashed border-gray-100 rounded-[32px] p-6 flex items-center justify-center gap-3 text-gray-300 hover:border-[#1A1F3D]/20 hover:text-[#1A1F3D] transition-all"
-                >
-                  <Plus size={20} />
-                  <span className="text-sm font-black">Add New Service</span>
-                </button>
              </div>
-          </TabsContent>
-
-          <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-             <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
-              <div className="flex items-center gap-3 mb-10">
-                <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-                  <ShieldCheck size={24} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold">Membership Tier Logic</h2>
-                  <p className="text-xs text-gray-400">Define rewards and progression rules for your clients</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {localTierRules.map((rule) => {
-                  const tier = getTierIcon(rule.level);
-                  const Icon = tier.icon;
-                  return (
-                    <div key={rule.level} className="relative group bg-[#F5F6FA] p-8 rounded-[32px] border border-transparent hover:border-purple-100 transition-all">
-                      <div className={cn("absolute -top-4 -left-4 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", tier.bg, tier.color)}>
-                        <Icon size={24} />
-                      </div>
-                      
-                      <div className="space-y-6">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Public Label</label>
-                            <input 
-                              className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-black text-[#1A1F3D] focus:ring-2 focus:ring-purple-500/10" 
-                              value={rule.label} 
-                              onChange={(e) => updateRule(rule.level, 'label', e.target.value)} 
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Min. Spending</label>
-                            <div className="relative">
-                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs font-bold">{currency}</span>
-                              <input 
-                                type="number"
-                                className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-[#1A1F3D]" 
-                                value={rule.minSpent} 
-                                onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))} 
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Benefit Discount</label>
-                            <div className="relative">
-                              <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
-                              <input 
-                                type="number"
-                                className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-green-600" 
-                                value={rule.discount} 
-                                onChange={(e) => updateRule(rule.level, 'discount', Number(e.target.value))} 
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
           </TabsContent>
         </Tabs>
       </div>
