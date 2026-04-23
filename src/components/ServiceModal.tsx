@@ -12,7 +12,7 @@ interface ServiceModalProps {
 }
 
 const ServiceModal = ({ service, onClose }: ServiceModalProps) => {
-  const { addService, updateService } = useStore();
+  const { addService, updateService, currency } = useStore();
   const [activeTab, setActiveTab] = useState<'dog' | 'cat'>('dog');
   const [newSizeName, setNewSizeName] = useState('');
   
@@ -199,7 +199,7 @@ const ServiceModal = ({ service, onClose }: ServiceModalProps) => {
                         activeTab === 'dog' ? "text-blue-600" : "text-pink-600"
                       )}>{size}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-300 font-bold">$</span>
+                        <span className="text-xs text-gray-300 font-bold">{currency}</span>
                         <input 
                           type="number"
                           className="w-16 bg-gray-50 border-none rounded-xl px-2 py-2 text-center text-xs font-black"

@@ -10,7 +10,7 @@ import PetModal from '@/components/PetModal';
 import PetProfileRecord from '@/components/PetProfileRecord';
 
 const Customers = () => {
-  const { customers } = useStore();
+  const { customers, currency } = useStore();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(customers[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -126,7 +126,7 @@ const Customers = () => {
                   <span className="bg-amber-100 text-amber-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest block mb-2">
                     {selectedCustomer.membership} MEMBER
                   </span>
-                  <p className="text-[10px] text-gray-400 font-black uppercase">Spent: <span className="text-[#1A1F3D]">${selectedCustomer.totalSpent.toFixed(2)}</span></p>
+                  <p className="text-[10px] text-gray-400 font-black uppercase">Spent: <span className="text-[#1A1F3D]">{currency}{selectedCustomer.totalSpent.toFixed(2)}</span></p>
                 </div>
               </div>
 

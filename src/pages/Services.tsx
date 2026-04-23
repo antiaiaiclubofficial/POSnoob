@@ -6,7 +6,7 @@ import ServiceModal from '@/components/ServiceModal';
 import { cn } from '@/lib/utils';
 
 const Services = () => {
-  const { services, deleteService } = useStore();
+  const { services, deleteService, currency } = useStore();
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -92,7 +92,7 @@ const Services = () => {
                           Object.entries(service.prices.dog).map(([size, price]) => (
                             <div key={size} className="flex items-center bg-blue-50/50 px-2.5 py-1.5 rounded-xl border border-blue-100">
                               <span className="text-[9px] font-black text-blue-400 uppercase mr-1.5">{size}</span>
-                              <span className="text-xs font-black text-blue-700">${price}</span>
+                              <span className="text-xs font-black text-blue-700">{currency}{price}</span>
                             </div>
                           ))
                         ) : (
@@ -106,7 +106,7 @@ const Services = () => {
                           Object.entries(service.prices.cat).map(([size, price]) => (
                             <div key={size} className="flex items-center bg-pink-50/50 px-2.5 py-1.5 rounded-xl border border-pink-100">
                               <span className="text-[9px] font-black text-pink-400 uppercase mr-1.5">{size}</span>
-                              <span className="text-xs font-black text-pink-700">${price}</span>
+                              <span className="text-xs font-black text-pink-700">{currency}{price}</span>
                             </div>
                           ))
                         ) : (
