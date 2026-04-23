@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { 
-  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, MapPin, Phone, MessageSquare, Receipt, Calendar, AlertCircle
+  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, MapPin, Phone, MessageSquare, Receipt, Calendar, AlertCircle, Zap, Smartphone, Key
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -27,7 +27,8 @@ const Settings = () => {
   const { 
     tierRules, updateTierRules, 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader, currency, shopIsOpen, recurringHolidays,
-    updateBusinessProfile,
+    liffId, lineChannelToken, smsApiKey, smsSenderName,
+    updateBusinessProfile, updateIntegrations,
     services, deleteService, toggleServiceActive,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings
   } = useStore();
@@ -47,6 +48,11 @@ const Settings = () => {
   const [localMaxCapacity, setLocalMaxCapacity] = useState(maxCapacity);
   const [localOpenTime, setLocalOpenTime] = useState(openTime);
   const [localCloseTime, setLocalCloseTime] = useState(closeTime);
+
+  const [localLiffId, setLocalLiffId] = useState(liffId);
+  const [localLineToken, setLocalLineToken] = useState(lineChannelToken);
+  const [localSmsKey, setLocalSmsKey] = useState(smsApiKey);
+  const [localSmsSender, setLocalSmsSender] = useState(smsSenderName);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -77,6 +83,12 @@ const Settings = () => {
       maxCapacity: localMaxCapacity,
       openTime: localOpenTime,
       closeTime: localCloseTime
+    });
+    updateIntegrations({
+      liffId: localLiffId,
+      lineChannelToken: localLineToken,
+      smsApiKey: localSmsKey,
+      smsSenderName: localSmsSender
     });
     toast.success("All settings saved successfully!");
   };
@@ -137,6 +149,9 @@ const Settings = () => {
             </TabsTrigger>
             <TabsTrigger value="booking" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
               <Clock size={16} className="mr-2" /> Booking
+            </TabsTrigger>
+            <TabsTrigger value="integrations" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+              <Zap size={16} className="mr-2" /> Integrations
             </TabsTrigger>
             <TabsTrigger value="services" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
               <Scissors size={16} className="mr-2" /> Services
@@ -227,15 +242,59 @@ const Settings = () => {
                         );
                       })}
                    </div>
-                   <div className="mt-6 flex items-center gap-3 text-orange-600 bg-orange-50 p-4 rounded-2xl border border-orange-100">
-                      <AlertCircle size={16} className="shrink-0" />
-                      <p className="text-[10px] font-bold leading-relaxed">
-                        Clients won't be able to book appointments on these days. Selected days will be greyed out in the booking calendar.
-                      </p>
-                   </div>
                 </div>
               </section>
             </div>
+          </TabsContent>
+
+          <TabsContent value="integrations" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-3 bg-[#06C755]/10 text-[#06C755] rounded-2xl"><MessageSquare size={24} /></div>
+                    <div>
+                      <h2 className="text-xl font-bold">LINE Integration</h2>
+                      <p className="text-xs text-gray-400">Connect with LINE Messaging API</p>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">LIFF ID</label>
+                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold" value={localLiffId} onChange={(e) => setLocalLiffId(e.target.value)} placeholder="e.g. 12345678-abcde..." />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Channel Access Token</label>
+                      <div className="relative">
+                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                        <input type="password" className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-xs font-bold" value={localLineToken} onChange={(e) => setLocalLineToken(e.target.value)} placeholder="••••••••••••••••" />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-3 bg-[#1A1F3D]/10 text-[#1A1F3D] rounded-2xl"><Smartphone size={24} /></div>
+                    <div>
+                      <h2 className="text-xl font-bold">SMS Gateway</h2>
+                      <p className="text-xs text-gray-400">Configure SMS Broadcast provider</p>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">API Key</label>
+                      <div className="relative">
+                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                        <input type="password" className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-xs font-bold" value={localSmsKey} onChange={(e) => setLocalSmsKey(e.target.value)} placeholder="••••••••••••••••" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Sender Name (SENDER ID)</label>
+                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold uppercase" value={localSmsSender} onChange={(e) => setLocalSmsSender(e.target.value)} placeholder="TACTILE" />
+                    </div>
+                  </div>
+                </section>
+             </div>
           </TabsContent>
 
           <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -284,6 +343,7 @@ const Settings = () => {
           </TabsContent>
 
           <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-10">
+             {/* ... Services Content เหมือนไฟล์เดิม ... */}
              <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
                 <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm shrink-0">
                   <button 
@@ -305,7 +365,6 @@ const Settings = () => {
                     <Cat size={14} /> CATS
                   </button>
                 </div>
-
                 <div className="flex items-center gap-4 w-full sm:w-auto">
                   <div className="relative flex-1 sm:w-64">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
@@ -325,7 +384,6 @@ const Settings = () => {
                   </button>
                 </div>
              </div>
-
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredServices.map((service) => (
                   <div key={service.id} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between group transition-all hover:shadow-md">
@@ -358,16 +416,56 @@ const Settings = () => {
                 ))}
              </div>
           </TabsContent>
+
+          <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+             {/* ... Membership Content เหมือนไฟล์เดิม ... */}
+             <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-10">
+                <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                  <ShieldCheck size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Membership Tier Logic</h2>
+                  <p className="text-xs text-gray-400">Define rewards and progression rules for your clients</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {localTierRules.map((rule) => {
+                  const tier = getTierIcon(rule.level);
+                  const Icon = tier.icon;
+                  return (
+                    <div key={rule.level} className="relative group bg-[#F5F6FA] p-8 rounded-[32px] border border-transparent hover:border-purple-100 transition-all">
+                      <div className={cn("absolute -top-4 -left-4 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", tier.bg, tier.color)}>
+                        <Icon size={24} />
+                      </div>
+                      <div className="space-y-6">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Public Label</label>
+                            <input className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-black text-[#1A1F3D] focus:ring-2 focus:ring-purple-500/10" value={rule.label} onChange={(e) => updateRule(rule.level, 'label', e.target.value)} />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Min. Spending</label>
+                            <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs font-bold">{currency}</span><input type="number" className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-[#1A1F3D]" value={rule.minSpent} onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))} /></div>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Benefit Discount</label>
+                            <div className="relative"><Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} /><input type="number" className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-green-600" value={rule.discount} onChange={(e) => updateRule(rule.level, 'discount', Number(e.target.value))} /></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </TabsContent>
         </Tabs>
       </div>
 
-      {isServiceModalOpen && (
-        <ServiceModal 
-          service={selectedService} 
-          defaultSpecies={speciesTab}
-          onClose={() => setIsServiceModalOpen(false)} 
-        />
-      )}
+      {isServiceModalOpen && <ServiceModal service={selectedService} defaultSpecies={speciesTab} onClose={() => setIsServiceModalOpen(false)} />}
     </main>
   );
 };
