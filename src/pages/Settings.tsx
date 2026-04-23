@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { 
-  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Bath, Sparkles
+  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Bath, Sparkles, MapPin, Phone, MessageSquare, Receipt
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service, ServiceIcon } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -242,20 +242,58 @@ const Settings = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-8">
-              <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-10">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                    <Store size={24} />
+            <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column: Shop Info */}
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                      <Store size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Shop Information</h2>
+                      <p className="text-xs text-gray-400">Basic details for your business</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold">Business Profile</h2>
-                    <p className="text-xs text-gray-400">Basic identification for your shop</p>
+                  
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                        <Store size={12} /> Shop Name
+                      </label>
+                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopName} onChange={(e) => setLocalShopName(e.target.value)} />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                          <Phone size={12} /> Phone Number
+                        </label>
+                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopPhone} onChange={(e) => setLocalShopPhone(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                          <MessageSquare size={12} /> Line ID
+                        </label>
+                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopLineId} onChange={(e) => setLocalShopLineId(e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                        Currency Symbol
+                      </label>
+                      <select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold appearance-none" value={localCurrency} onChange={(e) => setLocalCurrency(e.target.value)}>
+                        <option value="฿">THB (฿)</option>
+                        <option value="$">USD ($)</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
-                  <div className="md:col-span-3 flex flex-col items-center">
+                </section>
+
+                {/* Right Column: Logo & Address */}
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex flex-col items-center mb-4">
                     <div className="relative group">
                       <div className="w-40 h-40 bg-[#F5F6FA] rounded-[40px] flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-200 group-hover:border-blue-400 transition-all">
                         {localShopLogo ? (
@@ -280,27 +318,70 @@ const Settings = () => {
                       }} />
                     </div>
                   </div>
-                  <div className="md:col-span-9 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Shop Name</label>
-                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopName} onChange={(e) => setLocalShopName(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Currency Symbol</label>
-                        <select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold appearance-none" value={localCurrency} onChange={(e) => setLocalCurrency(e.target.value)}>
-                          <option value="฿">THB (฿)</option>
-                          <option value="$">USD ($)</option>
-                        </select>
-                      </div>
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                        <MapPin size={12} /> Shop Address
+                      </label>
+                      <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none" value={localShopAddress} onChange={(e) => setLocalShopAddress(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Address</label>
-                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopAddress} onChange={(e) => setLocalShopAddress(e.target.value)} />
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                        <Receipt size={12} /> Receipt Header
+                      </label>
+                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localReceiptHeader} onChange={(e) => setLocalReceiptHeader(e.target.value)} />
                     </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column: Booking Settings */}
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><Clock size={24} /></div>
+                    <div>
+                      <h2 className="text-xl font-bold">Booking Rules</h2>
+                      <p className="text-xs text-gray-400">Configure how clients book appointments</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-8">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Slot Duration</label>
+                      <div className="flex gap-2">
+                        {[30, 60].map(duration => (
+                          <button key={duration} onClick={() => setLocalSlotDuration(duration)} className={cn("flex-1 py-4 rounded-2xl border-2 font-bold transition-all", localSlotDuration === duration ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" : "bg-white border-gray-100 text-gray-400")}>{duration} Min</button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Max Capacity per Slot</label>
+                      <input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localMaxCapacity} onChange={e => setLocalMaxCapacity(Number(e.target.value))} />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Opening Time</label>
+                        <TimePicker value={localOpenTime} onChange={setLocalOpenTime} />
+                      </div>
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Closing Time</label>
+                        <TimePicker value={localCloseTime} onChange={setLocalCloseTime} />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Right Column: Slot Preview */}
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
+                  <SlotPicker selectedTime="" onSelect={() => {}} />
+                </section>
+              </div>
             </TabsContent>
 
             <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-12">
@@ -320,38 +401,6 @@ const Settings = () => {
                <ServiceCatalogView />
             </TabsContent>
 
-            <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-               <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                <section className="xl:col-span-2 bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
-                  <div className="flex items-center gap-3 mb-8">
-                    <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><Clock size={24} /></div>
-                    <h2 className="text-xl font-bold">Booking Configuration</h2>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Slot Duration</label>
-                      <div className="flex gap-2">
-                        {[30, 60].map(duration => (
-                          <button key={duration} onClick={() => setLocalSlotDuration(duration)} className={cn("flex-1 py-4 rounded-2xl border-2 font-bold transition-all", localSlotDuration === duration ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" : "bg-white border-gray-100 text-gray-400")}>{duration} Min</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Max Capacity</label>
-                      <input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localMaxCapacity} onChange={e => setLocalMaxCapacity(Number(e.target.value))} />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <TimePicker value={localOpenTime} onChange={setLocalOpenTime} />
-                    <TimePicker value={localCloseTime} onChange={setLocalCloseTime} />
-                  </div>
-                </section>
-                <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
-                  <SlotPicker selectedTime="" onSelect={() => {}} />
-                </section>
-              </div>
-            </TabsContent>
-
             <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-10">
@@ -364,7 +413,7 @@ const Settings = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {localTierRules.map((rule) => {
                     const tier = getTierIcon(rule.level);
                     const Icon = tier.icon;
