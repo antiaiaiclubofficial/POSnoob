@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { 
   Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign, 
-  Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat 
+  Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock 
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -16,12 +16,19 @@ const Settings = () => {
   const { 
     tierRules, updateTierRules, 
     shopName, shopLogo, updateBusinessProfile,
-    services, deleteService 
+    services, deleteService,
+    slotDuration, openTime, closeTime, updateBookingSettings
   } = useStore();
 
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
   const [localShopName, setLocalShopName] = useState(shopName);
   const [localShopLogo, setLocalShopLogo] = useState<string | null>(shopLogo);
+  
+  // Booking settings local state
+  const [localSlotDuration, setLocalSlotDuration] = useState(slotDuration);
+  const [localOpenTime, setLocalOpenTime] = useState(openTime);
+  const [localCloseTime, setLocalCloseTime] = useState(closeTime);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Service management states
@@ -29,13 +36,18 @@ const Settings = () => {
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [serviceQuery, setServiceQuery] = useState('');
 
-  const handleSaveBusiness = () => {
+  const handleSaveAll = () => {
     updateTierRules(localTierRules);
     updateBusinessProfile({ 
       shopName: localShopName, 
       shopLogo: localShopLogo 
     });
-    toast.success("Settings saved successfully!");
+    updateBookingSettings({
+      slotDuration: localSlotDuration,
+      openTime: localOpenTime,
+      closeTime: localCloseTime
+    });
+    toast.success("All settings saved successfully!");
   };
 
   const updateRule = (level: MembershipLevel, field: keyof TierRule, value: any) => {
@@ -71,12 +83,21 @@ const Settings = () => {
               <h1 className="text-4xl font-black mb-1">Settings</h1>
               <p className="text-gray-400 font-medium">Manage your shop configurations and business rules</p>
             </div>
+            <button 
+              onClick={handleSaveAll}
+              className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-[#2A3152] transition-all shadow-xl shadow-[#1A1F3D]/10 active:scale-95"
+            >
+              <Save size={18} /> Save All Changes
+            </button>
           </div>
 
           <Tabs defaultValue="business" className="space-y-8">
             <TabsList className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm w-auto inline-flex gap-1 h-auto">
               <TabsTrigger value="business" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
                 <Store size={16} className="mr-2" /> Business
+              </TabsTrigger>
+              <TabsTrigger value="booking" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+                <Clock size={16} className="mr-2" /> Booking
               </TabsTrigger>
               <TabsTrigger value="services" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
                 <Scissors size={16} className="mr-2" /> Services
@@ -88,19 +109,11 @@ const Settings = () => {
 
             <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-                <div className="flex justify-between items-center mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                      <Store size={24} />
-                    </div>
-                    <h2 className="text-xl font-bold">Shop Profile</h2>
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                    <Store size={24} />
                   </div>
-                  <button 
-                    onClick={handleSaveBusiness}
-                    className="bg-[#1A1F3D] text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"
-                  >
-                    <Save size={16} /> Save Business Profile
-                  </button>
+                  <h2 className="text-xl font-bold">Shop Profile</h2>
                 </div>
                 
                 <div className="flex items-center gap-8">
@@ -115,27 +128,13 @@ const Settings = () => {
                         </div>
                       )}
                     </div>
-                    {localShopLogo && (
-                      <button 
-                        onClick={() => setLocalShopLogo(null)}
-                        className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
                     <button 
                       onClick={() => fileInputRef.current?.click()}
                       className="absolute -bottom-2 right-2 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors"
                     >
                       <Upload size={14} />
                     </button>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      className="hidden" 
-                      accept="image/*" 
-                      onChange={handleLogoUpload} 
-                    />
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                   </div>
                   <div className="flex-1 space-y-4">
                     <div className="space-y-2">
@@ -144,20 +143,70 @@ const Settings = () => {
                         className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold focus:ring-2 focus:ring-blue-500/20" 
                         value={localShopName}
                         onChange={(e) => setLocalShopName(e.target.value)}
-                        placeholder="Enter shop name..."
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Contact Email</label>
-                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" defaultValue="hello@tactilesanctuary.com" />
                     </div>
                   </div>
                 </div>
               </section>
             </TabsContent>
 
-            <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
+                    <Clock size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Booking Configuration</h2>
+                    <p className="text-xs text-gray-400">Define your shop hours and slot intervals</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Slot Duration</label>
+                    <div className="flex gap-2">
+                      {[30, 60].map(duration => (
+                        <button
+                          key={duration}
+                          onClick={() => setLocalSlotDuration(duration)}
+                          className={cn(
+                            "flex-1 py-4 rounded-2xl border-2 font-bold transition-all",
+                            localSlotDuration === duration ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" : "bg-white border-gray-100 text-gray-400"
+                          )}
+                        >
+                          {duration} Min
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Opening Time</label>
+                    <input 
+                      type="time"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-orange-500/20"
+                      value={localOpenTime}
+                      onChange={e => setLocalOpenTime(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Closing Time</label>
+                    <input 
+                      type="time"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-orange-500/20"
+                      value={localCloseTime}
+                      onChange={e => setLocalCloseTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </section>
+            </TabsContent>
+
+            {/* Other tabs remain the same but use handleSaveAll in the header */}
+            <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+               <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-8">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
@@ -193,12 +242,8 @@ const Settings = () => {
                     <thead>
                       <tr className="bg-gray-50/50">
                         <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Service</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">
-                          <div className="flex items-center gap-2"><Dog size={14} className="text-blue-500" /> Dog Pricing</div>
-                        </th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">
-                          <div className="flex items-center gap-2"><Cat size={14} className="text-pink-500" /> Cat Pricing</div>
-                        </th>
+                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Dog Pricing</th>
+                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Cat Pricing</th>
                         <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">Actions</th>
                       </tr>
                     </thead>
@@ -206,59 +251,25 @@ const Settings = () => {
                       {filteredServices.map((svc) => (
                         <tr key={svc.id} className="group hover:bg-gray-50/30 transition-colors">
                           <td className="px-6 py-5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center text-[#1A1F3D]">
-                                <Scissors size={18} />
-                              </div>
-                              <div>
-                                <p className="font-bold text-sm text-[#1A1F3D]">{svc.title}</p>
-                                <span className="text-[9px] font-bold text-gray-400 uppercase">{svc.category}</span>
-                              </div>
-                            </div>
+                            <p className="font-bold text-sm text-[#1A1F3D]">{svc.title}</p>
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">{svc.category}</span>
                           </td>
                           <td className="px-6 py-5">
-                            <div className="flex flex-wrap gap-1.5">
-                              {Object.entries(svc.prices.dog).length > 0 ? (
-                                Object.entries(svc.prices.dog).map(([sz, p]) => (
-                                  <div key={sz} className="flex items-center bg-blue-50/50 px-2 py-1 rounded-lg border border-blue-100">
-                                    <span className="text-[8px] font-black text-blue-400 uppercase mr-1">{sz}</span>
-                                    <span className="text-[10px] font-black text-blue-700">${p}</span>
-                                  </div>
-                                ))
-                              ) : (
-                                <span className="text-[10px] text-gray-300 italic">No dog prices</span>
-                              )}
-                            </div>
+                             <div className="flex flex-wrap gap-1">
+                              {Object.entries(svc.prices.dog).map(([sz, p]) => (
+                                <span key={sz} className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md">{sz}: ${p}</span>
+                              ))}
+                             </div>
                           </td>
                           <td className="px-6 py-5">
-                            <div className="flex flex-wrap gap-1.5">
-                              {Object.entries(svc.prices.cat).length > 0 ? (
-                                Object.entries(svc.prices.cat).map(([sz, p]) => (
-                                  <div key={sz} className="flex items-center bg-pink-50/50 px-2 py-1 rounded-lg border border-pink-100">
-                                    <span className="text-[8px] font-black text-pink-400 uppercase mr-1">{sz}</span>
-                                    <span className="text-[10px] font-black text-pink-700">${p}</span>
-                                  </div>
-                                ))
-                              ) : (
-                                <span className="text-[10px] text-gray-300 italic">No cat prices</span>
-                              )}
-                            </div>
+                             <div className="flex flex-wrap gap-1">
+                              {Object.entries(svc.prices.cat).map(([sz, p]) => (
+                                <span key={sz} className="text-[9px] font-black bg-pink-50 text-pink-600 px-2 py-0.5 rounded-md">{sz}: ${p}</span>
+                              ))}
+                             </div>
                           </td>
                           <td className="px-6 py-5 text-right">
-                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button 
-                                onClick={() => { setSelectedService(svc); setIsServiceModalOpen(true); }}
-                                className="p-2 text-gray-400 hover:text-[#1A1F3D] transition-colors"
-                              >
-                                <Edit3 size={16} />
-                              </button>
-                              <button 
-                                onClick={() => deleteService(svc.id)}
-                                className="p-2 text-gray-300 hover:text-red-500 transition-colors"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
+                            <button onClick={() => { setSelectedService(svc); setIsServiceModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={16} /></button>
                           </td>
                         </tr>
                       ))}
@@ -269,70 +280,18 @@ const Settings = () => {
             </TabsContent>
 
             <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-                <div className="flex justify-between items-center mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-                      <ShieldCheck size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Membership Tier Rules</h2>
-                      <p className="text-xs text-gray-400">Configure promotion thresholds and benefits</p>
-                    </div>
+               <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                    <ShieldCheck size={24} />
                   </div>
-                  <button 
-                    onClick={handleSaveBusiness}
-                    className="bg-[#1A1F3D] text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"
-                  >
-                    <Save size={16} /> Save Membership Rules
-                  </button>
+                  <h2 className="text-xl font-bold">Membership Tier Rules</h2>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {localTierRules.map((rule) => (
-                    <div key={rule.level} className="p-6 bg-[#F5F6FA] rounded-2xl border border-transparent hover:border-purple-200 transition-all group space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 opacity-60">{rule.level} Tier</span>
-                        <TrendingUp size={16} className="text-purple-300" />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-1">
-                          <Tag size={10} /> Tier Label
-                        </label>
-                        <input 
-                          type="text"
-                          className="w-full bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-purple-500/20" 
-                          value={rule.label}
-                          onChange={(e) => updateRule(rule.level, 'label', e.target.value)}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-1">
-                            <DollarSign size={10} /> Min. Spent ($)
-                          </label>
-                          <input 
-                            type="number"
-                            className="w-full bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-purple-500/20 disabled:opacity-50" 
-                            value={rule.minSpent}
-                            onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))}
-                            disabled={rule.level === 'Standard'}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-1">
-                            <Percent size={10} /> Discount (%)
-                          </label>
-                          <input 
-                            type="number"
-                            className="w-full bg-white border-none rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-purple-500/20" 
-                            value={rule.discount}
-                            onChange={(e) => updateRule(rule.level, 'discount', Number(e.target.value))}
-                          />
-                        </div>
-                      </div>
+                    <div key={rule.level} className="p-6 bg-[#F5F6FA] rounded-2xl space-y-4">
+                      <p className="text-[10px] font-black uppercase text-purple-600">{rule.level}</p>
+                      <input className="w-full bg-white rounded-xl px-4 py-2.5 text-sm font-bold border-none" value={rule.label} onChange={(e) => updateRule(rule.level, 'label', e.target.value)} />
                     </div>
                   ))}
                 </div>

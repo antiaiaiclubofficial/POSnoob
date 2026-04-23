@@ -108,6 +108,12 @@ interface AppState {
   activePet: Pet | null;
   activeQueueItemId: string | null;
   
+  // Booking Settings
+  slotDuration: number; // minutes
+  openTime: string; // "09:00"
+  closeTime: string; // "20:00"
+  disabledSlots: string[]; // ["10:30", "14:00"]
+  
   updateBusinessProfile: (profile: { shopName?: string, shopLogo?: string | null }) => void;
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
@@ -133,6 +139,9 @@ interface AppState {
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
   processPayment: (customerId: string, amount: number, items: CartItem[], method?: PaymentMethod) => void;
   updateTierRules: (rules: TierRule[]) => void;
+  
+  updateBookingSettings: (settings: { slotDuration?: number, openTime?: string, closeTime?: string }) => void;
+  toggleSlotStatus: (time: string) => void;
 }
 
 const INITIAL_TIER_RULES: TierRule[] = [
@@ -195,6 +204,11 @@ export const useStore = create<AppState>((set, get) => ({
   selectedOwner: null,
   activePet: null,
   activeQueueItemId: null,
+  
+  slotDuration: 30,
+  openTime: "09:00",
+  closeTime: "19:00",
+  disabledSlots: [],
   
   updateBusinessProfile: (profile) => set((state) => ({
     ...state,
@@ -276,7 +290,6 @@ export const useStore = create<AppState>((set, get) => ({
     const { customers, tierRules, transactions } = get();
     const today = new Date().toISOString().split('T')[0];
     
-    // บันทึก Transaction ใหม่
     const newTransaction: Transaction = {
       id: 'tx-' + Math.random().toString(36).substr(2, 9),
       date: today,
@@ -337,5 +350,16 @@ export const useStore = create<AppState>((set, get) => ({
     if (currentSelected?.id === customerId) {
       set({ selectedOwner: updatedCustomers.find(c => c.id === customerId) || null });
     }
-  }
+  },
+
+  updateBookingSettings: (settings) => set((state) => ({
+    ...state,
+    ...settings
+  })),
+
+  toggleSlotStatus: (time) => set((state) => ({
+    disabledSlots: state.disabledSlots.includes(time) 
+      ? state.disabledSlots.filter(t => t !== time)
+      : [...state.disabledSlots, time]
+  }))
 }));
