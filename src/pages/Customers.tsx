@@ -16,6 +16,8 @@ const Customers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  
   const [isPetModalOpen, setIsPetModalOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
 
@@ -25,6 +27,16 @@ const Customers = () => {
   );
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+
+  const handleEditCustomer = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setIsCustomerModalOpen(true);
+  };
+
+  const handleAddCustomer = () => {
+    setEditingCustomer(null);
+    setIsCustomerModalOpen(true);
+  };
 
   const handleEditPet = (pet: Pet) => {
     setEditingPet(pet);
@@ -40,6 +52,7 @@ const Customers = () => {
     <div className="flex h-screen bg-[#F5F6FA] text-[#1A1F3D] overflow-hidden">
       <Sidebar />
       <main className="flex-1 flex overflow-hidden">
+        {/* Customer List Sidebar */}
         <div className="w-80 flex flex-col border-r border-gray-100 bg-white shrink-0">
           <div className="p-6">
             <h1 className="text-2xl font-black mb-6">CRM</h1>
@@ -60,7 +73,7 @@ const Customers = () => {
                 key={customer.id}
                 onClick={() => setSelectedCustomerId(customer.id)}
                 className={cn(
-                  "w-full text-left p-4 rounded-2xl mb-2 transition-all flex items-center justify-between",
+                  "w-full text-left p-4 rounded-2xl mb-2 transition-all flex items-center justify-between group",
                   selectedCustomerId === customer.id ? "bg-[#1A1F3D] text-white shadow-lg" : "hover:bg-gray-50"
                 )}
               >
@@ -76,7 +89,7 @@ const Customers = () => {
 
           <div className="p-6 border-t border-gray-50">
             <button 
-              onClick={() => setIsCustomerModalOpen(true)}
+              onClick={handleAddCustomer}
               className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-bold py-3.5 rounded-xl text-sm flex items-center justify-center gap-2"
             >
               <Plus size={18} /> Add Client
@@ -84,16 +97,26 @@ const Customers = () => {
           </div>
         </div>
 
+        {/* Customer Detail View */}
         <div className="flex-1 overflow-y-auto bg-[#F8F9FD] scrollbar-hide">
           {selectedCustomer ? (
             <div className="p-10 max-w-5xl mx-auto">
-              <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 mb-8 flex justify-between items-start">
+              <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 mb-8 flex justify-between items-start group">
                 <div className="flex gap-6">
                   <div className="w-20 h-20 bg-[#1A1F3D] rounded-[24px] flex items-center justify-center text-2xl font-black text-white">
                     {selectedCustomer.name.charAt(0)}
                   </div>
                   <div>
-                    <h2 className="text-3xl font-black mb-1">{selectedCustomer.name}</h2>
+                    <div className="flex items-center gap-3 mb-1">
+                      <h2 className="text-3xl font-black">{selectedCustomer.name}</h2>
+                      <button 
+                        onClick={() => handleEditCustomer(selectedCustomer)}
+                        className="p-2 text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-lg transition-all"
+                        title="Edit Customer Profile"
+                      >
+                        <Edit3 size={18} />
+                      </button>
+                    </div>
                     <div className="flex gap-4">
                       <span className="flex items-center gap-1.5 text-xs text-gray-400 font-bold"><Phone size={14}/> {selectedCustomer.phone}</span>
                       <span className="flex items-center gap-1.5 text-xs text-gray-400 font-bold"><Mail size={14}/> {selectedCustomer.email}</span>
@@ -112,7 +135,7 @@ const Customers = () => {
                 <h3 className="text-2xl font-black">Pet Health Hub</h3>
                 <button 
                   onClick={handleAddPet}
-                  className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"
+                  className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-[#1A1F3D]/10"
                 >
                   <Plus size={16} /> Register Pet
                 </button>
@@ -120,11 +143,11 @@ const Customers = () => {
 
               <div className="space-y-8">
                 {selectedCustomer.pets.map(pet => (
-                  <div key={pet.id} className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden flex relative group">
+                  <div key={pet.id} className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden flex relative group/pet">
                     <button 
                       onClick={() => handleEditPet(pet)}
-                      className="absolute top-6 right-6 p-3 bg-gray-50 text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-2xl transition-all shadow-sm opacity-0 group-hover:opacity-100"
-                      title="Edit Profile"
+                      className="absolute top-6 right-6 p-3 bg-gray-50 text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-2xl transition-all shadow-sm opacity-0 group-hover/pet:opacity-100"
+                      title="Edit Pet Profile"
                     >
                       <Edit3 size={18} />
                     </button>
@@ -188,7 +211,13 @@ const Customers = () => {
         </div>
       </main>
 
-      {isCustomerModalOpen && <CustomerModal onClose={() => setIsCustomerModalOpen(false)} />}
+      {isCustomerModalOpen && (
+        <CustomerModal 
+          customer={editingCustomer} 
+          onClose={() => setIsCustomerModalOpen(false)} 
+        />
+      )}
+      
       {isPetModalOpen && selectedCustomer && (
         <PetModal 
           customerId={selectedCustomer.id} 
