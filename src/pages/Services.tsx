@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { 
   Plus, Edit3, Trash2, Dog, Cat, Scissors, Search, 
-  Settings2, PlusCircle, Bath, Sparkles, SwitchCamera
+  Bath, Sparkles
 } from 'lucide-react';
 import { useStore, Service } from '@/store/useStore';
 import ServiceModal from '@/components/ServiceModal';
