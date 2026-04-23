@@ -153,21 +153,21 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
           <div className="space-y-4">
             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Services</p>
             {cart.map((item, idx) => (
-              <div key={`${item.id}-${idx}`} className="flex items-center gap-4 p-3 bg-white hover:bg-gray-50 rounded-2xl transition-colors border border-transparent hover:border-gray-100 group/item">
+              <div key={`${item.id}-${idx}`} className="flex items-center gap-4 p-3 bg-white border border-gray-100 rounded-2xl shadow-sm">
                 <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center shrink-0">
                   <Dog className="text-[#1A1F3D] w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-[#1A1F3D] text-sm truncate">{item.title}</h4>
-                  <p className="text-[9px] text-gray-400 font-bold uppercase">{item.petName}</p>
+                  <h4 className="font-bold text-[#1A1F3D] text-[13px] leading-tight truncate">{item.title}</h4>
+                  <p className="text-[9px] text-gray-400 font-black uppercase mt-0.5">{item.petName}</p>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="font-bold text-[#1A1F3D] text-sm">{currency}{item.price.toFixed(2)}</span>
+                <div className="flex flex-col items-end justify-between self-stretch py-0.5">
+                  <span className="font-black text-[#1A1F3D] text-[13px]">{currency}{item.price.toFixed(2)}</span>
                   <button 
                     onClick={() => removeFromCart(idx)}
-                    className="opacity-0 group-hover/item:opacity-100 p-1 text-red-300 hover:text-red-500 transition-all"
+                    className="p-1.5 text-red-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
