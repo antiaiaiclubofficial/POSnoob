@@ -6,12 +6,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Index from "./pages/Index";
 import Queue from "./pages/Queue";
+import Services from "./pages/Services";
 import Customers from "./pages/Customers";
 import Staff from "./pages/Staff";
 import Logs from "./pages/Logs";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
-import Marketing from "./pages/Marketing"; // เพิ่มหน้า Marketing
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,8 +26,8 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/queue" element={<Queue />} />
+            <Route path="/services" element={<Services />} />
             <Route path="/customers" element={<Customers />} />
-            <Route path="/marketing" element={<Marketing />} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/logs" element={<Logs />} />
             <Route path="/reports" element={<Reports />} />
