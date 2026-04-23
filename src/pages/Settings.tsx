@@ -146,7 +146,7 @@ const Settings = () => {
                             </div>
                             <div className="px-4 py-2 bg-white flex items-center gap-1.5">
                               <span className="text-[10px] font-black text-gray-300">{currency}</span>
-                              <span className="text-sm font-black text-[#1A1F3D]">{p.toFixed(2)}</span>
+                              <span className="text-sm font-black text-[#1A1F3D]">{p.price.toFixed(2)}</span>
                             </div>
                           </div>
                         ))}

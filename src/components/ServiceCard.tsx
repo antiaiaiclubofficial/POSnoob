@@ -27,7 +27,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
     }
   }, [activePet, service.id]);
 
-  const currentPrice = selectedSize ? service.prices[selectedSize] : 0;
+  const currentPrice = selectedSize ? service.prices[selectedSize].price : 0;
 
   const IconComponent = {
     grooming: Scissors,

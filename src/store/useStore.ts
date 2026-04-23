@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ServiceIcon = 'grooming' | 'bath' | 'nail' | 'deshedding';
+export type ServiceIcon = 'grooming' | 'bath' | 'nail' | 'deshedding' | 'spa';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card';
@@ -66,6 +66,11 @@ export interface TierRule {
   discount: number;
 }
 
+export interface ServicePriceInfo {
+  price: number;
+  duration: number;
+}
+
 export interface Service {
   id: string;
   icon: ServiceIcon;
@@ -73,7 +78,9 @@ export interface Service {
   description: string;
   category: string;
   targetSpecies: 'Dog' | 'Cat';
-  prices: Record<string, number>;
+  prices: Record<string, ServicePriceInfo>;
+  isActive: boolean;
+  isPopular?: boolean;
 }
 
 export interface QueueItem {
@@ -142,6 +149,7 @@ interface AppState {
   addService: (service: Omit<Service, 'id'>) => void;
   updateService: (id: string, service: Partial<Service>) => void;
   deleteService: (id: string) => void;
+  toggleServiceActive: (id: string) => void;
   
   selectOwner: (owner: Customer | null) => void;
   setActivePet: (pet: Pet | null) => void;
@@ -202,20 +210,45 @@ const INITIAL_SERVICES: Service[] = [
   { 
     id: "svc-1", 
     icon: "grooming", 
-    title: "Full Grooming (Dog)", 
-    description: "Haircut, bath, brush, nails, and ears for dogs.", 
+    title: "Full Grooming", 
+    description: "Includes bath, haircut, nail trimming, and ear cleaning.", 
     category: "Grooming", 
     targetSpecies: 'Dog',
-    prices: { S: 45, M: 55, L: 75 }
+    isActive: true,
+    prices: { 
+      "Small (< 10kg)": { price: 800, duration: 90 }, 
+      "Medium (10-25kg)": { price: 1200, duration: 120 }, 
+      "Large (> 25kg)": { price: 1800, duration: 150 } 
+    }
   },
   { 
     id: "svc-2", 
     icon: "bath", 
-    title: "Cat Spa & Bath", 
-    description: "Relaxing bath and blow dry for cats.", 
+    title: "Bath & Brush", 
+    description: "Deep cleaning shampoo, blow dry, and intensive de-shedding brush.", 
     category: "Bathing", 
-    targetSpecies: 'Cat',
-    prices: { Standard: 50, LongHair: 65 }
+    targetSpecies: 'Dog',
+    isActive: true,
+    prices: { 
+      "Small (< 10kg)": { price: 450, duration: 45 }, 
+      "Medium (10-25kg)": { price: 650, duration: 60 }, 
+      "Large (> 25kg)": { price: 950, duration: 90 } 
+    }
+  },
+  { 
+    id: "svc-3", 
+    icon: "spa", 
+    title: "Spa Treatment", 
+    description: "Aromatherapy bath, mud mask, and therapeutic paw massage.", 
+    category: "Spa", 
+    targetSpecies: 'Dog',
+    isActive: true,
+    isPopular: true,
+    prices: { 
+      "Small (< 10kg)": { price: 1500, duration: 120 }, 
+      "Medium (10-25kg)": { price: 2200, duration: 140 }, 
+      "Large (> 25kg)": { price: 3000, duration: 180 } 
+    }
   }
 ];
 
@@ -267,6 +300,9 @@ export const useStore = create<AppState>((set, get) => ({
   })),
   deleteService: (id) => set((state) => ({
     services: state.services.filter(s => s.id !== id)
+  })),
+  toggleServiceActive: (id) => set((state) => ({
+    services: state.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s)
   })),
 
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
