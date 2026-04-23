@@ -473,7 +473,11 @@ const Settings = () => {
       </main>
 
       {isServiceModalOpen && (
-        <ServiceModal service={selectedService} onClose={() => setIsServiceModalOpen(false)} />
+        <ServiceModal 
+          service={selectedService} 
+          defaultSpecies={speciesTab}
+          onClose={() => setIsServiceModalOpen(false)} 
+        />
       )}
     </div>
   );

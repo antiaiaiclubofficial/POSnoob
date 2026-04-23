@@ -48,7 +48,8 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
       }));
       setSizes(initialSizes);
     } else {
-      const defaultPresets = targetSpecies === 'Dog' 
+      setTargetSpecies(defaultSpecies);
+      const defaultPresets = defaultSpecies === 'Dog' 
         ? ['Small (< 10kg)', 'Medium (10-25kg)', 'Large (> 25kg)'] 
         : ['Standard'];
       
@@ -59,7 +60,7 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
         duration: 60
       })));
     }
-  }, [service]);
+  }, [service, defaultSpecies]);
 
   const handleAddSize = () => {
     setSizes([...sizes, { 
@@ -145,7 +146,7 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
             </div>
             <div>
               <h2 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">
-                {service ? `Edit ${targetSpecies} Service` : `New ${targetSpecies} Service`}
+                {service ? 'Edit' : 'New'} {targetSpecies} Service
               </h2>
               <p className="text-xs lg:text-sm text-gray-400 font-medium">Define your specialized grooming treatments</p>
             </div>
@@ -158,27 +159,54 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
         <form onSubmit={handleSubmit} className="p-8 lg:p-10 max-h-[75vh] overflow-y-auto scrollbar-hide">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-10">
             <div className="space-y-8">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Choose Icon</label>
-                <div className="flex flex-wrap gap-3">
-                  {(['grooming', 'bath', 'spa', 'nail'] as ServiceIcon[]).map((iconType) => (
-                    <button
-                      key={iconType}
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Target Species</label>
+                  <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1">
+                    <button 
                       type="button"
-                      onClick={() => setIcon(iconType)}
+                      onClick={() => setTargetSpecies('Dog')}
                       className={cn(
-                        "w-12 h-12 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center border-2 transition-all",
-                        icon === iconType 
-                        ? (isDog ? "bg-blue-600 border-blue-600 text-white" : "bg-pink-600 border-pink-600 text-white")
-                        : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
+                        "flex-1 py-3 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 transition-all",
+                        targetSpecies === 'Dog' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400"
                       )}
                     >
-                      {iconType === 'grooming' && <Scissors size={20} />}
-                      {iconType === 'bath' && <Bath size={20} />}
-                      {iconType === 'spa' && <Sparkles size={20} />}
-                      {iconType === 'nail' && <Plus size={20} />}
+                      <Dog size={14} /> DOG
                     </button>
-                  ))}
+                    <button 
+                      type="button"
+                      onClick={() => setTargetSpecies('Cat')}
+                      className={cn(
+                        "flex-1 py-3 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 transition-all",
+                        targetSpecies === 'Cat' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400"
+                      )}
+                    >
+                      <Cat size={14} /> CAT
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Choose Icon</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(['grooming', 'bath', 'spa', 'nail'] as ServiceIcon[]).map((iconType) => (
+                      <button
+                        key={iconType}
+                        type="button"
+                        onClick={() => setIcon(iconType)}
+                        className={cn(
+                          "w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center border-2 transition-all",
+                          icon === iconType 
+                          ? (isDog ? "bg-blue-600 border-blue-600 text-white" : "bg-pink-600 border-pink-600 text-white")
+                          : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
+                        )}
+                      >
+                        {iconType === 'grooming' && <Scissors size={18} />}
+                        {iconType === 'bath' && <Bath size={18} />}
+                        {iconType === 'spa' && <Sparkles size={18} />}
+                        {iconType === 'nail' && <Plus size={18} />}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
