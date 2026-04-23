@@ -246,11 +246,12 @@ const Settings = () => {
                   </div>
                   <button onClick={() => { setSelectedService(null); setIsServiceModalOpen(true); }} className="bg-[#1A1F3D] text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"><Plus size={16} /> Add Service</button>
                 </div>
-                <div className="overflow-hidden border border-gray-50 rounded-2xl">
+                <div className="overflow-hidden border border-gray-100 rounded-2xl">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50/50">
                         <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Service</th>
+                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Type</th>
                         <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Prices</th>
                         <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">Actions</th>
                       </tr>
@@ -263,9 +264,19 @@ const Settings = () => {
                             <span className="text-[9px] font-bold text-gray-400 uppercase">{svc.category}</span>
                           </td>
                           <td className="px-6 py-5">
+                            <span className={cn(
+                              "text-[9px] font-black px-2 py-0.5 rounded-full uppercase",
+                              svc.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600"
+                            )}>
+                              {svc.targetSpecies}
+                            </span>
+                          </td>
+                          <td className="px-6 py-5">
                              <div className="flex flex-wrap gap-1">
-                              {Object.entries(svc.prices.dog).map(([sz, p]) => (
-                                <span key={sz} className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md">{sz}: {currency}{p}</span>
+                              {Object.entries(svc.prices).map(([sz, p]) => (
+                                <span key={sz} className="text-[9px] font-black bg-gray-50 text-gray-600 px-2 py-0.5 rounded-md border border-gray-100">
+                                  {sz}: {currency}{p}
+                                </span>
                               ))}
                              </div>
                           </td>

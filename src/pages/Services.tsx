@@ -25,91 +25,96 @@ const Services = () => {
     setIsModalOpen(true);
   };
 
-  const handleAdd = () => {
+  const handleAdd = (species: 'Dog' | 'Cat') => {
     setSelectedService(null);
     setIsModalOpen(true);
   };
 
-  const PricingGrid = ({ type }: { type: 'dog' | 'cat' }) => (
-    <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
-      <table className="w-full">
-        <thead>
-          <tr className="bg-gray-50/50 border-b border-gray-100">
-            <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Service Details</th>
-            <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Available Sizes & Rates</th>
-            <th className="px-8 py-6 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50">
-          {filteredServices.map((service) => (
-            <tr key={service.id} className="group hover:bg-gray-50/30 transition-colors">
-              <td className="px-8 py-8">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110",
-                    type === 'dog' ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600"
-                  )}>
-                    <Scissors size={20} />
-                  </div>
-                  <div>
-                    <p className="font-black text-[#1A1F3D] mb-1">{service.title}</p>
-                    <span className="bg-gray-100 text-gray-500 text-[9px] font-black px-2.5 py-1 rounded-lg uppercase">
-                      {service.category}
-                    </span>
-                  </div>
-                </div>
-              </td>
-              <td className="px-8 py-8">
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(service.prices[type]).length > 0 ? (
-                    Object.entries(service.prices[type]).map(([size, price]) => (
-                      <div key={size} className={cn(
-                        "flex items-center px-3 py-2 rounded-xl border transition-all",
-                        type === 'dog' ? "bg-blue-50/30 border-blue-100" : "bg-pink-50/30 border-pink-100"
-                      )}>
-                        <span className={cn(
-                          "text-[10px] font-black uppercase mr-2",
-                          type === 'dog' ? "text-blue-400" : "text-pink-400"
-                        )}>{size}</span>
-                        <span className="text-sm font-black text-[#1A1F3D]">{currency}{price}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <span className="text-[10px] text-gray-300 italic font-bold">No pricing set for {type}s</span>
-                  )}
-                </div>
-              </td>
-              <td className="px-8 py-8 text-right">
-                <div className="flex justify-end gap-2">
-                  <button 
-                    onClick={() => handleEdit(service)}
-                    className="p-3 text-gray-300 hover:text-[#1A1F3D] hover:bg-white rounded-2xl transition-all shadow-sm border border-transparent hover:border-gray-100"
-                  >
-                    <Edit3 size={18} />
-                  </button>
-                  <button 
-                    onClick={() => deleteService(service.id)}
-                    className="p-3 text-gray-200 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </td>
+  const PricingGrid = ({ type }: { type: 'dog' | 'cat' }) => {
+    const species = type === 'dog' ? 'Dog' : 'Cat';
+    const speciesServices = filteredServices.filter(s => s.targetSpecies === species);
+
+    return (
+      <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gray-50/50 border-b border-gray-100">
+              <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Service Details</th>
+              <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Available Sizes & Rates</th>
+              <th className="px-8 py-6 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      
-      {filteredServices.length === 0 && (
-        <div className="py-24 text-center">
-          <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Search size={32} className="text-gray-200" />
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {speciesServices.map((service) => (
+              <tr key={service.id} className="group hover:bg-gray-50/30 transition-colors">
+                <td className="px-8 py-8">
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110",
+                      type === 'dog' ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600"
+                    )}>
+                      <Scissors size={20} />
+                    </div>
+                    <div>
+                      <p className="font-black text-[#1A1F3D] mb-1">{service.title}</p>
+                      <span className="bg-gray-100 text-gray-500 text-[9px] font-black px-2.5 py-1 rounded-lg uppercase">
+                        {service.category}
+                      </span>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-8 py-8">
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(service.prices).length > 0 ? (
+                      Object.entries(service.prices).map(([size, price]) => (
+                        <div key={size} className={cn(
+                          "flex items-center px-3 py-2 rounded-xl border transition-all",
+                          type === 'dog' ? "bg-blue-50/30 border-blue-100" : "bg-pink-50/30 border-pink-100"
+                        )}>
+                          <span className={cn(
+                            "text-[10px] font-black uppercase mr-2",
+                            type === 'dog' ? "text-blue-400" : "text-pink-400"
+                          )}>{size}</span>
+                          <span className="text-sm font-black text-[#1A1F3D]">{currency}{price}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-gray-300 italic font-bold">No pricing set</span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-8 py-8 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button 
+                      onClick={() => handleEdit(service)}
+                      className="p-3 text-gray-300 hover:text-[#1A1F3D] hover:bg-white rounded-2xl transition-all shadow-sm border border-transparent hover:border-gray-100"
+                    >
+                      <Edit3 size={18} />
+                    </button>
+                    <button 
+                      onClick={() => deleteService(service.id)}
+                      className="p-3 text-gray-200 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        
+        {speciesServices.length === 0 && (
+          <div className="py-24 text-center">
+            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search size={32} className="text-gray-200" />
+            </div>
+            <p className="text-gray-400 font-bold">No services found for this category</p>
           </div>
-          <p className="text-gray-400 font-bold">No services found matching your search</p>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-screen bg-[#F5F6FA] text-[#1A1F3D] overflow-hidden">
@@ -137,7 +142,7 @@ const Services = () => {
                 />
               </div>
               <button 
-                onClick={handleAdd}
+                onClick={() => handleAdd('Dog')}
                 className="bg-[#1A1F3D] text-white px-8 py-3.5 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-[#2A3152] transition-all shadow-xl shadow-[#1A1F3D]/10 active:scale-95"
               >
                 <Plus size={18} /> Add Service
