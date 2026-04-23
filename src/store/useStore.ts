@@ -110,6 +110,7 @@ interface AppState {
   shopPhone: string;
   shopLineId: string;
   receiptHeader: string;
+  currency: string;
   
   services: Service[];
   customers: Customer[];
@@ -134,7 +135,8 @@ interface AppState {
     shopAddress?: string,
     shopPhone?: string,
     shopLineId?: string,
-    receiptHeader?: string
+    receiptHeader?: string,
+    currency?: string
   }) => void;
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
@@ -220,6 +222,7 @@ export const useStore = create<AppState>((set, get) => ({
   shopPhone: "02-xxx-xxxx",
   shopLineId: "@tactilesanctuary",
   receiptHeader: "Thank you for visiting us!",
+  currency: "฿",
   
   services: INITIAL_SERVICES,
   customers: INITIAL_CUSTOMERS,
@@ -245,6 +248,7 @@ export const useStore = create<AppState>((set, get) => ({
     shopPhone: profile.shopPhone ?? state.shopPhone,
     shopLineId: profile.shopLineId ?? state.shopLineId,
     receiptHeader: profile.receiptHeader ?? state.receiptHeader,
+    currency: profile.currency ?? state.currency,
   })),
 
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),

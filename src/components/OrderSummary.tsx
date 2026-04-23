@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import PaymentModal from './PaymentModal';
 
 const OrderSummary = () => {
-  const { cart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules } = useStore();
+  const { cart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules, currency } = useStore();
   const [newWeight, setNewWeight] = useState('');
   const [isWeightSaved, setIsWeightSaved] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
@@ -56,12 +56,11 @@ const OrderSummary = () => {
 
     processPayment(selectedOwner.id, total, cart, paymentMethod, details);
     
-    // Mark items in queue as paid
     cart.forEach(item => {
       if (item.queueItemId) markAsPaid(item.queueItemId);
     });
 
-    toast.success(`Checkout Complete! $${total.toFixed(2)} paid via ${paymentMethod}.`);
+    toast.success(`Checkout Complete! ${currency}${total.toFixed(2)} paid via ${paymentMethod}.`);
     clearCart();
     setNewWeight('');
     setIsWeightSaved(false);
@@ -147,14 +146,13 @@ const OrderSummary = () => {
                   <h4 className="font-bold text-[#1A1F3D] text-sm truncate">{item.title}</h4>
                   <p className="text-[9px] text-gray-400 font-bold uppercase">{item.petName}</p>
                 </div>
-                <span className="font-bold text-[#1A1F3D] text-sm">${item.price.toFixed(2)}</span>
+                <span className="font-bold text-[#1A1F3D] text-sm">{currency}{item.price.toFixed(2)}</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Payment Method Selector */}
       <div className="pt-8 mb-6 space-y-3">
         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Payment Method</p>
         <div className="flex gap-2">
@@ -185,12 +183,12 @@ const OrderSummary = () => {
             <span className="flex items-center gap-2">
               <ArrowDownCircle size={12}/> Member Discount ({tierDiscountPercent}%)
             </span>
-            <span>-${discountAmount.toFixed(2)}</span>
+            <span>-{currency}{discountAmount.toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between items-end pt-2 px-2">
           <span className="text-xl font-bold text-[#1A1F3D]">Total</span>
-          <span className="text-3xl font-extrabold text-[#1A1F3D]">${total.toFixed(2)}</span>
+          <span className="text-3xl font-extrabold text-[#1A1F3D]">{currency}{total.toFixed(2)}</span>
         </div>
       </div>
 
@@ -202,7 +200,6 @@ const OrderSummary = () => {
         <Banknote size={24} /> Pay and Checkout
       </button>
 
-      {/* Payment Detail Modal */}
       {isPaymentModalOpen && (
         <PaymentModal 
           total={total}

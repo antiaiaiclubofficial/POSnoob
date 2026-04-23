@@ -5,7 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import { 
   Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign, 
   Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Users,
-  MapPin, Phone, MessageCircle, FileText, Award, Star, Crown, Gem
+  MapPin, Phone, MessageCircle, FileText, Award, Star, Crown, Gem, Coins
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 const Settings = () => {
   const { 
     tierRules, updateTierRules, 
-    shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader,
+    shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader, currency,
     updateBusinessProfile,
     services, deleteService,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings
@@ -31,6 +31,7 @@ const Settings = () => {
   const [localShopPhone, setLocalShopPhone] = useState(shopPhone);
   const [localShopLineId, setLocalShopLineId] = useState(shopLineId);
   const [localReceiptHeader, setLocalReceiptHeader] = useState(receiptHeader);
+  const [localCurrency, setLocalCurrency] = useState(currency);
   
   const [localSlotDuration, setLocalSlotDuration] = useState(slotDuration);
   const [localMaxCapacity, setLocalMaxCapacity] = useState(maxCapacity);
@@ -50,7 +51,8 @@ const Settings = () => {
       shopAddress: localShopAddress,
       shopPhone: localShopPhone,
       shopLineId: localShopLineId,
-      receiptHeader: localReceiptHeader
+      receiptHeader: localReceiptHeader,
+      currency: localCurrency
     });
     updateBookingSettings({
       slotDuration: localSlotDuration,
@@ -99,7 +101,7 @@ const Settings = () => {
             </button>
           </div>
 
-          <Tabs defaultValue="membership" className="space-y-8">
+          <Tabs defaultValue="business" className="space-y-8">
             <TabsList className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm w-auto inline-flex gap-1 h-auto">
               <TabsTrigger value="business" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
                 <Store size={16} className="mr-2" /> Business
@@ -115,88 +117,6 @@ const Settings = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-               <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-10">
-                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-                    <ShieldCheck size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">Membership Tier Logic</h2>
-                    <p className="text-xs text-gray-400">Define rewards and progression rules for your clients</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {localTierRules.map((rule) => {
-                    const tier = getTierIcon(rule.level);
-                    const Icon = tier.icon;
-                    return (
-                      <div key={rule.level} className="relative group bg-[#F5F6FA] p-8 rounded-[32px] border border-transparent hover:border-purple-100 transition-all">
-                        <div className={cn("absolute -top-4 -left-4 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", tier.bg, tier.color)}>
-                          <Icon size={24} />
-                        </div>
-                        
-                        <div className="space-y-6">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Public Label</label>
-                              <input 
-                                className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-black text-[#1A1F3D] focus:ring-2 focus:ring-purple-500/10" 
-                                value={rule.label} 
-                                onChange={(e) => updateRule(rule.level, 'label', e.target.value)} 
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Min. Spending</label>
-                              <div className="relative">
-                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
-                                <input 
-                                  type="number"
-                                  className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-[#1A1F3D]" 
-                                  value={rule.minSpent} 
-                                  onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))} 
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Benefit Discount</label>
-                              <div className="relative">
-                                <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
-                                <input 
-                                  type="number"
-                                  className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-green-600" 
-                                  value={rule.discount} 
-                                  onChange={(e) => updateRule(rule.level, 'discount', Number(e.target.value))} 
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-10 p-6 bg-purple-50 rounded-[28px] border border-purple-100/50 flex items-start gap-4">
-                  <div className="p-2 bg-white rounded-xl text-purple-600 shadow-sm shrink-0">
-                    <TrendingUp size={18} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-purple-900 mb-1">How it works</p>
-                    <p className="text-[10px] text-purple-800/70 leading-relaxed font-medium">
-                      Customers will be automatically upgraded to the next tier once their **Total Spent** reaches the minimum requirement. 
-                      The discount percentage will be applied automatically at checkout based on their current status.
-                    </p>
-                  </div>
-                </div>
-              </section>
-            </TabsContent>
-
-            {/* Other tabs remain the same as before */}
             <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-8">
               <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-10">
@@ -240,6 +160,23 @@ const Settings = () => {
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Shop Name</label>
                         <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopName} onChange={(e) => setLocalShopName(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Currency Symbol</label>
+                        <div className="relative">
+                          <Coins className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                          <select 
+                            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold appearance-none"
+                            value={localCurrency}
+                            onChange={(e) => setLocalCurrency(e.target.value)}
+                          >
+                            <option value="฿">THB (฿)</option>
+                            <option value="$">USD ($)</option>
+                            <option value="€">EUR (€)</option>
+                            <option value="£">GBP (£)</option>
+                            <option value="¥">JPY (¥)</option>
+                          </select>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Phone Number</label>
@@ -328,7 +265,7 @@ const Settings = () => {
                           <td className="px-6 py-5">
                              <div className="flex flex-wrap gap-1">
                               {Object.entries(svc.prices.dog).map(([sz, p]) => (
-                                <span key={sz} className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md">{sz}: ${p}</span>
+                                <span key={sz} className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md">{sz}: {currency}{p}</span>
                               ))}
                              </div>
                           </td>
@@ -339,6 +276,74 @@ const Settings = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </section>
+            </TabsContent>
+
+            <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+               <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-10">
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                    <ShieldCheck size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Membership Tier Logic</h2>
+                    <p className="text-xs text-gray-400">Define rewards and progression rules for your clients</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {localTierRules.map((rule) => {
+                    const tier = getTierIcon(rule.level);
+                    const Icon = tier.icon;
+                    return (
+                      <div key={rule.level} className="relative group bg-[#F5F6FA] p-8 rounded-[32px] border border-transparent hover:border-purple-100 transition-all">
+                        <div className={cn("absolute -top-4 -left-4 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", tier.bg, tier.color)}>
+                          <Icon size={24} />
+                        </div>
+                        
+                        <div className="space-y-6">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Public Label</label>
+                              <input 
+                                className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-black text-[#1A1F3D] focus:ring-2 focus:ring-purple-500/10" 
+                                value={rule.label} 
+                                onChange={(e) => updateRule(rule.level, 'label', e.target.value)} 
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Min. Spending</label>
+                              <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs font-bold">{currency}</span>
+                                <input 
+                                  type="number"
+                                  className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-[#1A1F3D]" 
+                                  value={rule.minSpent} 
+                                  onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))} 
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Benefit Discount</label>
+                              <div className="relative">
+                                <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                                <input 
+                                  type="number"
+                                  className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-green-600" 
+                                  value={rule.discount} 
+                                  onChange={(e) => updateRule(rule.level, 'discount', Number(e.target.value))} 
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             </TabsContent>
