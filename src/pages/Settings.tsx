@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { 
   Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign, 
-  Image, Trash2, Upload, Scissors, Plus, Search, Edit3 
+  Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat 
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -65,7 +65,7 @@ const Settings = () => {
     <div className="flex h-screen bg-[#F5F6FA] text-[#1A1F3D] overflow-hidden">
       <Sidebar />
       <main className="flex-1 p-10 overflow-y-auto">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-10">
             <div>
               <h1 className="text-4xl font-black mb-1">Settings</h1>
@@ -86,7 +86,6 @@ const Settings = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* Business Profile Content */}
             <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-8">
@@ -157,7 +156,6 @@ const Settings = () => {
               </section>
             </TabsContent>
 
-            {/* Service Management Content */}
             <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-8">
@@ -195,7 +193,12 @@ const Settings = () => {
                     <thead>
                       <tr className="bg-gray-50/50">
                         <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Service</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Pricing (Dog/Cat)</th>
+                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                          <div className="flex items-center gap-2"><Dog size={14} className="text-blue-500" /> Dog Pricing</div>
+                        </th>
+                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                          <div className="flex items-center gap-2"><Cat size={14} className="text-pink-500" /> Cat Pricing</div>
+                        </th>
                         <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">Actions</th>
                       </tr>
                     </thead>
@@ -214,18 +217,31 @@ const Settings = () => {
                             </div>
                           </td>
                           <td className="px-6 py-5">
-                            <div className="flex gap-4">
-                              <div className="flex flex-wrap gap-1">
-                                {Object.entries(svc.prices.dog).slice(0, 2).map(([sz, p]) => (
-                                  <span key={sz} className="text-[9px] font-black px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded uppercase">{sz}:${p}</span>
-                                ))}
-                                {Object.keys(svc.prices.dog).length > 2 && <span className="text-[9px] text-gray-300 font-bold">...</span>}
-                              </div>
-                              <div className="flex flex-wrap gap-1">
-                                {Object.entries(svc.prices.cat).slice(0, 1).map(([sz, p]) => (
-                                  <span key={sz} className="text-[9px] font-black px-1.5 py-0.5 bg-pink-50 text-pink-600 rounded uppercase">{sz}:${p}</span>
-                                ))}
-                              </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {Object.entries(svc.prices.dog).length > 0 ? (
+                                Object.entries(svc.prices.dog).map(([sz, p]) => (
+                                  <div key={sz} className="flex items-center bg-blue-50/50 px-2 py-1 rounded-lg border border-blue-100">
+                                    <span className="text-[8px] font-black text-blue-400 uppercase mr-1">{sz}</span>
+                                    <span className="text-[10px] font-black text-blue-700">${p}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-[10px] text-gray-300 italic">No dog prices</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex flex-wrap gap-1.5">
+                              {Object.entries(svc.prices.cat).length > 0 ? (
+                                Object.entries(svc.prices.cat).map(([sz, p]) => (
+                                  <div key={sz} className="flex items-center bg-pink-50/50 px-2 py-1 rounded-lg border border-pink-100">
+                                    <span className="text-[8px] font-black text-pink-400 uppercase mr-1">{sz}</span>
+                                    <span className="text-[10px] font-black text-pink-700">${p}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-[10px] text-gray-300 italic">No cat prices</span>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-5 text-right">
@@ -252,7 +268,6 @@ const Settings = () => {
               </section>
             </TabsContent>
 
-            {/* Membership Rules Content */}
             <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-8">

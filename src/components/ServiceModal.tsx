@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Scissors, Tag, Plus, Trash2, Dog, Cat, FileText, LayoutGrid } from 'lucide-react';
 import { useStore, Service, ServiceIcon } from '@/store/useStore';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface ServiceModalProps {
   service?: Service | null;
@@ -121,7 +122,6 @@ const ServiceModal = ({ service, onClose }: ServiceModalProps) => {
 
         <form onSubmit={handleSubmit} className="p-10">
           <div className="grid grid-cols-2 gap-8 mb-8">
-            {/* Left: Basic Info */}
             <div className="space-y-6">
               <div>
                 <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest flex items-center gap-2">
@@ -158,36 +158,51 @@ const ServiceModal = ({ service, onClose }: ServiceModalProps) => {
               </div>
             </div>
 
-            {/* Right: Pricing Logic */}
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Pricing Structure</label>
               <div className="flex gap-2 p-1.5 bg-[#F5F6FA] rounded-[24px]">
                 <button 
                   type="button"
                   onClick={() => setActiveTab('dog')}
-                  className={`flex-1 py-3 flex items-center justify-center gap-2 text-xs font-black rounded-xl transition-all ${activeTab === 'dog' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                  className={cn(
+                    "flex-1 py-4 flex flex-col items-center justify-center gap-1 text-[10px] font-black rounded-xl transition-all border-2",
+                    activeTab === 'dog' 
+                      ? "bg-white border-blue-500 text-blue-600 shadow-md" 
+                      : "bg-transparent border-transparent text-gray-400 hover:bg-white/50"
+                  )}
                 >
-                  <Dog size={16} /> DOGS
+                  <Dog size={18} /> DOG PRICING
                 </button>
                 <button 
                   type="button"
                   onClick={() => setActiveTab('cat')}
-                  className={`flex-1 py-3 flex items-center justify-center gap-2 text-xs font-black rounded-xl transition-all ${activeTab === 'cat' ? 'bg-white shadow-sm text-pink-600' : 'text-gray-400 hover:text-gray-600'}`}
+                  className={cn(
+                    "flex-1 py-4 flex flex-col items-center justify-center gap-1 text-[10px] font-black rounded-xl transition-all border-2",
+                    activeTab === 'cat' 
+                      ? "bg-white border-pink-500 text-pink-600 shadow-md" 
+                      : "bg-transparent border-transparent text-gray-400 hover:bg-white/50"
+                  )}
                 >
-                  <Cat size={16} /> CATS
+                  <Cat size={18} /> CAT PRICING
                 </button>
               </div>
 
-              <div className="bg-[#F5F6FA] p-5 rounded-[32px] min-h-[220px] flex flex-col">
+              <div className={cn(
+                "p-5 rounded-[32px] min-h-[220px] flex flex-col border-2 transition-colors",
+                activeTab === 'dog' ? "bg-blue-50/50 border-blue-100" : "bg-pink-50/50 border-pink-100"
+              )}>
                 <div className="flex-1 space-y-3 mb-4 max-h-[160px] overflow-y-auto pr-2 scrollbar-hide">
                   {Object.entries(formData.prices[activeTab]).map(([size, price]) => (
-                    <div key={size} className="flex items-center gap-3 bg-white p-3 rounded-2xl shadow-sm border border-gray-50/50">
-                      <span className="flex-1 text-[10px] font-black uppercase text-[#1A1F3D] tracking-wider pl-2">{size}</span>
+                    <div key={size} className="flex items-center gap-3 bg-white p-3 rounded-2xl shadow-sm">
+                      <span className={cn(
+                        "flex-1 text-[10px] font-black uppercase tracking-wider pl-2",
+                        activeTab === 'dog' ? "text-blue-600" : "text-pink-600"
+                      )}>{size}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-300 font-bold">$</span>
                         <input 
                           type="number"
-                          className="w-16 bg-[#F5F6FA] border-none rounded-xl px-2 py-2 text-center text-xs font-black"
+                          className="w-16 bg-gray-50 border-none rounded-xl px-2 py-2 text-center text-xs font-black"
                           value={price}
                           onChange={e => handleUpdatePrice(size, Number(e.target.value))}
                         />
@@ -205,8 +220,8 @@ const ServiceModal = ({ service, onClose }: ServiceModalProps) => {
 
                 <div className="flex gap-2">
                   <input 
-                    className="flex-1 bg-white border border-gray-100 rounded-xl px-4 py-2.5 text-[10px] font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
-                    placeholder="Size name (e.g. XL)"
+                    className="flex-1 bg-white border-none rounded-xl px-4 py-2.5 text-[10px] font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
+                    placeholder="e.g. Medium"
                     value={newSizeName}
                     onChange={e => setNewSizeName(e.target.value)}
                     onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSize())}
@@ -214,7 +229,10 @@ const ServiceModal = ({ service, onClose }: ServiceModalProps) => {
                   <button 
                     type="button"
                     onClick={handleAddSize}
-                    className="bg-[#1A1F3D] text-white p-2.5 rounded-xl hover:bg-[#2A3152] transition-colors"
+                    className={cn(
+                      "text-white p-2.5 rounded-xl transition-colors",
+                      activeTab === 'dog' ? "bg-blue-600 hover:bg-blue-700" : "bg-pink-600 hover:bg-pink-700"
+                    )}
                   >
                     <Plus size={18} />
                   </button>
