@@ -11,7 +11,8 @@ import {
   Trash2,
   BadgeCheck,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  RotateCcw
 } from 'lucide-react';
 import { useStore, QueueItem, QueueStatus } from '@/store/useStore';
 import BookingModal from '@/components/BookingModal';
@@ -22,7 +23,6 @@ const Queue = () => {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [filter, setFilter] = useState<QueueStatus | 'All'>('All');
   
-  // วันที่ปัจจุบันสำหรับกรอง
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   const filteredQueue = queue.filter(item => 
@@ -36,10 +36,16 @@ const Queue = () => {
     { label: 'Completed', count: queue.filter(i => i.date === selectedDate && i.status === 'Completed').length, status: 'Completed' as QueueStatus, color: 'green' }
   ];
 
+  const statusSequence: QueueStatus[] = ['Waiting', 'Checked-in', 'In Progress', 'Completed'];
+
   const getNextStatus = (current: QueueStatus): QueueStatus | null => {
-    const sequence: QueueStatus[] = ['Waiting', 'Checked-in', 'In Progress', 'Completed'];
-    const index = sequence.indexOf(current);
-    return index < sequence.length - 1 ? sequence[index + 1] : null;
+    const index = statusSequence.indexOf(current);
+    return index < statusSequence.length - 1 ? statusSequence[index + 1] : null;
+  };
+
+  const getPrevStatus = (current: QueueStatus): QueueStatus | null => {
+    const index = statusSequence.indexOf(current);
+    return index > 0 ? statusSequence[index - 1] : null;
   };
 
   const getStatusUI = (status: QueueStatus) => {
@@ -82,7 +88,6 @@ const Queue = () => {
           </button>
         </header>
 
-        {/* Stats Filter Chips */}
         <div className="px-10 mb-8 flex gap-4 shrink-0 overflow-x-auto scrollbar-hide">
           <button 
             onClick={() => setFilter('All')}
@@ -123,6 +128,7 @@ const Queue = () => {
             filteredQueue.map((item) => {
               const ui = getStatusUI(item.status);
               const nextStatus = getNextStatus(item.status);
+              const prevStatus = getPrevStatus(item.status);
 
               return (
                 <div 
@@ -160,14 +166,27 @@ const Queue = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {/* Back Button */}
+                      {prevStatus && (
+                        <button 
+                          onClick={() => updateQueueStatus(item.id, prevStatus)}
+                          className="p-3 text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-2xl transition-all flex items-center gap-2"
+                          title={`Back to ${prevStatus}`}
+                        >
+                          <ChevronLeft size={18} />
+                          <span className="text-[10px] font-black uppercase hidden group-hover:block">Back</span>
+                        </button>
+                      )}
+
+                      {/* Next Status Button */}
                       {nextStatus && (
                         <button 
                           onClick={() => updateQueueStatus(item.id, nextStatus)}
                           className={cn(
                             "px-6 py-3 rounded-2xl transition-all flex items-center gap-2 text-xs font-black shadow-lg shadow-transparent hover:shadow-current/10 active:scale-95",
-                            nextStatus === 'Checked-in' ? "bg-purple-100 text-purple-700 hover:bg-purple-200" :
-                            nextStatus === 'In Progress' ? "bg-blue-100 text-blue-700 hover:bg-blue-200" :
-                            "bg-green-100 text-green-700 hover:bg-green-200"
+                            nextStatus === 'Checked-in' ? "bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200" :
+                            nextStatus === 'In Progress' ? "bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200" :
+                            "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
                           )}
                         >
                           <ChevronRight size={16} />
