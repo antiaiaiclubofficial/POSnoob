@@ -68,10 +68,15 @@ const Sidebar = () => {
 
       <div className="mt-auto space-y-6 pt-6 border-t border-gray-50">
         <div className="px-2 space-y-4">
-          <button className="flex items-center gap-3 text-gray-400 hover:text-[#1A1F3D] transition-colors w-full group">
+          <a 
+            href="https://www.elmony.com/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 text-gray-400 hover:text-[#1A1F3D] transition-colors w-full group"
+          >
             <HelpCircle size={18} className="group-hover:rotate-12 transition-transform" />
             <span className="text-xs font-bold">Support Center</span>
-          </button>
+          </a>
           <button className="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors w-full group">
             <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
             <span className="text-xs font-bold">Sign Out</span>
