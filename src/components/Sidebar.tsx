@@ -3,13 +3,13 @@
 import React from 'react';
 import { 
   Users, 
-  Scissors, 
   BarChart3, 
   HelpCircle, 
   LogOut,
   ShoppingBag,
   Settings as SettingsIcon,
-  LayoutDashboard
+  LayoutDashboard,
+  Scissors
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from 'react-router-dom';
@@ -18,7 +18,6 @@ import { useStore } from '@/store/useStore';
 const menuItems = [
   { icon: ShoppingBag, label: 'Checkout', path: '/' },
   { icon: LayoutDashboard, label: 'Pet Queue', path: '/queue' },
-  { icon: Scissors, label: 'Services', path: '/services' },
   { icon: Users, label: 'Customers', path: '/customers' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: SettingsIcon, label: 'Settings', path: '/settings' },
