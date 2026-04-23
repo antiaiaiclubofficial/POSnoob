@@ -14,6 +14,8 @@ export interface Staff {
   phone: string;
   status: 'Active' | 'Inactive';
   avatar: string;
+  username?: string;
+  password?: string;
 }
 
 export interface ActivityLog {
@@ -226,8 +228,8 @@ const INITIAL_TIER_RULES: TierRule[] = [
 ];
 
 const INITIAL_STAFF: Staff[] = [
-  { id: 's1', name: 'Alex Smith', role: 'Admin', phone: '081-111-2222', status: 'Active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop' },
-  { id: 's2', name: 'Sarah Wilson', role: 'Groomer', phone: '081-333-4444', status: 'Active', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop' }
+  { id: 's1', name: 'Alex Smith', role: 'Admin', phone: '081-111-2222', status: 'Active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop', username: 'alex', password: 'password' },
+  { id: 's2', name: 'Sarah Wilson', role: 'Groomer', phone: '081-333-4444', status: 'Active', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop', username: 'sarah', password: 'password' }
 ];
 
 const INITIAL_LOGS: ActivityLog[] = [
@@ -267,7 +269,14 @@ export const useStore = create<AppState>((set, get) => ({
   disabledSlots: [],
 
   login: (id, pass) => {
+    // Check super admin
     if (id === 'admin' && pass === '1234') {
+      set({ isAuthenticated: true });
+      return true;
+    }
+    // Check registered staff
+    const member = get().staff.find(s => s.username === id && s.password === pass && s.status === 'Active');
+    if (member) {
       set({ isAuthenticated: true });
       return true;
     }

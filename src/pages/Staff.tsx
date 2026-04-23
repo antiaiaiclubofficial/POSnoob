@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, Search, Edit3, Trash2, Phone, BadgeCheck, XCircle } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, Phone, BadgeCheck, XCircle, Key } from 'lucide-react';
 import { useStore, Staff as StaffType } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import StaffModal from '@/components/StaffModal';
@@ -14,7 +14,8 @@ const Staff = () => {
 
   const filteredStaff = staff.filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    s.role.toLowerCase().includes(searchQuery.toLowerCase())
+    s.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s.username && s.username.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleEdit = (s: StaffType) => {
@@ -47,7 +48,7 @@ const Staff = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
             <input 
               className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-6 py-3.5 text-sm font-bold shadow-sm"
-              placeholder="Search team members..."
+              placeholder="Search by name, role or username..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
@@ -71,13 +72,20 @@ const Staff = () => {
                   <h3 className="text-xl font-black">{member.name}</h3>
                   {member.status === 'Active' ? <BadgeCheck className="text-green-500" size={18} /> : <XCircle className="text-gray-300" size={18} />}
                 </div>
-                <span className={cn(
-                  "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
-                  member.role === 'Admin' ? "bg-purple-100 text-purple-600" : 
-                  member.role === 'Groomer' ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"
-                )}>
-                  {member.role}
-                </span>
+                <div className="flex flex-wrap gap-2">
+                  <span className={cn(
+                    "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
+                    member.role === 'Admin' ? "bg-purple-100 text-purple-600" : 
+                    member.role === 'Groomer' ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"
+                  )}>
+                    {member.role}
+                  </span>
+                  {member.username && (
+                    <span className="bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1">
+                      <Key size={10} /> {member.username}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-3 pt-6 border-t border-gray-50">
