@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { X, Calendar, Clock, Dog, User, Scissors } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Calendar, Clock, Dog, User, Scissors, Search, ChevronDown } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -12,14 +12,34 @@ interface BookingModalProps {
 
 const BookingModal = ({ onClose }: BookingModalProps) => {
   const { customers, services, addBooking } = useStore();
+  
+  // States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [selectedOwnerId, setSelectedOwnerId] = useState('');
   const [selectedPetId, setSelectedPetId] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [time, setTime] = useState('09:00');
 
+  // Derived Data
+  const filteredCustomers = useMemo(() => {
+    if (!searchQuery) return [];
+    return customers.filter(c => 
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      c.phone.includes(searchQuery)
+    );
+  }, [customers, searchQuery]);
+
   const selectedOwner = customers.find(c => c.id === selectedOwnerId);
   const selectedPet = selectedOwner?.pets.find(p => p.id === selectedPetId);
   const selectedService = services.find(s => s.id === selectedServiceId);
+
+  const handleSelectOwner = (id: string, name: string) => {
+    setSelectedOwnerId(id);
+    setSearchQuery(name);
+    setIsSearching(false);
+    setSelectedPetId(''); // Reset pet when owner changes
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,48 +65,76 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="p-8 border-b border-gray-50 flex justify-between items-center">
+        {/* Header */}
+        <div className="p-8 border-b border-gray-50 flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-[#1A1F3D]">New Booking</h2>
-            <p className="text-xs text-gray-400 font-medium">Schedule a pet service</p>
+            <h2 className="text-3xl font-black text-[#1A1F3D] mb-1">New Booking</h2>
+            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Schedule a pet service</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
             <X size={20} className="text-gray-400" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Select Owner</label>
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          <div className="space-y-6">
+            {/* Select Owner with Search */}
+            <div className="relative">
+              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Select Owner</label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                <select 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5 appearance-none"
-                  value={selectedOwnerId}
+                <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                <input 
+                  type="text"
+                  placeholder="Choose a customer..."
+                  className="w-full bg-[#F5F6FA] border-none rounded-[20px] pl-14 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
+                  value={searchQuery}
                   onChange={(e) => {
-                    setSelectedOwnerId(e.target.value);
-                    setSelectedPetId('');
+                    setSearchQuery(e.target.value);
+                    setIsSearching(true);
+                    if (selectedOwnerId) setSelectedOwnerId('');
                   }}
-                >
-                  <option value="">Choose a customer...</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                  onFocus={() => setIsSearching(true)}
+                />
+                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={18} />
               </div>
+
+              {/* Search Results Dropdown */}
+              {isSearching && searchQuery.length > 0 && (
+                <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden max-h-48 overflow-y-auto">
+                  {filteredCustomers.length > 0 ? (
+                    filteredCustomers.map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => handleSelectOwner(c.id, c.name)}
+                        className="w-full px-6 py-3.5 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                      >
+                        <p className="text-sm font-bold text-[#1A1F3D]">{c.name}</p>
+                        <p className="text-[10px] text-gray-400 font-bold">{c.phone}</p>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-6 py-4 text-xs text-gray-400 font-bold">No customers found</div>
+                  )}
+                </div>
+              )}
             </div>
 
+            {/* Pet Selection (Shows after owner is selected) */}
             {selectedOwner && (
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Select Pet</label>
-                <div className="flex gap-2">
+              <div className="animate-in fade-in slide-in-from-top-2">
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Select Pet</label>
+                <div className="flex flex-wrap gap-2">
                   {selectedOwner.pets.map(pet => (
                     <button
                       key={pet.id}
                       type="button"
                       onClick={() => setSelectedPetId(pet.id)}
                       className={cn(
-                        "flex-1 flex items-center gap-2 p-3 rounded-2xl border transition-all",
-                        selectedPetId === pet.id ? "bg-[#1A1F3D] text-white border-[#1A1F3D]" : "bg-white border-gray-100 hover:border-gray-300"
+                        "flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border transition-all",
+                        selectedPetId === pet.id 
+                          ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-lg" 
+                          : "bg-white border-gray-100 hover:border-gray-200 text-gray-600"
                       )}
                     >
                       <img src={pet.image} className="w-6 h-6 rounded-lg object-cover" />
@@ -97,13 +145,14 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
               </div>
             )}
 
+            {/* Service & Time Row */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Service</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Service</label>
                 <div className="relative">
-                  <Scissors className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                  <Scissors className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                   <select 
-                    className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5 appearance-none"
+                    className="w-full bg-[#F5F6FA] border-none rounded-[20px] pl-14 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5 appearance-none"
                     value={selectedServiceId}
                     onChange={(e) => setSelectedServiceId(e.target.value)}
                   >
@@ -113,12 +162,12 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Time</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Time</label>
                 <div className="relative">
-                  <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                  <Clock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                   <input 
                     type="time"
-                    className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
+                    className="w-full bg-[#F5F6FA] border-none rounded-[20px] pl-14 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
                   />
@@ -127,7 +176,8 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
             </div>
           </div>
 
-          <button className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#D9ED5F]/20 mt-4">
+          {/* Submit Button */}
+          <button className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D9ED5F]/20 mt-4 active:scale-95">
             Confirm Booking
           </button>
         </form>
