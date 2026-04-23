@@ -39,8 +39,13 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   const { shopName, shopLogo } = useStore();
 
   return (
-    <div className={cn("w-64 h-full bg-white flex flex-col p-6 border-r border-gray-100 shrink-0", className)}>
-      <div className="flex items-center gap-3 mb-10 px-2">
+    <div className={cn(
+      "h-full bg-white flex flex-col border-r border-gray-100 shrink-0 transition-all duration-300 ease-in-out overflow-hidden group/sidebar z-50",
+      "w-[88px] hover:w-64", // หุบเหลือ 88px และกางเป็น 64 (256px) เมื่อ Hover
+      className
+    )}>
+      {/* Logo Section */}
+      <div className="flex items-center gap-4 mb-10 px-6 pt-8 shrink-0">
         <div className="w-10 h-10 bg-[#1A1F3D] rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-[#1A1F3D]/10">
           {shopLogo ? (
             <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" />
@@ -48,15 +53,16 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
             <Scissors className="text-white w-5 h-5" />
           )}
         </div>
-        <div className="min-w-0">
-          <h1 className="font-black text-[#1A1F3D] leading-tight truncate text-sm" title={shopName}>
+        <div className="min-w-0 opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+          <h1 className="font-black text-[#1A1F3D] leading-tight truncate text-sm">
             {shopName}
           </h1>
           <p className="text-[9px] text-gray-400 font-black tracking-widest uppercase opacity-60">Premium Care</p>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1.5 overflow-y-auto scrollbar-hide">
+      {/* Navigation */}
+      <nav className="flex-1 space-y-2 px-4 overflow-y-auto scrollbar-hide">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -65,40 +71,44 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
               to={item.path}
               onClick={onClose}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group",
+                "flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group overflow-hidden whitespace-nowrap",
                 isActive 
                   ? "bg-[#1A1F3D] text-white shadow-xl shadow-[#1A1F3D]/10 font-bold" 
                   : "text-gray-400 hover:bg-gray-50 hover:text-[#1A1F3D]"
               )}
             >
-              <item.icon size={18} className={cn("transition-transform group-hover:scale-110", isActive ? "text-[#D9ED5F]" : "")} />
-              <span className="text-xs">{item.label}</span>
+              <item.icon size={20} className={cn("shrink-0 transition-transform group-hover:scale-110", isActive ? "text-[#D9ED5F]" : "")} />
+              <span className="text-xs opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">
+                {item.label}
+              </span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-auto space-y-6 pt-6 border-t border-gray-50">
-        <div className="px-2 space-y-4">
+      {/* Bottom Section */}
+      <div className="mt-auto space-y-4 px-4 pb-8 shrink-0">
+        <div className="pt-6 border-t border-gray-50 space-y-1">
           <a 
             href="https://www.elmony.com/" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="flex items-center gap-3 text-gray-400 hover:text-[#1A1F3D] transition-colors w-full group"
+            className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-[#1A1F3D] transition-colors group overflow-hidden whitespace-nowrap"
           >
-            <HelpCircle size={18} className="group-hover:rotate-12 transition-transform" />
-            <span className="text-xs font-bold">Support</span>
+            <HelpCircle size={20} className="shrink-0 group-hover:rotate-12 transition-transform" />
+            <span className="text-xs font-bold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Support</span>
           </a>
-          <button className="flex items-center gap-3 text-gray-400 hover:text-red-500 transition-colors w-full group">
-            <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-xs font-bold">Sign Out</span>
+          <button className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-red-500 transition-colors w-full group overflow-hidden whitespace-nowrap">
+            <LogOut size={20} className="shrink-0 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-xs font-bold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Sign Out</span>
           </button>
         </div>
         
-        <div className="bg-[#F5F6FA] p-4 rounded-[24px]">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-[10px] font-black border border-gray-100">A</div>
-            <span className="text-[10px] font-black text-[#1A1F3D] truncate">Admin User</span>
+        <div className="bg-[#F5F6FA] p-3 rounded-2xl flex items-center gap-3 overflow-hidden whitespace-nowrap">
+          <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-[10px] font-black border border-gray-100 shrink-0">A</div>
+          <div className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 min-w-0">
+            <p className="text-[10px] font-black text-[#1A1F3D] truncate">Admin User</p>
+            <p className="text-[8px] text-gray-400 font-bold uppercase">Store Owner</p>
           </div>
         </div>
       </div>
@@ -112,7 +122,7 @@ const Sidebar = () => {
       {/* Desktop Sidebar */}
       <SidebarContent className="hidden lg:flex" />
       
-      {/* Mobile Trigger */}
+      {/* Mobile Trigger (Always use full drawer on mobile for usability) */}
       <div className="lg:hidden fixed top-6 left-6 z-50">
         <Sheet>
           <SheetTrigger asChild>
@@ -121,7 +131,30 @@ const Sidebar = () => {
             </button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-64 border-none">
-            <SidebarContent className="w-full border-none" />
+            {/* On mobile, we force the sidebar to be expanded (w-64) inside the sheet */}
+            <div className="w-64 h-full bg-white flex flex-col border-none group/sidebar-mobile">
+               <div className="flex items-center gap-4 mb-10 px-6 pt-8 shrink-0">
+                  <div className="w-10 h-10 bg-[#1A1F3D] rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-[#1A1F3D]/10">
+                    <Scissors className="text-white w-5 h-5" />
+                  </div>
+                  <div>
+                    <h1 className="font-black text-[#1A1F3D] leading-tight truncate text-sm">Tactile Sanctuary</h1>
+                    <p className="text-[9px] text-gray-400 font-black tracking-widest uppercase opacity-60">Premium Care</p>
+                  </div>
+               </div>
+               <nav className="flex-1 space-y-2 px-4 overflow-y-auto scrollbar-hide">
+                  {menuItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-400 hover:bg-gray-50 hover:text-[#1A1F3D]"
+                    >
+                      <item.icon size={20} />
+                      <span className="text-xs">{item.label}</span>
+                    </Link>
+                  ))}
+               </nav>
+            </div>
           </SheetContent>
         </Sheet>
       </div>
