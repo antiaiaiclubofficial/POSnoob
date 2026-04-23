@@ -76,6 +76,7 @@ export interface Service {
   icon: ServiceIcon;
   title: string;
   description: string;
+  subServices: string[];
   category: string;
   targetSpecies: 'Dog' | 'Cat';
   prices: Record<string, ServicePriceInfo>;
@@ -211,7 +212,8 @@ const INITIAL_SERVICES: Service[] = [
     id: "svc-1", 
     icon: "grooming", 
     title: "Full Grooming", 
-    description: "Includes bath, haircut, nail trimming, and ear cleaning.", 
+    description: "Complete grooming package for professional care.", 
+    subServices: ["bath", "haircut", "nail trimming", "ear cleaning"],
     category: "Grooming", 
     targetSpecies: 'Dog',
     isActive: true,
@@ -225,7 +227,8 @@ const INITIAL_SERVICES: Service[] = [
     id: "svc-2", 
     icon: "bath", 
     title: "Bath & Brush", 
-    description: "Deep cleaning shampoo, blow dry, and intensive de-shedding brush.", 
+    description: "Clean and refresh your pet with our standard bath service.", 
+    subServices: ["shampoo", "blow dry", "brushing"],
     category: "Bathing", 
     targetSpecies: 'Dog',
     isActive: true,
@@ -239,7 +242,8 @@ const INITIAL_SERVICES: Service[] = [
     id: "svc-3", 
     icon: "spa", 
     title: "Spa Treatment", 
-    description: "Aromatherapy bath, mud mask, and therapeutic paw massage.", 
+    description: "Relaxing spa therapy for your furry friend.", 
+    subServices: ["aromatherapy", "mud mask", "massage"],
     category: "Spa", 
     targetSpecies: 'Dog',
     isActive: true,

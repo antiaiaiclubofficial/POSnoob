@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Scissors, Tag, Plus, Trash2, Dog, Cat, LayoutGrid, Check, PlusCircle, Clock, Sparkles, Bath } from 'lucide-react';
+import { X, Scissors, Plus, Trash2, Dog, Cat, Sparkles, Bath, CheckCircle2 } from 'lucide-react';
 import { useStore, Service, ServiceIcon, ServicePriceInfo } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,8 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
   const [targetSpecies, setTargetSpecies] = useState<'Dog' | 'Cat'>(defaultSpecies);
   const [icon, setIcon] = useState<ServiceIcon>('grooming');
   const [sizes, setSizes] = useState<SizeEntry[]>([]);
+  const [subServices, setSubServices] = useState<string[]>([]);
+  const [newSubService, setNewSubService] = useState('');
 
   useEffect(() => {
     if (service) {
@@ -36,6 +38,7 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
       setDescription(service.description);
       setTargetSpecies(service.targetSpecies);
       setIcon(service.icon);
+      setSubServices(service.subServices || []);
       
       const initialSizes = Object.entries(service.prices).map(([name, info]) => ({
         id: Math.random().toString(36).substr(2, 9),
@@ -75,6 +78,17 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
     setSizes(sizes.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
+  const handleAddSubService = () => {
+    if (newSubService.trim()) {
+      setSubServices([...subServices, newSubService.trim()]);
+      setNewSubService('');
+    }
+  };
+
+  const handleRemoveSubService = (index: number) => {
+    setSubServices(subServices.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !category) {
@@ -99,6 +113,7 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
       title,
       category,
       description,
+      subServices,
       icon,
       targetSpecies,
       prices,
@@ -120,20 +135,19 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-5xl rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-        {/* Header */}
-        <div className="p-10 flex justify-between items-center border-b border-gray-50">
+        <div className="p-8 lg:p-10 flex justify-between items-center border-b border-gray-50">
           <div className="flex items-center gap-6">
             <div className={cn(
-              "w-16 h-16 rounded-[24px] flex items-center justify-center text-white shadow-xl",
+              "w-14 h-14 lg:w-16 lg:h-16 rounded-[24px] flex items-center justify-center text-white shadow-xl",
               isDog ? "bg-blue-600" : "bg-pink-600"
             )}>
-              {isDog ? <Dog size={32} /> : <Cat size={32} />}
+              {isDog ? <Dog size={28} /> : <Cat size={28} />}
             </div>
             <div>
-              <h2 className="text-3xl font-black text-[#1A1F3D]">
+              <h2 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">
                 {service ? `Edit ${targetSpecies} Service` : `New ${targetSpecies} Service`}
               </h2>
-              <p className="text-sm text-gray-400 font-medium">Define your specialized grooming treatments</p>
+              <p className="text-xs lg:text-sm text-gray-400 font-medium">Define your specialized grooming treatments</p>
             </div>
           </div>
           <button onClick={onClose} className="p-4 hover:bg-gray-50 rounded-[20px] transition-all">
@@ -141,20 +155,19 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-10">
-            {/* General Settings */}
+        <form onSubmit={handleSubmit} className="p-8 lg:p-10 max-h-[75vh] overflow-y-auto scrollbar-hide">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-10">
             <div className="space-y-8">
               <div>
                 <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Choose Icon</label>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                   {(['grooming', 'bath', 'spa', 'nail'] as ServiceIcon[]).map((iconType) => (
                     <button
                       key={iconType}
                       type="button"
                       onClick={() => setIcon(iconType)}
                       className={cn(
-                        "w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all",
+                        "w-12 h-12 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center border-2 transition-all",
                         icon === iconType 
                         ? (isDog ? "bg-blue-600 border-blue-600 text-white" : "bg-pink-600 border-pink-600 text-white")
                         : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
@@ -169,60 +182,89 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
                 </div>
               </div>
 
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Service Details</label>
-                <div className="space-y-4">
-                  <input 
-                    className="w-full bg-[#F5F6FA] border-none rounded-[24px] px-8 py-5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5"
-                    value={title}
-                    onChange={e => setTitle(e.target.value)}
-                    placeholder="Full Grooming"
-                  />
-                  <input 
-                    className="w-full bg-[#F5F6FA] border-none rounded-[24px] px-8 py-5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5"
-                    value={category}
-                    onChange={e => setCategory(e.target.value)}
-                    placeholder="Category (e.g. Grooming)"
-                  />
-                  <textarea 
-                    className="w-full bg-[#F5F6FA] border-none rounded-[24px] px-8 py-5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 h-32 resize-none"
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    placeholder="Brief description of what's included..."
-                  />
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Service Basic Info</label>
+                <input 
+                  className="w-full bg-[#F5F6FA] border-none rounded-[20px] lg:rounded-[24px] px-6 lg:px-8 py-4 lg:py-5 text-sm font-bold"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Full Grooming"
+                />
+                <input 
+                  className="w-full bg-[#F5F6FA] border-none rounded-[20px] lg:rounded-[24px] px-6 lg:px-8 py-4 lg:py-5 text-sm font-bold"
+                  value={category}
+                  onChange={e => setCategory(e.target.value)}
+                  placeholder="Category (e.g. Grooming)"
+                />
+              </div>
+
+              {/* Sub-services Section */}
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Included Services (Checkboxes)</label>
+                <div className="bg-[#F5F6FA] p-6 rounded-[32px] space-y-4">
+                  <div className="flex gap-2">
+                    <input 
+                      className="flex-1 bg-white border-none rounded-xl px-4 py-3 text-xs font-bold shadow-sm"
+                      value={newSubService}
+                      onChange={e => setNewSubService(e.target.value)}
+                      onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubService())}
+                      placeholder="Add an item (e.g. Bathing)"
+                    />
+                    <button 
+                      type="button"
+                      onClick={handleAddSubService}
+                      className="bg-[#1A1F3D] text-white p-3 rounded-xl hover:scale-105 transition-all"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto scrollbar-hide">
+                    {subServices.map((item, idx) => (
+                      <div key={idx} className="bg-white px-3 py-2 rounded-xl flex items-center gap-2 border border-gray-100 shadow-sm">
+                        <CheckCircle2 size={12} className="text-green-500" />
+                        <span className="text-[10px] font-bold text-[#1A1F3D]">{item}</span>
+                        <button 
+                          type="button"
+                          onClick={() => handleRemoveSubService(idx)}
+                          className="text-gray-300 hover:text-red-500"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    {subServices.length === 0 && <p className="text-[10px] text-gray-400 font-medium italic w-full text-center py-2">No items added yet</p>}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Pricing Matrix */}
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Pricing Matrix</label>
               <div className={cn(
-                "rounded-[40px] p-8 border-2 min-h-[440px] flex flex-col",
+                "rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 border-2 min-h-[400px] flex flex-col",
                 isDog ? "bg-blue-50/20 border-blue-100" : "bg-pink-50/20 border-pink-100"
               )}>
-                <div className="flex-1 space-y-4 mb-6 max-h-[350px] overflow-y-auto pr-2 scrollbar-hide">
+                <div className="flex-1 space-y-4 mb-6">
                   <div className="flex gap-3 px-4 mb-2">
-                    <span className="flex-1 text-[9px] font-black text-gray-400 uppercase tracking-widest">Pet Size / Breed</span>
-                    <span className="w-32 text-[9px] font-black text-gray-400 uppercase tracking-widest">Price</span>
+                    <span className="flex-1 text-[9px] font-black text-gray-400 uppercase tracking-widest">Pet Size</span>
+                    <span className="w-24 lg:w-32 text-[9px] font-black text-gray-400 uppercase tracking-widest">Price</span>
                     <div className="w-10" />
                   </div>
                   
                   {sizes.map((s) => (
-                    <div key={s.id} className="flex gap-3 animate-in fade-in slide-in-from-right-2 duration-300">
-                      <div className="flex-1">
-                        <input 
-                          className="w-full bg-white border-none rounded-[20px] px-6 py-4 text-xs font-black shadow-sm focus:ring-2 focus:ring-[#1A1F3D]/10"
-                          value={s.name}
-                          onChange={e => updateSize(s.id, 'name', e.target.value)}
-                          placeholder="Small Breed"
-                        />
-                      </div>
-                      <div className="w-32 relative">
+                    <div key={s.id} className="flex gap-3">
+                      <input 
+                        className="flex-1 bg-white border-none rounded-[20px] px-4 lg:px-6 py-3 lg:py-4 text-xs font-black shadow-sm"
+                        value={s.name}
+                        onChange={e => updateSize(s.id, 'name', e.target.value)}
+                        placeholder="Small Breed"
+                      />
+                      <div className="w-24 lg:w-32 relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-gray-300">{currency}</span>
                         <input 
                           type="number"
-                          className="w-full bg-white border-none rounded-[20px] pl-8 pr-4 py-4 text-xs font-black shadow-sm focus:ring-2 focus:ring-[#1A1F3D]/10"
+                          className="w-full bg-white border-none rounded-[20px] pl-8 pr-4 py-3 lg:py-4 text-xs font-black shadow-sm"
                           value={s.price}
                           onChange={e => updateSize(s.id, 'price', Number(e.target.value))}
                         />
@@ -230,7 +272,7 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
                       <button 
                         type="button" 
                         onClick={() => handleRemoveSize(s.id)}
-                        className="p-4 text-gray-300 hover:text-red-500 transition-all"
+                        className="p-3 lg:p-4 text-gray-300 hover:text-red-500 transition-all"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -246,23 +288,22 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
                     isDog ? "border-blue-200 text-blue-400 hover:text-blue-600" : "border-pink-200 text-pink-400 hover:text-pink-600"
                   )}
                 >
-                  <PlusCircle size={18} /> Add New Price Tier
+                  <Plus size={16} /> Add Price Tier
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-6 pt-4 border-t border-gray-50">
+          <div className="flex gap-4 lg:gap-6 pt-4 border-t border-gray-50">
             <button 
               type="button" 
               onClick={onClose} 
-              className="px-10 py-5 text-sm font-black text-gray-400 hover:text-[#1A1F3D] transition-colors"
+              className="px-6 lg:px-10 py-4 lg:py-5 text-sm font-black text-gray-400 hover:text-[#1A1F3D]"
             >
               Cancel
             </button>
-            <button className="flex-1 bg-[#1A1F3D] text-white font-black py-5 rounded-[28px] shadow-2xl shadow-[#1A1F3D]/20 active:scale-95 text-lg hover:bg-[#2A3152] transition-all">
-              {service ? 'Save Service Changes' : 'Create New Service'}
+            <button className="flex-1 bg-[#1A1F3D] text-white font-black py-4 lg:py-5 rounded-[24px] lg:rounded-[28px] shadow-2xl shadow-[#1A1F3D]/20 active:scale-95 text-base lg:text-lg">
+              {service ? 'Save Changes' : 'Create Service'}
             </button>
           </div>
         </form>

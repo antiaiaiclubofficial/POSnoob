@@ -15,14 +15,8 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
-  // แยกรายการบริการย่อยจาก description
-  const subServices = useMemo(() => {
-    if (!service.description) return [];
-    const cleanDesc = service.description.replace(/^Includes\s+/i, '');
-    return cleanDesc.split(/,|\sand\s/).map(item => item.trim()).filter(item => item !== "");
-  }, [service.description]);
-
-  // ใช้ useMemo เพื่อให้ reference ของ availableSizes นิ่ง ป้องกันบัครีเซ็ตค่า
+  // ใช้รายการบริการย่อยจากฐานข้อมูลโดยตรง
+  const subServices = useMemo(() => service.subServices || [], [service.subServices]);
   const availableSizes = useMemo(() => Object.keys(service.prices), [service.prices]);
 
   useEffect(() => {
@@ -31,7 +25,6 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
   }, [subServices]);
 
   useEffect(() => {
-    // ตั้งค่าเริ่มต้นเมื่อเปลี่ยนสัตว์เลี้ยงหรือเปลี่ยนบริการ
     if (availableSizes.length > 0) {
       setSelectedSize(availableSizes[0]);
     } else {
@@ -64,13 +57,13 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       return;
     }
 
-    if (selectedItems.length === 0) {
+    if (selectedItems.length === 0 && subServices.length > 0) {
       toast.error("Please select at least one service item");
       return;
     }
 
     const itemTitle = isFixedPrice ? service.title : `${service.title} (${selectedSize})`;
-    const selectedText = selectedItems.length === subServices.length 
+    const selectedText = (selectedItems.length === subServices.length || subServices.length === 0)
       ? "" 
       : ` (Excl: ${subServices.filter(s => !selectedItems.includes(s)).join(', ')})`;
 
@@ -90,7 +83,6 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
 
   return (
     <div className="bg-white rounded-[40px] p-8 flex flex-col h-full transition-all duration-300 border border-transparent group hover:shadow-2xl hover:border-gray-100">
-      {/* Header: Icon & Price */}
       <div className="flex justify-between items-start mb-6">
         <div className="w-14 h-14 bg-[#F5F6FA] rounded-[20px] flex items-center justify-center text-[#1A1F3D] transition-transform group-hover:scale-110">
           <IconComponent className="w-7 h-7" />
@@ -103,39 +95,40 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
         </div>
       </div>
 
-      {/* Content: Title */}
       <div className="mb-4">
         <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">{service.title}</h3>
       </div>
 
-      {/* Sub-services Checkboxes (Wrapped layout) */}
-      <div className="space-y-3 mb-8 flex-1">
-        <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-1">Included Services</p>
-        <div className="flex flex-wrap gap-2">
-          {subServices.map((item) => (
-            <div 
-              key={item} 
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-xl transition-all cursor-pointer border text-[10px] font-bold",
-                selectedItems.includes(item) 
-                  ? "bg-blue-50/50 border-blue-100 text-[#1A1F3D]" 
-                  : "bg-white border-gray-50 text-gray-400 opacity-60"
-              )}
-              onClick={() => toggleItem(item)}
-            >
-              <div className={cn(
-                "w-3.5 h-3.5 rounded-md border flex items-center justify-center transition-all",
-                selectedItems.includes(item) 
-                  ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" 
-                  : "border-gray-200"
-              )}>
-                {selectedItems.includes(item) && <Check size={8} strokeWidth={4} />}
+      {/* Sub-services Checkboxes */}
+      {subServices.length > 0 && (
+        <div className="space-y-3 mb-8 flex-1">
+          <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-1">Included Services</p>
+          <div className="flex flex-wrap gap-2">
+            {subServices.map((item) => (
+              <div 
+                key={item} 
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-xl transition-all cursor-pointer border text-[10px] font-bold",
+                  selectedItems.includes(item) 
+                    ? "bg-blue-50/50 border-blue-100 text-[#1A1F3D]" 
+                    : "bg-white border-gray-50 text-gray-400 opacity-60"
+                )}
+                onClick={() => toggleItem(item)}
+              >
+                <div className={cn(
+                  "w-3.5 h-3.5 rounded-md border flex items-center justify-center transition-all",
+                  selectedItems.includes(item) 
+                    ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" 
+                    : "border-gray-200"
+                )}>
+                  {selectedItems.includes(item) && <Check size={8} strokeWidth={4} />}
+                </div>
+                <span className="capitalize">{item}</span>
               </div>
-              <span className="capitalize">{item}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Size Selector */}
       {!isFixedPrice && (
@@ -157,10 +150,9 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
         </div>
       )}
 
-      {/* Action Button */}
       <button 
         onClick={handleAdd}
-        className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl shadow-[#1A1F3D]/10"
+        className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl shadow-[#1A1F3D]/10 mt-auto"
       >
         <Plus size={20} /> Add for {activePet.name}
       </button>
