@@ -79,21 +79,21 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
         <p className="text-sm text-gray-400 leading-relaxed font-medium">{service.description}</p>
       </div>
 
-      {/* Size Selector: Pill Style */}
+      {/* Size Selector: Pill Style (Fixed Overflow) */}
       {!isFixedPrice && (
-        <div className="bg-[#F5F6FA] p-1.5 rounded-[24px] flex gap-1 mb-8">
+        <div className="bg-[#F5F6FA] p-1.5 rounded-[24px] flex flex-wrap gap-1 mb-8">
           {availableSizes.map((size) => (
             <button
               key={size}
               onClick={() => setSelectedSize(size)}
               className={cn(
-                "flex-1 py-2.5 px-4 text-[10px] font-black uppercase rounded-[18px] transition-all whitespace-nowrap",
+                "flex-1 min-w-[60px] py-2 px-2 text-[9px] font-black uppercase rounded-[18px] transition-all",
                 selectedSize === size 
                   ? "bg-white text-[#1A1F3D] shadow-sm" 
                   : "text-gray-400 hover:text-gray-600"
               )}
             >
-              {size.split(' ')[0]} {/* แสดงแค่คำแรก เช่น Small, Medium, Large */}
+              {size.split(' ')[0]}
             </button>
           ))}
         </div>
