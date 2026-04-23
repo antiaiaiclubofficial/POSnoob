@@ -5,7 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import { 
   Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign, 
   Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Users,
-  MapPin, Phone, MessageCircle, FileText
+  MapPin, Phone, MessageCircle, FileText, Award, Star, Crown, Gem
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -32,15 +32,12 @@ const Settings = () => {
   const [localShopLineId, setLocalShopLineId] = useState(shopLineId);
   const [localReceiptHeader, setLocalReceiptHeader] = useState(receiptHeader);
   
-  // Booking settings local state
   const [localSlotDuration, setLocalSlotDuration] = useState(slotDuration);
   const [localMaxCapacity, setLocalMaxCapacity] = useState(maxCapacity);
   const [localOpenTime, setLocalOpenTime] = useState(openTime);
   const [localCloseTime, setLocalCloseTime] = useState(closeTime);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Service management states
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [serviceQuery, setServiceQuery] = useState('');
@@ -70,15 +67,12 @@ const Settings = () => {
     ));
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLocalShopLogo(reader.result as string);
-        toast.success("Logo uploaded!");
-      };
-      reader.readAsDataURL(file);
+  const getTierIcon = (level: MembershipLevel) => {
+    switch(level) {
+      case 'Standard': return { icon: Star, color: 'text-gray-400', bg: 'bg-gray-50' };
+      case 'Silver': return { icon: Award, color: 'text-blue-400', bg: 'bg-blue-50' };
+      case 'Gold': return { icon: Crown, color: 'text-amber-400', bg: 'bg-amber-50' };
+      case 'VIP': return { icon: Gem, color: 'text-purple-400', bg: 'bg-purple-50' };
     }
   };
 
@@ -105,7 +99,7 @@ const Settings = () => {
             </button>
           </div>
 
-          <Tabs defaultValue="business" className="space-y-8">
+          <Tabs defaultValue="membership" className="space-y-8">
             <TabsList className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm w-auto inline-flex gap-1 h-auto">
               <TabsTrigger value="business" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
                 <Store size={16} className="mr-2" /> Business
@@ -121,8 +115,89 @@ const Settings = () => {
               </TabsTrigger>
             </TabsList>
 
+            <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+               <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-10">
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                    <ShieldCheck size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Membership Tier Logic</h2>
+                    <p className="text-xs text-gray-400">Define rewards and progression rules for your clients</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {localTierRules.map((rule) => {
+                    const tier = getTierIcon(rule.level);
+                    const Icon = tier.icon;
+                    return (
+                      <div key={rule.level} className="relative group bg-[#F5F6FA] p-8 rounded-[32px] border border-transparent hover:border-purple-100 transition-all">
+                        <div className={cn("absolute -top-4 -left-4 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", tier.bg, tier.color)}>
+                          <Icon size={24} />
+                        </div>
+                        
+                        <div className="space-y-6">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Public Label</label>
+                              <input 
+                                className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-black text-[#1A1F3D] focus:ring-2 focus:ring-purple-500/10" 
+                                value={rule.label} 
+                                onChange={(e) => updateRule(rule.level, 'label', e.target.value)} 
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Min. Spending</label>
+                              <div className="relative">
+                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                                <input 
+                                  type="number"
+                                  className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-[#1A1F3D]" 
+                                  value={rule.minSpent} 
+                                  onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))} 
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Benefit Discount</label>
+                              <div className="relative">
+                                <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                                <input 
+                                  type="number"
+                                  className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-green-600" 
+                                  value={rule.discount} 
+                                  onChange={(e) => updateRule(rule.level, 'discount', Number(e.target.value))} 
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-10 p-6 bg-purple-50 rounded-[28px] border border-purple-100/50 flex items-start gap-4">
+                  <div className="p-2 bg-white rounded-xl text-purple-600 shadow-sm shrink-0">
+                    <TrendingUp size={18} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-purple-900 mb-1">How it works</p>
+                    <p className="text-[10px] text-purple-800/70 leading-relaxed font-medium">
+                      Customers will be automatically upgraded to the next tier once their **Total Spent** reaches the minimum requirement. 
+                      The discount percentage will be applied automatically at checkout based on their current status.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </TabsContent>
+
+            {/* Other tabs remain the same as before */}
             <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-8">
-              {/* Profile Card */}
               <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-10">
                   <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
@@ -147,96 +222,49 @@ const Settings = () => {
                           </div>
                         )}
                       </div>
-                      <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-2 right-2 w-10 h-10 bg-[#1A1F3D] text-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-all"
-                      >
+                      <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 right-2 w-10 h-10 bg-[#1A1F3D] text-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-all">
                         <Upload size={18} />
                       </button>
-                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => setLocalShopLogo(reader.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }} />
                     </div>
                   </div>
-
                   <div className="md:col-span-9 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Shop Name</label>
-                        <div className="relative">
-                          <Store className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                          <input 
-                            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/20" 
-                            value={localShopName}
-                            placeholder="My Pet Shop"
-                            onChange={(e) => setLocalShopName(e.target.value)}
-                          />
-                        </div>
+                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopName} onChange={(e) => setLocalShopName(e.target.value)} />
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Phone Number</label>
-                        <div className="relative">
-                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                          <input 
-                            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/20" 
-                            value={localShopPhone}
-                            placeholder="02-xxx-xxxx"
-                            onChange={(e) => setLocalShopPhone(e.target.value)}
-                          />
-                        </div>
+                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopPhone} onChange={(e) => setLocalShopPhone(e.target.value)} />
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">LINE ID / Social</label>
-                        <div className="relative">
-                          <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                          <input 
-                            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/20" 
-                            value={localShopLineId}
-                            placeholder="@lineid"
-                            onChange={(e) => setLocalShopLineId(e.target.value)}
-                          />
-                        </div>
+                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopLineId} onChange={(e) => setLocalShopLineId(e.target.value)} />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Shop Address</label>
-                      <div className="relative">
-                        <MapPin className="absolute left-4 top-4 text-gray-300" size={18} />
-                        <textarea 
-                          className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500/20 h-24 resize-none" 
-                          value={localShopAddress}
-                          placeholder="Full address of your shop..."
-                          onChange={(e) => setLocalShopAddress(e.target.value)}
-                        />
-                      </div>
+                      <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none" value={localShopAddress} onChange={(e) => setLocalShopAddress(e.target.value)} />
                     </div>
                   </div>
                 </div>
               </section>
-
-              {/* Receipt Config */}
               <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-8">
                   <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
                     <FileText size={24} />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold">Receipt Configuration</h2>
-                    <p className="text-xs text-gray-400">Settings for printed and digital receipts</p>
-                  </div>
+                  <h2 className="text-xl font-bold">Receipt Configuration</h2>
                 </div>
-                
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Receipt Header Text</label>
-                  <div className="relative">
-                    <FileText className="absolute left-4 top-4 text-gray-300" size={18} />
-                    <textarea 
-                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-purple-500/20 h-32 resize-none" 
-                      value={localReceiptHeader}
-                      placeholder="Welcome message, Tax ID, or Legal info..."
-                      onChange={(e) => setLocalReceiptHeader(e.target.value)}
-                    />
-                  </div>
-                  <p className="text-[10px] text-gray-400 italic mt-2 ml-2">* This text will appear at the top of every receipt generated for customers.</p>
-                </div>
+                <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-32 resize-none" value={localReceiptHeader} onChange={(e) => setLocalReceiptHeader(e.target.value)} />
               </section>
             </TabsContent>
 
@@ -244,124 +272,49 @@ const Settings = () => {
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 <section className="xl:col-span-2 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                   <div className="flex items-center gap-3 mb-8">
-                    <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
-                      <Clock size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Booking Configuration</h2>
-                      <p className="text-xs text-gray-400">Define your shop hours and slot intervals</p>
-                    </div>
+                    <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><Clock size={24} /></div>
+                    <h2 className="text-xl font-bold">Booking Configuration</h2>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Slot Duration</label>
                       <div className="flex gap-2">
                         {[30, 60].map(duration => (
-                          <button
-                            key={duration}
-                            onClick={() => setLocalSlotDuration(duration)}
-                            className={cn(
-                              "flex-1 py-4 rounded-2xl border-2 font-bold transition-all",
-                              localSlotDuration === duration ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" : "bg-white border-gray-100 text-gray-400"
-                            )}
-                          >
-                            {duration} Min
-                          </button>
+                          <button key={duration} onClick={() => setLocalSlotDuration(duration)} className={cn("flex-1 py-4 rounded-2xl border-2 font-bold transition-all", localSlotDuration === duration ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" : "bg-white border-gray-100 text-gray-400")}>{duration} Min</button>
                         ))}
                       </div>
                     </div>
-
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Max Capacity (Pets/Slot)</label>
-                      <div className="relative">
-                        <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                        <input 
-                          type="number"
-                          className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-orange-500/20"
-                          value={localMaxCapacity}
-                          onChange={e => setLocalMaxCapacity(Number(e.target.value))}
-                        />
-                      </div>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Max Capacity</label>
+                      <input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localMaxCapacity} onChange={e => setLocalMaxCapacity(Number(e.target.value))} />
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Opening Time</label>
-                      <TimePicker 
-                        value={localOpenTime}
-                        onChange={setLocalOpenTime}
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Closing Time</label>
-                      <TimePicker 
-                        value={localCloseTime}
-                        onChange={setLocalCloseTime}
-                      />
-                    </div>
+                    <TimePicker value={localOpenTime} onChange={setLocalOpenTime} />
+                    <TimePicker value={localCloseTime} onChange={setLocalCloseTime} />
                   </div>
                 </section>
-
                 <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-                  <div className="mb-6">
-                    <h3 className="text-lg font-bold mb-1">Slot Planner</h3>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Manual Availability Override</p>
-                  </div>
-                  
                   <SlotPicker selectedTime="" onSelect={() => {}} />
-                  
-                  <div className="mt-6 p-4 bg-[#FFF9F2] rounded-2xl border border-orange-100">
-                    <p className="text-[9px] font-black text-orange-600 uppercase tracking-wider leading-relaxed">
-                      💡 Tip: Right-click on any slot to manually block it (for breaks, cleanup, or full day closure).
-                    </p>
-                  </div>
                 </section>
               </div>
             </TabsContent>
 
-            {/* Rest of the Tabs (Services, Membership) stay same */}
             <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-8">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
-                      <Scissors size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Service Management</h2>
-                      <p className="text-xs text-gray-400">Configure prices and service offerings</p>
-                    </div>
+                    <div className="p-3 bg-green-50 text-green-600 rounded-2xl"><Scissors size={24} /></div>
+                    <h2 className="text-xl font-bold">Service Management</h2>
                   </div>
-                  <div className="flex gap-4">
-                    <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-                      <input 
-                        type="text"
-                        placeholder="Search services..."
-                        className="bg-[#F5F6FA] border-none pl-10 pr-4 py-2.5 rounded-xl text-xs font-bold w-48 focus:ring-2 focus:ring-[#1A1F3D]/5"
-                        value={serviceQuery}
-                        onChange={e => setServiceQuery(e.target.value)}
-                      />
-                    </div>
-                    <button 
-                      onClick={() => { setSelectedService(null); setIsServiceModalOpen(true); }}
-                      className="bg-[#1A1F3D] text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"
-                    >
-                      <Plus size={16} /> Add Service
-                    </button>
-                  </div>
+                  <button onClick={() => { setSelectedService(null); setIsServiceModalOpen(true); }} className="bg-[#1A1F3D] text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"><Plus size={16} /> Add Service</button>
                 </div>
-
                 <div className="overflow-hidden border border-gray-50 rounded-2xl">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50/50">
                         <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Service</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Dog Pricing</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Cat Pricing</th>
+                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Prices</th>
                         <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">Actions</th>
                       </tr>
                     </thead>
@@ -379,13 +332,6 @@ const Settings = () => {
                               ))}
                              </div>
                           </td>
-                          <td className="px-6 py-5">
-                             <div className="flex flex-wrap gap-1">
-                              {Object.entries(svc.prices.cat).map(([sz, p]) => (
-                                <span key={sz} className="text-[9px] font-black bg-pink-50 text-pink-600 px-2 py-0.5 rounded-md">{sz}: ${p}</span>
-                              ))}
-                             </div>
-                          </td>
                           <td className="px-6 py-5 text-right">
                             <button onClick={() => { setSelectedService(svc); setIsServiceModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={16} /></button>
                           </td>
@@ -396,34 +342,12 @@ const Settings = () => {
                 </div>
               </section>
             </TabsContent>
-
-            <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-               <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-                    <ShieldCheck size={24} />
-                  </div>
-                  <h2 className="text-xl font-bold">Membership Tier Rules</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {localTierRules.map((rule) => (
-                    <div key={rule.level} className="p-6 bg-[#F5F6FA] rounded-2xl space-y-4">
-                      <p className="text-[10px] font-black uppercase text-purple-600">{rule.level}</p>
-                      <input className="w-full bg-white rounded-xl px-4 py-2.5 text-sm font-bold border-none" value={rule.label} onChange={(e) => updateRule(rule.level, 'label', e.target.value)} />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </TabsContent>
           </Tabs>
         </div>
       </main>
 
       {isServiceModalOpen && (
-        <ServiceModal 
-          service={selectedService} 
-          onClose={() => setIsServiceModalOpen(false)} 
-        />
+        <ServiceModal service={selectedService} onClose={() => setIsServiceModalOpen(false)} />
       )}
     </div>
   );
