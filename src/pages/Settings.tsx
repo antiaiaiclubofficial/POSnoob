@@ -3,22 +3,23 @@
 import React, { useState, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { 
-  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent
+  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Bath, Sparkles
 } from 'lucide-react';
-import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
+import { useStore, TierRule, MembershipLevel, Service, ServiceIcon } from '@/store/useStore';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ServiceModal from '@/components/ServiceModal';
 import SlotPicker from '@/components/SlotPicker';
 import TimePicker from '@/components/TimePicker';
 import { cn } from '@/lib/utils';
+import { Switch } from "@/components/ui/switch";
 
 const Settings = () => {
   const { 
     tierRules, updateTierRules, 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader, currency,
     updateBusinessProfile,
-    services, deleteService,
+    services, deleteService, toggleServiceActive,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings
   } = useStore();
 
@@ -40,6 +41,7 @@ const Settings = () => {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [serviceQuery, setServiceQuery] = useState('');
+  const [speciesTab, setSpeciesTab] = useState<'Dog' | 'Cat'>('Dog');
 
   const handleSaveAll = () => {
     updateTierRules(localTierRules);
@@ -76,112 +78,137 @@ const Settings = () => {
     }
   };
 
-  const ServiceTable = ({ species }: { species: 'Dog' | 'Cat' }) => {
+  const getIcon = (iconName: string, species: string) => {
     const isDog = species === 'Dog';
+    switch(iconName) {
+      case 'grooming': return <Scissors className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
+      case 'bath': return <Bath className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
+      case 'spa': return <Sparkles className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
+      default: return <Scissors className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
+    }
+  };
+
+  const ServiceCatalogView = () => {
     const filtered = services.filter(s => 
-      s.targetSpecies === species && 
+      s.targetSpecies === speciesTab && 
       (s.title.toLowerCase().includes(serviceQuery.toLowerCase()) || 
        s.category.toLowerCase().includes(serviceQuery.toLowerCase()))
     );
 
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center px-4">
-          <div className="flex items-center gap-3">
-            <div className={cn("w-3 h-3 rounded-full animate-pulse", isDog ? "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" : "bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]")} />
-            <h3 className="text-sm font-black text-[#1A1F3D] uppercase tracking-[0.2em]">{species} Service Pricing</h3>
+      <div className="space-y-8">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-black text-[#1A1F3D]">Service Catalog</h2>
+            <p className="text-sm text-gray-400 font-medium">Manage your professional grooming services and pricing models.</p>
           </div>
-          <button 
-            onClick={() => { setSelectedService(null); setIsServiceModalOpen(true); }}
-            className={cn(
-              "px-5 py-2.5 rounded-2xl text-[10px] font-black text-white flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg",
-              isDog ? "bg-blue-600 shadow-blue-600/20" : "bg-pink-600 shadow-pink-600/20"
-            )}
-          >
-            <Plus size={14} /> Add {species} Service
-          </button>
+          
+          <div className="flex items-center gap-4">
+            <div className="bg-[#E9EBF1] p-1 rounded-full flex gap-1">
+              <button 
+                onClick={() => setSpeciesTab('Dog')}
+                className={cn(
+                  "px-5 py-2 rounded-full text-[10px] font-black flex items-center gap-2 transition-all",
+                  speciesTab === 'Dog' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                <Dog size={14} /> DOG SERVICES
+              </button>
+              <button 
+                onClick={() => setSpeciesTab('Cat')}
+                className={cn(
+                  "px-5 py-2 rounded-full text-[10px] font-black flex items-center gap-2 transition-all",
+                  speciesTab === 'Cat' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                <Cat size={14} /> CAT SERVICES
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50/50">
-                  <th className="px-10 py-6 text-left text-[10px] font-black uppercase text-gray-400 tracking-[0.15em] w-1/3">Service Identity</th>
-                  <th className="px-10 py-6 text-left text-[10px] font-black uppercase text-gray-400 tracking-[0.15em]">Pricing Matrix</th>
-                  <th className="px-10 py-6 text-right text-[10px] font-black uppercase text-gray-400 tracking-[0.15em] w-32">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filtered.map((svc) => (
-                  <tr key={svc.id} className="group hover:bg-[#F8F9FD]/50 transition-all">
-                    {/* Part 1: Identity */}
-                    <td className="px-10 py-8">
-                      <div className="flex items-center gap-4">
-                        <div className={cn(
-                          "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
-                          isDog ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600"
-                        )}>
-                          <Scissors size={20} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-black text-base text-[#1A1F3D] mb-1 truncate">{svc.title}</p>
-                          <span className="inline-block bg-[#F1F3F9] text-[9px] font-black text-gray-400 px-2.5 py-1 rounded-lg uppercase tracking-wider">
-                            {svc.category}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          {filtered.map((svc) => (
+            <div 
+              key={svc.id} 
+              className={cn(
+                "bg-white rounded-[40px] p-8 shadow-sm border border-gray-100 flex flex-col transition-all hover:shadow-xl",
+                !svc.isActive && "opacity-60 grayscale-[0.5]"
+              )}
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex gap-4">
+                  <div className={cn(
+                    "w-14 h-14 rounded-3xl flex items-center justify-center",
+                    svc.targetSpecies === 'Dog' ? "bg-blue-50" : "bg-pink-50"
+                  )}>
+                    {getIcon(svc.icon, svc.targetSpecies)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-xl font-black text-[#1A1F3D]">{svc.title}</h3>
+                      {svc.isPopular && (
+                        <span className="bg-[#D9ED5F] text-[#1A1F3D] text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wider">Popular</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400 leading-relaxed max-w-[240px]">{svc.description}</p>
+                  </div>
+                </div>
 
-                    {/* Part 2: Pricing Structure (Size/Price) */}
-                    <td className="px-10 py-8">
-                      <div className="flex flex-wrap gap-2.5">
-                        {Object.entries(svc.prices).map(([sz, p]) => (
-                          <div key={sz} className="flex items-center overflow-hidden rounded-2xl border border-gray-100 shadow-sm bg-white hover:border-[#1A1F3D]/20 transition-all">
-                            <div className={cn(
-                              "px-3 py-2 text-[9px] font-black uppercase tracking-tighter",
-                              isDog ? "bg-blue-600 text-white" : "bg-pink-600 text-white"
-                            )}>
-                              {sz}
-                            </div>
-                            <div className="px-4 py-2 bg-white flex items-center gap-1.5">
-                              <span className="text-[10px] font-black text-gray-300">{currency}</span>
-                              <span className="text-sm font-black text-[#1A1F3D]">{p.price.toFixed(2)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
+                <div className="flex items-center gap-3">
+                  <Switch 
+                    checked={svc.isActive} 
+                    onCheckedChange={() => toggleServiceActive(svc.id)}
+                    className="data-[state=checked]:bg-[#1A1F3D]"
+                  />
+                  <button 
+                    onClick={() => { setSelectedService(svc); setIsServiceModalOpen(true); }}
+                    className="p-2 text-gray-400 hover:text-[#1A1F3D] transition-colors"
+                  >
+                    <Edit3 size={18} />
+                  </button>
+                  <button 
+                    onClick={() => deleteService(svc.id)}
+                    className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
 
-                    {/* Part 3: Actions */}
-                    <td className="px-10 py-8 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => { setSelectedService(svc); setIsServiceModalOpen(true); }} 
-                          className="p-3 bg-gray-50 text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-xl transition-all"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => deleteService(svc.id)} 
-                          className="p-3 bg-gray-50 text-gray-400 hover:bg-red-500 hover:text-white rounded-xl transition-all"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+              <div className="mt-auto">
+                <div className="bg-[#1A1F3D] rounded-t-2xl px-6 py-2 flex justify-between">
+                  <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Pet Size</span>
+                  <div className="flex gap-12">
+                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Price ({currency})</span>
+                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Duration</span>
+                  </div>
+                </div>
+                <div className="bg-[#F8F9FD] rounded-b-2xl border-x border-b border-gray-100 divide-y divide-gray-100">
+                  {Object.entries(svc.prices).map(([size, info]) => (
+                    <div key={size} className="px-6 py-3.5 flex justify-between items-center">
+                      <span className="text-[11px] font-bold text-gray-600">{size}</span>
+                      <div className="flex gap-12 items-center">
+                        <span className="text-xs font-black text-[#1A1F3D] min-w-[50px] text-right">{currency}{info.price.toLocaleString()}</span>
+                        <span className="text-[10px] font-bold text-gray-400 min-w-[50px] text-right">{info.duration} min</span>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="px-10 py-16 text-center text-gray-300 font-bold italic text-sm">
-                      No matching services found in the catalog.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <button 
+            onClick={() => { setSelectedService(null); setIsServiceModalOpen(true); }}
+            className="bg-transparent border-2 border-dashed border-gray-200 rounded-[40px] flex flex-col items-center justify-center py-16 group hover:bg-white hover:border-[#1A1F3D]/20 transition-all cursor-pointer"
+          >
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Plus size={24} className="text-gray-400" />
+            </div>
+            <h4 className="text-lg font-black text-[#1A1F3D] mb-1">Add New Service</h4>
+            <p className="text-xs text-gray-400">Configure a new grooming or spa package</p>
+          </button>
         </div>
       </div>
     );
@@ -283,11 +310,7 @@ const Settings = () => {
             </TabsContent>
 
             <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-12">
-               <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <h2 className="text-2xl font-black">Service Catalog</h2>
-                    <p className="text-sm text-gray-400">Define your treatments and pricing matrix</p>
-                  </div>
+               <div className="flex justify-end mb-4">
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
                     <input 
@@ -300,8 +323,7 @@ const Settings = () => {
                   </div>
                </div>
 
-               <ServiceTable species="Dog" />
-               <ServiceTable species="Cat" />
+               <ServiceCatalogView />
             </TabsContent>
 
             <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
