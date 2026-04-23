@@ -28,7 +28,7 @@ const Settings = () => {
   const { 
     tierRules, updateTierRules, 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader, currency, shopIsOpen, recurringHolidays,
-    lineLiffId, lineChannelToken, smsApiKey,
+    lineLiffId, lineChannelToken,
     updateBusinessProfile,
     services, deleteService, toggleServiceActive,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings
@@ -47,7 +47,6 @@ const Settings = () => {
   
   const [localLineLiffId, setLocalLineLiffId] = useState(lineLiffId);
   const [localLineChannelToken, setLocalLineChannelToken] = useState(lineChannelToken);
-  const [localSmsApiKey, setLocalSmsApiKey] = useState(smsApiKey);
 
   const [localSlotDuration, setLocalSlotDuration] = useState(slotDuration);
   const [localMaxCapacity, setLocalMaxCapacity] = useState(maxCapacity);
@@ -81,7 +80,6 @@ const Settings = () => {
       recurringHolidays: localRecurringHolidays,
       lineLiffId: localLineLiffId,
       lineChannelToken: localLineChannelToken,
-      smsApiKey: localSmsApiKey
     });
     updateBookingSettings({
       slotDuration: localSlotDuration,
@@ -138,7 +136,7 @@ const Settings = () => {
               onClick={() => setIsBroadcastModalOpen(true)}
               className="bg-white border border-gray-100 text-[#1A1F3D] px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
             >
-              <Send size={18} className="text-blue-500" /> Messaging Center
+              <Send size={18} className="text-green-500" /> Messaging Center
             </button>
             <button 
               onClick={handleSaveAll}
@@ -255,8 +253,7 @@ const Settings = () => {
           </TabsContent>
 
           <TabsContent value="integrations" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* LINE Integration */}
+             <div className="max-w-2xl mx-auto">
                 <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-14 h-14 bg-green-50 text-green-600 rounded-[22px] flex items-center justify-center">
@@ -296,41 +293,6 @@ const Settings = () => {
                       2. Create a LIFF App and set Endpoint URL to your app URL<br/>
                       3. Copy LIFF ID and Messaging Channel Token here
                     </p>
-                  </div>
-                </section>
-
-                {/* SMS Integration */}
-                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-[22px] flex items-center justify-center">
-                      <Smartphone size={28} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">SMS Gateway</h2>
-                      <p className="text-xs text-gray-400">Transactional alerts for clients</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">API Key / Token</label>
-                      <input 
-                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold font-mono" 
-                        placeholder="Enter SMS Provider API Key..."
-                        value={localSmsApiKey} 
-                        onChange={(e) => setLocalSmsApiKey(e.target.value)} 
-                      />
-                    </div>
-                    <div className="p-8 border-2 border-dashed border-gray-100 rounded-[28px] text-center">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Messaging Credits</p>
-                      <h3 className="text-3xl font-black text-[#1A1F3D]">2,450</h3>
-                      <p className="text-[8px] text-gray-300 font-bold uppercase mt-1">Remaining Units</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                    <AlertCircle className="text-blue-500 shrink-0" size={18} />
-                    <p className="text-[10px] font-bold text-blue-600">SMS will be used as a fallback if LINE delivery fails or for non-LINE users.</p>
                   </div>
                 </section>
              </div>

@@ -2,7 +2,7 @@
 
 import { toast } from 'sonner';
 
-export type MessageChannel = 'LINE' | 'SMS' | 'Both';
+export type MessageChannel = 'LINE';
 
 interface SendMessageProps {
   to: string;
@@ -11,7 +11,7 @@ interface SendMessageProps {
 }
 
 export const sendNotification = async ({ to, message, channel }: SendMessageProps) => {
-  // ในสถานการณ์จริง ส่วนนี้จะเรียกใช้ LINE Messaging API หรือ SMS Gateway Provider
+  // ในสถานการณ์จริง ส่วนนี้จะเรียกใช้ LINE Messaging API
   console.log(`[Messaging] Sending to ${to} via ${channel}: ${message}`);
   
   // จำลองการทำงานของ API

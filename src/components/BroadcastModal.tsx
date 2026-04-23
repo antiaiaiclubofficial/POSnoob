@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { X, Send, MessageSquare, Phone, Users, ShieldCheck, Smartphone, CheckCircle2 } from 'lucide-react';
+import { X, Send, MessageSquare, Users, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useStore, MembershipLevel } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -14,10 +14,10 @@ interface BroadcastModalProps {
 const BroadcastModal = ({ onClose }: BroadcastModalProps) => {
   const { customers } = useStore();
   const [message, setMessage] = useState('');
-  const [channel, setChannel] = useState<MessageChannel>('Both');
   const [targetTier, setTargetTier] = useState<'All' | MembershipLevel>('All');
   const [isSending, setIsSending] = useState(false);
 
+  const channel: MessageChannel = 'LINE';
   const targetCustomers = customers.filter(c => targetTier === 'All' || c.membership === targetTier);
 
   const handleSend = async () => {
@@ -43,7 +43,7 @@ const BroadcastModal = ({ onClose }: BroadcastModalProps) => {
         });
       }
       
-      toast.success(`Broadcast sent successfully to ${targetCustomers.length} recipients!`);
+      toast.success(`Broadcast sent successfully to ${targetCustomers.length} recipients via LINE!`);
       onClose();
     } catch (error) {
       toast.error("Failed to send broadcast");
@@ -60,8 +60,8 @@ const BroadcastModal = ({ onClose }: BroadcastModalProps) => {
         <div className="flex-1 p-10 space-y-8 overflow-y-auto scrollbar-hide">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-3xl font-black text-[#1A1F3D]">Broadcast Center</h2>
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Connect with your community</p>
+              <h2 className="text-3xl font-black text-[#1A1F3D]">LINE Broadcast</h2>
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Connect via LINE Official Account</p>
             </div>
             <button onClick={onClose} className="md:hidden p-2 hover:bg-gray-50 rounded-xl">
               <X size={20} />
@@ -69,27 +69,6 @@ const BroadcastModal = ({ onClose }: BroadcastModalProps) => {
           </div>
 
           <div className="space-y-6">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Delivery Channel</label>
-              <div className="flex gap-2">
-                {(['LINE', 'SMS', 'Both'] as MessageChannel[]).map((ch) => (
-                  <button
-                    key={ch}
-                    onClick={() => setChannel(ch)}
-                    className={cn(
-                      "flex-1 py-4 rounded-2xl border-2 font-black text-[10px] uppercase transition-all flex items-center justify-center gap-2",
-                      channel === ch ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-lg" : "bg-white border-gray-100 text-gray-400"
-                    )}
-                  >
-                    {ch === 'LINE' && <MessageSquare size={14} />}
-                    {ch === 'SMS' && <Smartphone size={14} />}
-                    {ch === 'Both' && <Users size={14} />}
-                    {ch}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="space-y-3">
               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Target Audience</label>
               <div className="grid grid-cols-2 gap-2">
@@ -99,7 +78,7 @@ const BroadcastModal = ({ onClose }: BroadcastModalProps) => {
                     onClick={() => setTargetTier(tier)}
                     className={cn(
                       "py-3 rounded-xl border-2 text-[10px] font-black transition-all",
-                      targetTier === tier ? "bg-purple-50 border-purple-200 text-purple-600" : "bg-white border-gray-50 text-gray-400"
+                      targetTier === tier ? "bg-green-50 border-green-200 text-green-600" : "bg-white border-gray-50 text-gray-400"
                     )}
                   >
                     {tier} {tier === 'All' ? 'Customers' : 'Members'}
@@ -114,7 +93,7 @@ const BroadcastModal = ({ onClose }: BroadcastModalProps) => {
             <div className="space-y-3">
               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Message Content</label>
               <textarea 
-                className="w-full bg-[#F5F6FA] border-none rounded-[28px] p-6 text-sm font-medium h-40 resize-none focus:ring-4 focus:ring-blue-500/5 transition-all"
+                className="w-full bg-[#F5F6FA] border-none rounded-[28px] p-6 text-sm font-medium h-40 resize-none focus:ring-4 focus:ring-green-500/5 transition-all"
                 placeholder="Type your promotion or announcement here..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -130,7 +109,7 @@ const BroadcastModal = ({ onClose }: BroadcastModalProps) => {
             {isSending ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
-              <><Send size={18} /> Send Broadcast Now</>
+              <><Send size={18} /> Send LINE Broadcast</>
             )}
           </button>
         </div>
@@ -146,7 +125,7 @@ const BroadcastModal = ({ onClose }: BroadcastModalProps) => {
           <div className="w-full max-w-[280px] space-y-6">
             <div className="text-center">
               <ShieldCheck className="mx-auto text-green-500 mb-2" size={32} />
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Visual Preview</p>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">LINE Preview</p>
             </div>
 
             {/* Smartphone Mockup */}
@@ -155,7 +134,7 @@ const BroadcastModal = ({ onClose }: BroadcastModalProps) => {
               
               <div className="h-full bg-white rounded-[32px] p-4 flex flex-col pt-8">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                     <MessageSquare size={10} className="text-white" />
                   </div>
                   <span className="text-[8px] font-black uppercase text-gray-400">Tactile Sanctuary</span>
@@ -171,12 +150,10 @@ const BroadcastModal = ({ onClose }: BroadcastModalProps) => {
                   <span className="text-[7px] text-gray-300 font-bold mt-1 block">12:45 PM</span>
                 </div>
 
-                {channel === 'LINE' && (
-                  <div className="mt-auto bg-green-500/10 border border-green-500/20 p-2 rounded-xl flex items-center gap-2">
-                    <CheckCircle2 size={10} className="text-green-500" />
-                    <span className="text-[7px] font-black text-green-600 uppercase">LINE Optimized</span>
-                  </div>
-                )}
+                <div className="mt-auto bg-green-500/10 border border-green-500/20 p-2 rounded-xl flex items-center gap-2">
+                  <CheckCircle2 size={10} className="text-green-500" />
+                  <span className="text-[7px] font-black text-green-600 uppercase">LINE Verified</span>
+                </div>
               </div>
             </div>
           </div>
