@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Scissors, Bath, ShieldCheck, Zap, Plus, Dog, Cat } from 'lucide-react';
+import { Scissors, Bath, ShieldCheck, Zap, Plus, Dog, Cat, Sparkles } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useStore, Service, ServiceIcon } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -28,12 +28,14 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
   }, [activePet, service.id]);
 
   const currentPrice = selectedSize ? service.prices[selectedSize].price : 0;
+  const isFixedPrice = availableSizes.length <= 1;
 
   const IconComponent = {
     grooming: Scissors,
     bath: Bath,
     nail: Zap,
-    deshedding: ShieldCheck
+    deshedding: ShieldCheck,
+    spa: Sparkles
   }[service.icon as ServiceIcon] || (service.targetSpecies === 'Dog' ? Dog : Cat);
 
   const handleAdd = () => {
@@ -45,67 +47,64 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
     addToCart({
       id: service.id,
       icon: service.icon,
-      title: `${service.title} (${selectedSize})`,
+      title: isFixedPrice ? service.title : `${service.title} (${selectedSize})`,
       price: currentPrice,
       petId: activePet.id,
       petName: activePet.name,
       ownerName: selectedOwner.name,
-      size: selectedSize,
+      size: isFixedPrice ? undefined : selectedSize,
       queueItemId: activeQueueItemId || undefined
     });
     toast.success(`Added ${service.title} for ${activePet.name}`);
   };
 
-  const isDog = service.targetSpecies === 'Dog';
-
   return (
-    <div className={cn(
-      "bg-white rounded-[32px] p-6 flex flex-col h-full transition-all duration-300 border border-transparent group hover:shadow-xl hover:border-gray-100",
-      isDog ? "hover:border-blue-100" : "hover:border-pink-100"
-    )}>
+    <div className="bg-white rounded-[40px] p-8 flex flex-col h-full transition-all duration-300 border border-transparent group hover:shadow-2xl hover:border-gray-100">
+      {/* Header: Icon & Price */}
       <div className="flex justify-between items-start mb-6">
-        <div className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110",
-          isDog ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600"
-        )}>
-          <IconComponent className="w-6 h-6" />
+        <div className="w-14 h-14 bg-[#F5F6FA] rounded-[20px] flex items-center justify-center text-[#1A1F3D] transition-transform group-hover:scale-110">
+          <IconComponent className="w-7 h-7" />
         </div>
         <div className="text-right">
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Price ({selectedSize})</p>
-          <p className="text-2xl font-black text-[#1A1F3D]">{currency}{currentPrice}</p>
+          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">
+            {isFixedPrice ? 'Fixed Price' : 'Starting From'}
+          </p>
+          <p className="text-3xl font-black text-[#1A1F3D]">{currency}{currentPrice}</p>
         </div>
       </div>
 
-      <h3 className="text-xl font-black text-[#1A1F3D] mb-2">{service.title}</h3>
-      <p className="text-xs text-gray-400 leading-relaxed mb-6 flex-grow">{service.description}</p>
+      {/* Content: Title & Description */}
+      <div className="mb-8">
+        <h3 className="text-2xl font-black text-[#1A1F3D] mb-2">{service.title}</h3>
+        <p className="text-sm text-gray-400 leading-relaxed font-medium">{service.description}</p>
+      </div>
 
-      {availableSizes.length > 0 && (
-        <div className="bg-[#F5F6FA] p-1.5 rounded-2xl flex gap-1.5 mb-5 overflow-x-auto scrollbar-hide">
+      {/* Size Selector: Pill Style */}
+      {!isFixedPrice && (
+        <div className="bg-[#F5F6FA] p-1.5 rounded-[24px] flex gap-1 mb-8">
           {availableSizes.map((size) => (
             <button
               key={size}
               onClick={() => setSelectedSize(size)}
               className={cn(
-                "flex-1 py-2 px-3 text-[10px] font-black uppercase rounded-xl transition-all whitespace-nowrap",
+                "flex-1 py-2.5 px-4 text-[10px] font-black uppercase rounded-[18px] transition-all whitespace-nowrap",
                 selectedSize === size 
-                  ? (isDog ? "bg-blue-600 text-white shadow-md" : "bg-pink-600 text-white shadow-md") 
-                  : "bg-white text-gray-400 hover:text-gray-600 shadow-sm"
+                  ? "bg-white text-[#1A1F3D] shadow-sm" 
+                  : "text-gray-400 hover:text-gray-600"
               )}
             >
-              {size}
+              {size.split(' ')[0]} {/* แสดงแค่คำแรก เช่น Small, Medium, Large */}
             </button>
           ))}
         </div>
       )}
 
+      {/* Action Button */}
       <button 
         onClick={handleAdd}
-        className={cn(
-          "w-full text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg",
-          isDog ? "bg-blue-600 hover:bg-blue-700 shadow-blue-600/10" : "bg-pink-600 hover:bg-pink-700 shadow-pink-600/10"
-        )}
+        className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl shadow-[#1A1F3D]/10 mt-auto"
       >
-        <Plus size={18} /> Add for {activePet.name}
+        <Plus size={20} /> Add for {activePet.name}
       </button>
     </div>
   );
