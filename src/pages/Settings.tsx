@@ -375,7 +375,7 @@ const Settings = () => {
                       <input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localMaxCapacity} onChange={e => setLocalMaxCapacity(Number(e.target.value))} />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-6">
                       <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Opening Time</label>
                         <TimePicker value={localOpenTime} onChange={setLocalOpenTime} />
