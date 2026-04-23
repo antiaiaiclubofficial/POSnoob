@@ -77,6 +77,7 @@ export interface QueueItem {
   petName: string;
   ownerName: string;
   serviceName: string;
+  date: string; // เพิ่มช่องวันที่
   time: string;
   status: QueueStatus;
   image: string;
@@ -109,10 +110,10 @@ interface AppState {
   activeQueueItemId: string | null;
   
   // Booking Settings
-  slotDuration: number; // minutes
-  openTime: string; // "09:00"
-  closeTime: string; // "20:00"
-  disabledSlots: string[]; // ["10:30", "14:00"]
+  slotDuration: number;
+  openTime: string;
+  closeTime: string;
+  disabledSlots: string[];
   
   updateBusinessProfile: (profile: { shopName?: string, shopLogo?: string | null }) => void;
   addToCart: (item: CartItem) => void;
@@ -235,7 +236,11 @@ export const useStore = create<AppState>((set, get) => ({
   setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
 
   addBooking: (booking) => set((state) => ({
-    queue: [...state.queue, { ...booking, id: Math.random().toString(36).substr(2, 9), isPaid: false }].sort((a, b) => a.time.localeCompare(b.time))
+    queue: [...state.queue, { ...booking, id: Math.random().toString(36).substr(2, 9), isPaid: false }].sort((a, b) => {
+      // เรียงตามวันที่ก่อน แล้วตามด้วยเวลา
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.time.localeCompare(b.time);
+    })
   })),
   updateQueueStatus: (id, status) => set((state) => ({
     queue: state.queue.map(q => q.id === id ? { ...q, status } : q)

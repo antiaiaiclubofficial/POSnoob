@@ -9,10 +9,9 @@ import {
   Plus, 
   Calendar as CalendarIcon,
   Trash2,
-  Undo2,
-  UserCheck,
   BadgeCheck,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import { useStore, QueueItem, QueueStatus } from '@/store/useStore';
 import BookingModal from '@/components/BookingModal';
@@ -22,14 +21,19 @@ const Queue = () => {
   const { queue, updateQueueStatus, removeQueueItem } = useStore();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [filter, setFilter] = useState<QueueStatus | 'All'>('All');
+  
+  // วันที่ปัจจุบันสำหรับกรอง
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const filteredQueue = queue.filter(item => filter === 'All' || item.status === filter);
+  const filteredQueue = queue.filter(item => 
+    item.date === selectedDate && (filter === 'All' || item.status === filter)
+  );
 
   const stats = [
-    { label: 'Waiting', count: queue.filter(i => i.status === 'Waiting').length, status: 'Waiting' as QueueStatus, color: 'orange' },
-    { label: 'Checked-in', count: queue.filter(i => i.status === 'Checked-in').length, status: 'Checked-in' as QueueStatus, color: 'purple' },
-    { label: 'In Progress', count: queue.filter(i => i.status === 'In Progress').length, status: 'In Progress' as QueueStatus, color: 'blue' },
-    { label: 'Completed', count: queue.filter(i => i.status === 'Completed').length, status: 'Completed' as QueueStatus, color: 'green' }
+    { label: 'Waiting', count: queue.filter(i => i.date === selectedDate && i.status === 'Waiting').length, status: 'Waiting' as QueueStatus, color: 'orange' },
+    { label: 'Checked-in', count: queue.filter(i => i.date === selectedDate && i.status === 'Checked-in').length, status: 'Checked-in' as QueueStatus, color: 'purple' },
+    { label: 'In Progress', count: queue.filter(i => i.date === selectedDate && i.status === 'In Progress').length, status: 'In Progress' as QueueStatus, color: 'blue' },
+    { label: 'Completed', count: queue.filter(i => i.date === selectedDate && i.status === 'Completed').length, status: 'Completed' as QueueStatus, color: 'green' }
   ];
 
   const getNextStatus = (current: QueueStatus): QueueStatus | null => {
@@ -41,10 +45,16 @@ const Queue = () => {
   const getStatusUI = (status: QueueStatus) => {
     switch(status) {
       case 'Waiting': return { color: 'text-orange-500', bg: 'bg-orange-50', icon: Clock };
-      case 'Checked-in': return { color: 'text-purple-500', bg: 'bg-purple-50', icon: UserCheck };
+      case 'Checked-in': return { color: 'text-purple-500', bg: 'bg-purple-50', icon: Clock };
       case 'In Progress': return { color: 'text-blue-500', bg: 'bg-blue-50', icon: PlayCircle };
       case 'Completed': return { color: 'text-green-500', bg: 'bg-green-50', icon: CheckCircle2 };
     }
+  };
+
+  const changeDate = (days: number) => {
+    const date = new Date(selectedDate);
+    date.setDate(date.getDate() + days);
+    setSelectedDate(date.toISOString().split('T')[0]);
   };
 
   return (
@@ -53,18 +63,22 @@ const Queue = () => {
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="px-10 py-8 flex justify-between items-end shrink-0">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <CalendarIcon size={14} className="text-gray-400" />
-              <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Daily Operations • {new Date().toLocaleDateString()}</p>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl shadow-sm border border-gray-100">
+                <button onClick={() => changeDate(-1)} className="p-1 hover:bg-gray-50 rounded-lg transition-colors"><ChevronLeft size={14}/></button>
+                <span className="text-xs font-black text-[#1A1F3D] min-w-[100px] text-center">{selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : selectedDate}</span>
+                <button onClick={() => changeDate(1)} className="p-1 hover:bg-gray-50 rounded-lg transition-colors"><ChevronRight size={14}/></button>
+              </div>
+              <div className="w-1 h-1 bg-gray-300 rounded-full" />
+              <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Queue Management</p>
             </div>
-            <h1 className="text-3xl font-black text-[#1A1F3D]">Pet Queue</h1>
+            <h1 className="text-3xl font-black text-[#1A1F3D]">Operations Schedule</h1>
           </div>
           <button 
             onClick={() => setIsBookingOpen(true)}
-            className="flex items-center gap-2 bg-[#1A1F3D] text-white px-6 py-3 rounded-2xl text-xs font-black hover:bg-[#2A3152] transition-all hover:scale-105 active:scale-95 shadow-xl shadow-[#1A1F3D]/10"
+            className="flex items-center gap-2 bg-[#1A1F3D] text-white px-6 py-3 rounded-2xl text-xs font-black hover:bg-[#2A3152] transition-all hover:scale-105 shadow-xl shadow-[#1A1F3D]/10"
           >
-            <Plus size={18} />
-            New Appointment
+            <Plus size={18} /> New Appointment
           </button>
         </header>
 
@@ -77,8 +91,8 @@ const Queue = () => {
               filter === 'All' ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-lg" : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
             )}
           >
-            <span className="text-[9px] font-black uppercase tracking-widest mb-1 opacity-60">Overview</span>
-            <span className="text-xl font-black">{queue.length}</span>
+            <span className="text-[9px] font-black uppercase tracking-widest mb-1 opacity-60">All Bookings</span>
+            <span className="text-xl font-black">{queue.filter(i => i.date === selectedDate).length}</span>
           </button>
           
           {stats.map((stat) => (
@@ -102,8 +116,8 @@ const Queue = () => {
         <div className="flex-1 overflow-y-auto px-10 pb-10 scrollbar-hide space-y-4">
           {filteredQueue.length === 0 ? (
             <div className="h-64 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed border-gray-200 rounded-[40px]">
-              <Clock size={48} className="mb-4" />
-              <p className="font-black text-lg">No pets in this category</p>
+              <CalendarIcon size={48} className="mb-4" />
+              <p className="font-black text-lg">No appointments scheduled for this date</p>
             </div>
           ) : (
             filteredQueue.map((item) => {
@@ -141,7 +155,7 @@ const Queue = () => {
 
                   <div className="flex items-center gap-10">
                     <div className="text-right">
-                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Schedule</p>
+                      <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Appointment Time</p>
                       <span className="text-xl font-black text-[#1A1F3D]">{item.time}</span>
                     </div>
 

@@ -20,6 +20,7 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
   const [selectedOwnerId, setSelectedOwnerId] = useState('');
   const [selectedPetId, setSelectedPetId] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState('');
 
   // Derived Data
@@ -44,8 +45,8 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPet || !selectedService || !time) {
-      toast.error("Please fill in all details (Owner, Pet, Service, and Slot)");
+    if (!selectedPet || !selectedService || !date || !time) {
+      toast.error("Please select a pet, service, date and time slot");
       return;
     }
 
@@ -54,23 +55,24 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
       petName: selectedPet.name,
       ownerName: selectedOwner?.name || '',
       serviceName: selectedService.title,
+      date: date,
       time: time,
       status: 'Waiting',
       image: selectedPet.image
     });
 
-    toast.success(`Booking confirmed for ${selectedPet.name} at ${time}`);
+    toast.success(`Booking confirmed for ${selectedPet.name} on ${date} at ${time}`);
     onClose();
   };
 
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-3xl rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[95vh]">
+      <div className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[95vh]">
         {/* Header */}
         <div className="p-10 border-b border-gray-50 flex justify-between items-start shrink-0">
           <div>
             <h2 className="text-3xl font-black text-[#1A1F3D] mb-1">New Appointment</h2>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Select a pet and available time slot</p>
+            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Select details for your furry friend</p>
           </div>
           <button onClick={onClose} className="p-3 hover:bg-gray-50 rounded-2xl transition-all">
             <X size={24} className="text-gray-400" />
@@ -78,8 +80,8 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-          {/* Left Panel: Customer & Service */}
-          <div className="w-full md:w-[320px] p-10 border-r border-gray-50 space-y-8 overflow-y-auto scrollbar-hide">
+          {/* Left Panel: Selection */}
+          <div className="w-full md:w-[350px] p-10 border-r border-gray-50 space-y-8 overflow-y-auto scrollbar-hide">
             {/* Select Owner */}
             <div className="relative">
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Pet Owner</label>
@@ -165,9 +167,24 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
             </div>
           </div>
 
-          {/* Right Panel: Slot Picker */}
-          <div className="flex-1 p-10 bg-[#F8F9FD]">
-             <SlotPicker selectedTime={time} onSelect={setTime} />
+          {/* Right Panel: Date & Slot */}
+          <div className="flex-1 p-10 bg-[#F8F9FD] overflow-y-auto scrollbar-hide space-y-8">
+            {/* Date Selection */}
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase text-gray-400 px-2 tracking-widest flex items-center gap-2">
+                <Calendar size={12} /> Appointment Date
+              </label>
+              <input 
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full bg-white border-none rounded-2xl px-6 py-4 text-sm font-black shadow-sm focus:ring-2 focus:ring-[#1A1F3D]/5"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+              />
+            </div>
+
+            {/* Time Slots */}
+            <SlotPicker selectedTime={time} onSelect={setTime} />
           </div>
         </div>
 
@@ -176,10 +193,10 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
           <button 
             type="submit"
             onClick={handleSubmit}
-            className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-5 rounded-[28px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D9ED5F]/20 active:scale-95 disabled:bg-gray-100 disabled:text-gray-300 disabled:shadow-none"
-            disabled={!selectedPet || !selectedService || !time}
+            className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-5 rounded-[28px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D9ED5F]/20 active:scale-95 disabled:bg-gray-100 disabled:text-gray-300"
+            disabled={!selectedPet || !selectedService || !date || !time}
           >
-            Confirm Booking Appointment
+            Confirm Appointment
           </button>
         </div>
       </div>
