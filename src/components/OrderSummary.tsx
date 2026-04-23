@@ -7,12 +7,14 @@ import {
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import PaymentModal from './PaymentModal';
 
 const OrderSummary = () => {
   const { cart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules } = useStore();
   const [newWeight, setNewWeight] = useState('');
   const [isWeightSaved, setIsWeightSaved] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     setNewWeight('');
@@ -37,23 +39,33 @@ const OrderSummary = () => {
     setTimeout(() => setIsWeightSaved(false), 2000);
   };
 
-  const handlePayment = () => {
+  const handleInitiatePayment = () => {
     if (cart.length === 0 || !selectedOwner) {
       toast.error("Cart or customer missing");
       return;
     }
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleCompletePayment = (details: any) => {
+    if (!selectedOwner) return;
 
     if (newWeight && activePet && !isWeightSaved) {
       updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
     }
 
-    processPayment(selectedOwner.id, total, cart, paymentMethod);
-    cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
+    processPayment(selectedOwner.id, total, cart, paymentMethod, details);
+    
+    // Mark items in queue as paid
+    cart.forEach(item => {
+      if (item.queueItemId) markAsPaid(item.queueItemId);
+    });
 
-    toast.success(`Checkout Complete via ${paymentMethod}! $${total.toFixed(2)} paid.`);
+    toast.success(`Checkout Complete! $${total.toFixed(2)} paid via ${paymentMethod}.`);
     clearCart();
     setNewWeight('');
     setIsWeightSaved(false);
+    setIsPaymentModalOpen(false);
   };
 
   return (
@@ -183,12 +195,22 @@ const OrderSummary = () => {
       </div>
 
       <button 
-        onClick={handlePayment}
+        onClick={handleInitiatePayment}
         disabled={cart.length === 0}
         className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] disabled:bg-gray-100 disabled:text-gray-300 text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 mt-6 shadow-xl shadow-[#D9ED5F]/20 transition-all active:scale-95"
       >
         <Banknote size={24} /> Pay and Checkout
       </button>
+
+      {/* Payment Detail Modal */}
+      {isPaymentModalOpen && (
+        <PaymentModal 
+          total={total}
+          method={paymentMethod}
+          onClose={() => setIsPaymentModalOpen(false)}
+          onComplete={handleCompletePayment}
+        />
+      )}
     </div>
   );
 };

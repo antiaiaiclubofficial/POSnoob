@@ -50,6 +50,13 @@ export interface Transaction {
   species: ('Dog' | 'Cat' | 'Other')[];
   paymentMethod: PaymentMethod;
   itemsCount: number;
+  paymentDetails?: {
+    cashReceived?: number;
+    change?: number;
+    cardLast4?: string;
+    cardType?: string;
+    referenceNo?: string;
+  };
 }
 
 export interface TierRule {
@@ -138,7 +145,7 @@ interface AppState {
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
   updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
-  processPayment: (customerId: string, amount: number, items: CartItem[], method?: PaymentMethod) => void;
+  processPayment: (customerId: string, amount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails']) => void;
   updateTierRules: (rules: TierRule[]) => void;
   
   updateBookingSettings: (settings: { slotDuration?: number, openTime?: string, closeTime?: string }) => void;
@@ -291,7 +298,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateTierRules: (rules) => set({ tierRules: rules }),
 
-  processPayment: (customerId, amount, items, method = 'Cash') => {
+  processPayment: (customerId, amount, items, method = 'Cash', details) => {
     const { customers, tierRules, transactions } = get();
     const today = new Date().toISOString().split('T')[0];
     
@@ -307,7 +314,8 @@ export const useStore = create<AppState>((set, get) => ({
         return pet?.species || 'Other';
       }))),
       paymentMethod: method,
-      itemsCount: items.length
+      itemsCount: items.length,
+      paymentDetails: details
     };
 
     const updatedCustomers = customers.map(c => {
