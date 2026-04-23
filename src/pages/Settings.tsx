@@ -5,7 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import { 
   Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign, 
   Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Users,
-  MapPin, Phone, MessageCircle, FileText, Award, Star, Crown, Gem, Coins
+  MapPin, Phone, MessageCircle, FileText, Award, Star, Crown, Gem, Coins, ChevronRight
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -78,15 +78,77 @@ const Settings = () => {
     }
   };
 
-  const filteredServices = services.filter(s => 
-    s.title.toLowerCase().includes(serviceQuery.toLowerCase()) || 
-    s.category.toLowerCase().includes(serviceQuery.toLowerCase())
-  );
+  const ServiceTable = ({ species }: { species: 'Dog' | 'Cat' }) => {
+    const isDog = species === 'Dog';
+    const filtered = services.filter(s => 
+      s.targetSpecies === species && 
+      (s.title.toLowerCase().includes(serviceQuery.toLowerCase()) || 
+       s.category.toLowerCase().includes(serviceQuery.toLowerCase()))
+    );
+
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center px-2">
+          <div className="flex items-center gap-2">
+            <div className={cn("w-2 h-2 rounded-full", isDog ? "bg-blue-500" : "bg-pink-500")} />
+            <h3 className="text-sm font-black text-[#1A1F3D] uppercase tracking-widest">{species} Pricing List</h3>
+          </div>
+          <button 
+            onClick={() => { setSelectedService(null); setIsServiceModalOpen(true); }}
+            className={cn(
+              "px-4 py-2 rounded-xl text-[10px] font-black text-white flex items-center gap-2",
+              isDog ? "bg-blue-600" : "bg-pink-600"
+            )}
+          >
+            <Plus size={14} /> Add {species} Service
+          </button>
+        </div>
+
+        <div className="overflow-hidden border border-gray-100 rounded-3xl bg-white shadow-sm">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50/50">
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Service Name</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Pricing Structure</th>
+                <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filtered.map((svc) => (
+                <tr key={svc.id} className="group hover:bg-gray-50/30 transition-colors">
+                  <td className="px-8 py-6">
+                    <p className="font-bold text-sm text-[#1A1F3D] mb-0.5">{svc.title}</p>
+                    <span className="text-[9px] font-black text-gray-300 uppercase tracking-tighter">{svc.category}</span>
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(svc.prices).map(([sz, p]) => (
+                        <div key={sz} className="bg-[#F5F6FA] px-3 py-1.5 rounded-xl border border-gray-100 flex items-center gap-2">
+                          <span className="text-[8px] font-black text-gray-400 uppercase">{sz}</span>
+                          <span className="text-[10px] font-black text-[#1A1F3D]">{currency}{p.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => { setSelectedService(svc); setIsServiceModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-100 rounded-lg transition-all"><Edit3 size={14} /></button>
+                      <button onClick={() => deleteService(svc.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-screen bg-[#F5F6FA] text-[#1A1F3D] overflow-hidden">
       <Sidebar />
-      <main className="flex-1 p-10 overflow-y-auto">
+      <main className="flex-1 p-10 overflow-y-auto scrollbar-hide">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-10">
             <div>
@@ -163,51 +225,44 @@ const Settings = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Currency Symbol</label>
-                        <div className="relative">
-                          <Coins className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                          <select 
-                            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold appearance-none"
-                            value={localCurrency}
-                            onChange={(e) => setLocalCurrency(e.target.value)}
-                          >
-                            <option value="฿">THB (฿)</option>
-                            <option value="$">USD ($)</option>
-                            <option value="€">EUR (€)</option>
-                            <option value="£">GBP (£)</option>
-                            <option value="¥">JPY (¥)</option>
-                          </select>
-                        </div>
+                        <select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold appearance-none" value={localCurrency} onChange={(e) => setLocalCurrency(e.target.value)}>
+                          <option value="฿">THB (฿)</option>
+                          <option value="$">USD ($)</option>
+                        </select>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Phone Number</label>
-                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopPhone} onChange={(e) => setLocalShopPhone(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">LINE ID / Social</label>
-                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopLineId} onChange={(e) => setLocalShopLineId(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Shop Address</label>
-                      <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none" value={localShopAddress} onChange={(e) => setLocalShopAddress(e.target.value)} />
                     </div>
                   </div>
                 </div>
-              </section>
-              <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-                    <FileText size={24} />
-                  </div>
-                  <h2 className="text-xl font-bold">Receipt Configuration</h2>
-                </div>
-                <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-32 resize-none" value={localReceiptHeader} onChange={(e) => setLocalReceiptHeader(e.target.value)} />
               </section>
             </TabsContent>
 
+            <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-10">
+               <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-2xl font-black">Service Management</h2>
+                    <p className="text-sm text-gray-400">Configure global pricing and services for dogs and cats</p>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                    <input 
+                      type="text"
+                      className="bg-white border border-gray-100 pl-10 pr-6 py-3 rounded-2xl text-xs font-bold w-64 shadow-sm"
+                      placeholder="Search services..."
+                      value={serviceQuery}
+                      onChange={e => setServiceQuery(e.target.value)}
+                    />
+                  </div>
+               </div>
+
+               <div className="space-y-12">
+                  <ServiceTable species="Dog" />
+                  <ServiceTable species="Cat" />
+               </div>
+            </TabsContent>
+
             <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                <section className="xl:col-span-2 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+               <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <section className="xl:col-span-2 bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
                   <div className="flex items-center gap-3 mb-8">
                     <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><Clock size={24} /></div>
                     <h2 className="text-xl font-bold">Booking Configuration</h2>
@@ -231,64 +286,10 @@ const Settings = () => {
                     <TimePicker value={localCloseTime} onChange={setLocalCloseTime} />
                   </div>
                 </section>
-                <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+                <section className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                   <SlotPicker selectedTime="" onSelect={() => {}} />
                 </section>
               </div>
-            </TabsContent>
-
-            <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-               <section className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-                <div className="flex justify-between items-center mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-green-50 text-green-600 rounded-2xl"><Scissors size={24} /></div>
-                    <h2 className="text-xl font-bold">Service Management</h2>
-                  </div>
-                  <button onClick={() => { setSelectedService(null); setIsServiceModalOpen(true); }} className="bg-[#1A1F3D] text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"><Plus size={16} /> Add Service</button>
-                </div>
-                <div className="overflow-hidden border border-gray-100 rounded-2xl">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-50/50">
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Service</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Type</th>
-                        <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Prices</th>
-                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {filteredServices.map((svc) => (
-                        <tr key={svc.id} className="group hover:bg-gray-50/30 transition-colors">
-                          <td className="px-6 py-5">
-                            <p className="font-bold text-sm text-[#1A1F3D]">{svc.title}</p>
-                            <span className="text-[9px] font-bold text-gray-400 uppercase">{svc.category}</span>
-                          </td>
-                          <td className="px-6 py-5">
-                            <span className={cn(
-                              "text-[9px] font-black px-2 py-0.5 rounded-full uppercase",
-                              svc.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600"
-                            )}>
-                              {svc.targetSpecies}
-                            </span>
-                          </td>
-                          <td className="px-6 py-5">
-                             <div className="flex flex-wrap gap-1">
-                              {Object.entries(svc.prices).map(([sz, p]) => (
-                                <span key={sz} className="text-[9px] font-black bg-gray-50 text-gray-600 px-2 py-0.5 rounded-md border border-gray-100">
-                                  {sz}: {currency}{p}
-                                </span>
-                              ))}
-                             </div>
-                          </td>
-                          <td className="px-6 py-5 text-right">
-                            <button onClick={() => { setSelectedService(svc); setIsServiceModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={16} /></button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
             </TabsContent>
 
             <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
