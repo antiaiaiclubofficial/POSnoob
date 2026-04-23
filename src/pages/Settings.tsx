@@ -3,9 +3,7 @@
 import React, { useState, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { 
-  Store, Save, ShieldCheck, TrendingUp, Percent, Tag, DollarSign, 
-  Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Users,
-  MapPin, Phone, MessageCircle, FileText, Award, Star, Crown, Gem, Coins, ChevronRight
+  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -87,59 +85,103 @@ const Settings = () => {
     );
 
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center px-2">
-          <div className="flex items-center gap-2">
-            <div className={cn("w-2 h-2 rounded-full", isDog ? "bg-blue-500" : "bg-pink-500")} />
-            <h3 className="text-sm font-black text-[#1A1F3D] uppercase tracking-widest">{species} Pricing List</h3>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center px-4">
+          <div className="flex items-center gap-3">
+            <div className={cn("w-3 h-3 rounded-full animate-pulse", isDog ? "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" : "bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]")} />
+            <h3 className="text-sm font-black text-[#1A1F3D] uppercase tracking-[0.2em]">{species} Service Pricing</h3>
           </div>
           <button 
             onClick={() => { setSelectedService(null); setIsServiceModalOpen(true); }}
             className={cn(
-              "px-4 py-2 rounded-xl text-[10px] font-black text-white flex items-center gap-2",
-              isDog ? "bg-blue-600" : "bg-pink-600"
+              "px-5 py-2.5 rounded-2xl text-[10px] font-black text-white flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg",
+              isDog ? "bg-blue-600 shadow-blue-600/20" : "bg-pink-600 shadow-pink-600/20"
             )}
           >
             <Plus size={14} /> Add {species} Service
           </button>
         </div>
 
-        <div className="overflow-hidden border border-gray-100 rounded-3xl bg-white shadow-sm">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50/50">
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Service Name</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400 tracking-widest">Pricing Structure</th>
-                <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400 tracking-widest">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map((svc) => (
-                <tr key={svc.id} className="group hover:bg-gray-50/30 transition-colors">
-                  <td className="px-8 py-6">
-                    <p className="font-bold text-sm text-[#1A1F3D] mb-0.5">{svc.title}</p>
-                    <span className="text-[9px] font-black text-gray-300 uppercase tracking-tighter">{svc.category}</span>
-                  </td>
-                  <td className="px-8 py-6">
-                    <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(svc.prices).map(([sz, p]) => (
-                        <div key={sz} className="bg-[#F5F6FA] px-3 py-1.5 rounded-xl border border-gray-100 flex items-center gap-2">
-                          <span className="text-[8px] font-black text-gray-400 uppercase">{sz}</span>
-                          <span className="text-[10px] font-black text-[#1A1F3D]">{currency}{p.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => { setSelectedService(svc); setIsServiceModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-100 rounded-lg transition-all"><Edit3 size={14} /></button>
-                      <button onClick={() => deleteService(svc.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
+        <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50/50">
+                  <th className="px-10 py-6 text-left text-[10px] font-black uppercase text-gray-400 tracking-[0.15em] w-1/3">Service Identity</th>
+                  <th className="px-10 py-6 text-left text-[10px] font-black uppercase text-gray-400 tracking-[0.15em]">Pricing Matrix</th>
+                  <th className="px-10 py-6 text-right text-[10px] font-black uppercase text-gray-400 tracking-[0.15em] w-32">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.map((svc) => (
+                  <tr key={svc.id} className="group hover:bg-[#F8F9FD]/50 transition-all">
+                    {/* Part 1: Identity */}
+                    <td className="px-10 py-8">
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
+                          isDog ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600"
+                        )}>
+                          <Scissors size={20} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-black text-base text-[#1A1F3D] mb-1 truncate">{svc.title}</p>
+                          <span className="inline-block bg-[#F1F3F9] text-[9px] font-black text-gray-400 px-2.5 py-1 rounded-lg uppercase tracking-wider">
+                            {svc.category}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Part 2: Pricing Structure (Size/Price) */}
+                    <td className="px-10 py-8">
+                      <div className="flex flex-wrap gap-2.5">
+                        {Object.entries(svc.prices).map(([sz, p]) => (
+                          <div key={sz} className="flex items-center overflow-hidden rounded-2xl border border-gray-100 shadow-sm bg-white hover:border-[#1A1F3D]/20 transition-all">
+                            <div className={cn(
+                              "px-3 py-2 text-[9px] font-black uppercase tracking-tighter",
+                              isDog ? "bg-blue-600 text-white" : "bg-pink-600 text-white"
+                            )}>
+                              {sz}
+                            </div>
+                            <div className="px-4 py-2 bg-white flex items-center gap-1.5">
+                              <span className="text-[10px] font-black text-gray-300">{currency}</span>
+                              <span className="text-sm font-black text-[#1A1F3D]">{p.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+
+                    {/* Part 3: Actions */}
+                    <td className="px-10 py-8 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => { setSelectedService(svc); setIsServiceModalOpen(true); }} 
+                          className="p-3 bg-gray-50 text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-xl transition-all"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button 
+                          onClick={() => deleteService(svc.id)} 
+                          className="p-3 bg-gray-50 text-gray-400 hover:bg-red-500 hover:text-white rounded-xl transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="px-10 py-16 text-center text-gray-300 font-bold italic text-sm">
+                      No matching services found in the catalog.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
@@ -231,22 +273,26 @@ const Settings = () => {
                         </select>
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Address</label>
+                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopAddress} onChange={(e) => setLocalShopAddress(e.target.value)} />
+                    </div>
                   </div>
                 </div>
               </section>
             </TabsContent>
 
-            <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-10">
-               <div className="flex justify-between items-center mb-6">
+            <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-12">
+               <div className="flex justify-between items-center mb-4">
                   <div>
-                    <h2 className="text-2xl font-black">Service Management</h2>
-                    <p className="text-sm text-gray-400">Configure global pricing and services for dogs and cats</p>
+                    <h2 className="text-2xl font-black">Service Catalog</h2>
+                    <p className="text-sm text-gray-400">Define your treatments and pricing matrix</p>
                   </div>
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
                     <input 
                       type="text"
-                      className="bg-white border border-gray-100 pl-10 pr-6 py-3 rounded-2xl text-xs font-bold w-64 shadow-sm"
+                      className="bg-white border border-gray-100 pl-10 pr-6 py-3 rounded-[20px] text-xs font-bold w-64 shadow-sm focus:ring-2 focus:ring-[#1A1F3D]/5"
                       placeholder="Search services..."
                       value={serviceQuery}
                       onChange={e => setServiceQuery(e.target.value)}
@@ -254,10 +300,8 @@ const Settings = () => {
                   </div>
                </div>
 
-               <div className="space-y-12">
-                  <ServiceTable species="Dog" />
-                  <ServiceTable species="Cat" />
-               </div>
+               <ServiceTable species="Dog" />
+               <ServiceTable species="Cat" />
             </TabsContent>
 
             <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
