@@ -81,6 +81,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
         breed: formData.breed,
         birthday: formData.birthday,
         weightHistory: [{ date: new Date().toISOString().split('T')[0], value: Number(formData.initialWeight) }],
+        serviceHistory: [], // แก้ไข TypeScript Error: เพิ่มอาร์เรย์ว่างสำหรับประวัติบริการเริ่มต้น
         notes: formData.notes,
         image: formData.image
       });

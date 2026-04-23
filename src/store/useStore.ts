@@ -9,6 +9,14 @@ export interface WeightEntry {
   value: number;
 }
 
+export interface ServiceHistoryEntry {
+  id: string;
+  date: string;
+  serviceName: string;
+  price: number;
+  size?: string;
+}
+
 export interface Pet {
   id: string;
   name: string;
@@ -16,6 +24,7 @@ export interface Pet {
   breed: string;
   birthday: string;
   weightHistory: WeightEntry[];
+  serviceHistory: ServiceHistoryEntry[];
   notes: string;
   image: string;
 }
@@ -109,7 +118,7 @@ interface AppState {
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
   updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
-  processPayment: (customerId: string, amount: number) => void;
+  processPayment: (customerId: string, amount: number, items: CartItem[]) => void;
   updateTierRules: (rules: TierRule[]) => void;
 }
 
@@ -137,6 +146,9 @@ const INITIAL_CUSTOMERS: Customer[] = [
         breed: 'Golden Retriever', 
         birthday: '2021-03-15', 
         weightHistory: [{ date: '2023-10-01', value: 24.5 }, { date: '2024-01-20', value: 25.2 }], 
+        serviceHistory: [
+          { id: 'h1', date: '2024-01-20', serviceName: 'Full Grooming (M)', price: 55 }
+        ],
         notes: 'Sensitive skin', 
         image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=64&h=64&fit=crop' 
       }
@@ -225,7 +237,7 @@ export const useStore = create<AppState>((set, get) => ({
   addPet: (customerId, petData) => set((state) => ({
     customers: state.customers.map(c => c.id === customerId ? {
       ...c,
-      pets: [...c.pets, { ...petData, id: 'p' + Math.random().toString(36).substr(2, 4) }]
+      pets: [...c.pets, { ...petData, id: 'p' + Math.random().toString(36).substr(2, 4), serviceHistory: [] }]
     } : c)
   })),
   updatePet: (customerId, petId, petData) => set((state) => ({
@@ -246,23 +258,47 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateTierRules: (rules) => set({ tierRules: rules }),
 
-  processPayment: (customerId, amount) => {
+  processPayment: (customerId, amount, items) => {
     const { customers, tierRules } = get();
+    const today = new Date().toISOString().split('T')[0];
+    
     const updatedCustomers = customers.map(c => {
       if (c.id === customerId) {
         const newSpent = c.totalSpent + amount;
         const newPoints = c.points + Math.floor(amount);
         const sortedRules = [...tierRules].sort((a, b) => b.minSpent - a.minSpent);
         const newMembership = sortedRules.find(r => newSpent >= r.minSpent)?.level || 'Standard';
+        
+        // บันทึกรายการลงในประวัติของสัตว์เลี้ยงแต่ละตัว
+        const updatedPets = c.pets.map(pet => {
+          const itemsForThisPet = items.filter(item => item.petId === pet.id);
+          if (itemsForThisPet.length > 0) {
+            const newHistoryEntries: ServiceHistoryEntry[] = itemsForThisPet.map(item => ({
+              id: Math.random().toString(36).substr(2, 9),
+              date: today,
+              serviceName: item.title,
+              price: item.price,
+              size: item.size
+            }));
+            return {
+              ...pet,
+              serviceHistory: [...(pet.serviceHistory || []), ...newHistoryEntries]
+            };
+          }
+          return pet;
+        });
+
         return {
           ...c,
           totalSpent: newSpent,
           points: newPoints,
-          membership: newMembership as MembershipLevel
+          membership: newMembership as MembershipLevel,
+          pets: updatedPets
         };
       }
       return c;
     });
+
     set({ customers: updatedCustomers });
     const currentSelected = get().selectedOwner;
     if (currentSelected?.id === customerId) {

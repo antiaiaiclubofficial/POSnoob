@@ -12,7 +12,6 @@ const OrderSummary = () => {
   const [newWeight, setNewWeight] = useState('');
   const [isWeightSaved, setIsWeightSaved] = useState(false);
 
-  // รีเซ็ตสถานะปุ่มเมื่อเปลี่ยนสัตว์เลี้ยง
   useEffect(() => {
     setNewWeight('');
     setIsWeightSaved(false);
@@ -33,8 +32,6 @@ const OrderSummary = () => {
     updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
     setIsWeightSaved(true);
     toast.success(`Updated ${activePet.name}'s weight to ${newWeight} kg`);
-    
-    // หลังจาก 2 วินาทีให้กลับเป็นปุ่ม Save ปกติ
     setTimeout(() => setIsWeightSaved(false), 2000);
   };
 
@@ -44,12 +41,12 @@ const OrderSummary = () => {
       return;
     }
 
-    // ถ้าน้ำหนักยังไม่ได้กดบันทึก ให้บันทึกไปพร้อมจ่ายเงินด้วย
     if (newWeight && activePet && !isWeightSaved) {
       updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
     }
 
-    processPayment(selectedOwner.id, total);
+    // ส่ง cart ไปด้วยเพื่อบันทึกประวัติ
+    processPayment(selectedOwner.id, total, cart);
     cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
 
     toast.success(`Checkout Complete! $${total.toFixed(2)} paid.`);
@@ -71,7 +68,6 @@ const OrderSummary = () => {
         </div>
       </div>
 
-      {/* Weight Update Field with dedicated Save button */}
       {activePet && (
         <div className="mb-8 p-5 bg-[#F5F6FA] rounded-[28px] border border-blue-100/50 shadow-sm transition-all">
           <div className="flex items-center justify-between mb-4">
