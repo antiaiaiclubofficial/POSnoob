@@ -3,6 +3,7 @@ import { create } from 'zustand';
 export type ServiceIcon = 'grooming' | 'bath' | 'nail' | 'deshedding';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
+export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card';
 
 export interface WeightEntry {
   date: string;
@@ -38,6 +39,17 @@ export interface Customer {
   points: number;
   pets: Pet[];
   totalSpent: number;
+}
+
+export interface Transaction {
+  id: string;
+  date: string;
+  amount: number;
+  customerId: string;
+  customerName: string;
+  species: ('Dog' | 'Cat' | 'Other')[];
+  paymentMethod: PaymentMethod;
+  itemsCount: number;
 }
 
 export interface TierRule {
@@ -90,6 +102,7 @@ interface AppState {
   customers: Customer[];
   cart: CartItem[];
   queue: QueueItem[];
+  transactions: Transaction[];
   tierRules: TierRule[];
   selectedOwner: Customer | null;
   activePet: Pet | null;
@@ -118,7 +131,7 @@ interface AppState {
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
   updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
-  processPayment: (customerId: string, amount: number, items: CartItem[]) => void;
+  processPayment: (customerId: string, amount: number, items: CartItem[], method?: PaymentMethod) => void;
   updateTierRules: (rules: TierRule[]) => void;
 }
 
@@ -177,6 +190,7 @@ export const useStore = create<AppState>((set, get) => ({
   customers: INITIAL_CUSTOMERS,
   cart: [],
   queue: [],
+  transactions: [],
   tierRules: INITIAL_TIER_RULES,
   selectedOwner: null,
   activePet: null,
@@ -258,10 +272,26 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateTierRules: (rules) => set({ tierRules: rules }),
 
-  processPayment: (customerId, amount, items) => {
-    const { customers, tierRules } = get();
+  processPayment: (customerId, amount, items, method = 'Cash') => {
+    const { customers, tierRules, transactions } = get();
     const today = new Date().toISOString().split('T')[0];
     
+    // บันทึก Transaction ใหม่
+    const newTransaction: Transaction = {
+      id: 'tx-' + Math.random().toString(36).substr(2, 9),
+      date: today,
+      amount: amount,
+      customerId: customerId,
+      customerName: customers.find(c => c.id === customerId)?.name || 'Unknown',
+      species: Array.from(new Set(items.map(item => {
+        const cust = customers.find(c => c.id === customerId);
+        const pet = cust?.pets.find(p => p.id === item.petId);
+        return pet?.species || 'Other';
+      }))),
+      paymentMethod: method,
+      itemsCount: items.length
+    };
+
     const updatedCustomers = customers.map(c => {
       if (c.id === customerId) {
         const newSpent = c.totalSpent + amount;
@@ -269,7 +299,6 @@ export const useStore = create<AppState>((set, get) => ({
         const sortedRules = [...tierRules].sort((a, b) => b.minSpent - a.minSpent);
         const newMembership = sortedRules.find(r => newSpent >= r.minSpent)?.level || 'Standard';
         
-        // บันทึกรายการลงในประวัติของสัตว์เลี้ยงแต่ละตัว
         const updatedPets = c.pets.map(pet => {
           const itemsForThisPet = items.filter(item => item.petId === pet.id);
           if (itemsForThisPet.length > 0) {
@@ -299,7 +328,11 @@ export const useStore = create<AppState>((set, get) => ({
       return c;
     });
 
-    set({ customers: updatedCustomers });
+    set({ 
+      customers: updatedCustomers,
+      transactions: [...transactions, newTransaction]
+    });
+    
     const currentSelected = get().selectedOwner;
     if (currentSelected?.id === customerId) {
       set({ selectedOwner: updatedCustomers.find(c => c.id === customerId) || null });

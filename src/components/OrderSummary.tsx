@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, Check, Save
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, Check, Save, CreditCard, Wallet
 } from 'lucide-react';
-import { useStore } from '@/store/useStore';
+import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const OrderSummary = () => {
   const { cart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules } = useStore();
   const [newWeight, setNewWeight] = useState('');
   const [isWeightSaved, setIsWeightSaved] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
 
   useEffect(() => {
     setNewWeight('');
@@ -45,11 +47,10 @@ const OrderSummary = () => {
       updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
     }
 
-    // ส่ง cart ไปด้วยเพื่อบันทึกประวัติ
-    processPayment(selectedOwner.id, total, cart);
+    processPayment(selectedOwner.id, total, cart, paymentMethod);
     cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
 
-    toast.success(`Checkout Complete! $${total.toFixed(2)} paid.`);
+    toast.success(`Checkout Complete via ${paymentMethod}! $${total.toFixed(2)} paid.`);
     clearCart();
     setNewWeight('');
     setIsWeightSaved(false);
@@ -80,12 +81,6 @@ const OrderSummary = () => {
                 <p className="text-xs font-bold text-[#1A1F3D]">{activePet.name}</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-[9px] font-bold text-gray-400 uppercase leading-none mb-1">Last Record</p>
-              <p className="text-xs font-black text-blue-600">
-                {activePet.weightHistory[activePet.weightHistory.length - 1]?.value || '0'} kg
-              </p>
-            </div>
           </div>
           
           <div className="flex gap-2">
@@ -94,7 +89,7 @@ const OrderSummary = () => {
                 type="number" 
                 step="0.1"
                 placeholder="0.0"
-                className="w-full bg-white border-2 border-transparent focus:border-blue-500/20 rounded-2xl px-5 py-3.5 text-sm font-black transition-all outline-none"
+                className="w-full bg-white border-none rounded-2xl px-5 py-3.5 text-sm font-black focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
                 value={newWeight}
                 onChange={(e) => {
                   setNewWeight(e.target.value);
@@ -147,14 +142,36 @@ const OrderSummary = () => {
         )}
       </div>
 
-      <div className="pt-8 space-y-3 border-t border-dashed border-gray-200 mt-auto">
+      {/* Payment Method Selector */}
+      <div className="pt-8 mb-6 space-y-3">
+        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Payment Method</p>
+        <div className="flex gap-2">
+          {(['Cash', 'Transfer', 'Credit Card'] as PaymentMethod[]).map((method) => {
+            const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Banknote : CreditCard;
+            return (
+              <button
+                key={method}
+                onClick={() => setPaymentMethod(method)}
+                className={cn(
+                  "flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all",
+                  paymentMethod === method 
+                    ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-lg" 
+                    : "bg-white border-gray-100 text-gray-400 hover:border-gray-300"
+                )}
+              >
+                <Icon size={18} />
+                <span className="text-[9px] font-black uppercase">{method}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="pt-6 space-y-3 border-t border-dashed border-gray-200 mt-auto">
         {tierDiscountPercent > 0 && (
           <div className="flex justify-between items-center text-xs text-green-600 font-bold bg-green-50 px-4 py-3 rounded-2xl">
             <span className="flex items-center gap-2">
-              <div className="w-5 h-5 bg-green-100 rounded-md flex items-center justify-center">
-                <ArrowDownCircle size={12}/>
-              </div>
-              Member Discount ({tierDiscountPercent}%)
+              <ArrowDownCircle size={12}/> Member Discount ({tierDiscountPercent}%)
             </span>
             <span>-${discountAmount.toFixed(2)}</span>
           </div>
@@ -168,7 +185,7 @@ const OrderSummary = () => {
       <button 
         onClick={handlePayment}
         disabled={cart.length === 0}
-        className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] disabled:bg-gray-100 disabled:text-gray-300 text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 mt-8 shadow-xl shadow-[#D9ED5F]/20 transition-all active:scale-95"
+        className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] disabled:bg-gray-100 disabled:text-gray-300 text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 mt-6 shadow-xl shadow-[#D9ED5F]/20 transition-all active:scale-95"
       >
         <Banknote size={24} /> Pay and Checkout
       </button>
