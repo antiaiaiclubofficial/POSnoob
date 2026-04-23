@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ServiceModal from '@/components/ServiceModal';
 import SlotPicker from '@/components/SlotPicker';
+import TimePicker from '@/components/TimePicker';
 import { cn } from '@/lib/utils';
 
 const Settings = () => {
@@ -160,21 +161,17 @@ const Settings = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Opening Time</label>
-                      <input 
-                        type="time"
-                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-4 text-sm font-bold"
+                      <TimePicker 
                         value={localOpenTime}
-                        onChange={e => setLocalOpenTime(e.target.value)}
+                        onChange={setLocalOpenTime}
                       />
                     </div>
 
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Closing Time</label>
-                      <input 
-                        type="time"
-                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-4 text-sm font-bold"
+                      <TimePicker 
                         value={localCloseTime}
-                        onChange={e => setLocalCloseTime(e.target.value)}
+                        onChange={setLocalCloseTime}
                       />
                     </div>
                   </div>
