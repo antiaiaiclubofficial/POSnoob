@@ -138,7 +138,7 @@ export interface CartItem {
 
 interface AppState {
   isAuthenticated: boolean;
-  currentUser: { name: string; role: string } | null;
+  currentUser: { name: string; role: string; username?: string } | null;
   shopName: string;
   shopLogo: string | null;
   shopAddress: string;
@@ -171,6 +171,7 @@ interface AppState {
   disabledSlots: string[];
   
   login: (id: string, pass: string) => boolean;
+  verifyPassword: (pass: string) => boolean;
   logout: () => void;
   
   updateBusinessProfile: (profile: { 
@@ -210,6 +211,11 @@ interface AppState {
   updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
   processPayment: (customerId: string, amount: number, discount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails']) => void;
+  
+  updateTransaction: (id: string, data: Partial<Transaction>) => void;
+  deleteTransaction: (id: string) => void;
+  recalculateCustomerStats: (customerId: string) => void;
+
   updateTierRules: (rules: TierRule[]) => void;
   
   addStaff: (staff: Omit<Staff, 'id'>) => void;
@@ -272,23 +278,29 @@ export const useStore = create<AppState>((set, get) => ({
 
   login: (id, pass) => {
     const { addLog } = get();
-    // Check super admin
     if (id === 'admin' && pass === '1234') {
-      const user = { name: 'Admin', role: 'Admin' };
+      const user = { name: 'Admin', role: 'Admin', username: 'admin' };
       set({ isAuthenticated: true, currentUser: user });
       addLog({ staffName: 'System', action: 'Login Success', details: 'Super Admin logged into the system', type: 'success' });
       return true;
     }
-    // Check registered staff
     const member = get().staff.find(s => s.username === id && s.password === pass && s.status === 'Active');
     if (member) {
-      const user = { name: member.name, role: member.role };
+      const user = { name: member.name, role: member.role, username: member.username };
       set({ isAuthenticated: true, currentUser: user });
       addLog({ staffName: 'System', action: 'Login Success', details: `Staff member ${member.name} logged in`, type: 'success' });
       return true;
     }
     addLog({ staffName: 'System', action: 'Login Failed', details: `Failed login attempt with ID: ${id}`, type: 'danger' });
     return false;
+  },
+
+  verifyPassword: (pass) => {
+    const { currentUser, staff } = get();
+    if (!currentUser) return false;
+    if (currentUser.username === 'admin') return pass === '1234';
+    const member = staff.find(s => s.username === currentUser.username);
+    return member?.password === pass;
   },
   
   logout: () => {
@@ -315,12 +327,7 @@ export const useStore = create<AppState>((set, get) => ({
       lineLiffId: profile.lineLiffId ?? state.lineLiffId,
       lineChannelToken: profile.lineChannelToken ?? state.lineChannelToken,
     }));
-    addLog({ 
-      staffName: currentUser?.name || 'Unknown', 
-      action: 'Update Business Profile', 
-      details: 'Modified shop settings or contact information', 
-      type: 'warning' 
-    });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Update Business Profile', details: 'Modified shop settings', type: 'warning' });
   },
 
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
@@ -332,7 +339,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       services: [...state.services, { ...serviceData, id: 'svc-' + Math.random().toString(36).substr(2, 5) }]
     }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Add Service', details: `Created new service: ${serviceData.title}`, type: 'info' });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Add Service', details: `Created: ${serviceData.title}`, type: 'info' });
   },
   updateService: (id, serviceData) => {
     const { currentUser, addLog, services } = get();
@@ -340,7 +347,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       services: state.services.map(s => s.id === id ? { ...s, ...serviceData } : s)
     }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Update Service', details: `Modified service details for: ${service?.title || id}`, type: 'warning' });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Update Service', details: `Modified: ${service?.title}`, type: 'warning' });
   },
   deleteService: (id) => {
     const { currentUser, addLog, services } = get();
@@ -348,7 +355,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       services: state.services.filter(s => s.id !== id)
     }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Delete Service', details: `Removed service: ${service?.title || id}`, type: 'danger' });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Delete Service', details: `Removed: ${service?.title}`, type: 'danger' });
   },
   toggleServiceActive: (id) => {
     const { currentUser, addLog, services } = get();
@@ -356,7 +363,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       services: state.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s)
     }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Toggle Service', details: `Changed visibility for: ${service?.title || id}`, type: 'info' });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Toggle Service', details: `Visibility: ${service?.title}`, type: 'info' });
   },
 
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
@@ -371,7 +378,7 @@ export const useStore = create<AppState>((set, get) => ({
         return a.time.localeCompare(b.time);
       })
     }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'New Booking', details: `Booked ${booking.petName} for ${booking.date} at ${booking.time}`, type: 'success' });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'New Booking', details: `Booked ${booking.petName}`, type: 'success' });
   },
   updateQueueStatus: (id, status) => {
     const { currentUser, addLog, queue } = get();
@@ -379,7 +386,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       queue: state.queue.map(q => q.id === id ? { ...q, status } : q)
     }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Queue Status Change', details: `Moved ${item?.petName} to status: ${status}`, type: 'info' });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Queue Status Change', details: `${item?.petName} -> ${status}`, type: 'info' });
   },
   removeQueueItem: (id) => {
     const { currentUser, addLog, queue } = get();
@@ -387,7 +394,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       queue: state.queue.filter(q => q.id !== id)
     }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Cancel Booking', details: `Removed ${item?.petName} from queue`, type: 'danger' });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Cancel Booking', details: `Removed ${item?.petName}`, type: 'danger' });
   },
   markAsPaid: (id) => set((state) => ({
     queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q)
@@ -396,18 +403,9 @@ export const useStore = create<AppState>((set, get) => ({
   addCustomer: (customerData) => {
     const { currentUser, addLog } = get();
     set((state) => ({
-      customers: [
-        ...state.customers,
-        {
-          ...customerData,
-          id: 'c' + Math.random().toString(36).substr(2, 4),
-          points: 0,
-          pets: [],
-          totalSpent: 0
-        }
-      ]
+      customers: [...state.customers, { ...customerData, id: 'c' + Math.random().toString(36).substr(2, 4), points: 0, pets: [], totalSpent: 0 }]
     }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Add Customer', details: `Registered new customer: ${customerData.name}`, type: 'success' });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Add Customer', details: `New client: ${customerData.name}`, type: 'success' });
   },
   updateCustomer: (id, customerData) => {
     const { currentUser, addLog, customers } = get();
@@ -415,7 +413,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c)
     }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Update Customer', details: `Modified profile for: ${customer?.name || id}`, type: 'warning' });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Update Customer', details: `Modified: ${customer?.name}`, type: 'warning' });
   },
   addPet: (customerId, petData) => {
     const { currentUser, addLog, customers } = get();
@@ -426,46 +424,28 @@ export const useStore = create<AppState>((set, get) => ({
         pets: [...c.pets, { ...petData, id: 'p' + Math.random().toString(36).substr(2, 4), serviceHistory: [] }]
       } : c)
     }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Register Pet', details: `Added ${petData.name} to owner: ${customer?.name}`, type: 'info' });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Register Pet', details: `Added ${petData.name} to ${customer?.name}`, type: 'info' });
   },
-  updatePet: (customerId, petId, petData) => {
-    const { currentUser, addLog } = get();
-    set((state) => ({
-      customers: state.customers.map(c => c.id === customerId ? {
-        ...c,
-        pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
-      } : c)
-    }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Update Pet Profile', details: `Modified pet details`, type: 'warning' });
-  },
-  updatePetWeight: (customerId, petId, weight) => {
-    const { currentUser, addLog, customers } = get();
-    const customer = customers.find(c => c.id === customerId);
-    const pet = customer?.pets.find(p => p.id === petId);
-    set((state) => ({
-      customers: state.customers.map(c => c.id === customerId ? {
-        ...c,
-        pets: c.pets.map(p => p.id === petId ? {
-          ...p,
-          weightHistory: [...p.weightHistory, { date: new Date().toISOString().split('T')[0], value: weight }]
-        } : p)
-      } : c)
-    }));
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Update Weight', details: `Updated ${pet?.name}'s weight to ${weight}kg`, type: 'info' });
-  },
-
-  updateTierRules: (rules) => {
-    const { currentUser, addLog } = get();
-    set({ tierRules: rules });
-    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Update Membership Rules', details: 'Modified tier spending thresholds or discounts', type: 'warning' });
-  },
+  updatePet: (customerId, petId, petData) => set((state) => ({
+    customers: state.customers.map(c => c.id === customerId ? {
+      ...c,
+      pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
+    } : c)
+  })),
+  updatePetWeight: (customerId, petId, weight) => set((state) => ({
+    customers: state.customers.map(c => c.id === customerId ? {
+      ...c,
+      pets: c.pets.map(p => p.id === petId ? {
+        ...p,
+        weightHistory: [...p.weightHistory, { date: new Date().toISOString().split('T')[0], value: weight }]
+      } : p)
+    } : c)
+  })),
 
   processPayment: (customerId, amount, discount, items, method = 'Cash', details) => {
     const { customers, tierRules, transactions, addLog, currentUser, currency } = get();
     const today = new Date().toISOString().split('T')[0];
-    
     const isAppointment = items.some(item => !!item.queueItemId);
-    const bookingType: BookingType = isAppointment ? 'Appointment' : 'Walk-in';
     
     const newTransaction: Transaction = {
       id: 'tx-' + Math.random().toString(36).substr(2, 9),
@@ -480,115 +460,109 @@ export const useStore = create<AppState>((set, get) => ({
         return pet?.species || 'Other';
       }))),
       paymentMethod: method,
-      bookingType,
+      bookingType: isAppointment ? 'Appointment' : 'Walk-in',
       itemsCount: items.length,
       processedBy: currentUser?.name || 'Admin User',
       staffName: items[0]?.staffName || 'Sarah Wilson',
       paymentDetails: details
     };
 
-    const updatedCustomers = customers.map(c => {
-      if (c.id === customerId) {
-        const newSpent = c.totalSpent + amount;
-        const newPoints = c.points + Math.floor(amount);
-        const sortedRules = [...tierRules].sort((a, b) => b.minSpent - a.minSpent);
-        const newMembership = sortedRules.find(r => newSpent >= r.minSpent)?.level || 'Standard';
-        
-        const updatedPets = c.pets.map(pet => {
-          const itemsForThisPet = items.filter(item => item.petId === pet.id);
-          if (itemsForThisPet.length > 0) {
-            const newHistoryEntries: ServiceHistoryEntry[] = itemsForThisPet.map(item => ({
-              id: Math.random().toString(36).substr(2, 9),
-              date: today,
-              serviceName: item.title,
-              price: item.price,
-              size: item.size
-            }));
-            return {
-              ...pet,
-              serviceHistory: [...(pet.serviceHistory || []), ...newHistoryEntries]
-            };
-          }
-          return pet;
-        });
-
-        return {
-          ...c,
-          totalSpent: newSpent,
-          points: newPoints,
-          membership: newMembership as MembershipLevel,
-          pets: updatedPets
-        };
-      }
-      return c;
-    });
-
-    set({ 
-      customers: updatedCustomers,
-      transactions: [...transactions, newTransaction]
-    });
-
+    set({ transactions: [...transactions, newTransaction] });
+    get().recalculateCustomerStats(customerId);
+    
     addLog({
       staffName: currentUser?.name || 'Admin',
       action: 'Checkout Complete',
-      details: `Received ${currency}${amount.toLocaleString()} from ${newTransaction.customerName} via ${method}`,
+      details: `Received ${currency}${amount.toLocaleString()} from ${newTransaction.customerName}`,
       type: 'success'
     });
+  },
+
+  updateTransaction: (id, data) => {
+    const { currentUser, addLog, transactions } = get();
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+
+    set((state) => ({
+      transactions: state.transactions.map(t => t.id === id ? { ...t, ...data } : t)
+    }));
+
+    if (tx.customerId) {
+      get().recalculateCustomerStats(tx.customerId);
+    }
+
+    addLog({
+      staffName: currentUser?.name || 'Admin',
+      action: 'Update Bill',
+      details: `Modified transaction ${id} (${tx.customerName})`,
+      type: 'warning'
+    });
+  },
+
+  deleteTransaction: (id) => {
+    const { currentUser, addLog, transactions } = get();
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+
+    set((state) => ({
+      transactions: state.transactions.filter(t => t.id !== id)
+    }));
+
+    if (tx.customerId) {
+      get().recalculateCustomerStats(tx.customerId);
+    }
+
+    addLog({
+      staffName: currentUser?.name || 'Admin',
+      action: 'Delete Bill',
+      details: `Permanently removed transaction ${id} for ${tx.customerName}`,
+      type: 'danger'
+    });
+  },
+
+  recalculateCustomerStats: (customerId) => {
+    const { transactions, customers, tierRules } = get();
+    const customerTransactions = transactions.filter(t => t.customerId === customerId);
+    const totalSpent = customerTransactions.reduce((acc, t) => acc + t.amount, 0);
+    const points = Math.floor(totalSpent);
     
+    const sortedRules = [...tierRules].sort((a, b) => b.minSpent - a.minSpent);
+    const membership = sortedRules.find(r => totalSpent >= r.minSpent)?.level || 'Standard';
+
+    set((state) => ({
+      customers: state.customers.map(c => c.id === customerId ? { ...c, totalSpent, points, membership: membership as MembershipLevel } : c)
+    }));
+
     const currentSelected = get().selectedOwner;
     if (currentSelected?.id === customerId) {
-      set({ selectedOwner: updatedCustomers.find(c => c.id === customerId) || null });
+      set({ selectedOwner: { ...currentSelected, totalSpent, points, membership: membership as MembershipLevel } });
     }
   },
 
-  addStaff: (staffData) => set((state) => {
-    const { currentUser } = get();
+  updateTierRules: (rules) => {
+    const { currentUser, addLog } = get();
+    set({ tierRules: rules });
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'Update Membership Rules', details: 'Modified tiers', type: 'warning' });
+  },
+
+  addStaff: (staffData) => {
+    const { currentUser, addLog } = get();
     const newStaff = { ...staffData, id: 's' + Math.random().toString(36).substr(2, 4) };
-    state.addLog({
-      staffName: currentUser?.name || 'Admin',
-      action: 'Staff Hired',
-      details: `Added new staff: ${newStaff.name} (${newStaff.role})`,
-      type: 'info'
-    });
-    return { staff: [...state.staff, newStaff] };
-  }),
-  updateStaff: (id, staffData) => {
-    const { currentUser, addLog, staff } = get();
-    const member = staff.find(s => s.id === id);
-    set((state) => ({
-      staff: state.staff.map(s => s.id === id ? { ...s, ...staffData } : s)
-    }));
-    addLog({ staffName: currentUser?.name || 'Admin', action: 'Update Staff', details: `Modified profile for employee: ${member?.name}`, type: 'warning' });
+    set((state) => ({ staff: [...state.staff, newStaff] }));
+    addLog({ staffName: currentUser?.name || 'Admin', action: 'Staff Hired', details: `Added ${newStaff.name}`, type: 'info' });
   },
-  deleteStaff: (id) => {
-    const { currentUser, addLog, staff } = get();
-    const member = staff.find(s => s.id === id);
-    set((state) => ({
-      staff: state.staff.filter(s => s.id !== id)
-    }));
-    addLog({ staffName: currentUser?.name || 'Admin', action: 'Terminate Staff', details: `Removed employee: ${member?.name}`, type: 'danger' });
-  },
+  updateStaff: (id, staffData) => set((state) => ({
+    staff: state.staff.map(s => s.id === id ? { ...s, ...staffData } : s)
+  })),
+  deleteStaff: (id) => set((state) => ({
+    staff: state.staff.filter(s => s.id !== id)
+  })),
   addLog: (logData) => set((state) => ({
     logs: [{ ...logData, id: 'l' + Math.random().toString(36).substr(2, 6), timestamp: new Date().toISOString() }, ...state.logs].slice(0, 100)
   })),
 
-  updateBookingSettings: (settings) => {
-    const { currentUser, addLog } = get();
-    set((state) => ({
-      ...state,
-      ...settings
-    }));
-    addLog({ staffName: currentUser?.name || 'Admin', action: 'Update Booking Config', details: 'Modified shop hours, capacity, or slot duration', type: 'warning' });
-  },
-
-  toggleSlotStatus: (time) => {
-    const { currentUser, addLog, disabledSlots } = get();
-    const isBlocking = !disabledSlots.includes(time);
-    set((state) => ({
-      disabledSlots: isBlocking 
-        ? [...state.disabledSlots, time]
-        : state.disabledSlots.filter(t => t !== time)
-    }));
-    addLog({ staffName: currentUser?.name || 'Admin', action: 'Modify Calendar', details: `${isBlocking ? 'Blocked' : 'Unblocked'} time slot: ${time}`, type: 'info' });
-  }
+  updateBookingSettings: (settings) => set((state) => ({ ...state, ...settings })),
+  toggleSlotStatus: (time) => set((state) => ({
+    disabledSlots: state.disabledSlots.includes(time) ? state.disabledSlots.filter(t => t !== time) : [...state.disabledSlots, time]
+  }))
 }));
