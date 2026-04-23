@@ -42,6 +42,11 @@ const Settings = () => {
   const [serviceQuery, setServiceQuery] = useState('');
   const [speciesTab, setSpeciesTab] = useState<'Dog' | 'Cat'>('Dog');
 
+  const filteredServices = services.filter(s => 
+    s.targetSpecies === speciesTab && 
+    s.title.toLowerCase().includes(serviceQuery.toLowerCase())
+  );
+
   const handleSaveAll = () => {
     updateTierRules(localTierRules);
     updateBusinessProfile({ 
@@ -75,6 +80,16 @@ const Settings = () => {
       case 'Gold': return { icon: Crown, color: 'text-amber-400', bg: 'bg-amber-50' };
       case 'VIP': return { icon: Gem, color: 'text-purple-400', bg: 'bg-purple-50' };
     }
+  };
+
+  const handleEditService = (service: Service) => {
+    setSelectedService(service);
+    setIsServiceModalOpen(true);
+  };
+
+  const handleAddService = () => {
+    setSelectedService(null);
+    setIsServiceModalOpen(true);
   };
 
   return (
@@ -247,18 +262,87 @@ const Settings = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-12">
-             <div className="flex justify-end mb-4">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-                  <input 
-                    type="text"
-                    className="bg-white border border-gray-100 pl-10 pr-6 py-3 rounded-[20px] text-xs font-bold w-64 shadow-sm focus:ring-2 focus:ring-[#1A1F3D]/5"
-                    placeholder="Search services..."
-                    value={serviceQuery}
-                    onChange={e => setServiceQuery(e.target.value)}
-                  />
+          <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-10">
+             <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
+                <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+                  <button 
+                    onClick={() => setSpeciesTab('Dog')}
+                    className={cn(
+                      "px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all",
+                      speciesTab === 'Dog' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400"
+                    )}
+                  >
+                    <Dog size={14} /> DOGS
+                  </button>
+                  <button 
+                    onClick={() => setSpeciesTab('Cat')}
+                    className={cn(
+                      "px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all",
+                      speciesTab === 'Cat' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400"
+                    )}
+                  >
+                    <Cat size={14} /> CATS
+                  </button>
                 </div>
+
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-64">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                    <input 
+                      type="text"
+                      className="bg-white border border-gray-100 pl-10 pr-6 py-3 rounded-2xl text-xs font-bold w-full shadow-sm"
+                      placeholder="Search services..."
+                      value={serviceQuery}
+                      onChange={e => setServiceQuery(e.target.value)}
+                    />
+                  </div>
+                  <button 
+                    onClick={handleAddService}
+                    className="bg-[#D9ED5F] text-[#1A1F3D] p-3 rounded-2xl shadow-lg shadow-[#D9ED5F]/20 hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <Plus size={20} />
+                  </button>
+                </div>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredServices.map((service) => (
+                  <div key={service.id} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between group transition-all hover:shadow-md">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
+                        service.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600"
+                      )}>
+                        <Scissors size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-[#1A1F3D]">{service.title}</h4>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">{service.category}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Switch 
+                        checked={service.isActive} 
+                        onCheckedChange={() => toggleServiceActive(service.id)}
+                        className="data-[state=checked]:bg-[#1A1F3D]"
+                      />
+                      <button onClick={() => handleEditService(service)} className="p-2 text-gray-300 hover:text-[#1A1F3D] transition-colors">
+                        <Edit3 size={18} />
+                      </button>
+                      <button onClick={() => deleteService(service.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                <button 
+                  onClick={handleAddService}
+                  className="bg-transparent border-2 border-dashed border-gray-100 rounded-[32px] p-6 flex items-center justify-center gap-3 text-gray-300 hover:border-[#1A1F3D]/20 hover:text-[#1A1F3D] transition-all"
+                >
+                  <Plus size={20} />
+                  <span className="text-sm font-black">Add New Service</span>
+                </button>
              </div>
           </TabsContent>
 
