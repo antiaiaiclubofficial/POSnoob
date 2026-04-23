@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Scissors, Plus, Trash2, Dog, Cat, Sparkles, Bath, CheckCircle2 } from 'lucide-react';
+import { 
+  X, Scissors, Plus, Trash2, Dog, Cat, Sparkles, Bath, CheckCircle2, 
+  Wind, Stethoscope, Brush, Home, Heart, Bone, Award, Zap
+} from 'lucide-react';
 import { useStore, Service, ServiceIcon, ServicePriceInfo } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -18,6 +21,20 @@ interface ServiceModalProps {
   defaultSpecies?: 'Dog' | 'Cat';
   onClose: () => void;
 }
+
+const ICONS_LIST: { id: ServiceIcon; icon: any }[] = [
+  { id: 'grooming', icon: Scissors },
+  { id: 'bath', icon: Bath },
+  { id: 'spa', icon: Sparkles },
+  { id: 'nail', icon: Zap },
+  { id: 'dry', icon: Wind },
+  { id: 'brush', icon: Brush },
+  { id: 'health', icon: Stethoscope },
+  { id: 'hotel', icon: Home },
+  { id: 'love', icon: Heart },
+  { id: 'food', icon: Bone },
+  { id: 'premium', icon: Award },
+];
 
 const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModalProps) => {
   const { addService, updateService, currency } = useStore();
@@ -159,7 +176,7 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
         <form onSubmit={handleSubmit} className="p-8 lg:p-10 max-h-[75vh] overflow-y-auto scrollbar-hide">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-10">
             <div className="space-y-8">
-              <div className="grid grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 gap-8">
                 <div>
                   <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Target Species</label>
                   <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1">
@@ -187,25 +204,26 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
                 </div>
                 <div>
                   <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Choose Icon</label>
-                  <div className="flex flex-wrap gap-2">
-                    {(['grooming', 'bath', 'spa', 'nail'] as ServiceIcon[]).map((iconType) => (
-                      <button
-                        key={iconType}
-                        type="button"
-                        onClick={() => setIcon(iconType)}
-                        className={cn(
-                          "w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center border-2 transition-all",
-                          icon === iconType 
-                          ? (isDog ? "bg-blue-600 border-blue-600 text-white" : "bg-pink-600 border-pink-600 text-white")
-                          : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
-                        )}
-                      >
-                        {iconType === 'grooming' && <Scissors size={18} />}
-                        {iconType === 'bath' && <Bath size={18} />}
-                        {iconType === 'spa' && <Sparkles size={18} />}
-                        {iconType === 'nail' && <Plus size={18} />}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-6 gap-2">
+                    {ICONS_LIST.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setIcon(item.id)}
+                          className={cn(
+                            "w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center border-2 transition-all",
+                            icon === item.id 
+                            ? (isDog ? "bg-blue-600 border-blue-600 text-white" : "bg-pink-600 border-pink-600 text-white")
+                            : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
+                          )}
+                          title={item.id}
+                        >
+                          <Icon size={18} />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -226,7 +244,6 @@ const ServiceModal = ({ service, defaultSpecies = 'Dog', onClose }: ServiceModal
                 />
               </div>
 
-              {/* Sub-services Section */}
               <div className="space-y-4">
                 <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">Included Services (Checkboxes)</label>
                 <div className="bg-[#F5F6FA] p-6 rounded-[32px] space-y-4">

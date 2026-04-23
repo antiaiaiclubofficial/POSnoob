@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ServiceIcon = 'grooming' | 'bath' | 'nail' | 'deshedding' | 'spa';
+export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health' | 'brush' | 'hotel' | 'love' | 'food' | 'premium';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card';

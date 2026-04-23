@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Scissors, Bath, ShieldCheck, Zap, Plus, Dog, Cat, Sparkles, Check } from 'lucide-react';
+import { 
+  Scissors, Bath, Sparkles, Zap, Plus, Dog, Cat, Check, 
+  Wind, Stethoscope, Brush, Home, Heart, Bone, Award
+} from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useStore, Service, ServiceIcon } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -15,12 +18,10 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
-  // ใช้รายการบริการย่อยจากฐานข้อมูลโดยตรง
   const subServices = useMemo(() => service.subServices || [], [service.subServices]);
   const availableSizes = useMemo(() => Object.keys(service.prices), [service.prices]);
 
   useEffect(() => {
-    // เลือกทุกรายการเป็นค่าเริ่มต้น
     setSelectedItems(subServices);
   }, [subServices]);
 
@@ -37,13 +38,24 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
   const currentPrice = selectedSize ? service.prices[selectedSize].price : 0;
   const isFixedPrice = availableSizes.length <= 1;
 
-  const IconComponent = {
-    grooming: Scissors,
-    bath: Bath,
-    nail: Zap,
-    deshedding: ShieldCheck,
-    spa: Sparkles
-  }[service.icon as ServiceIcon] || (service.targetSpecies === 'Dog' ? Dog : Cat);
+  const getIconComponent = (iconName: ServiceIcon) => {
+    switch(iconName) {
+      case 'grooming': return Scissors;
+      case 'bath': return Bath;
+      case 'spa': return Sparkles;
+      case 'nail': return Zap;
+      case 'dry': return Wind;
+      case 'health': return Stethoscope;
+      case 'brush': return Brush;
+      case 'hotel': return Home;
+      case 'love': return Heart;
+      case 'food': return Bone;
+      case 'premium': return Award;
+      default: return service.targetSpecies === 'Dog' ? Dog : Cat;
+    }
+  };
+
+  const IconComponent = getIconComponent(service.icon);
 
   const toggleItem = (item: string) => {
     setSelectedItems(prev => 
@@ -99,7 +111,6 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
         <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">{service.title}</h3>
       </div>
 
-      {/* Sub-services Checkboxes */}
       {subServices.length > 0 && (
         <div className="space-y-3 mb-8 flex-1">
           <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-1">Included Services</p>
@@ -130,7 +141,6 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
         </div>
       )}
 
-      {/* Size Selector */}
       {!isFixedPrice && (
         <div className="bg-[#F5F6FA] p-1.5 rounded-[24px] flex flex-wrap gap-1 mb-8">
           {availableSizes.map((size) => (

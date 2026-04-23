@@ -3,7 +3,8 @@
 import React, { useState, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { 
-  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Bath, Sparkles, MapPin, Phone, MessageSquare, Receipt
+  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Bath, Sparkles, MapPin, Phone, MessageSquare, Receipt,
+  Wind, Stethoscope, Brush, Home, Heart, Bone, Zap
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service, ServiceIcon } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -78,13 +79,23 @@ const Settings = () => {
     }
   };
 
-  const getIcon = (iconName: string, species: string) => {
+  const getIcon = (iconName: ServiceIcon, species: string) => {
     const isDog = species === 'Dog';
+    const colorClass = isDog ? "text-blue-600" : "text-pink-600";
+    
     switch(iconName) {
-      case 'grooming': return <Scissors className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
-      case 'bath': return <Bath className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
-      case 'spa': return <Sparkles className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
-      default: return <Scissors className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
+      case 'grooming': return <Scissors className={colorClass} size={24} />;
+      case 'bath': return <Bath className={colorClass} size={24} />;
+      case 'spa': return <Sparkles className={colorClass} size={24} />;
+      case 'nail': return <Zap className={colorClass} size={24} />;
+      case 'dry': return <Wind className={colorClass} size={24} />;
+      case 'brush': return <Brush className={colorClass} size={24} />;
+      case 'health': return <Stethoscope className={colorClass} size={24} />;
+      case 'hotel': return <Home className={colorClass} size={24} />;
+      case 'love': return <Heart className={colorClass} size={24} />;
+      case 'food': return <Bone className={colorClass} size={24} />;
+      case 'premium': return <Award className={colorClass} size={24} />;
+      default: return isDog ? <Dog className={colorClass} size={24} /> : <Cat className={colorClass} size={24} />;
     }
   };
 

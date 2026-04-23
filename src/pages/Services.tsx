@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { 
   Plus, Edit3, Trash2, Dog, Cat, Scissors, Search, 
-  Bath, Sparkles
+  Bath, Sparkles, Zap, Wind, Stethoscope, Brush, Home, Heart, Bone, Award
 } from 'lucide-react';
-import { useStore, Service } from '@/store/useStore';
+import { useStore, Service, ServiceIcon } from '@/store/useStore';
 import ServiceModal from '@/components/ServiceModal';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
@@ -29,13 +29,23 @@ const Services = () => {
     setIsModalOpen(true);
   };
 
-  const getIcon = (iconName: string, species: string) => {
+  const getIcon = (iconName: ServiceIcon, species: string) => {
     const isDog = species === 'Dog';
+    const colorClass = isDog ? "text-blue-600" : "text-pink-600";
+    
     switch(iconName) {
-      case 'grooming': return <Scissors className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
-      case 'bath': return <Bath className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
-      case 'spa': return <Sparkles className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
-      default: return <Scissors className={isDog ? "text-blue-600" : "text-pink-600"} size={24} />;
+      case 'grooming': return <Scissors className={colorClass} size={24} />;
+      case 'bath': return <Bath className={colorClass} size={24} />;
+      case 'spa': return <Sparkles className={colorClass} size={24} />;
+      case 'nail': return <Zap className={colorClass} size={24} />;
+      case 'dry': return <Wind className={colorClass} size={24} />;
+      case 'brush': return <Brush className={colorClass} size={24} />;
+      case 'health': return <Stethoscope className={colorClass} size={24} />;
+      case 'hotel': return <Home className={colorClass} size={24} />;
+      case 'love': return <Heart className={colorClass} size={24} />;
+      case 'food': return <Bone className={colorClass} size={24} />;
+      case 'premium': return <Award className={colorClass} size={24} />;
+      default: return isDog ? <Dog className={colorClass} size={24} /> : <Cat className={colorClass} size={24} />;
     }
   };
 
@@ -43,7 +53,6 @@ const Services = () => {
     <div className="flex h-screen bg-[#F8F9FD] text-[#1A1F3D] overflow-hidden">
       <Sidebar />
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
         <header className="px-12 py-10 shrink-0 flex justify-between items-start">
           <div>
             <h1 className="text-4xl font-black text-[#1A1F3D] mb-2">Service Catalog</h1>
@@ -74,7 +83,6 @@ const Services = () => {
           </div>
         </header>
 
-        {/* Content Grid */}
         <div className="flex-1 overflow-y-auto px-12 pb-12 scrollbar-hide">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             {filteredServices.map((service) => (
@@ -85,7 +93,6 @@ const Services = () => {
                   !service.isActive && "opacity-60 grayscale-[0.5]"
                 )}
               >
-                {/* Card Header */}
                 <div className="flex justify-between items-start mb-6">
                   <div className="flex gap-4">
                     <div className={cn(
@@ -126,7 +133,6 @@ const Services = () => {
                   </div>
                 </div>
 
-                {/* Pricing Table */}
                 <div className="mt-auto">
                   <div className="bg-[#1A1F3D] rounded-t-2xl px-6 py-2.5 flex justify-between">
                     <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Pet Size</span>
@@ -144,7 +150,6 @@ const Services = () => {
               </div>
             ))}
 
-            {/* Add New Service Card */}
             <button 
               onClick={handleAdd}
               className="bg-transparent border-2 border-dashed border-gray-200 rounded-[40px] flex flex-col items-center justify-center py-20 group hover:bg-white hover:border-[#1A1F3D]/20 transition-all cursor-pointer"
