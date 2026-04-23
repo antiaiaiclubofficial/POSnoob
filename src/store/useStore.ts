@@ -72,10 +72,8 @@ export interface Service {
   title: string;
   description: string;
   category: string;
-  prices: {
-    dog: Record<string, number>;
-    cat: Record<string, number>;
-  };
+  targetSpecies: 'Dog' | 'Cat';
+  prices: Record<string, number>;
 }
 
 export interface QueueItem {
@@ -84,7 +82,7 @@ export interface QueueItem {
   petName: string;
   ownerName: string;
   serviceName: string;
-  date: string; // เพิ่มช่องวันที่
+  date: string;
   time: string;
   status: QueueStatus;
   image: string;
@@ -122,7 +120,6 @@ interface AppState {
   activePet: Pet | null;
   activeQueueItemId: string | null;
   
-  // Booking Settings
   slotDuration: number;
   maxCapacity: number;
   openTime: string;
@@ -205,13 +202,20 @@ const INITIAL_SERVICES: Service[] = [
   { 
     id: "svc-1", 
     icon: "grooming", 
-    title: "Full Grooming", 
-    description: "Haircut, bath, brush, nails, and ears.", 
+    title: "Full Grooming (Dog)", 
+    description: "Haircut, bath, brush, nails, and ears for dogs.", 
     category: "Grooming", 
-    prices: { 
-      dog: { S: 45, M: 55, L: 75 },
-      cat: { Standard: 50 }
-    } 
+    targetSpecies: 'Dog',
+    prices: { S: 45, M: 55, L: 75 }
+  },
+  { 
+    id: "svc-2", 
+    icon: "bath", 
+    title: "Cat Spa & Bath", 
+    description: "Relaxing bath and blow dry for cats.", 
+    category: "Bathing", 
+    targetSpecies: 'Cat',
+    prices: { Standard: 50, LongHair: 65 }
   }
 ];
 
