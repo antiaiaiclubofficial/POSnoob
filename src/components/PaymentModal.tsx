@@ -14,6 +14,7 @@ interface PaymentModalProps {
 }
 
 const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps) => {
+  const { currency } = useStore();
   // Cash States
   const [received, setReceived] = useState<string>('');
   const [change, setChange] = useState<number>(0);
@@ -81,7 +82,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
           {/* Total Amount Display */}
           <div className="text-center">
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Total Amount Due</p>
-            <h2 className="text-5xl font-black text-[#1A1F3D]">${total.toFixed(2)}</h2>
+            <h2 className="text-5xl font-black text-[#1A1F3D]">{currency}{total.toFixed(2)}</h2>
           </div>
 
           {/* Dynamic Payment Content */}
@@ -91,7 +92,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
                 <div>
                   <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Amount Received</label>
                   <div className="relative">
-                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-lg font-black">{currency}</span>
                     <input 
                       type="number"
                       autoFocus
@@ -110,14 +111,14 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
                       onClick={() => handleQuickCash(amount)}
                       className="flex-1 py-3 bg-white border border-gray-100 rounded-xl text-xs font-black text-gray-500 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all"
                     >
-                      ${amount}
+                      {currency}{amount}
                     </button>
                   ))}
                 </div>
 
                 <div className="bg-orange-50 p-6 rounded-[28px] border border-orange-100 flex justify-between items-center">
                   <span className="text-xs font-black text-orange-600 uppercase tracking-widest">Change Due</span>
-                  <span className="text-2xl font-black text-orange-600">${change.toFixed(2)}</span>
+                  <span className="text-2xl font-black text-orange-600">{currency}{change.toFixed(2)}</span>
                 </div>
               </div>
             )}
@@ -140,7 +141,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
                     onChange={e => setRefNo(e.target.value)}
                   />
                 </div>
-                <p className="text-[10px] text-gray-400 font-medium italic">Scanning this QR will automatically set the amount to ${total}</p>
+                <p className="text-[10px] text-gray-400 font-medium italic">Scanning this QR will automatically set the amount to {currency}{total}</p>
               </div>
             )}
 
@@ -155,7 +156,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
                   <div className="flex justify-between items-end">
                     <div>
                       <p className="text-[8px] font-bold uppercase opacity-40 mb-1">Transaction Total</p>
-                      <p className="text-2xl font-black text-[#D9ED5F]">${total.toFixed(2)}</p>
+                      <p className="text-2xl font-black text-[#D9ED5F]">{currency}{total.toFixed(2)}</p>
                     </div>
                     <p className="text-sm font-mono tracking-wider">**** **** **** {cardLast4 || 'XXXX'}</p>
                   </div>

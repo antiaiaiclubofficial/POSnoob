@@ -5,7 +5,7 @@ import {
   Edit3, TrendingUp, History, ClipboardList, Calendar, 
   ChevronDown, ChevronUp, Scale 
 } from 'lucide-react';
-import { Pet } from '@/store/useStore';
+import { useStore, Pet } from '@/store/useStore';
 import { calculateAge } from '@/utils/petData';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -17,6 +17,7 @@ interface PetProfileRecordProps {
 }
 
 const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
+  const { currency } = useStore();
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -132,7 +133,7 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-black text-[#1A1F3D]">${history.price.toFixed(2)}</p>
+                      <p className="text-lg font-black text-[#1A1F3D]">{currency}{history.price.toFixed(2)}</p>
                       <span className="bg-green-100 text-green-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Paid</span>
                     </div>
                   </div>

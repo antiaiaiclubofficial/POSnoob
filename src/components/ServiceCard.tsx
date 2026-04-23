@@ -11,7 +11,7 @@ interface ServiceCardProps {
 }
 
 const ServiceCard = ({ service }: ServiceCardProps) => {
-  const { addToCart, activePet, selectedOwner, activeQueueItemId } = useStore();
+  const { addToCart, activePet, selectedOwner, activeQueueItemId, currency } = useStore();
   const [selectedSize, setSelectedSize] = useState<string>('');
 
   const petSpecies = activePet?.species === 'Cat' ? 'cat' : 'dog';
@@ -73,7 +73,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">
             {activePet ? `${activePet.species} Pricing` : 'Select Pet'}
           </p>
-          <p className="text-2xl font-bold text-[#1A1F3D]">${currentPrice}</p>
+          <p className="text-2xl font-bold text-[#1A1F3D]">{currency}{currentPrice}</p>
         </div>
       </div>
 

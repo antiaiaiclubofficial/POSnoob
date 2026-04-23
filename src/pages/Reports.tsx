@@ -32,7 +32,7 @@ import {
 } from 'recharts';
 
 const Reports = () => {
-  const { transactions } = useStore();
+  const { transactions, currency } = useStore();
   
   // States สำหรับ Filter
   const [dateRange, setDateRange] = useState<'today' | '7days' | 'month' | 'all'>('all');
@@ -157,7 +157,7 @@ const Reports = () => {
                   <DollarSign size={24} />
                 </div>
                 <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">Total Revenue</p>
-                <h2 className="text-3xl font-black">${stats.totalRevenue.toFixed(2)}</h2>
+                <h2 className="text-3xl font-black">{currency}{stats.totalRevenue.toFixed(2)}</h2>
                 <div className="mt-4 flex items-center gap-1.5 text-green-500 text-[10px] font-bold">
                   <ArrowUpRight size={14} /> +4.5% vs prev. period
                 </div>
@@ -179,7 +179,7 @@ const Reports = () => {
                   <TrendingUp size={24} />
                 </div>
                 <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">Avg. Order Value</p>
-                <h2 className="text-3xl font-black">${stats.avgOrder.toFixed(2)}</h2>
+                <h2 className="text-3xl font-black">{currency}{stats.avgOrder.toFixed(2)}</h2>
                 <div className="mt-4 flex items-center gap-1.5 text-purple-500 text-[10px] font-bold">
                   <Users size={14} /> Optimized per customer
                 </div>
@@ -218,6 +218,7 @@ const Reports = () => {
                     />
                     <Tooltip 
                       contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 40px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                      formatter={(value) => [`${currency}${value}`, 'Revenue']}
                     />
                     <Area 
                       type="monotone" 
@@ -288,7 +289,7 @@ const Reports = () => {
                             </div>
                           </td>
                           <td className="px-10 py-6 text-right">
-                            <span className="text-lg font-black text-[#1A1F3D]">${tx.amount.toFixed(2)}</span>
+                            <span className="text-lg font-black text-[#1A1F3D]">{currency}{tx.amount.toFixed(2)}</span>
                           </td>
                         </tr>
                       ))
