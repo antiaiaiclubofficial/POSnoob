@@ -4,6 +4,25 @@ export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card';
+export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
+
+export interface Staff {
+  id: string;
+  name: string;
+  role: StaffRole;
+  phone: string;
+  status: 'Active' | 'Inactive';
+  avatar: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  timestamp: string;
+  staffName: string;
+  action: string;
+  details: string;
+  type: 'info' | 'success' | 'warning' | 'danger';
+}
 
 export interface WeightEntry {
   date: string;
@@ -120,6 +139,8 @@ interface AppState {
   
   services: Service[];
   customers: Customer[];
+  staff: Staff[];
+  logs: ActivityLog[];
   cart: CartItem[];
   queue: QueueItem[];
   transactions: Transaction[];
@@ -169,6 +190,11 @@ interface AppState {
   processPayment: (customerId: string, amount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails']) => void;
   updateTierRules: (rules: TierRule[]) => void;
   
+  addStaff: (staff: Omit<Staff, 'id'>) => void;
+  updateStaff: (id: string, staff: Partial<Staff>) => void;
+  deleteStaff: (id: string) => void;
+  addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
+
   updateBookingSettings: (settings: { slotDuration?: number, maxCapacity?: number, openTime?: string, closeTime?: string }) => void;
   toggleSlotStatus: (time: string) => void;
 }
@@ -180,80 +206,13 @@ const INITIAL_TIER_RULES: TierRule[] = [
   { level: 'VIP', label: 'VIP Exclusive', minSpent: 5000, discount: 15 },
 ];
 
-const INITIAL_CUSTOMERS: Customer[] = [
-  {
-    id: 'c1',
-    name: 'John Doe',
-    phone: '081-234-5678',
-    email: 'john@example.com',
-    membership: 'Gold',
-    points: 450,
-    totalSpent: 1250,
-    pets: [
-      { 
-        id: 'p1', 
-        name: 'Bella', 
-        species: 'Dog', 
-        breed: 'Golden Retriever', 
-        birthday: '2021-03-15', 
-        weightHistory: [{ date: '2023-10-01', value: 24.5 }, { date: '2024-01-20', value: 25.2 }], 
-        serviceHistory: [
-          { id: 'h1', date: '2024-01-20', serviceName: 'Full Grooming (M)', price: 55 }
-        ],
-        notes: 'Sensitive skin', 
-        image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=64&h=64&fit=crop' 
-      }
-    ]
-  }
+const INITIAL_STAFF: Staff[] = [
+  { id: 's1', name: 'Alex Smith', role: 'Admin', phone: '081-111-2222', status: 'Active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop' },
+  { id: 's2', name: 'Sarah Wilson', role: 'Groomer', phone: '081-333-4444', status: 'Active', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop' }
 ];
 
-const INITIAL_SERVICES: Service[] = [
-  { 
-    id: "svc-1", 
-    icon: "grooming", 
-    title: "Full Grooming", 
-    description: "Complete grooming package for professional care.", 
-    subServices: ["bath", "haircut", "nail trimming", "ear cleaning"],
-    category: "Grooming", 
-    targetSpecies: 'Dog',
-    isActive: true,
-    prices: { 
-      "Small (< 10kg)": { price: 800, duration: 90 }, 
-      "Medium (10-25kg)": { price: 1200, duration: 120 }, 
-      "Large (> 25kg)": { price: 1800, duration: 150 } 
-    }
-  },
-  { 
-    id: "svc-2", 
-    icon: "bath", 
-    title: "Bath & Brush", 
-    description: "Clean and refresh your pet with our standard bath service.", 
-    subServices: ["shampoo", "blow dry", "brushing"],
-    category: "Bathing", 
-    targetSpecies: 'Dog',
-    isActive: true,
-    prices: { 
-      "Small (< 10kg)": { price: 450, duration: 45 }, 
-      "Medium (10-25kg)": { price: 650, duration: 60 }, 
-      "Large (> 25kg)": { price: 950, duration: 90 } 
-    }
-  },
-  { 
-    id: "svc-3", 
-    icon: "spa", 
-    title: "Spa Treatment", 
-    description: "Relaxing spa therapy for your furry friend.", 
-    subServices: ["aromatherapy", "mud mask", "massage"],
-    category: "Spa", 
-    targetSpecies: 'Dog',
-    isActive: true,
-    isPopular: true,
-    prices: { 
-      "Small (< 10kg)": { price: 1500, duration: 120 }, 
-      "Medium (10-25kg)": { price: 2200, duration: 140 }, 
-      "Large (> 25kg)": { price: 3000, duration: 180 } 
-    }
-  }
+const INITIAL_LOGS: ActivityLog[] = [
+  { id: 'l1', timestamp: new Date().toISOString(), staffName: 'System', action: 'Store Initialized', details: 'The application store was successfully created.', type: 'info' }
 ];
 
 export const useStore = create<AppState>((set, get) => ({
@@ -265,8 +224,10 @@ export const useStore = create<AppState>((set, get) => ({
   receiptHeader: "Thank you for visiting us!",
   currency: "฿",
   
-  services: INITIAL_SERVICES,
-  customers: INITIAL_CUSTOMERS,
+  services: [],
+  customers: [],
+  staff: INITIAL_STAFF,
+  logs: INITIAL_LOGS,
   cart: [],
   queue: [],
   transactions: [],
@@ -369,7 +330,7 @@ export const useStore = create<AppState>((set, get) => ({
   updateTierRules: (rules) => set({ tierRules: rules }),
 
   processPayment: (customerId, amount, items, method = 'Cash', details) => {
-    const { customers, tierRules, transactions } = get();
+    const { customers, tierRules, transactions, addLog } = get();
     const today = new Date().toISOString().split('T')[0];
     
     const newTransaction: Transaction = {
@@ -428,12 +389,39 @@ export const useStore = create<AppState>((set, get) => ({
       customers: updatedCustomers,
       transactions: [...transactions, newTransaction]
     });
+
+    addLog({
+      staffName: 'Admin',
+      action: 'Payment Processed',
+      details: `Received ${get().currency}${amount} from ${newTransaction.customerName}`,
+      type: 'success'
+    });
     
     const currentSelected = get().selectedOwner;
     if (currentSelected?.id === customerId) {
       set({ selectedOwner: updatedCustomers.find(c => c.id === customerId) || null });
     }
   },
+
+  addStaff: (staffData) => set((state) => {
+    const newStaff = { ...staffData, id: 's' + Math.random().toString(36).substr(2, 4) };
+    state.addLog({
+      staffName: 'Admin',
+      action: 'Staff Added',
+      details: `Added new staff: ${newStaff.name} (${newStaff.role})`,
+      type: 'info'
+    });
+    return { staff: [...state.staff, newStaff] };
+  }),
+  updateStaff: (id, staffData) => set((state) => ({
+    staff: state.staff.map(s => s.id === id ? { ...s, ...staffData } : s)
+  })),
+  deleteStaff: (id) => set((state) => ({
+    staff: state.staff.filter(s => s.id !== id)
+  })),
+  addLog: (logData) => set((state) => ({
+    logs: [{ ...logData, id: 'l' + Math.random().toString(36).substr(2, 6), timestamp: new Date().toISOString() }, ...state.logs].slice(0, 100)
+  })),
 
   updateBookingSettings: (settings) => set((state) => ({
     ...state,

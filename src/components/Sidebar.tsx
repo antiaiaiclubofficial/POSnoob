@@ -10,7 +10,9 @@ import {
   Settings as SettingsIcon,
   LayoutDashboard,
   Scissors,
-  Menu
+  Menu,
+  ShieldCheck,
+  History
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from 'react-router-dom';
@@ -21,6 +23,8 @@ const menuItems = [
   { icon: ShoppingBag, label: 'Checkout', path: '/' },
   { icon: LayoutDashboard, label: 'Pet Queue', path: '/queue' },
   { icon: Users, label: 'Customers', path: '/customers' },
+  { icon: ShieldCheck, label: 'Staff Management', path: '/staff' },
+  { icon: History, label: 'Activity Logs', path: '/logs' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: SettingsIcon, label: 'Settings', path: '/settings' },
 ];
@@ -52,7 +56,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1.5">
+      <nav className="flex-1 space-y-1.5 overflow-y-auto scrollbar-hide">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
