@@ -2,13 +2,12 @@
 
 import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import { Search, Mail, Phone, Plus, Shield, Dog, Cat, Info, User, Edit3, TrendingUp, History, ClipboardList, Calendar } from 'lucide-react';
+import { Search, Mail, Phone, Plus, User, Edit3 } from 'lucide-react';
 import { useStore, Customer, Pet } from '@/store/useStore';
-import { calculateAge } from '@/utils/petData';
 import { cn } from '@/lib/utils';
 import CustomerModal from '@/components/CustomerModal';
 import PetModal from '@/components/PetModal';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import PetProfileRecord from '@/components/PetProfileRecord';
 
 const Customers = () => {
   const { customers } = useStore();
@@ -102,7 +101,7 @@ const Customers = () => {
           {selectedCustomer ? (
             <div className="p-10 max-w-5xl mx-auto">
               {/* Profile Card */}
-              <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 mb-8 flex justify-between items-start group">
+              <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 mb-10 flex justify-between items-start group">
                 <div className="flex gap-6">
                   <div className="w-20 h-20 bg-[#1A1F3D] rounded-[24px] flex items-center justify-center text-2xl font-black text-white">
                     {selectedCustomer.name.charAt(0)}
@@ -132,113 +131,33 @@ const Customers = () => {
               </div>
 
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-black">Pet Health Hub</h3>
+                <h3 className="text-2xl font-black text-[#1A1F3D]">Pet Registry</h3>
                 <button 
                   onClick={handleAddPet}
-                  className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-[#1A1F3D]/10"
+                  className="bg-[#D9ED5F] text-[#1A1F3D] px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg shadow-[#D9ED5F]/20 transition-all hover:scale-105"
                 >
                   <Plus size={16} /> Register Pet
                 </button>
               </div>
 
-              {/* Pets List */}
-              <div className="space-y-12">
+              {/* Pets List - Using the new PetProfileRecord component */}
+              <div className="space-y-8 pb-10">
                 {selectedCustomer.pets.map(pet => (
-                  <div key={pet.id} className="space-y-6">
-                    <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden flex relative group/pet">
-                      <button 
-                        onClick={() => handleEditPet(pet)}
-                        className="absolute top-6 right-6 p-3 bg-gray-50 text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-2xl transition-all shadow-sm opacity-0 group-hover/pet:opacity-100"
-                      >
-                        <Edit3 size={18} />
-                      </button>
-
-                      {/* Pet Info Sidebar */}
-                      <div className="w-1/3 p-8 border-r border-gray-50 bg-[#F8F9FD]/50">
-                        <img src={pet.image} className="w-32 h-32 rounded-[28px] object-cover mx-auto mb-4 border-4 border-white shadow-lg" />
-                        <div className="text-center">
-                          <h4 className="text-xl font-black mb-1">{pet.name}</h4>
-                          <p className="text-xs text-gray-400 font-bold uppercase mb-4">{pet.breed}</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-white p-3 rounded-2xl shadow-sm">
-                              <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Age</p>
-                              <p className="text-xs font-black">{calculateAge(pet.birthday)}</p>
-                            </div>
-                            <div className="bg-white p-3 rounded-2xl shadow-sm">
-                              <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Weight</p>
-                              <p className="text-xs font-black">{pet.weightHistory[pet.weightHistory.length-1]?.value} kg</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Weight Chart & Notes */}
-                      <div className="flex-1 p-8 flex flex-col">
-                        <div className="flex justify-between items-center mb-6">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp size={18} className="text-blue-500" />
-                            <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Weight Progression</span>
-                          </div>
-                        </div>
-                        
-                        <div className="h-32 w-full mb-6">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={pet.weightHistory}>
-                              <XAxis dataKey="date" hide />
-                              <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
-                              <Tooltip 
-                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
-                              />
-                              <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-
-                        <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100/50 mt-auto">
-                          <p className="text-[10px] font-black uppercase text-orange-600 mb-1">Medical Notes</p>
-                          <p className="text-xs text-orange-900/70 font-medium leading-relaxed">{pet.notes || 'No special notes recorded.'}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Service History Section */}
-                    <div className="bg-white/50 rounded-[32px] p-8 border border-gray-100/50">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-[#1A1F3D] text-white rounded-xl flex items-center justify-center shadow-sm">
-                          <ClipboardList size={20} />
-                        </div>
-                        <h4 className="text-lg font-black text-[#1A1F3D]">Service History</h4>
-                      </div>
-
-                      <div className="space-y-3">
-                        {pet.serviceHistory && pet.serviceHistory.length > 0 ? (
-                          [...pet.serviceHistory].reverse().map((history) => (
-                            <div key={history.id} className="bg-white p-4 rounded-2xl flex items-center justify-between border border-gray-50 group hover:border-[#1A1F3D]/10 transition-all">
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400">
-                                  <Calendar size={18} />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-bold text-[#1A1F3D]">{history.serviceName}</p>
-                                  <p className="text-[10px] text-gray-400 font-bold uppercase">{history.date}</p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm font-black text-[#1A1F3D]">${history.price.toFixed(2)}</p>
-                                <p className="text-[9px] text-green-500 font-bold uppercase tracking-wider">Completed</p>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="py-8 text-center bg-gray-50/50 rounded-[24px] border border-dashed border-gray-200">
-                            <History size={32} className="mx-auto text-gray-200 mb-2" />
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No service history found</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <PetProfileRecord 
+                    key={pet.id} 
+                    pet={pet} 
+                    onEdit={handleEditPet} 
+                  />
                 ))}
+                
+                {selectedCustomer.pets.length === 0 && (
+                  <div className="py-20 text-center bg-white rounded-[40px] border border-dashed border-gray-200">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                       <Plus size={32} className="text-gray-200" />
+                    </div>
+                    <p className="text-gray-400 font-bold">No pets registered for this household</p>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
