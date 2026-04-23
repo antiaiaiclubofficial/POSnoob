@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, Check, Save, CreditCard, Wallet, X
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, Check, Save, CreditCard, Wallet, X, Trash2
 } from 'lucide-react';
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ interface OrderSummaryProps {
 }
 
 const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
-  const { cart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules, currency } = useStore();
+  const { cart, removeFromCart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules, currency } = useStore();
   const [newWeight, setNewWeight] = useState('');
   const [isWeightSaved, setIsWeightSaved] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
@@ -85,6 +85,14 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
             </span>
           )}
         </div>
+        {cart.length > 0 && (
+          <button 
+            onClick={clearCart}
+            className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors"
+          >
+            Clear All
+          </button>
+        )}
       </div>
 
       {activePet && (
@@ -145,7 +153,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
           <div className="space-y-4">
             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Services</p>
             {cart.map((item, idx) => (
-              <div key={`${item.id}-${idx}`} className="flex items-center gap-4 p-3 bg-white hover:bg-gray-50 rounded-2xl transition-colors border border-transparent hover:border-gray-100">
+              <div key={`${item.id}-${idx}`} className="flex items-center gap-4 p-3 bg-white hover:bg-gray-50 rounded-2xl transition-colors border border-transparent hover:border-gray-100 group/item">
                 <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center shrink-0">
                   <Dog className="text-[#1A1F3D] w-5 h-5" />
                 </div>
@@ -153,7 +161,15 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
                   <h4 className="font-bold text-[#1A1F3D] text-sm truncate">{item.title}</h4>
                   <p className="text-[9px] text-gray-400 font-bold uppercase">{item.petName}</p>
                 </div>
-                <span className="font-bold text-[#1A1F3D] text-sm">{currency}{item.price.toFixed(2)}</span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="font-bold text-[#1A1F3D] text-sm">{currency}{item.price.toFixed(2)}</span>
+                  <button 
+                    onClick={() => removeFromCart(idx)}
+                    className="opacity-0 group-hover/item:opacity-100 p-1 text-red-300 hover:text-red-500 transition-all"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
