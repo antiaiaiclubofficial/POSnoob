@@ -7,6 +7,14 @@ export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card';
 export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
 export type BookingType = 'Appointment' | 'Walk-in';
 
+export interface InventoryItem {
+  id: string;
+  name: string;
+  stock: number;
+  minStock: number;
+  unit: string;
+}
+
 export interface Staff {
   id: string;
   name: string;
@@ -121,6 +129,7 @@ export interface QueueItem {
   status: QueueStatus;
   image: string;
   isPaid?: boolean;
+  staffId?: string;
 }
 
 export interface CartItem {
@@ -155,6 +164,7 @@ interface AppState {
   services: Service[];
   customers: Customer[];
   staff: Staff[];
+  inventory: InventoryItem[];
   logs: ActivityLog[];
   cart: CartItem[];
   queue: QueueItem[];
@@ -169,6 +179,7 @@ interface AppState {
   openTime: string;
   closeTime: string;
   disabledSlots: string[];
+  kennelCapacity: number;
   
   login: (id: string, pass: string) => boolean;
   verifyPassword: (pass: string) => boolean;
@@ -223,7 +234,7 @@ interface AppState {
   deleteStaff: (id: string) => void;
   addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
 
-  updateBookingSettings: (settings: { slotDuration?: number, maxCapacity?: number, openTime?: string, closeTime?: string }) => void;
+  updateBookingSettings: (settings: { slotDuration?: number, maxCapacity?: number, openTime?: string, closeTime?: string, kennelCapacity?: number }) => void;
   toggleSlotStatus: (time: string) => void;
 }
 
@@ -237,6 +248,12 @@ const INITIAL_TIER_RULES: TierRule[] = [
 const INITIAL_STAFF: Staff[] = [
   { id: 's1', name: 'Alex Smith', role: 'Admin', phone: '081-111-2222', status: 'Active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop', username: 'alex', password: 'password' },
   { id: 's2', name: 'Sarah Wilson', role: 'Groomer', phone: '081-333-4444', status: 'Active', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop', username: 'sarah', password: 'password' }
+];
+
+const INITIAL_INVENTORY: InventoryItem[] = [
+  { id: 'inv1', name: 'Sensitive Shampoo', stock: 3, minStock: 5, unit: 'Bottle' },
+  { id: 'inv2', name: 'Pet Perfume (Classic)', stock: 12, minStock: 5, unit: 'Bottle' },
+  { id: 'inv3', name: 'Hair Conditioning Cream', stock: 2, minStock: 8, unit: 'Tub' },
 ];
 
 const INITIAL_LOGS: ActivityLog[] = [
@@ -260,6 +277,7 @@ export const useStore = create<AppState>((set, get) => ({
   
   services: [],
   customers: [],
+  inventory: INITIAL_INVENTORY,
   staff: INITIAL_STAFF,
   logs: INITIAL_LOGS,
   cart: [],
@@ -275,6 +293,7 @@ export const useStore = create<AppState>((set, get) => ({
   openTime: "09:00",
   closeTime: "19:00",
   disabledSlots: [],
+  kennelCapacity: 12,
 
   login: (id, pass) => {
     const { addLog } = get();

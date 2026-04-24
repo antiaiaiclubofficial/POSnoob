@@ -12,7 +12,8 @@ import {
   Scissors,
   Menu,
   ShieldCheck,
-  History
+  History,
+  CalendarDays
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -21,8 +22,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from 'sonner';
 
 const menuItems = [
-  { icon: ShoppingBag, label: 'Checkout', path: '/' },
-  { icon: LayoutDashboard, label: 'Pet Queue', path: '/queue' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+  { icon: ShoppingBag, label: 'Checkout', path: '/checkout' },
+  { icon: CalendarDays, label: 'Pet Queue', path: '/queue' },
   { icon: Users, label: 'Customers', path: '/customers' },
   { icon: ShieldCheck, label: 'Staff Management', path: '/staff' },
   { icon: History, label: 'Activity Logs', path: '/logs' },
