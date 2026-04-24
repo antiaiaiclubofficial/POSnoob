@@ -157,7 +157,6 @@ interface AppState {
   currency: string;
   shopIsOpen: boolean;
   recurringHolidays: number[];
-  specificHolidays: string[]; // เพิ่มช่องเก็บวันหยุดแบบเจาะจง (ISO Date Strings)
   
   lineLiffId: string;
   lineChannelToken: string;
@@ -196,7 +195,6 @@ interface AppState {
     currency?: string,
     shopIsOpen?: boolean,
     recurringHolidays?: number[],
-    specificHolidays?: string[],
     lineLiffId?: string,
     lineChannelToken?: string
   }) => void;
@@ -274,7 +272,6 @@ export const useStore = create<AppState>((set, get) => ({
   currency: "฿",
   shopIsOpen: true,
   recurringHolidays: [],
-  specificHolidays: [],
   lineLiffId: "",
   lineChannelToken: "",
   
@@ -346,7 +343,6 @@ export const useStore = create<AppState>((set, get) => ({
       currency: profile.currency ?? state.currency,
       shopIsOpen: profile.shopIsOpen ?? state.shopIsOpen,
       recurringHolidays: profile.recurringHolidays ?? state.recurringHolidays,
-      specificHolidays: profile.specificHolidays ?? state.specificHolidays,
       lineLiffId: profile.lineLiffId ?? state.lineLiffId,
       lineChannelToken: profile.lineChannelToken ?? state.lineChannelToken,
     }));

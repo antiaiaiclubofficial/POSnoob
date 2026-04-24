@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { 
-  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, MapPin, Phone, MessageSquare, Receipt, Calendar as CalendarIcon, AlertCircle, Share2, Smartphone, Send, CalendarDays, X
+  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, MapPin, Phone, MessageSquare, Receipt, Calendar, AlertCircle, Share2, Smartphone, Send
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -13,8 +13,6 @@ import TimePicker from '@/components/TimePicker';
 import BroadcastModal from '@/components/BroadcastModal';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from 'date-fns';
 
 const DAYS_OF_WEEK = [
   { label: 'Sun', value: 0 },
@@ -29,7 +27,7 @@ const DAYS_OF_WEEK = [
 const Settings = () => {
   const { 
     tierRules, updateTierRules, 
-    shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader, currency, shopIsOpen, recurringHolidays, specificHolidays,
+    shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader, currency, shopIsOpen, recurringHolidays,
     lineLiffId, lineChannelToken,
     updateBusinessProfile,
     services, deleteService, toggleServiceActive,
@@ -46,7 +44,6 @@ const Settings = () => {
   const [localCurrency, setLocalCurrency] = useState(currency);
   const [localShopIsOpen, setLocalShopIsOpen] = useState(shopIsOpen);
   const [localRecurringHolidays, setLocalRecurringHolidays] = useState<number[]>(recurringHolidays);
-  const [localSpecificHolidays, setLocalSpecificHolidays] = useState<string[]>(specificHolidays);
   
   const [localLineLiffId, setLocalLineLiffId] = useState(lineLiffId);
   const [localLineChannelToken, setLocalLineChannelToken] = useState(lineChannelToken);
@@ -81,7 +78,6 @@ const Settings = () => {
       currency: localCurrency,
       shopIsOpen: localShopIsOpen,
       recurringHolidays: localRecurringHolidays,
-      specificHolidays: localSpecificHolidays,
       lineLiffId: localLineLiffId,
       lineChannelToken: localLineChannelToken,
     });
@@ -100,16 +96,6 @@ const Settings = () => {
         ? prev.filter(d => d !== dayValue) 
         : [...prev, dayValue]
     );
-  };
-
-  const handleSpecificHolidayChange = (days: Date[] | undefined) => {
-    if (!days) return;
-    const isoDates = days.map(d => format(d, 'yyyy-MM-dd'));
-    setLocalSpecificHolidays(isoDates);
-  };
-
-  const removeSpecificHoliday = (dateStr: string) => {
-    setLocalSpecificHolidays(prev => prev.filter(d => d !== dateStr));
   };
 
   const updateRule = (level: MembershipLevel, field: keyof TierRule, value: any) => {
@@ -182,7 +168,7 @@ const Settings = () => {
 
           <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8 h-full">
+              <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
@@ -227,101 +213,40 @@ const Settings = () => {
                     </div>
                   </div>
                 </div>
-
-                <div className="pt-6 border-t border-gray-50">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-                      <CalendarIcon size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Weekly Holidays</h2>
-                      <p className="text-xs text-gray-400">Recurring days the shop is closed</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#F5F6FA] p-6 rounded-[32px]">
-                    <div className="grid grid-cols-4 gap-3">
-                        {DAYS_OF_WEEK.map((day) => {
-                          const isHoliday = localRecurringHolidays.includes(day.value);
-                          return (
-                            <button
-                              key={day.value}
-                              type="button"
-                              onClick={() => toggleHoliday(day.value)}
-                              className={cn(
-                                "py-3 rounded-xl text-[10px] font-black transition-all border-2",
-                                isHoliday 
-                                  ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20" 
-                                  : "bg-white border-white text-gray-400 hover:border-gray-200"
-                              )}
-                            >
-                              {day.label}
-                            </button>
-                          );
-                        })}
-                    </div>
-                  </div>
-                </div>
               </section>
 
-              <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8 flex flex-col">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
-                    <CalendarDays size={24} />
+              <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                    <Calendar size={24} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold">Closed Dates</h2>
-                    <p className="text-xs text-gray-400">Select specific dates on the calendar</p>
+                    <h2 className="text-xl font-bold">Weekly Holidays</h2>
+                    <p className="text-xs text-gray-400">Recurring days the shop is closed</p>
                   </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-8 items-start">
-                  <div className="bg-[#F5F6FA] p-4 rounded-[32px] shrink-0 border border-transparent focus-within:border-red-100 transition-all">
-                    <Calendar
-                      mode="multiple"
-                      selected={localSpecificHolidays.map(d => new Date(d))}
-                      onSelect={handleSpecificHolidayChange}
-                      className="rounded-2xl"
-                      classNames={{
-                        day_selected: "bg-red-500 text-white hover:bg-red-600 focus:bg-red-500 focus:text-white rounded-xl shadow-lg shadow-red-500/20",
-                        day_today: "bg-gray-100 text-gray-900 font-black",
-                        head_cell: "text-gray-400 font-black text-[10px] uppercase",
-                        day: "h-9 w-9 text-[10px] font-bold rounded-xl transition-all hover:bg-gray-50",
-                      }}
-                    />
-                  </div>
-
-                  <div className="flex-1 w-full space-y-4">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Selected Holidays</label>
-                    <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
-                      {localSpecificHolidays.length > 0 ? (
-                        localSpecificHolidays.sort().map(date => (
-                          <div key={date} className="bg-red-50/50 border border-red-100 px-4 py-3 rounded-2xl flex items-center justify-between group animate-in fade-in slide-in-from-right-2">
-                            <div className="flex items-center gap-3">
-                              <CalendarDays size={14} className="text-red-500" />
-                              <span className="text-xs font-black text-[#1A1F3D]">{format(new Date(date), 'PPP')}</span>
-                            </div>
-                            <button 
-                              onClick={() => removeSpecificHoliday(date)}
-                              className="text-gray-300 hover:text-red-500 p-1 rounded-lg transition-colors"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="h-32 border-2 border-dashed border-gray-100 rounded-[32px] flex flex-col items-center justify-center opacity-40">
-                           <CalendarIcon size={24} className="mb-2 text-gray-300" />
-                           <p className="text-[10px] font-bold text-gray-400 uppercase">No dates selected</p>
-                        </div>
-                      )}
-                    </div>
-                    {localSpecificHolidays.length > 0 && (
-                      <p className="text-[9px] text-gray-400 italic font-medium px-2">
-                        * Appointments will be blocked on these {localSpecificHolidays.length} days.
-                      </p>
-                    )}
-                  </div>
+                <div className="bg-[#F5F6FA] p-6 rounded-[32px]">
+                   <div className="grid grid-cols-4 gap-3">
+                      {DAYS_OF_WEEK.map((day) => {
+                        const isHoliday = localRecurringHolidays.includes(day.value);
+                        return (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => toggleHoliday(day.value)}
+                            className={cn(
+                              "py-3 rounded-xl text-[10px] font-black transition-all border-2",
+                              isHoliday 
+                                ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20" 
+                                : "bg-white border-white text-gray-400 hover:border-gray-200"
+                            )}
+                          >
+                            {day.label}
+                          </button>
+                        );
+                      })}
+                   </div>
                 </div>
               </section>
             </div>

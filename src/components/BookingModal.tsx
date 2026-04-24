@@ -14,7 +14,7 @@ interface BookingModalProps {
 }
 
 const BookingModal = ({ onClose }: BookingModalProps) => {
-  const { customers, services, addBooking, shopIsOpen, recurringHolidays, specificHolidays } = useStore();
+  const { customers, services, addBooking, shopIsOpen, recurringHolidays } = useStore();
   
   // States
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,14 +47,7 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
 
   const isDayDisabled = (date: Date) => {
     if (isBefore(date, startOfToday())) return true;
-    
-    // บล็อกวันหยุดประจำสัปดาห์
     if (recurringHolidays.includes(date.getDay())) return true;
-    
-    // บล็อกวันที่เจาะจงที่เลือกใน Settings
-    const dateStr = format(date, 'yyyy-MM-dd');
-    if (specificHolidays.includes(dateStr)) return true;
-    
     return false;
   };
 
