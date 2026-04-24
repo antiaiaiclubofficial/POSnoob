@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import ServiceCard from '@/components/ServiceCard';
 import OrderSummary from '@/components/OrderSummary';
 import CustomerSearch from '@/components/CustomerSearch';
-import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag } from 'lucide-react';
+import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2 } from 'lucide-react';
 import { useStore, QueueItem } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -25,8 +25,9 @@ const Index = () => {
     cart
   } = useStore();
 
+  // ปรับเงื่อนไข: รายการที่เข้าสู่กระบวนการแล้ว (Checked-in เป็นต้นไป) และยังไม่ได้จ่ายเงิน
   const pendingCheckout = queue.filter(q => 
-    (q.status === 'Checked-in' || q.status === 'In Progress') && !q.isPaid
+    (q.status !== 'Waiting') && !q.isPaid
   );
 
   const handleQuickSelectFromQueue = (item: QueueItem) => {
@@ -85,7 +86,7 @@ const Index = () => {
             <div className="animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Active Queue ({pendingCheckout.length})</span>
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Wait for Payment ({pendingCheckout.length})</span>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {pendingCheckout.map(item => (
@@ -94,15 +95,31 @@ const Index = () => {
                     onClick={() => handleQuickSelectFromQueue(item)}
                     className={cn(
                       "flex items-center gap-3 bg-white border px-4 py-3 rounded-[20px] shrink-0 transition-all group hover:border-[#1A1F3D]/20",
-                      activePet?.id === item.petId ? "border-orange-200 bg-orange-50/30" : "border-gray-100"
+                      activePet?.id === item.petId ? "border-orange-200 bg-orange-50/30" : "border-gray-100",
+                      item.status === 'Completed' && "border-green-100"
                     )}
                   >
-                    <img src={item.image} className="w-10 h-10 rounded-xl object-cover shadow-sm" />
+                    <div className="relative">
+                      <img src={item.image} className="w-10 h-10 rounded-xl object-cover shadow-sm" />
+                      {item.status === 'Completed' && (
+                        <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-0.5 border-2 border-white">
+                          <CheckCircle2 size={8} />
+                        </div>
+                      )}
+                    </div>
                     <div className="text-left">
                       <p className="text-xs font-black text-[#1A1F3D]">{item.petName}</p>
-                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Wait for payment</p>
+                      <p className={cn(
+                        "text-[9px] font-bold uppercase tracking-tighter",
+                        item.status === 'Completed' ? "text-green-600" : "text-gray-400"
+                      )}>
+                        {item.status === 'Completed' ? 'Ready to Pay' : 'In Service'}
+                      </p>
                     </div>
-                    <CreditCard size={14} className="text-orange-400 opacity-40 group-hover:opacity-100 transition-opacity" />
+                    <CreditCard size={14} className={cn(
+                      "opacity-40 group-hover:opacity-100 transition-opacity",
+                      item.status === 'Completed' ? "text-green-500" : "text-orange-400"
+                    )} />
                   </button>
                 ))}
               </div>

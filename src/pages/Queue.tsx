@@ -11,27 +11,33 @@ import {
   BadgeCheck,
   ChevronRight,
   ChevronLeft,
+  CreditCard,
 } from 'lucide-react';
 import { useStore, QueueStatus } from '@/store/useStore';
 import BookingModal from '@/components/BookingModal';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 const Queue = () => {
-  const { queue, updateQueueStatus, removeQueueItem } = useStore();
+  const navigate = useNavigate();
+  const { queue, updateQueueStatus, removeQueueItem, customers, selectOwner, setActivePet, setActiveQueueItem } = useStore();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [filter, setFilter] = useState<QueueStatus | 'All'>('All');
   
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
+  // ปรับเงื่อนไข: แสดงเฉพาะคิวที่ "ยังไม่ได้จ่ายเงิน" (isPaid !== true)
   const filteredQueue = queue.filter(item => 
-    item.date === selectedDate && (filter === 'All' || item.status === filter)
+    item.date === selectedDate && 
+    !item.isPaid && 
+    (filter === 'All' || item.status === filter)
   );
 
   const stats = [
-    { label: 'Waiting', count: queue.filter(i => i.date === selectedDate && i.status === 'Waiting').length, status: 'Waiting' as QueueStatus, color: 'orange' },
-    { label: 'Checked-in', count: queue.filter(i => i.date === selectedDate && i.status === 'Checked-in').length, status: 'Checked-in' as QueueStatus, color: 'purple' },
-    { label: 'In Progress', count: queue.filter(i => i.date === selectedDate && i.status === 'In Progress').length, status: 'In Progress' as QueueStatus, color: 'blue' },
-    { label: 'Completed', count: queue.filter(i => i.date === selectedDate && i.status === 'Completed').length, status: 'Completed' as QueueStatus, color: 'green' }
+    { label: 'Waiting', count: queue.filter(i => i.date === selectedDate && i.status === 'Waiting' && !i.isPaid).length, status: 'Waiting' as QueueStatus, color: 'orange' },
+    { label: 'Checked-in', count: queue.filter(i => i.date === selectedDate && i.status === 'Checked-in' && !i.isPaid).length, status: 'Checked-in' as QueueStatus, color: 'purple' },
+    { label: 'In Progress', count: queue.filter(i => i.date === selectedDate && i.status === 'In Progress' && !i.isPaid).length, status: 'In Progress' as QueueStatus, color: 'blue' },
+    { label: 'Completed', count: queue.filter(i => i.date === selectedDate && i.status === 'Completed' && !i.isPaid).length, status: 'Completed' as QueueStatus, color: 'green' }
   ];
 
   const statusSequence: QueueStatus[] = ['Waiting', 'Checked-in', 'In Progress', 'Completed'];
@@ -59,6 +65,19 @@ const Queue = () => {
     const date = new Date(selectedDate);
     date.setDate(date.getDate() + days);
     setSelectedDate(date.toISOString().split('T')[0]);
+  };
+
+  const handleGoToCheckout = (item: any) => {
+    const owner = customers.find(c => c.name === item.ownerName);
+    if (owner) {
+      selectOwner(owner);
+      const pet = owner.pets.find(p => p.id === item.petId);
+      if (pet) {
+        setActivePet(pet);
+        setActiveQueueItem(item.id);
+        navigate('/checkout');
+      }
+    }
   };
 
   return (
@@ -92,8 +111,8 @@ const Queue = () => {
             filter === 'All' ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-lg" : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
           )}
         >
-          <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest mb-1 opacity-60">All</span>
-          <span className="text-lg lg:text-xl font-black">{queue.filter(i => i.date === selectedDate).length}</span>
+          <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest mb-1 opacity-60">All Active</span>
+          <span className="text-lg lg:text-xl font-black">{queue.filter(i => i.date === selectedDate && !i.isPaid).length}</span>
         </button>
         
         {stats.map((stat) => (
@@ -118,7 +137,7 @@ const Queue = () => {
         {filteredQueue.length === 0 ? (
           <div className="h-48 lg:h-64 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed border-gray-200 rounded-[32px] lg:rounded-[40px]">
             <CalendarIcon size={32} className="mb-4" />
-            <p className="font-black text-sm lg:text-lg">No appointments scheduled</p>
+            <p className="font-black text-sm lg:text-lg">No active queue items</p>
           </div>
         ) : (
           filteredQueue.map((item) => {
@@ -129,7 +148,10 @@ const Queue = () => {
             return (
               <div 
                 key={item.id} 
-                className="bg-white p-4 lg:p-6 rounded-[24px] lg:rounded-[32px] border border-gray-100 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4 group transition-all hover:shadow-xl hover:border-transparent animate-in fade-in slide-in-from-bottom-2 duration-300"
+                className={cn(
+                  "bg-white p-4 lg:p-6 rounded-[24px] lg:rounded-[32px] border border-gray-100 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4 group transition-all hover:shadow-xl hover:border-transparent animate-in fade-in slide-in-from-bottom-2 duration-300",
+                  item.status === 'Completed' && "border-green-100 bg-green-50/10"
+                )}
               >
                 <div className="flex items-center gap-4 lg:gap-6">
                   <div className="relative shrink-0">
@@ -141,9 +163,9 @@ const Queue = () => {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <h3 className="text-base lg:text-lg font-black text-[#1A1F3D] truncate">{item.petName}</h3>
-                      {item.isPaid && (
-                        <span className="bg-green-100 text-green-700 text-[7px] lg:text-[8px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-tighter shrink-0">
-                          <BadgeCheck size={8} /> Paid
+                      {item.status === 'Completed' && (
+                        <span className="bg-orange-100 text-orange-700 text-[7px] lg:text-[8px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-tighter shrink-0 animate-pulse">
+                          Waiting for Payment
                         </span>
                       )}
                     </div>
@@ -162,36 +184,43 @@ const Queue = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {prevStatus && (
+                    {item.status === 'Completed' ? (
                       <button 
-                        onClick={() => updateQueueStatus(item.id, prevStatus)}
-                        className="p-2 lg:p-3 text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-xl transition-all"
-                        title={`Back to ${prevStatus}`}
+                        onClick={() => handleGoToCheckout(item)}
+                        className="bg-[#1A1F3D] text-[#D9ED5F] px-4 lg:px-6 py-2 lg:py-3 rounded-xl lg:rounded-2xl transition-all flex items-center gap-2 text-[10px] lg:text-xs font-black shadow-lg shadow-[#1A1F3D]/10 active:scale-95"
                       >
-                        <ChevronLeft size={16} />
+                        <CreditCard size={14} /> Go to Checkout
                       </button>
-                    )}
-
-                    {nextStatus && (
-                      <button 
-                        onClick={() => updateQueueStatus(item.id, nextStatus)}
-                        className={cn(
-                          "px-4 lg:px-6 py-2 lg:py-3 rounded-xl lg:rounded-2xl transition-all flex items-center gap-2 text-[10px] lg:text-xs font-black shadow-lg shadow-transparent hover:shadow-current/10 active:scale-95",
-                          nextStatus === 'Checked-in' ? "bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200" :
-                          nextStatus === 'In Progress' ? "bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200" :
-                          "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
+                    ) : (
+                      <>
+                        {prevStatus && (
+                          <button 
+                            onClick={() => updateQueueStatus(item.id, prevStatus)}
+                            className="p-2 lg:p-3 text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-xl transition-all"
+                            title={`Back to ${prevStatus}`}
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
                         )}
-                      >
-                        <ChevronRight size={14} />
-                        <span className="hidden sm:inline">
-                          {nextStatus === 'Checked-in' ? 'Check-in' : 
-                           nextStatus === 'In Progress' ? 'Start' : 'Complete'}
-                        </span>
-                        <span className="sm:hidden">
-                          {nextStatus === 'Checked-in' ? 'In' : 
-                           nextStatus === 'In Progress' ? 'Start' : 'Done'}
-                        </span>
-                      </button>
+
+                        {nextStatus && (
+                          <button 
+                            onClick={() => updateQueueStatus(item.id, nextStatus)}
+                            className={cn(
+                              "px-4 lg:px-6 py-2 lg:py-3 rounded-xl lg:rounded-2xl transition-all flex items-center gap-2 text-[10px] lg:text-xs font-black shadow-lg shadow-transparent hover:shadow-current/10 active:scale-95",
+                              nextStatus === 'Checked-in' ? "bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200" :
+                              nextStatus === 'In Progress' ? "bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200" :
+                              "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
+                            )}
+                          >
+                            <ChevronRight size={14} />
+                            <span className="hidden sm:inline">
+                              {nextStatus === 'Checked-in' ? 'Check-in' : 
+                               nextStatus === 'In Progress' ? 'Start' : 'Complete Job'}
+                            </span>
+                          </button>
+                        )}
+                      </>
                     )}
 
                     <button 
