@@ -4,12 +4,15 @@ import React, { useState, useMemo } from 'react';
 import { useStore, Staff, Transaction } from '@/store/useStore';
 import { 
   Users, TrendingUp, Clock, DollarSign, Dog, Cat, 
-  ChevronRight, Scissors, Calendar, Award, Target, Zap
+  ChevronRight, ChevronLeft, Scissors, Calendar, Award, Target, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
   format, startOfDay, endOfDay, startOfWeek, endOfWeek, 
-  startOfMonth, endOfMonth, startOfYear, endOfYear 
+  startOfMonth, endOfMonth, startOfYear, endOfYear,
+  addDays, addWeeks, addMonths, addYears,
+  subDays, subWeeks, subMonths, subYears,
+  parseISO
 } from 'date-fns';
 
 const StaffPerformance = () => {
@@ -51,6 +54,42 @@ const StaffPerformance = () => {
     setDateRange({
       start: format(start, 'yyyy-MM-dd'),
       end: format(end, 'yyyy-MM-dd')
+    });
+  };
+
+  const handleNavigateRange = (direction: 'prev' | 'next') => {
+    const currentStart = parseISO(dateRange.start);
+    let newStart, newEnd;
+
+    switch(rangeType) {
+      case 'today':
+        newStart = direction === 'prev' ? subDays(currentStart, 1) : addDays(currentStart, 1);
+        newEnd = endOfDay(newStart);
+        break;
+      case 'week':
+        newStart = direction === 'prev' ? subWeeks(currentStart, 1) : addWeeks(currentStart, 1);
+        newStart = startOfWeek(newStart, { weekStartsOn: 1 });
+        newEnd = endOfWeek(newStart, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        newStart = direction === 'prev' ? subMonths(currentStart, 1) : addMonths(currentStart, 1);
+        newStart = startOfMonth(newStart);
+        newEnd = endOfMonth(newStart);
+        break;
+      case 'year':
+        newStart = direction === 'prev' ? subYears(currentStart, 1) : addYears(currentStart, 1);
+        newStart = startOfYear(newStart);
+        newEnd = endOfYear(newStart);
+        break;
+      default:
+        // สำหรับ custom เลื่อนทีละ 7 วันเป็นพื้นฐาน
+        newStart = direction === 'prev' ? subDays(currentStart, 7) : addDays(currentStart, 7);
+        newEnd = addDays(newStart, 7);
+    }
+
+    setDateRange({
+      start: format(newStart, 'yyyy-MM-dd'),
+      end: format(newEnd, 'yyyy-MM-dd')
     });
   };
 
@@ -103,20 +142,36 @@ const StaffPerformance = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center">
-          {/* Quick Range Selection */}
-          <div className="flex bg-white p-1.5 rounded-[22px] border border-gray-100 shadow-sm gap-1">
-            {(['today', 'week', 'month', 'year'] as const).map((type) => (
-              <button
-                key={type}
-                onClick={() => handleRangeSelect(type)}
-                className={cn(
-                  "px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all",
-                  rangeType === type ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:text-gray-600"
-                )}
-              >
-                {type}
-              </button>
-            ))}
+          {/* Quick Range Selection & Navigation */}
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => handleNavigateRange('prev')}
+              className="p-3 bg-white border border-gray-100 rounded-xl text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-50 transition-all shadow-sm"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            
+            <div className="flex bg-white p-1.5 rounded-[22px] border border-gray-100 shadow-sm gap-1">
+              {(['today', 'week', 'month', 'year'] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => handleRangeSelect(type)}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all",
+                    rangeType === type ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => handleNavigateRange('next')}
+              className="p-3 bg-white border border-gray-100 rounded-xl text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-50 transition-all shadow-sm"
+            >
+              <ChevronRight size={18} />
+            </button>
           </div>
 
           <div className="flex gap-3 bg-white p-2 rounded-[24px] border border-gray-100 shadow-sm">
