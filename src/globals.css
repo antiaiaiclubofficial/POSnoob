@@ -43,8 +43,19 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Sukhumvit Set", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    /* Default: Apple System Font Stack (SF Pro) */
+    font-family: -apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* สำหรับภาษาไทย: ใช้ Thonburi */
+  html[lang="th"] body {
+    font-family: "Thonburi", -apple-system, "SF Pro Text", sans-serif;
+  }
+
+  /* สำหรับภาษาอังกฤษ: ใช้ SF Pro */
+  html[lang="en"] body {
+    font-family: -apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
   }
 }
