@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ServiceCard from '@/components/ServiceCard';
 import OrderSummary from '@/components/OrderSummary';
 import CustomerSearch from '@/components/CustomerSearch';
-import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2 } from 'lucide-react';
+import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2, Dog, Cat } from 'lucide-react';
 import { useStore, QueueItem } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -25,7 +25,16 @@ const Index = () => {
     cart
   } = useStore();
 
-  // ปรับเงื่อนไข: รายการที่เข้าสู่กระบวนการแล้ว (Checked-in เป็นต้นไป) และยังไม่ได้จ่ายเงิน
+  const [speciesFilter, setSpeciesFilter] = useState<'Dog' | 'Cat'>('Dog');
+
+  // เมื่อเลือกสัตว์เลี้ยง ให้ปรับตัวกรองประเภทสัตว์โดยอัตโนมัติ
+  useEffect(() => {
+    if (activePet) {
+      setSpeciesFilter(activePet.species === 'Dog' ? 'Dog' : 'Cat');
+    }
+  }, [activePet]);
+
+  // รายการที่เข้าสู่กระบวนการแล้วและยังไม่ได้จ่ายเงิน
   const pendingCheckout = queue.filter(q => 
     (q.status !== 'Waiting') && !q.isPaid
   );
@@ -43,6 +52,7 @@ const Index = () => {
     }
   };
 
+  const filteredServices = services.filter(s => s.targetSpecies === speciesFilter && s.isActive);
   const cartTotal = cart.reduce((acc, item) => acc + item.price, 0);
 
   return (
@@ -51,14 +61,14 @@ const Index = () => {
         <header className="px-6 lg:px-10 py-6 lg:py-8 flex justify-between items-center shrink-0">
           <div className="pl-14 lg:pl-0">
             <div className="flex items-center gap-2 mb-1">
-              <Sparkles size={14} className="text-amber-400" />
+              <Sparkles size={14} className="text-[#D9ED5F]" />
               <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Point of Sale</p>
             </div>
-            <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">Checkout</h1>
+            <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">POS System</h1>
           </div>
-          <button className="hidden sm:flex items-center gap-2 bg-white px-5 py-2.5 rounded-2xl shadow-sm text-xs font-bold border border-gray-100 hover:bg-gray-50 transition-all hover:scale-105 active:scale-95">
+          <button className="hidden sm:flex items-center gap-2 bg-[#D9ED5F] text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all">
             <UserPlus size={16} />
-            Quick Registration
+            New Customer
           </button>
         </header>
 
@@ -82,11 +92,12 @@ const Index = () => {
             )}
           </div>
 
+          {/* Quick Queue Bar */}
           {pendingCheckout.length > 0 && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Wait for Payment ({pendingCheckout.length})</span>
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Active Services ({pendingCheckout.length})</span>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {pendingCheckout.map(item => (
@@ -99,14 +110,7 @@ const Index = () => {
                       item.status === 'Completed' && "border-green-100"
                     )}
                   >
-                    <div className="relative">
-                      <img src={item.image} className="w-10 h-10 rounded-xl object-cover shadow-sm" />
-                      {item.status === 'Completed' && (
-                        <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-0.5 border-2 border-white">
-                          <CheckCircle2 size={8} />
-                        </div>
-                      )}
-                    </div>
+                    <img src={item.image} className="w-10 h-10 rounded-xl object-cover shadow-sm" />
                     <div className="text-left">
                       <p className="text-xs font-black text-[#1A1F3D]">{item.petName}</p>
                       <p className={cn(
@@ -116,55 +120,76 @@ const Index = () => {
                         {item.status === 'Completed' ? 'Ready to Pay' : 'In Service'}
                       </p>
                     </div>
-                    <CreditCard size={14} className={cn(
-                      "opacity-40 group-hover:opacity-100 transition-opacity",
-                      item.status === 'Completed' ? "text-green-500" : "text-orange-400"
-                    )} />
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {selectedOwner && (
-            <div className="bg-white p-2 rounded-[24px] shadow-sm border border-gray-100 flex flex-wrap items-center gap-2 animate-in fade-in duration-500">
-              <div className="px-4 py-2 text-[10px] font-black uppercase text-gray-400 tracking-wider border-r border-gray-50 hidden sm:block">Select Member</div>
-              <div className="flex gap-1 overflow-x-auto scrollbar-hide w-full sm:w-auto">
-                {selectedOwner.pets.map(pet => (
-                  <button
-                    key={pet.id}
-                    onClick={() => {
-                      setActivePet(pet);
-                      setActiveQueueItem(null);
-                    }}
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-xl transition-all border font-bold text-xs shrink-0",
-                      activePet?.id === pet.id 
-                        ? "bg-[#D9ED5F] border-[#D9ED5F] text-[#1A1F3D] shadow-md shadow-[#D9ED5F]/20" 
-                        : "bg-transparent border-transparent text-gray-400 hover:bg-gray-50"
-                    )}
-                  >
-                    <img src={pet.image} alt={pet.name} className="w-5 h-5 rounded-lg object-cover" />
-                    {pet.name}
-                  </button>
-                ))}
-              </div>
+          {/* Species & Pet Selector */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="bg-white p-1.5 rounded-[22px] shadow-sm border border-gray-100 flex gap-1 w-fit shrink-0">
+              <button 
+                onClick={() => setSpeciesFilter('Dog')}
+                className={cn(
+                  "px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all",
+                  speciesFilter === 'Dog' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                <Dog size={14} /> DOGS
+              </button>
+              <button 
+                onClick={() => setSpeciesFilter('Cat')}
+                className={cn(
+                  "px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all",
+                  speciesFilter === 'Cat' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                <Cat size={14} /> CATS
+              </button>
             </div>
-          )}
+
+            {selectedOwner && (
+              <div className="flex-1 bg-white p-1.5 rounded-[22px] shadow-sm border border-gray-100 flex items-center gap-2 overflow-x-auto scrollbar-hide animate-in fade-in slide-in-from-left-2">
+                <span className="px-3 py-1 border-r border-gray-100 text-[8px] font-black text-gray-300 uppercase tracking-widest shrink-0">Select Pet</span>
+                <div className="flex gap-1">
+                  {selectedOwner.pets.filter(p => p.species === speciesFilter).map(pet => (
+                    <button
+                      key={pet.id}
+                      onClick={() => {
+                        setActivePet(pet);
+                        setActiveQueueItem(null);
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-xl transition-all border font-bold text-xs shrink-0",
+                        activePet?.id === pet.id 
+                          ? "bg-[#D9ED5F] border-[#D9ED5F] text-[#1A1F3D] shadow-md" 
+                          : "bg-transparent border-transparent text-gray-400 hover:bg-gray-50"
+                      )}
+                    >
+                      <img src={pet.image} alt={pet.name} className="w-5 h-5 rounded-lg object-cover" />
+                      {pet.name}
+                    </button>
+                  ))}
+                  {selectedOwner.pets.filter(p => p.species === speciesFilter).length === 0 && (
+                    <p className="text-[9px] text-gray-300 font-bold px-4">No {speciesFilter}s found</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 lg:px-10 pb-24 lg:pb-10 scrollbar-hide">
-          {!selectedOwner ? (
-            <div className="h-full flex flex-col items-center justify-center text-center">
-              <div className="w-20 h-20 lg:w-24 lg:h-24 bg-white rounded-[32px] flex items-center justify-center mb-6 shadow-sm border border-gray-100">
-                <Search size={32} className="text-gray-200" />
-              </div>
-              <h2 className="text-xl lg:text-2xl font-black mb-2">Identify Customer</h2>
-              <p className="text-xs lg:text-sm text-gray-400 max-w-xs font-medium px-4">Search by name or select from the active queue bar above to begin.</p>
+          {filteredServices.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+              <ShoppingBag size={48} className="mb-4" />
+              <h2 className="text-xl font-black">No services found</h2>
+              <p className="text-xs font-bold uppercase">For {speciesFilter} category</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
-              {services.map((service) => (
+              {filteredServices.map((service) => (
                 <ServiceCard key={service.id} service={service} />
               ))}
             </div>

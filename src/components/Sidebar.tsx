@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: ShoppingBag, label: 'Checkout', path: '/checkout' },
+  { icon: ShoppingBag, label: 'POS', path: '/pos' },
   { icon: CalendarDays, label: 'Pet Queue', path: '/queue' },
   { icon: Users, label: 'Customers', path: '/customers' },
   { icon: ShieldCheck, label: 'Staff Management', path: '/staff' },
