@@ -23,6 +23,18 @@ export const translations = {
     search: "Search...",
     close: "Close",
 
+    // Login
+    loginSystem: "Management System Login",
+    operatorId: "Operator ID",
+    accessPin: "Access Pin",
+    signIn: "Sign In",
+    authorizedOnly: "Authorized Access Only",
+    forgotPin: "Forgot access pin? Please contact technical support.",
+    welcomeBack: "Welcome back!",
+    invalidCreds: "Invalid credentials. Please try again.",
+    enterAdminId: "Enter admin ID",
+    enterPassword: "Enter password",
+
     // Dashboard
     helloAdmin: "Hello, Admin!",
     todayIs: "Today is",
@@ -150,6 +162,18 @@ export const translations = {
     add: "เพิ่มใหม่",
     search: "ค้นหา...",
     close: "ปิด",
+
+    // Login
+    loginSystem: "เข้าสู่ระบบจัดการร้าน",
+    operatorId: "รหัสพนักงาน",
+    accessPin: "รหัสผ่าน (PIN)",
+    signIn: "เข้าสู่ระบบ",
+    authorizedOnly: "สำหรับผู้มีส่วนเกี่ยวข้องเท่านั้น",
+    forgotPin: "ลืมรหัสผ่าน? กรุณาติดต่อฝ่ายสนับสนุนเทคนิค",
+    welcomeBack: "ยินดีต้อนรับกลับมา!",
+    invalidCreds: "ข้อมูลไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง",
+    enterAdminId: "ระบุไอดีผู้ดูแล",
+    enterPassword: "ระบุรหัสผ่าน",
 
     // Dashboard
     helloAdmin: "สวัสดี, ผู้ดูแลระบบ!",
