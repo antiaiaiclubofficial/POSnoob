@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import ServiceCard from '@/components/ServiceCard';
 import OrderSummary from '@/components/OrderSummary';
 import CustomerSearch from '@/components/CustomerSearch';
+import CustomerModal from '@/components/CustomerModal';
 import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2, Dog, Cat } from 'lucide-react';
 import { useStore, QueueItem } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ const Index = () => {
   } = useStore();
 
   const [speciesFilter, setSpeciesFilter] = useState<'Dog' | 'Cat'>('Dog');
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   // เมื่อเลือกสัตว์เลี้ยง ให้ปรับตัวกรองประเภทสัตว์โดยอัตโนมัติ
   useEffect(() => {
@@ -66,7 +68,10 @@ const Index = () => {
             </div>
             <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">POS System</h1>
           </div>
-          <button className="hidden sm:flex items-center gap-2 bg-[#D9ED5F] text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all">
+          <button 
+            onClick={() => setIsCustomerModalOpen(true)}
+            className="hidden sm:flex items-center gap-2 bg-[#D9ED5F] text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
+          >
             <UserPlus size={16} />
             New Customer
           </button>
@@ -223,6 +228,10 @@ const Index = () => {
             </SheetContent>
           </Sheet>
         </div>
+      )}
+
+      {isCustomerModalOpen && (
+        <CustomerModal onClose={() => setIsCustomerModalOpen(false)} />
       )}
     </div>
   );
