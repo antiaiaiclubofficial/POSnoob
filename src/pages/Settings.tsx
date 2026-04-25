@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout
+  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout, Eye
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ import ServiceModal from '@/components/ServiceModal';
 import SlotPicker from '@/components/SlotPicker';
 import TimePicker from '@/components/TimePicker';
 import BroadcastModal from '@/components/BroadcastModal';
+import ReceiptPreview from '@/components/ReceiptPreview';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 import { DayPicker } from 'react-day-picker';
@@ -63,6 +64,7 @@ const Settings = () => {
   const [localCloseTime, setLocalCloseTime] = useState(closeTime);
 
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [isReceiptPreviewOpen, setIsReceiptPreviewOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [serviceQuery, setServiceQuery] = useState('');
@@ -273,14 +275,22 @@ const Settings = () => {
 
                 {/* Receipt Section */}
                 <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
-                      <FileText size={24} />
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
+                        <FileText size={24} />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Receipt Configuration</h2>
+                        <p className="text-xs text-gray-400">Customize your customer bills</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Receipt Configuration</h2>
-                      <p className="text-xs text-gray-400">Customize your customer bills</p>
-                    </div>
+                    <button 
+                      onClick={() => setIsReceiptPreviewOpen(true)}
+                      className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-blue-100 transition-all"
+                    >
+                      <Eye size={14} /> Preview
+                    </button>
                   </div>
 
                   <div className="space-y-6">
@@ -663,6 +673,19 @@ const Settings = () => {
 
       {isBroadcastModalOpen && (
         <BroadcastModal onClose={() => setIsBroadcastModalOpen(false)} />
+      )}
+
+      {isReceiptPreviewOpen && (
+        <ReceiptPreview 
+          shopName={localShopName}
+          shopLogo={localShopLogo}
+          shopAddress={localShopAddress}
+          shopPhone={localShopPhone}
+          header={localReceiptHeader}
+          footer={localReceiptFooter}
+          paperSize={localReceiptPaperSize}
+          onClose={() => setIsReceiptPreviewOpen(false)}
+        />
       )}
     </main>
   );
