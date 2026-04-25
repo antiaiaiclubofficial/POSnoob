@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { X, User, Phone, Briefcase, Camera, Lock, Key, Percent } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, User, Phone, Briefcase, Camera, Lock, Key, Percent, Upload } from 'lucide-react';
 import { useStore, Staff, StaffRole } from '@/store/useStore';
 import { toast } from 'sonner';
 
@@ -12,6 +12,8 @@ interface StaffModalProps {
 
 const StaffModal = ({ staff, onClose }: StaffModalProps) => {
   const { addStaff, updateStaff } = useStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [formData, setFormData] = useState({
     name: '',
     role: 'Assistant' as StaffRole,
@@ -37,6 +39,18 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
       });
     }
   }, [staff]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, avatar: reader.result as string }));
+        toast.info("Profile image updated in preview");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,14 +82,28 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto scrollbar-hide">
+        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[75vh] overflow-y-auto scrollbar-hide">
+          {/* Avatar Upload Section */}
           <div className="flex justify-center mb-4">
-             <div className="relative group">
-                <img src={formData.avatar} className="w-24 h-24 rounded-[32px] object-cover border-4 border-[#F5F6FA]" />
-                <div className="absolute inset-0 bg-[#1A1F3D]/20 rounded-[32px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                  <Camera className="text-white" size={24} />
+             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <div className="w-24 h-24 rounded-[32px] overflow-hidden border-4 border-[#F5F6FA] shadow-md transition-transform group-hover:scale-105">
+                  <img src={formData.avatar} className="w-full h-full object-cover" alt="Staff Avatar" />
+                </div>
+                <div className="absolute inset-0 bg-[#1A1F3D]/40 rounded-[32px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="text-white mb-1" size={20} />
+                  <span className="text-[8px] text-white font-black uppercase">Change</span>
+                </div>
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#1A1F3D] text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                  <Upload size={12} />
                 </div>
              </div>
+             <input 
+               type="file" 
+               ref={fileInputRef} 
+               className="hidden" 
+               accept="image/*" 
+               onChange={handleImageUpload} 
+             />
           </div>
 
           <div className="space-y-4">
