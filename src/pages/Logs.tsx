@@ -5,9 +5,11 @@ import { History, Search, Info, CheckCircle2, AlertTriangle, XCircle, Clock } fr
 import { useStore } from '@/store/useStore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { translations } from '@/utils/translations';
 
 const Logs = () => {
-  const { logs } = useStore();
+  const { logs, language } = useStore();
+  const t = translations[language];
   const [query, setQuery] = React.useState('');
 
   const filteredLogs = logs.filter(log => 
@@ -30,14 +32,14 @@ const Logs = () => {
       <header className="px-10 py-10 shrink-0 border-b border-gray-100 bg-white">
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h1 className="text-3xl font-black mb-1">Activity Logs</h1>
-            <p className="text-gray-400 font-medium text-sm">System audit trail and operation history</p>
+            <h1 className="text-3xl font-black mb-1">{t.activityLogs}</h1>
+            <p className="text-gray-400 font-medium text-sm">{t.auditTrail}</p>
           </div>
           <div className="relative w-72">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
             <input 
               className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-3 text-xs font-bold"
-              placeholder="Filter logs..."
+              placeholder={t.filterLogs}
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
@@ -61,17 +63,12 @@ const Logs = () => {
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-black text-sm text-[#1A1F3D]">{log.action}</h3>
                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-300">
-                    <div className="flex items-center gap-1">
-                      <Clock size={12} />
-                      {format(new Date(log.timestamp), 'PPpp')}
-                    </div>
+                    <Clock size={12} />
+                    {format(new Date(log.timestamp), 'PPpp')}
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 font-medium leading-relaxed mb-3">{log.details}</p>
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 bg-[#1A1F3D] rounded-lg flex items-center justify-center text-[8px] font-black text-white">
-                    {log.staffName.charAt(0)}
-                  </div>
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{log.staffName}</span>
                 </div>
               </div>
@@ -81,7 +78,7 @@ const Logs = () => {
           {filteredLogs.length === 0 && (
             <div className="py-20 text-center opacity-30">
               <History size={48} className="mx-auto mb-4" />
-              <p className="font-black">No activities recorded yet</p>
+              <p className="font-black">{t.noActivities}</p>
             </div>
           )}
         </div>

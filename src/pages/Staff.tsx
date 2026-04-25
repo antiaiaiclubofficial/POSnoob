@@ -5,9 +5,11 @@ import { Plus, Search, Edit3, Trash2, Phone, BadgeCheck, XCircle, Key } from 'lu
 import { useStore, Staff as StaffType } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import StaffModal from '@/components/StaffModal';
+import { translations } from '@/utils/translations';
 
 const Staff = () => {
-  const { staff, deleteStaff } = useStore();
+  const { staff, deleteStaff, language } = useStore();
+  const t = translations[language];
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
@@ -32,14 +34,14 @@ const Staff = () => {
     <div className="flex-1 flex flex-col overflow-hidden">
       <header className="px-10 py-10 shrink-0 flex justify-between items-end">
         <div>
-          <h1 className="text-4xl font-black mb-1">Our Team</h1>
-          <p className="text-gray-400 font-medium">Manage permissions and staff roles</p>
+          <h1 className="text-4xl font-black mb-1">{t.ourTeam}</h1>
+          <p className="text-gray-400 font-medium">{t.manageStaff}</p>
         </div>
         <button 
           onClick={handleAdd}
           className="bg-[#1A1F3D] text-white px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10"
         >
-          <Plus size={20} /> Add Staff
+          <Plus size={20} /> {t.addStaff}
         </button>
       </header>
 
@@ -48,7 +50,7 @@ const Staff = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
             <input 
               className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-6 py-3.5 text-sm font-bold shadow-sm"
-              placeholder="Search by name, role or username..."
+              placeholder={t.searchStaff}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
@@ -94,7 +96,7 @@ const Staff = () => {
                  </div>
                  <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest">
                     <span className={member.status === 'Active' ? "text-green-500" : "text-red-400"}>
-                      {member.status}
+                      {member.status === 'Active' ? t.active : t.inactive}
                     </span>
                  </div>
               </div>

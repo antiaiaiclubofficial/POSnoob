@@ -15,6 +15,7 @@ export const translations = {
     
     // Actions
     saveAll: "Save Changes",
+    saveChanges: "Save Changes",
     cancel: "Cancel",
     confirm: "Confirm",
     edit: "Edit",
@@ -108,21 +109,45 @@ export const translations = {
 
     // Staff
     ourTeam: "Our Team",
+    manageStaff: "Manage Staff",
     addStaff: "Add Staff",
+    searchStaff: "Search Staff",
     role: "Role",
     commission: "Commission",
     status: "Status",
+    active: "Active",
+    inactive: "Inactive",
     performanceAudit: "Team Performance Audit",
     avgTime: "Avg. Service Time",
     jobsDone: "Jobs Completed",
+    loginCredentials: "Login Credentials",
+    username: "Username",
+    password: "Password",
+    profileInfo: "Profile Info",
+    fullName: "Full Name",
+    updateStaff: "Update Staff",
+    addToTeam: "Add to Team",
 
     // Reports
     analytics: "Analytics",
+    businessInsights: "Business Insights",
+    transactionLedger: "Transaction Ledger",
+    totalRevenue: "Total Revenue",
+    totalDiscounts: "Total Discounts",
+    petCounts: "Pet Counts",
+    totalSessions: "Total Sessions",
+    verificationRequired: "Verification Required",
     ledger: "Transaction Ledger",
     revenueChart: "Revenue Performance",
     speciesRatio: "Species Ratio",
     export: "Export CSV",
     filterDate: "Date Range",
+
+    // Logs
+    activityLogs: "Activity Logs",
+    auditTrail: "Audit Trail",
+    filterLogs: "Filter Logs",
+    noActivities: "No Activities",
 
     // Settings
     business: "Business",
@@ -155,6 +180,7 @@ export const translations = {
 
     // Actions
     saveAll: "บันทึกการเปลี่ยนแปลง",
+    saveChanges: "บันทึกการเปลี่ยนแปลง",
     cancel: "ยกเลิก",
     confirm: "ยืนยัน",
     edit: "แก้ไข",
@@ -248,21 +274,45 @@ export const translations = {
 
     // Staff
     ourTeam: "ทีมงานของเรา",
+    manageStaff: "จัดการทีมพนักงาน",
     addStaff: "เพิ่มพนักงาน",
+    searchStaff: "ค้นหาพนักงาน",
     role: "ตำแหน่ง",
     commission: "ค่าคอมมิชชั่น",
     status: "สถานะ",
+    active: "เปิดใช้งาน",
+    inactive: "ปิดใช้งาน",
     performanceAudit: "วิเคราะห์ประสิทธิภาพทีม",
     avgTime: "เวลาเฉลี่ยต่อชิ้นงาน",
     jobsDone: "งานที่เสร็จสิ้น",
+    loginCredentials: "ข้อมูลเข้าสู่ระบบ",
+    username: "ชื่อผู้ใช้",
+    password: "รหัสผ่าน",
+    profileInfo: "ข้อมูลโปรไฟล์",
+    fullName: "ชื่อ-นามสกุล",
+    updateStaff: "อัปเดตข้อมูลพนักงาน",
+    addToTeam: "เพิ่มเข้าสู่ทีม",
 
     // Reports
     analytics: "การวิเคราะห์",
+    businessInsights: "ข้อมูลเจาะลึกธุรกิจ",
+    transactionLedger: "บัญชีธุรกรรม",
+    totalRevenue: "รายได้รวมทั้งหมด",
+    totalDiscounts: "ส่วนลดรวม",
+    petCounts: "จำนวนสัตว์เลี้ยง",
+    totalSessions: "จำนวนรายการทั้งหมด",
+    verificationRequired: "ต้องมีการยืนยันตัวตน",
     ledger: "ประวัติธุรกรรม",
     revenueChart: "ประสิทธิภาพรายได้",
     speciesRatio: "สัดส่วนสัตว์เลี้ยง",
     export: "ส่งออกไฟล์ CSV",
     filterDate: "เลือกช่วงเวลา",
+
+    // Logs
+    activityLogs: "บันทึกกิจกรรม",
+    auditTrail: "ประวัติการดำเนินงาน",
+    filterLogs: "กรองบันทึก",
+    noActivities: "ยังไม่มีกิจกรรม",
 
     // Settings
     business: "ข้อมูลธุรกิจ",
