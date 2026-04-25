@@ -8,13 +8,16 @@ import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import PaymentModal from './PaymentModal';
+import { translations } from '@/utils/translations';
 
 interface OrderSummaryProps {
   isMobile?: boolean;
 }
 
 const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
-  const { cart, removeFromCart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules, currency } = useStore();
+  const { cart, removeFromCart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules, currency, language } = useStore();
+  const t = translations[language];
+  
   const [newWeight, setNewWeight] = useState('');
   const [isWeightSaved, setIsWeightSaved] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
@@ -29,23 +32,23 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
   const userTier = selectedOwner ? tierRules.find(r => r.level === selectedOwner.membership) : null;
   const tierDiscountPercent = userTier?.discount || 0;
   const discountAmount = (subtotal * tierDiscountPercent) / 100;
-  const tax = (subtotal - discountAmount) * 0.08;
+  const tax = (subtotal - discountAmount) * 0.07;
   const total = subtotal - discountAmount + tax;
 
   const handleSaveWeight = () => {
     if (!newWeight || !activePet || !selectedOwner) {
-      toast.error("Please enter weight");
+      toast.error(language === 'th' ? "กรุณาระบุน้ำหนัก" : "Please enter weight");
       return;
     }
     updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
     setIsWeightSaved(true);
-    toast.success(`Updated ${activePet.name}'s weight to ${newWeight} kg`);
+    toast.success(language === 'th' ? `บันทึกน้ำหนักของ ${activePet.name} เป็น ${newWeight} กก.` : `Updated ${activePet.name}'s weight to ${newWeight} kg`);
     setTimeout(() => setIsWeightSaved(false), 2000);
   };
 
   const handleInitiatePayment = () => {
     if (cart.length === 0 || !selectedOwner) {
-      toast.error("Cart or customer missing");
+      toast.error(language === 'th' ? "ไม่มีรายการในตะกร้า" : "Cart or customer missing");
       return;
     }
     setIsPaymentModalOpen(true);
@@ -64,7 +67,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       if (item.queueItemId) markAsPaid(item.queueItemId);
     });
 
-    toast.success(`Checkout Complete! ${currency}${total.toFixed(2)} paid via ${paymentMethod}.`);
+    toast.success(language === 'th' ? `ชำระเงินเรียบร้อย! ${currency}${total.toFixed(2)} ผ่าน ${paymentMethod}` : `Checkout Complete! ${currency}${total.toFixed(2)} paid via ${paymentMethod}.`);
     clearCart();
     setNewWeight('');
     setIsWeightSaved(false);
@@ -78,10 +81,10 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
     )}>
       <div className="flex items-center justify-between mb-6 lg:mb-8">
         <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-[#1A1F3D]">Order Summary</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-[#1A1F3D]">{t.orderSummary}</h2>
           {selectedOwner && (
             <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter mt-1 inline-block">
-              {selectedOwner.membership} MEMBER
+              {selectedOwner.membership} {language === 'th' ? 'สมาชิก' : 'MEMBER'}
             </span>
           )}
         </div>
@@ -90,7 +93,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
             onClick={clearCart}
             className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors"
           >
-            Clear All
+            {t.clearAll}
           </button>
         )}
       </div>
@@ -103,7 +106,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
                 <Scale size={16} />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase text-gray-400 leading-none mb-1">Check-in Weight</p>
+                <p className="text-[10px] font-black uppercase text-gray-400 leading-none mb-1">{t.weight}</p>
                 <p className="text-xs font-bold text-[#1A1F3D]">{activePet.name}</p>
               </div>
             </div>
@@ -123,7 +126,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
                 }}
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <span className="text-[10px] font-black text-gray-300 uppercase">KG</span>
+                <span className="text-[10px] font-black text-gray-300 uppercase">{t.kg}</span>
               </div>
             </div>
             <button
@@ -132,7 +135,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
               className={`px-4 rounded-2xl transition-all flex items-center justify-center ${
                 isWeightSaved 
                 ? "bg-green-500 text-white" 
-                : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 active:scale-95 disabled:bg-gray-200 disabled:shadow-none"
+                : "bg-[#1A1F3D] text-white hover:bg-[#2A3152] shadow-lg shadow-[#1A1F3D]/20 active:scale-95 disabled:bg-gray-200 disabled:shadow-none"
               }`}
             >
               {isWeightSaved ? <Check size={18} /> : <Save size={18} />}
@@ -147,11 +150,11 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <ShoppingBag size={32} className="text-gray-400" />
             </div>
-            <p className="text-sm font-bold text-gray-500">Cart is empty</p>
+            <p className="text-sm font-bold text-gray-500">{language === 'th' ? 'ไม่มีรายการ' : 'Cart is empty'}</p>
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Services</p>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.services}</p>
             {cart.map((item, idx) => (
               <div key={`${item.id}-${idx}`} className="flex items-center gap-4 p-3 bg-white border border-gray-100 rounded-2xl shadow-sm">
                 <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center shrink-0">
@@ -177,10 +180,11 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       </div>
 
       <div className="pt-6 lg:pt-8 mb-4 lg:mb-6 space-y-3">
-        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Payment Method</p>
+        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.paymentMethod}</p>
         <div className="flex gap-2">
           {(['Cash', 'Transfer', 'Credit Card'] as PaymentMethod[]).map((method) => {
             const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Banknote : CreditCard;
+            const label = method === 'Cash' ? t.cash : method === 'Transfer' ? t.transfer : t.creditCard;
             return (
               <button
                 key={method}
@@ -193,7 +197,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
                 )}
               >
                 <Icon size={16} />
-                <span className="text-[8px] lg:text-[9px] font-black uppercase">{method}</span>
+                <span className="text-[8px] lg:text-[9px] font-black uppercase">{label}</span>
               </button>
             );
           })}
@@ -204,13 +208,13 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
         {tierDiscountPercent > 0 && (
           <div className="flex justify-between items-center text-xs text-green-600 font-bold bg-green-50 px-4 py-3 rounded-2xl">
             <span className="flex items-center gap-2">
-              <ArrowDownCircle size={12}/> Discount ({tierDiscountPercent}%)
+              <ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)
             </span>
             <span>-{currency}{discountAmount.toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between items-end pt-2 px-2">
-          <span className="text-lg lg:text-xl font-bold text-[#1A1F3D]">Total</span>
+          <span className="text-lg lg:text-xl font-bold text-[#1A1F3D]">{t.total}</span>
           <span className="text-2xl lg:text-3xl font-extrabold text-[#1A1F3D]">{currency}{total.toFixed(2)}</span>
         </div>
       </div>
@@ -220,7 +224,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
         disabled={cart.length === 0}
         className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] disabled:bg-gray-100 disabled:text-gray-300 text-[#1A1F3D] font-extrabold py-4 lg:py-5 rounded-[28px] flex items-center justify-center gap-3 mt-4 lg:mt-6 shadow-xl shadow-[#D9ED5F]/20 transition-all active:scale-95"
       >
-        <Banknote size={20} /> Checkout
+        <Banknote size={20} /> {t.checkout}
       </button>
 
       {isPaymentModalOpen && (

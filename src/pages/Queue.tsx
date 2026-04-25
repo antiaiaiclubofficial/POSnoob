@@ -17,16 +17,18 @@ import { useStore, QueueStatus } from '@/store/useStore';
 import BookingModal from '@/components/BookingModal';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { translations } from '@/utils/translations';
 
 const Queue = () => {
   const navigate = useNavigate();
-  const { queue, updateQueueStatus, removeQueueItem, customers, selectOwner, setActivePet, setActiveQueueItem } = useStore();
+  const { queue, updateQueueStatus, removeQueueItem, customers, selectOwner, setActivePet, setActiveQueueItem, language } = useStore();
+  const t = translations[language];
+  
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [filter, setFilter] = useState<QueueStatus | 'All'>('All');
   
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // ปรับเงื่อนไข: แสดงเฉพาะคิวที่ "ยังไม่ได้จ่ายเงิน" (isPaid !== true)
   const filteredQueue = queue.filter(item => 
     item.date === selectedDate && 
     !item.isPaid && 
@@ -34,10 +36,10 @@ const Queue = () => {
   );
 
   const stats = [
-    { label: 'Waiting', count: queue.filter(i => i.date === selectedDate && i.status === 'Waiting' && !i.isPaid).length, status: 'Waiting' as QueueStatus, color: 'orange' },
-    { label: 'Checked-in', count: queue.filter(i => i.date === selectedDate && i.status === 'Checked-in' && !i.isPaid).length, status: 'Checked-in' as QueueStatus, color: 'purple' },
-    { label: 'In Progress', count: queue.filter(i => i.date === selectedDate && i.status === 'In Progress' && !i.isPaid).length, status: 'In Progress' as QueueStatus, color: 'blue' },
-    { label: 'Completed', count: queue.filter(i => i.date === selectedDate && i.status === 'Completed' && !i.isPaid).length, status: 'Completed' as QueueStatus, color: 'green' }
+    { label: t.waiting, count: queue.filter(i => i.date === selectedDate && i.status === 'Waiting' && !i.isPaid).length, status: 'Waiting' as QueueStatus, color: 'orange' },
+    { label: t.checkedIn, count: queue.filter(i => i.date === selectedDate && i.status === 'Checked-in' && !i.isPaid).length, status: 'Checked-in' as QueueStatus, color: 'purple' },
+    { label: t.inProgress, count: queue.filter(i => i.date === selectedDate && i.status === 'In Progress' && !i.isPaid).length, status: 'In Progress' as QueueStatus, color: 'blue' },
+    { label: t.completed, count: queue.filter(i => i.date === selectedDate && i.status === 'Completed' && !i.isPaid).length, status: 'Completed' as QueueStatus, color: 'green' }
   ];
 
   const statusSequence: QueueStatus[] = ['Waiting', 'Checked-in', 'In Progress', 'Completed'];
@@ -54,10 +56,10 @@ const Queue = () => {
 
   const getStatusUI = (status: QueueStatus) => {
     switch(status) {
-      case 'Waiting': return { color: 'text-orange-500', bg: 'bg-orange-50', icon: Clock };
-      case 'Checked-in': return { color: 'text-purple-500', bg: 'bg-purple-50', icon: Clock };
-      case 'In Progress': return { color: 'text-blue-500', bg: 'bg-blue-50', icon: PlayCircle };
-      case 'Completed': return { color: 'text-green-500', bg: 'bg-green-50', icon: CheckCircle2 };
+      case 'Waiting': return { color: 'text-orange-500', bg: 'bg-orange-50', icon: Clock, label: t.waiting };
+      case 'Checked-in': return { color: 'text-purple-500', bg: 'bg-purple-50', icon: Clock, label: t.checkedIn };
+      case 'In Progress': return { color: 'text-blue-500', bg: 'bg-blue-50', icon: PlayCircle, label: t.inProgress };
+      case 'Completed': return { color: 'text-green-500', bg: 'bg-green-50', icon: CheckCircle2, label: t.completed };
     }
   };
 
@@ -75,7 +77,7 @@ const Queue = () => {
       if (pet) {
         setActivePet(pet);
         setActiveQueueItem(item.id);
-        navigate('/checkout');
+        navigate('/pos');
       }
     }
   };
@@ -87,19 +89,19 @@ const Queue = () => {
           <div className="flex items-center gap-3 lg:gap-4 mb-2 lg:mb-4">
             <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-xl shadow-sm border border-gray-100">
               <button onClick={() => changeDate(-1)} className="p-1 hover:bg-gray-50 rounded-lg transition-colors"><ChevronLeft size={12}/></button>
-              <span className="text-[10px] font-black text-[#1A1F3D] min-w-[80px] text-center">{selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : selectedDate}</span>
+              <span className="text-[10px] font-black text-[#1A1F3D] min-w-[80px] text-center">{selectedDate === new Date().toISOString().split('T')[0] ? (language === 'th' ? 'วันนี้' : 'Today') : selectedDate}</span>
               <button onClick={() => changeDate(1)} className="p-1 hover:bg-gray-50 rounded-lg transition-colors"><ChevronRight size={12}/></button>
             </div>
             <div className="w-1 h-1 bg-gray-300 rounded-full" />
-            <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.1em]">Queue</p>
+            <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.1em]">{t.queue}</p>
           </div>
-          <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">Operations</h1>
+          <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">{language === 'th' ? 'การจัดการคิวงาน' : 'Operations'}</h1>
         </div>
         <button 
           onClick={() => setIsBookingOpen(true)}
           className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#1A1F3D] text-white px-6 py-3 rounded-2xl text-xs font-black hover:bg-[#2A3152] transition-all shadow-xl shadow-[#1A1F3D]/10"
         >
-          <Plus size={18} /> New Appointment
+          <Plus size={18} /> {t.newAppointment}
         </button>
       </header>
 
@@ -111,7 +113,7 @@ const Queue = () => {
             filter === 'All' ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-lg" : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
           )}
         >
-          <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest mb-1 opacity-60">All Active</span>
+          <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest mb-1 opacity-60">{t.allActive}</span>
           <span className="text-lg lg:text-xl font-black">{queue.filter(i => i.date === selectedDate && !i.isPaid).length}</span>
         </button>
         
@@ -137,7 +139,7 @@ const Queue = () => {
         {filteredQueue.length === 0 ? (
           <div className="h-48 lg:h-64 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed border-gray-200 rounded-[32px] lg:rounded-[40px]">
             <CalendarIcon size={32} className="mb-4" />
-            <p className="font-black text-sm lg:text-lg">No active queue items</p>
+            <p className="font-black text-sm lg:text-lg">{t.noQueue}</p>
           </div>
         ) : (
           filteredQueue.map((item) => {
@@ -165,7 +167,7 @@ const Queue = () => {
                       <h3 className="text-base lg:text-lg font-black text-[#1A1F3D] truncate">{item.petName}</h3>
                       {item.status === 'Completed' && (
                         <span className="bg-orange-100 text-orange-700 text-[7px] lg:text-[8px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-tighter shrink-0 animate-pulse">
-                          Waiting for Payment
+                          {t.readyToPay}
                         </span>
                       )}
                     </div>
@@ -179,7 +181,7 @@ const Queue = () => {
 
                 <div className="flex items-center justify-between lg:justify-end gap-4 lg:gap-10 border-t lg:border-t-0 pt-4 lg:pt-0">
                   <div className="text-left lg:text-right">
-                    <p className="text-[8px] lg:text-[9px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Time</p>
+                    <p className="text-[8px] lg:text-[9px] text-gray-400 font-black uppercase tracking-widest mb-0.5">{t.time}</p>
                     <span className="text-base lg:text-xl font-black text-[#1A1F3D]">{item.time}</span>
                   </div>
 
@@ -189,7 +191,7 @@ const Queue = () => {
                         onClick={() => handleGoToCheckout(item)}
                         className="bg-[#1A1F3D] text-[#D9ED5F] px-4 lg:px-6 py-2 lg:py-3 rounded-xl lg:rounded-2xl transition-all flex items-center gap-2 text-[10px] lg:text-xs font-black shadow-lg shadow-[#1A1F3D]/10 active:scale-95"
                       >
-                        <CreditCard size={14} /> Go to Checkout
+                        <CreditCard size={14} /> {t.goToCheckout}
                       </button>
                     ) : (
                       <>
@@ -197,7 +199,6 @@ const Queue = () => {
                           <button 
                             onClick={() => updateQueueStatus(item.id, prevStatus)}
                             className="p-2 lg:p-3 text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-xl transition-all"
-                            title={`Back to ${prevStatus}`}
                           >
                             <ChevronLeft size={16} />
                           </button>
@@ -215,8 +216,8 @@ const Queue = () => {
                           >
                             <ChevronRight size={14} />
                             <span className="hidden sm:inline">
-                              {nextStatus === 'Checked-in' ? 'Check-in' : 
-                               nextStatus === 'In Progress' ? 'Start' : 'Complete Job'}
+                              {nextStatus === 'Checked-in' ? t.checkInBtn : 
+                               nextStatus === 'In Progress' ? t.startBtn : t.completeBtn}
                             </span>
                           </button>
                         )}

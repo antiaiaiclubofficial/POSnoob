@@ -5,6 +5,7 @@ import { X, Wallet, Banknote, CreditCard, QrCode, Check, ArrowRight, DollarSign 
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { translations } from '@/utils/translations';
 
 interface PaymentModalProps {
   total: number;
@@ -14,7 +15,9 @@ interface PaymentModalProps {
 }
 
 const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps) => {
-  const { currency } = useStore();
+  const { currency, language } = useStore();
+  const t = translations[language];
+  
   // Cash States
   const [received, setReceived] = useState<string>('');
   const [change, setChange] = useState<number>(0);
@@ -37,11 +40,11 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
 
   const handleFinish = () => {
     if (method === 'Cash' && Number(received) < total) {
-      toast.error("Received amount must be greater than total");
+      toast.error(language === 'th' ? "ยอดรับมาต้องไม่น้อยกว่ายอดรวม" : "Received amount must be greater than total");
       return;
     }
     if (method === 'Credit Card' && (!cardLast4 || !refNo)) {
-      toast.error("Please fill in card details and reference number");
+      toast.error(language === 'th' ? "กรุณากรอกข้อมูลบัตรและรหัสอ้างอิง" : "Please fill in card details and reference number");
       return;
     }
 
@@ -56,6 +59,8 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
     onComplete(details);
   };
 
+  const methodLabel = method === 'Cash' ? t.cash : method === 'Transfer' ? t.transfer : t.creditCard;
+
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[110] flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-md rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
@@ -69,8 +74,8 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
               {method === 'Cash' ? <Wallet size={24}/> : method === 'Transfer' ? <QrCode size={24}/> : <CreditCard size={24}/>}
             </div>
             <div>
-              <h3 className="text-xl font-black text-[#1A1F3D]">{method} Payment</h3>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Finalize Transaction</p>
+              <h3 className="text-xl font-black text-[#1A1F3D]">{methodLabel}</h3>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{language === 'th' ? 'สรุปธุรกรรม' : 'Finalize Transaction'}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all">
@@ -81,7 +86,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
         <div className="p-10 space-y-8">
           {/* Total Amount Display */}
           <div className="text-center">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Total Amount Due</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">{t.total}</p>
             <h2 className="text-5xl font-black text-[#1A1F3D]">{currency}{total.toFixed(2)}</h2>
           </div>
 
@@ -90,7 +95,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
             {method === 'Cash' && (
               <div className="space-y-6">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Amount Received</label>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.received}</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-lg font-black">{currency}</span>
                     <input 
@@ -117,7 +122,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
                 </div>
 
                 <div className="bg-orange-50 p-6 rounded-[28px] border border-orange-100 flex justify-between items-center">
-                  <span className="text-xs font-black text-orange-600 uppercase tracking-widest">Change Due</span>
+                  <span className="text-xs font-black text-orange-600 uppercase tracking-widest">{t.change}</span>
                   <span className="text-2xl font-black text-orange-600">{currency}{change.toFixed(2)}</span>
                 </div>
               </div>
@@ -133,15 +138,14 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
                   />
                 </div>
                 <div className="w-full">
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Reference No. (optional)</label>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{language === 'th' ? 'รหัสอ้างอิง (ถ้ามี)' : 'Reference No. (optional)'}</label>
                   <input 
                     className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
-                    placeholder="Enter transaction ref..."
+                    placeholder="..."
                     value={refNo}
                     onChange={e => setRefNo(e.target.value)}
                   />
                 </div>
-                <p className="text-[10px] text-gray-400 font-medium italic">Scanning this QR will automatically set the amount to {currency}{total}</p>
               </div>
             )}
 
@@ -155,7 +159,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
                   </div>
                   <div className="flex justify-between items-end">
                     <div>
-                      <p className="text-[8px] font-bold uppercase opacity-40 mb-1">Transaction Total</p>
+                      <p className="text-[8px] font-bold uppercase opacity-40 mb-1">{t.total}</p>
                       <p className="text-2xl font-black text-[#D9ED5F]">{currency}{total.toFixed(2)}</p>
                     </div>
                     <p className="text-sm font-mono tracking-wider">**** **** **** {cardLast4 || 'XXXX'}</p>
@@ -164,7 +168,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Card Last 4</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{language === 'th' ? 'เลขท้าย 4 ตัว' : 'Card Last 4'}</label>
                     <input 
                       maxLength={4}
                       className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-black text-center"
@@ -174,7 +178,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Card Type</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{language === 'th' ? 'ประเภทบัตร' : 'Card Type'}</label>
                     <select 
                       className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold appearance-none"
                       value={cardType}
@@ -182,16 +186,16 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
                     >
                       <option>Visa</option>
                       <option>Mastercard</option>
-                      <option>AMEX</option>
+                      <option>JCB</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Reference / Approval Code</label>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{language === 'th' ? 'รหัสอนุมัติ (Approval Code)' : 'Approval Code'}</label>
                   <input 
                     className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
-                    placeholder="Enter code from slip..."
+                    placeholder="..."
                     value={refNo}
                     onChange={e => setRefNo(e.target.value)}
                   />
@@ -208,7 +212,7 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
               method === 'Cash' ? "bg-orange-500 shadow-orange-500/20" : method === 'Transfer' ? "bg-blue-500 shadow-blue-500/20" : "bg-[#1A1F3D] shadow-[#1A1F3D]/20"
             )}
           >
-            <Check size={24} /> Confirm Payment
+            <Check size={24} /> {t.confirmPayment}
           </button>
         </div>
       </div>
