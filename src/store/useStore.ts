@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Language } from '@/utils/translations';
 
 export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health' | 'brush' | 'hotel' | 'love' | 'food' | 'premium';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
@@ -24,7 +25,7 @@ export interface Staff {
   avatar: string;
   username?: string;
   password?: string;
-  commissionRate: number; // เพิ่มค่าคอมมิชชั่น (%)
+  commissionRate: number; 
 }
 
 export interface ActivityLog {
@@ -84,10 +85,10 @@ export interface Transaction {
   paymentMethod: PaymentMethod;
   bookingType: BookingType;
   itemsCount: number;
-  staffId: string; // เปลี่ยนจาก staffName เป็น ID เพื่อความแม่นยำ
+  staffId: string; 
   staffName: string;
   processedBy: string;
-  actualDuration?: number; // ระยะเวลาทำงานจริง (นาที)
+  actualDuration?: number; 
   paymentDetails?: {
     cashReceived?: number;
     change?: number;
@@ -134,8 +135,8 @@ export interface QueueItem {
   image: string;
   isPaid?: boolean;
   staffId?: string;
-  startTime?: string; // เวลาเริ่มงานจริง
-  endTime?: string;   // เวลาจบงานจริง
+  startTime?: string; 
+  endTime?: string;   
 }
 
 export interface CartItem {
@@ -153,6 +154,8 @@ export interface CartItem {
 }
 
 interface AppState {
+  language: Language;
+  setLanguage: (lang: Language) => void;
   isAuthenticated: boolean;
   currentUser: { name: string; role: string; username?: string } | null;
   shopName: string;
@@ -213,6 +216,7 @@ interface AppState {
   }) => void;
   addToCart: (item: CartItem) => void;
   removeFromCart: (index: number) => void;
+  customAddToCart: (item: CartItem) => void;
   clearCart: () => void;
   
   addService: (service: Omit<Service, 'id'>) => void;
@@ -298,6 +302,8 @@ const INITIAL_SERVICES: Service[] = [
 ];
 
 export const useStore = create<AppState>((set, get) => ({
+  language: 'th',
+  setLanguage: (lang) => set({ language: lang }),
   isAuthenticated: false,
   currentUser: null,
   shopName: "Tactile Sanctuary",
@@ -367,6 +373,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
   removeFromCart: (index) => set((state) => ({ cart: state.cart.filter((_, i) => i !== index) })),
+  customAddToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
   clearCart: () => set({ cart: [], activeQueueItemId: null }),
   
   addService: (serviceData) => set((state) => ({ services: [...state.services, { ...serviceData, id: 'svc-' + Math.random().toString(36).substr(2, 5) }] })),
@@ -429,13 +436,12 @@ export const useStore = create<AppState>((set, get) => ({
     const { customers, transactions, queue, currentUser } = get();
     const today = new Date().toISOString().split('T')[0];
     
-    // หาคิวงานที่เกี่ยวข้องเพื่อเอาระยะเวลาทำงานจริง
     const relatedQueueItem = items[0]?.queueItemId ? queue.find(q => q.id === items[0].queueItemId) : null;
     let actualDuration = undefined;
     if (relatedQueueItem?.startTime && relatedQueueItem?.endTime) {
       const start = new Date(relatedQueueItem.startTime).getTime();
       const end = new Date(relatedQueueItem.endTime).getTime();
-      actualDuration = Math.round((end - start) / 60000); // นาที
+      actualDuration = Math.round((end - start) / 60000); 
     }
 
     const newTransaction: Transaction = {
@@ -454,7 +460,7 @@ export const useStore = create<AppState>((set, get) => ({
       bookingType: relatedQueueItem ? 'Appointment' : 'Walk-in',
       itemsCount: items.length,
       processedBy: currentUser?.name || 'Admin User',
-      staffId: relatedQueueItem?.staffId || 's2', // Default เป็น Sarah if missing
+      staffId: relatedQueueItem?.staffId || 's2', 
       staffName: get().staff.find(s => s.id === (relatedQueueItem?.staffId || 's2'))?.name || 'Unknown',
       actualDuration,
       paymentDetails: details

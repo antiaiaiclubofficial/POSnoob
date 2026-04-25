@@ -19,20 +19,9 @@ import {
 import { cn } from "@/lib/utils";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { translations } from '@/utils/translations';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from 'sonner';
-
-const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: ShoppingBag, label: 'POS', path: '/pos' },
-  { icon: CalendarDays, label: 'Pet Queue', path: '/queue' },
-  { icon: Users, label: 'Customers', path: '/customers' },
-  { icon: ShieldCheck, label: 'Staff Management', path: '/staff' },
-  { icon: Target, label: 'Staff Performance', path: '/staff/performance' },
-  { icon: History, label: 'Activity Logs', path: '/logs' },
-  { icon: BarChart3, label: 'Reports', path: '/reports' },
-  { icon: SettingsIcon, label: 'Settings', path: '/settings' },
-];
 
 interface SidebarProps {
   className?: string;
@@ -42,7 +31,20 @@ interface SidebarProps {
 export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { shopName, shopLogo, logout } = useStore();
+  const { shopName, shopLogo, logout, language } = useStore();
+  const t = translations[language];
+
+  const menuItems = [
+    { icon: LayoutDashboard, label: t.dashboard, path: '/' },
+    { icon: ShoppingBag, label: t.pos, path: '/pos' },
+    { icon: CalendarDays, label: t.queue, path: '/queue' },
+    { icon: Users, label: t.customers, path: '/customers' },
+    { icon: ShieldCheck, label: t.staff, path: '/staff' },
+    { icon: Target, label: t.performance, path: '/staff/performance' },
+    { icon: History, label: t.logs, path: '/logs' },
+    { icon: BarChart3, label: t.reports, path: '/reports' },
+    { icon: SettingsIcon, label: t.settings, path: '/settings' },
+  ];
 
   const handleLogout = () => {
     logout();
@@ -106,14 +108,14 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
             className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-[#1A1F3D] transition-colors group overflow-hidden whitespace-nowrap"
           >
             <HelpCircle size={20} className="shrink-0 group-hover:rotate-12 transition-transform" />
-            <span className="text-xs font-bold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Support</span>
+            <span className="text-xs font-bold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.support}</span>
           </a>
           <button 
             onClick={handleLogout}
             className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-red-500 transition-colors w-full group overflow-hidden whitespace-nowrap"
           >
             <LogOut size={20} className="shrink-0 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-xs font-bold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">Sign Out</span>
+            <span className="text-xs font-bold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.logout}</span>
           </button>
         </div>
         

@@ -2,9 +2,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout, Eye, MapPin
+  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout, Eye, MapPin, Globe
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
+import { translations, Language } from '@/utils/translations';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ServiceModal from '@/components/ServiceModal';
@@ -35,9 +36,11 @@ const Settings = () => {
     lineLiffId, lineChannelToken,
     updateBusinessProfile,
     services, deleteService, toggleServiceActive,
-    slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings
+    slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings,
+    language, setLanguage
   } = useStore();
 
+  const t = translations[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
@@ -161,7 +164,7 @@ const Settings = () => {
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-6">
           <div>
-            <h1 className="text-4xl font-black mb-1">Settings</h1>
+            <h1 className="text-4xl font-black mb-1">{t.settings}</h1>
             <p className="text-gray-400 font-medium">Manage your shop configurations and business rules</p>
           </div>
           <div className="flex gap-3">
@@ -175,7 +178,7 @@ const Settings = () => {
               onClick={handleSaveAll}
               className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-[#2A3152] transition-all shadow-xl shadow-[#1A1F3D]/10 active:scale-95"
             >
-              <Save size={18} /> Save All
+              <Save size={18} /> {t.saveAll}
             </button>
           </div>
         </div>
@@ -183,25 +186,58 @@ const Settings = () => {
         <Tabs defaultValue="business" className="space-y-8">
           <TabsList className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm w-auto inline-flex gap-1 h-auto">
             <TabsTrigger value="business" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
-              <Store size={16} className="mr-2" /> Business
+              <Store size={16} className="mr-2" /> {t.business}
             </TabsTrigger>
             <TabsTrigger value="booking" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
-              <Clock size={16} className="mr-2" /> Booking
+              <Clock size={16} className="mr-2" /> {t.booking}
             </TabsTrigger>
             <TabsTrigger value="services" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
-              <Scissors size={16} className="mr-2" /> Services
+              <Scissors size={16} className="mr-2" /> {t.services}
             </TabsTrigger>
             <TabsTrigger value="integrations" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
-              <Share2 size={16} className="mr-2" /> Integrations
+              <Share2 size={16} className="mr-2" /> {t.integrations}
             </TabsTrigger>
             <TabsTrigger value="membership" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
-              <ShieldCheck size={16} className="mr-2" /> Membership
+              <ShieldCheck size={16} className="mr-2" /> {t.membership}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="space-y-8">
+                {/* Language Selection */}
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                      <Globe size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">{t.language}</h2>
+                      <p className="text-xs text-gray-400">{t.selectLanguage}</p>
+                    </div>
+                  </div>
+                  <div className="flex bg-[#F5F6FA] p-1.5 rounded-2xl gap-2">
+                    <button 
+                      onClick={() => setLanguage('th')}
+                      className={cn(
+                        "flex-1 py-3 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-2",
+                        language === 'th' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400"
+                      )}
+                    >
+                      <span className="text-lg">🇹🇭</span> ภาษาไทย
+                    </button>
+                    <button 
+                      onClick={() => setLanguage('en')}
+                      className={cn(
+                        "flex-1 py-3 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-2",
+                        language === 'en' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400"
+                      )}
+                    >
+                      <span className="text-lg">🇺🇸</span> English
+                    </button>
+                  </div>
+                </section>
+
                 <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
@@ -224,7 +260,6 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  {/* Logo Upload */}
                   <div className="flex flex-col items-center gap-4 bg-[#F5F6FA] p-8 rounded-[32px] relative overflow-hidden">
                     <div className="relative group">
                       <div className="w-24 h-24 bg-white rounded-[28px] overflow-hidden shadow-md border-2 border-dashed border-gray-200 flex items-center justify-center">
@@ -251,7 +286,7 @@ const Settings = () => {
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                        <Store size={12} /> Shop Name
+                        <Store size={12} /> {t.shopName}
                       </label>
                       <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopName} onChange={(e) => setLocalShopName(e.target.value)} />
                     </div>
@@ -259,7 +294,7 @@ const Settings = () => {
                     <div className="grid grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                          <Phone size={12} /> Phone Number
+                          <Phone size={12} /> {t.phone}
                         </label>
                         <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopPhone} onChange={(e) => setLocalShopPhone(e.target.value)} />
                       </div>
@@ -272,8 +307,9 @@ const Settings = () => {
                     </div>
                   </div>
                 </section>
+              </div>
 
-                {/* Receipt Section */}
+              <div className="space-y-8">
                 <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
@@ -329,23 +365,13 @@ const Settings = () => {
                     <div className="grid grid-cols-1 gap-6">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                          <MapPin size={12} /> Shop Address (on Receipt)
+                          <MapPin size={12} /> {t.address}
                         </label>
                         <textarea 
                           className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-20 resize-none leading-relaxed" 
                           value={localShopAddress} 
                           onChange={(e) => setLocalShopAddress(e.target.value)}
                           placeholder="Store address..."
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                          <Phone size={12} /> Contact Number (on Receipt)
-                        </label>
-                        <input 
-                          className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" 
-                          value={localShopPhone} 
-                          onChange={(e) => setLocalShopPhone(e.target.value)}
                         />
                       </div>
                     </div>
@@ -362,98 +388,6 @@ const Settings = () => {
                       />
                     </div>
                   </div>
-                </section>
-              </div>
-
-              <div className="space-y-8">
-                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-                      <Calendar size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Weekly Holidays</h2>
-                      <p className="text-xs text-gray-400">Recurring days the shop is closed</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#F5F6FA] p-6 rounded-[32px]">
-                    <div className="grid grid-cols-4 gap-3">
-                        {DAYS_OF_WEEK.map((day) => {
-                          const isHoliday = localRecurringHolidays.includes(day.value);
-                          return (
-                            <button
-                              key={day.value}
-                              type="button"
-                              onClick={() => toggleHoliday(day.value)}
-                              className={cn(
-                                "py-3 rounded-xl text-[10px] font-black transition-all border-2",
-                                isHoliday 
-                                  ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20" 
-                                  : "bg-white border-white text-gray-400 hover:border-gray-200"
-                              )}
-                            >
-                              {day.label}
-                            </button>
-                          );
-                        })}
-                    </div>
-                  </div>
-                </section>
-
-                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
-                      <Calendar size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Specific Holidays</h2>
-                      <p className="text-xs text-gray-400">Pick specific dates to close the shop</p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center bg-[#F5F6FA] p-6 rounded-[32px]">
-                    <DayPicker
-                      mode="multiple"
-                      selected={localSpecificHolidays.map(date => parseISO(date)).filter(isValid)}
-                      onSelect={handleSpecificHolidaySelect}
-                      modifiers={{
-                        weeklyHoliday: (date) => localRecurringHolidays.includes(date.getDay())
-                      }}
-                      modifiersClassNames={{
-                        weeklyHoliday: "bg-red-100 text-red-400 cursor-not-allowed opacity-50"
-                      }}
-                      classNames={{
-                        month: "space-y-4",
-                        caption: "flex justify-center relative items-center mb-4",
-                        caption_label: "text-sm font-black text-[#1A1F3D] uppercase tracking-widest",
-                        nav: "flex items-center",
-                        nav_button: "h-6 w-6 bg-white hover:bg-gray-100 rounded-lg flex items-center justify-center shadow-sm",
-                        nav_button_previous: "absolute left-1",
-                        nav_button_next: "absolute right-1",
-                        table: "w-full border-collapse",
-                        head_row: "flex w-full justify-between mb-2",
-                        head_cell: "text-gray-300 w-9 font-black text-[8px] uppercase text-center",
-                        row: "flex w-full justify-center mt-1",
-                        cell: "relative p-0 text-center text-xs w-9",
-                        day: "h-8 w-8 p-0 font-bold rounded-lg transition-all hover:bg-white flex items-center justify-center mx-auto",
-                        day_selected: "bg-red-500 text-white hover:bg-red-600 shadow-md",
-                        day_today: "border-2 border-red-200",
-                        day_outside: "opacity-20",
-                      }}
-                    />
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-4">
-                     {localSpecificHolidays.sort().map(date => (
-                       <span key={date} className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-[10px] font-black border border-red-100">
-                         {date}
-                       </span>
-                     ))}
-                     {localSpecificHolidays.length === 0 && <p className="text-[10px] text-gray-400 italic">No specific holidays selected</p>}
-                  </div>
-                  <p className="text-[9px] text-gray-400 font-medium italic mt-2">
-                    * Light red dates are disabled because they are part of your Weekly Holidays.
-                  </p>
                 </section>
               </div>
             </div>

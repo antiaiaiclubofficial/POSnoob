@@ -1,0 +1,52 @@
+export const translations = {
+  en: {
+    dashboard: "Dashboard",
+    pos: "POS",
+    queue: "Pet Queue",
+    customers: "Customers",
+    staff: "Staff Management",
+    performance: "Staff Performance",
+    logs: "Activity Logs",
+    reports: "Reports",
+    settings: "Settings",
+    business: "Business",
+    booking: "Booking",
+    services: "Services",
+    integrations: "Integrations",
+    membership: "Membership",
+    language: "Language",
+    saveAll: "Save All",
+    shopName: "Shop Name",
+    phone: "Phone Number",
+    address: "Address",
+    selectLanguage: "Select Language",
+    logout: "Sign Out",
+    support: "Support"
+  },
+  th: {
+    dashboard: "แดชบอร์ด",
+    pos: "หน้าขาย (POS)",
+    queue: "คิวสัตว์เลี้ยง",
+    customers: "จัดการลูกค้า",
+    staff: "จัดการพนักงาน",
+    performance: "ผลงานพนักงาน",
+    logs: "บันทึกกิจกรรม",
+    reports: "รายงาน",
+    settings: "ตั้งค่า",
+    business: "ธุรกิจ",
+    booking: "การจอง",
+    services: "บริการ",
+    integrations: "เชื่อมต่อระบบ",
+    membership: "สมาชิก",
+    language: "ภาษา",
+    saveAll: "บันทึกทั้งหมด",
+    shopName: "ชื่อร้าน",
+    phone: "เบอร์โทรศัพท์",
+    address: "ที่อยู่",
+    selectLanguage: "เลือกภาษา",
+    logout: "ออกจากระบบ",
+    support: "ช่วยเหลือ"
+  }
+};
+
+export type Language = 'en' | 'th';
