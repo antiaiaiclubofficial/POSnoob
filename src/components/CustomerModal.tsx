@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Phone, Mail, Shield } from 'lucide-react';
 import { useStore, Customer, MembershipLevel } from '@/store/useStore';
+import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
 
 interface CustomerModalProps {
@@ -11,7 +12,9 @@ interface CustomerModalProps {
 }
 
 const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
-  const { addCustomer, updateCustomer } = useStore();
+  const { addCustomer, updateCustomer, language } = useStore();
+  const t = translations[language];
+  
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -33,16 +36,16 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.phone) {
-      toast.error("Name and Phone are required");
+      toast.error(language === 'th' ? "กรุณากรอกชื่อและเบอร์โทรศัพท์" : "Name and Phone are required");
       return;
     }
 
     if (customer) {
       updateCustomer(customer.id, formData);
-      toast.success("Customer updated successfully");
+      toast.success(language === 'th' ? "อัปเดตข้อมูลลูกค้าเรียบร้อย" : "Customer updated successfully");
     } else {
       addCustomer(formData);
-      toast.success("New customer added");
+      toast.success(language === 'th' ? "ลงทะเบียนลูกค้าใหม่เรียบร้อย" : "New customer added");
     }
     onClose();
   };
@@ -52,8 +55,8 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
       <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-8 border-b border-gray-50 flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold text-[#1A1F3D]">{customer ? 'Edit Profile' : 'Add New Client'}</h2>
-            <p className="text-xs text-gray-400 font-medium">Customer contact information</p>
+            <h2 className="text-2xl font-bold text-[#1A1F3D]">{customer ? t.editProfile : t.addClient}</h2>
+            <p className="text-xs text-gray-400 font-medium">{t.customerContact}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
             <X size={20} className="text-gray-400" />
@@ -63,7 +66,7 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
         <form onSubmit={handleSubmit} className="p-8 space-y-5">
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Full Name</label>
+              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.fullName}</label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                 <input 
@@ -77,7 +80,7 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
             </div>
 
             <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Phone Number</label>
+              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.phoneNumber}</label>
               <div className="relative">
                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                 <input 
@@ -91,7 +94,7 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
             </div>
 
             <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Email Address</label>
+              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.emailAddress}</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                 <input 
@@ -105,7 +108,7 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
             </div>
 
             <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Membership Level</label>
+              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.membershipLevel}</label>
               <div className="relative">
                 <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                 <select 
@@ -123,7 +126,7 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
           </div>
 
           <button className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg mt-4">
-            {customer ? 'Update Information' : 'Register Customer'}
+            {customer ? t.updateInformation : t.registerCustomer}
           </button>
         </form>
       </div>

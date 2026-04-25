@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Camera, Scale, Upload, Calendar, Dog as DogIcon, Cat as CatIcon } from 'lucide-react';
 import { useStore, Pet } from '@/store/useStore';
 import { DOG_BREEDS, CAT_BREEDS } from '@/utils/petData';
+import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
 
 interface PetModalProps {
@@ -13,7 +14,8 @@ interface PetModalProps {
 }
 
 const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
-  const { addPet, updatePet } = useStore();
+  const { addPet, updatePet, language } = useStore();
+  const t = translations[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -56,7 +58,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.breed || !formData.birthday) {
-      toast.error("Please fill in all required fields");
+      toast.error(language === 'th' ? "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน" : "Please fill in all required fields");
       return;
     }
 
@@ -69,10 +71,10 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
         notes: formData.notes,
         image: formData.image
       });
-      toast.success(`${formData.name}'s profile updated!`);
+      toast.success(language === 'th' ? `อัปเดตข้อมูลของ ${formData.name} เรียบร้อย!` : `${formData.name}'s profile updated!`);
     } else {
       if (!formData.initialWeight) {
-        toast.error("Initial weight is required for new registration");
+        toast.error(language === 'th' ? "กรุณาระบุน้ำหนักเริ่มต้น" : "Initial weight is required");
         return;
       }
       addPet(customerId, {
@@ -81,11 +83,11 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
         breed: formData.breed,
         birthday: formData.birthday,
         weightHistory: [{ date: new Date().toISOString().split('T')[0], value: Number(formData.initialWeight) }],
-        serviceHistory: [], // แก้ไข TypeScript Error: เพิ่มอาร์เรย์ว่างสำหรับประวัติบริการเริ่มต้น
+        serviceHistory: [],
         notes: formData.notes,
         image: formData.image
       });
-      toast.success(`${formData.name} registered successfully!`);
+      toast.success(language === 'th' ? `ลงทะเบียน ${formData.name} เรียบร้อย!` : `${formData.name} registered successfully!`);
     }
     
     onClose();
@@ -96,8 +98,8 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
       <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-8 border-b border-gray-50 flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold text-[#1A1F3D]">{pet ? 'Edit Pet Profile' : 'New Pet Registration'}</h2>
-            <p className="text-xs text-gray-400 font-medium">Update furry friend details</p>
+            <h2 className="text-2xl font-bold text-[#1A1F3D]">{pet ? t.editPetProfile : t.newPetRegistration}</h2>
+            <p className="text-xs text-gray-400 font-medium">{t.updatePetDetails}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
             <X size={20} className="text-gray-400" />
@@ -124,7 +126,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
 
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Pet Name</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.petName}</label>
                 <input 
                   className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3.5 text-sm font-bold"
                   value={formData.name}
@@ -133,34 +135,34 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
                 />
               </div>
               <div className="w-1/3">
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Species</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.species}</label>
                 <select 
                   className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3.5 text-sm font-bold appearance-none"
                   value={formData.species}
                   onChange={e => setFormData({...formData, species: e.target.value as any, breed: ''})}
                 >
-                  <option value="Dog">Dog</option>
-                  <option value="Cat">Cat</option>
-                  <option value="Other">Other</option>
+                  <option value="Dog">{language === 'th' ? 'สุนัข' : 'Dog'}</option>
+                  <option value="Cat">{language === 'th' ? 'แมว' : 'Cat'}</option>
+                  <option value="Other">{language === 'th' ? 'อื่นๆ' : 'Other'}</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Breed</label>
+              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.breed}</label>
               <select 
                 className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3.5 text-sm font-bold appearance-none"
                 value={formData.breed}
                 onChange={e => setFormData({...formData, breed: e.target.value})}
               >
-                <option value="">Select Breed...</option>
+                <option value="">{language === 'th' ? 'เลือกสายพันธุ์...' : 'Select Breed...'}</option>
                 {breeds.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Birthday</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.birthday}</label>
                 <div className="relative">
                   <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
                   <input 
@@ -173,7 +175,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
               </div>
               {!pet && (
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Weight (kg)</label>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{language === 'th' ? 'น้ำหนัก (กก.)' : 'Weight (kg)'}</label>
                   <div className="relative">
                     <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
                     <input 
@@ -193,12 +195,12 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
               className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3 text-xs font-bold h-20 resize-none"
               value={formData.notes}
               onChange={e => setFormData({...formData, notes: e.target.value})}
-              placeholder="Medical notes or allergies..."
+              placeholder={t.petNotes}
             />
           </div>
 
           <button className="w-full bg-[#1A1F3D] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all hover:bg-[#2A3152] shadow-xl shadow-[#1A1F3D]/10">
-            {pet ? 'Update Profile' : 'Register Furry Friend'}
+            {pet ? t.updatePetBtn : t.registerPetBtn}
           </button>
         </form>
       </div>
