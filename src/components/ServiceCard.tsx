@@ -33,7 +33,9 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
     }
   }, [activePet?.id, service.id, availableSizes]);
 
-  if (!activePet || activePet.species !== service.targetSpecies) return null;
+  // ลบเงื่อนไข if (!activePet) ออกเพื่อให้แสดงผลได้ตลอดเวลา
+  // แต่ยังคงตรวจสอบประเภทสัตว์หากมีการเลือกสัตว์เลี้ยงไว้แล้ว เพื่อความถูกต้อง
+  if (activePet && activePet.species !== service.targetSpecies) return null;
 
   const currentPrice = selectedSize ? service.prices[selectedSize].price : 0;
   const isFixedPrice = availableSizes.length <= 1;
@@ -65,7 +67,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
 
   const handleAdd = () => {
     if (!activePet || !selectedOwner) {
-      toast.error("Please select a customer first");
+      toast.error("Please select a customer and pet first");
       return;
     }
 
@@ -103,7 +105,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
           <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">
             {isFixedPrice ? 'Fixed Price' : 'Starting From'}
           </p>
-          <p className="text-3xl font-black text-[#1A1F3D]">{currency}{currentPrice}</p>
+          <p className="text-3xl font-black text-[#1A1F3D]">{currency}{currentPrice.toLocaleString()}</p>
         </div>
       </div>
 
@@ -164,7 +166,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
         onClick={handleAdd}
         className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl shadow-[#1A1F3D]/10 mt-auto"
       >
-        <Plus size={20} /> Add for {activePet.name}
+        <Plus size={20} /> {activePet ? `Add for ${activePet.name}` : 'Add Service'}
       </button>
     </div>
   );
