@@ -1,6 +1,6 @@
 export const translations = {
   en: {
-    // Sidebar & General
+    // General
     dashboard: "Dashboard",
     pos: "POS System",
     queue: "Operations",
@@ -12,10 +12,8 @@ export const translations = {
     settings: "Settings",
     logout: "Sign Out",
     support: "Support",
-    
-    // Actions
-    saveAll: "Save Changes",
     saveChanges: "Save Changes",
+    saveAll: "Save All Settings",
     cancel: "Cancel",
     confirm: "Confirm",
     edit: "Edit",
@@ -52,7 +50,7 @@ export const translations = {
     regulars: "Regulars",
     newClients: "New Clients",
 
-    // Customer Modal & CRM
+    // Customer Modal
     addClient: "Add New Client",
     editProfile: "Edit Profile",
     customerContact: "Customer contact information",
@@ -62,16 +60,17 @@ export const translations = {
     membershipLevel: "Membership Level",
     registerCustomer: "Register Customer",
     updateInformation: "Update Information",
+
+    // CRM View
     clientProfile: "Client Profile",
     petRegistry: "Pet Registry",
     registerPet: "Register Pet",
     totalSpent: "Total Spent",
     connectLine: "Connect LINE",
     lineConnected: "LINE Connected",
-    phone: "Phone",
+    phoneLabel: "Phone",
     email: "Email",
     membership: "Membership",
-    age: "Age",
 
     // Pet Modal
     newPetRegistration: "New Pet Registration",
@@ -105,37 +104,43 @@ export const translations = {
     addPriceTier: "Add Price Tier",
     createService: "Create Service",
 
-    // Staff Modal & Page
+    // Staff Page & Modal
+    ourTeam: "Our Team",
+    manageStaff: "Manage team member details & login access",
     addStaff: "Add New Staff",
     editStaff: "Edit Staff",
+    searchStaff: "Search by name, role or username...",
     staffManagement: "Manage team member details & login access",
     loginCredentials: "Login Credentials",
-    username: "Username",
-    password: "Password",
+    loginUsername: "Login Username",
+    loginPassword: "Login Password",
+    profileInfo: "Profile Info",
+    employeeFullName: "Employee Full Name",
     role: "Role",
     commissionRate: "Commission (%)",
+    phone: "Phone",
+    contactNumber: "Contact Number",
     status: "Status",
     active: "Active",
     inactive: "Inactive",
     addToTeam: "Add to Team",
     updateStaffMember: "Update Staff Member",
-    ourTeam: "Our Team",
-    manageStaff: "Manage Staff",
-    searchStaff: "Search Staff",
-    updateStaff: "Update Staff",
 
-    // Staff Performance
-    staffAnalytics: "Staff Analytics",
-    performanceAudit: "Team Performance Audit",
-    selectStaff: "Select Staff",
-    commissionEarned: "Commission Earned",
-    revenueGenerated: "Total Revenue Generated",
-    avgServiceTime: "Average Service Time",
-    avgTime: "Avg. Service Time",
-    jobsDone: "Jobs Completed",
-    jobDrillDown: "Job Drill-down",
-    jobsCount: "Completed Jobs",
-    profileInfo: "Profile Info",
+    // Reports & Analytics
+    analytics: "Analytics",
+    businessInsights: "Business Insights",
+    totalRevenue: "Total Revenue",
+    totalDiscounts: "Total Discounts",
+    petCounts: "Pet Counts",
+    totalSessions: "Total Sessions",
+    transactionLedger: "Transaction Ledger",
+    verificationRequired: "Verification Required",
+
+    // Logs
+    activityLogs: "Activity Logs",
+    auditTrail: "System audit trail and operation history",
+    filterLogs: "Filter logs...",
+    noActivities: "No activities recorded yet",
 
     // POS / Checkout
     pointOfSale: "Point of Sale",
@@ -176,28 +181,6 @@ export const translations = {
     goToCheckout: "Go to Checkout",
     noQueue: "No active queue items",
 
-    // Reports & Analytics
-    analytics: "Analytics",
-    businessInsights: "Business Insights",
-    transactionLedger: "Transaction Ledger",
-    totalRevenue: "Total Revenue",
-    totalDiscounts: "Total Discounts",
-    petCounts: "Pet Counts",
-    totalSessions: "Total Sessions",
-    verificationRequired: "Verification Required",
-    ledger: "Transaction Ledger",
-    revenueChart: "Revenue Performance",
-    speciesRatio: "Species Ratio",
-    export: "Export CSV",
-    filterDate: "Date Range",
-    revenuePerformance: "Revenue Performance",
-
-    // Logs
-    activityLogs: "Activity Logs",
-    auditTrail: "Audit Trail",
-    filterLogs: "Filter Logs",
-    noActivities: "No Activities",
-
     // Settings
     business: "Business",
     booking: "Booking",
@@ -214,7 +197,7 @@ export const translations = {
     closed: "Closed"
   },
   th: {
-    // Sidebar & General
+    // General
     dashboard: "แดชบอร์ด",
     pos: "ระบบขายหน้าร้าน",
     queue: "การจัดการคิว",
@@ -226,10 +209,8 @@ export const translations = {
     settings: "ตั้งค่าระบบ",
     logout: "ออกจากระบบ",
     support: "ช่วยเหลือ",
-
-    // Actions
-    saveAll: "บันทึกการเปลี่ยนแปลง",
     saveChanges: "บันทึกการเปลี่ยนแปลง",
+    saveAll: "บันทึกการตั้งค่าทั้งหมด",
     cancel: "ยกเลิก",
     confirm: "ยืนยัน",
     edit: "แก้ไข",
@@ -266,7 +247,7 @@ export const translations = {
     regulars: "ลูกค้าประจำ",
     newClients: "ลูกค้าใหม่",
 
-    // Customer Modal & CRM
+    // Customer Modal
     addClient: "เพิ่มลูกค้าใหม่",
     editProfile: "แก้ไขโปรไฟล์",
     customerContact: "ข้อมูลติดต่อของลูกค้า",
@@ -276,16 +257,17 @@ export const translations = {
     membershipLevel: "ระดับสมาชิก",
     registerCustomer: "ลงทะเบียนลูกค้า",
     updateInformation: "อัปเดตข้อมูล",
+
+    // CRM View
     clientProfile: "ข้อมูลลูกค้า",
     petRegistry: "ทะเบียนสัตว์เลี้ยง",
     registerPet: "ลงทะเบียนสัตว์เลี้ยง",
     totalSpent: "ยอดใช้จ่ายสะสม",
     connectLine: "เชื่อมต่อ LINE",
     lineConnected: "เชื่อมต่อ LINE แล้ว",
-    phone: "เบอร์โทรศัพท์",
+    phoneLabel: "เบอร์โทรศัพท์",
     email: "อีเมล",
     membership: "ระดับสมาชิก",
-    age: "อายุ",
 
     // Pet Modal
     newPetRegistration: "ลงทะเบียนสัตว์เลี้ยงใหม่",
@@ -319,37 +301,43 @@ export const translations = {
     addPriceTier: "เพิ่มระดับราคา",
     createService: "สร้างบริการ",
 
-    // Staff Modal & Page
+    // Staff Page & Modal
+    ourTeam: "ทีมงานของเรา",
+    manageStaff: "จัดการรายละเอียดพนักงานและสิทธิ์การเข้าระบบ",
     addStaff: "เพิ่มพนักงานใหม่",
     editStaff: "แก้ไขพนักงาน",
+    searchStaff: "ค้นหาด้วยชื่อ, ตำแหน่ง หรือชื่อผู้ใช้...",
     staffManagement: "จัดการรายละเอียดพนักงานและสิทธิ์การเข้าระบบ",
     loginCredentials: "ข้อมูลการเข้าสู่ระบบ",
-    username: "ชื่อผู้ใช้",
-    password: "รหัสผ่าน",
+    loginUsername: "ชื่อผู้ใช้ (Username)",
+    loginPassword: "รหัสผ่าน (Password)",
+    profileInfo: "ข้อมูลโปรไฟล์",
+    employeeFullName: "ชื่อ-นามสกุลพนักงาน",
     role: "ตำแหน่ง",
     commissionRate: "คอมมิชชั่น (%)",
+    phone: "เบอร์โทรศัพท์",
+    contactNumber: "เบอร์โทรศัพท์ติดต่อ",
     status: "สถานะ",
     active: "เปิดใช้งาน",
     inactive: "ปิดใช้งาน",
     addToTeam: "เพิ่มเข้าสู่ทีม",
     updateStaffMember: "อัปเดตข้อมูลพนักงาน",
-    ourTeam: "ทีมงานของเรา",
-    manageStaff: "จัดการทีมพนักงาน",
-    searchStaff: "ค้นหาพนักงาน",
-    updateStaff: "อัปเดตข้อมูลพนักงาน",
 
-    // Staff Performance
-    staffAnalytics: "การวิเคราะห์พนักงาน",
-    performanceAudit: "วิเคราะห์ประสิทธิภาพทีม",
-    selectStaff: "เลือกพนักงาน",
-    commissionEarned: "คอมมิชชั่นที่ได้รับ",
-    revenueGenerated: "รายได้รวมที่สร้างได้",
-    avgServiceTime: "เวลาเฉลี่ยต่อบริการ",
-    avgTime: "เวลาเฉลี่ยต่อชิ้นงาน",
-    jobsDone: "งานที่เสร็จสิ้น",
-    jobDrillDown: "รายละเอียดงาน",
-    jobsCount: "งานที่เสร็จสิ้น",
-    profileInfo: "ข้อมูลโปรไฟล์",
+    // Reports & Analytics
+    analytics: "การวิเคราะห์",
+    businessInsights: "ข้อมูลเจาะลึกธุรกิจ",
+    totalRevenue: "รายได้รวมทั้งหมด",
+    totalDiscounts: "ส่วนลดรวม",
+    petCounts: "จำนวนสัตว์เลี้ยง",
+    totalSessions: "จำนวนรายการทั้งหมด",
+    transactionLedger: "บัญชีธุรกรรม",
+    verificationRequired: "ต้องมีการยืนยันตัวตน",
+
+    // Logs
+    activityLogs: "บันทึกกิจกรรม",
+    auditTrail: "ประวัติการดำเนินงานและตรวจสอบระบบ",
+    filterLogs: "กรองบันทึก...",
+    noActivities: "ยังไม่มีการบันทึกกิจกรรม",
 
     // POS / Checkout
     pointOfSale: "จุดขาย (POS)",
@@ -389,28 +377,6 @@ export const translations = {
     completeBtn: "เสร็จงาน",
     goToCheckout: "ไปที่หน้าชำระเงิน",
     noQueue: "ไม่มีคิวงานในขณะนี้",
-
-    // Reports & Analytics
-    analytics: "การวิเคราะห์",
-    businessInsights: "ข้อมูลเจาะลึกธุรกิจ",
-    transactionLedger: "บัญชีธุรกรรม",
-    totalRevenue: "รายได้รวมทั้งหมด",
-    totalDiscounts: "ส่วนลดรวม",
-    petCounts: "จำนวนสัตว์เลี้ยง",
-    totalSessions: "จำนวนรายการทั้งหมด",
-    verificationRequired: "ต้องมีการยืนยันตัวตน",
-    ledger: "ประวัติธุรกรรม",
-    revenueChart: "ประสิทธิภาพรายได้",
-    speciesRatio: "สัดส่วนสัตว์เลี้ยง",
-    export: "ส่งออกไฟล์ CSV",
-    filterDate: "เลือกช่วงเวลา",
-    revenuePerformance: "ประสิทธิภาพรายได้",
-
-    // Logs
-    activityLogs: "บันทึกกิจกรรม",
-    auditTrail: "ประวัติการดำเนินงาน",
-    filterLogs: "กรองบันทึก",
-    noActivities: "ยังไม่มีกิจกรรม",
 
     // Settings
     business: "ข้อมูลธุรกิจ",

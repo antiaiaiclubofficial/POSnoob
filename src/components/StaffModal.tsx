@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, User, Phone, Briefcase, Camera, Lock, Key, Percent, Upload } from 'lucide-react';
 import { useStore, Staff, StaffRole } from '@/store/useStore';
+import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
 
 interface StaffModalProps {
@@ -11,7 +12,8 @@ interface StaffModalProps {
 }
 
 const StaffModal = ({ staff, onClose }: StaffModalProps) => {
-  const { addStaff, updateStaff } = useStore();
+  const { addStaff, updateStaff, language } = useStore();
+  const t = translations[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -46,7 +48,6 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, avatar: reader.result as string }));
-        toast.info("Profile image updated in preview");
       };
       reader.readAsDataURL(file);
     }
@@ -55,16 +56,16 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.phone) {
-      toast.error("Name and Phone are required");
+      toast.error(language === 'th' ? "กรุณากรอกชื่อและเบอร์โทรศัพท์" : "Name and Phone are required");
       return;
     }
 
     if (staff) {
       updateStaff(staff.id, formData);
-      toast.success("Staff updated successfully");
+      toast.success(language === 'th' ? "อัปเดตข้อมูลพนักงานเรียบร้อย" : "Staff updated successfully");
     } else {
       addStaff(formData);
-      toast.success("New staff registered");
+      toast.success(language === 'th' ? "เพิ่มพนักงานใหม่เรียบร้อย" : "New staff registered");
     }
     onClose();
   };
@@ -74,8 +75,8 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
       <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-8 border-b border-gray-50 flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold text-[#1A1F3D]">{staff ? 'Edit Staff' : 'Add New Staff'}</h2>
-            <p className="text-xs text-gray-400 font-medium">Manage team member details & login access</p>
+            <h2 className="text-2xl font-bold text-[#1A1F3D]">{staff ? t.editStaff : t.addStaff}</h2>
+            <p className="text-xs text-gray-400 font-medium">{t.staffManagement}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
             <X size={20} className="text-gray-400" />
@@ -91,7 +92,6 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                 </div>
                 <div className="absolute inset-0 bg-[#1A1F3D]/40 rounded-[32px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <Camera className="text-white mb-1" size={20} />
-                  <span className="text-[8px] text-white font-black uppercase">Change</span>
                 </div>
                 <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#1A1F3D] text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white">
                   <Upload size={12} />
@@ -108,7 +108,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
 
           <div className="space-y-4">
             <div className="bg-blue-50/50 p-6 rounded-[28px] border border-blue-100 space-y-4 mb-2">
-              <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest px-1">Login Credentials</p>
+              <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest px-1">{t.loginCredentials}</p>
               <div>
                 <div className="relative">
                   <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300" size={18} />
@@ -117,7 +117,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                     className="w-full bg-white border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500/10"
                     value={formData.username}
                     onChange={e => setFormData({...formData, username: e.target.value})}
-                    placeholder="Login Username"
+                    placeholder={t.loginUsername}
                   />
                 </div>
               </div>
@@ -129,14 +129,14 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                     className="w-full bg-white border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500/10"
                     value={formData.password}
                     onChange={e => setFormData({...formData, password: e.target.value})}
-                    placeholder="Login Password"
+                    placeholder={t.loginPassword}
                   />
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">Profile Info</p>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">{t.profileInfo}</p>
               <div>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
@@ -145,14 +145,14 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                     className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold"
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
-                    placeholder="Employee Full Name"
+                    placeholder={t.employeeFullName}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Role</label>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">{t.role}</label>
                   <div className="relative">
                     <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
                     <select 
@@ -167,7 +167,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Commission (%)</label>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">{t.commissionRate}</label>
                   <div className="relative">
                     <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
                     <input 
@@ -183,7 +183,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Phone</label>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">{t.phone}</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                     <input 
@@ -191,19 +191,19 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                       className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold"
                       value={formData.phone}
                       onChange={e => setFormData({...formData, phone: e.target.value})}
-                      placeholder="Contact Number"
+                      placeholder={t.contactNumber}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Status</label>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">{t.status}</label>
                   <select 
                     className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3.5 text-xs font-bold appearance-none"
                     value={formData.status}
                     onChange={e => setFormData({...formData, status: e.target.value as any})}
                   >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="Active">{t.active}</option>
+                    <option value="Inactive">{t.inactive}</option>
                   </select>
                 </div>
               </div>
@@ -211,7 +211,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
           </div>
 
           <button className="w-full bg-[#1A1F3D] text-white font-black py-4 rounded-2xl shadow-xl shadow-[#1A1F3D]/10 hover:bg-[#2A3152] transition-all mt-4">
-            {staff ? 'Update Staff Member' : 'Add to Team'}
+            {staff ? t.updateStaffMember : t.addToTeam}
           </button>
         </form>
       </div>
