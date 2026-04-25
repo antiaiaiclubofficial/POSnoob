@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft } from 'lucide-react';
+import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck } from 'lucide-react';
 import { useStore, Customer, Pet } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import CustomerModal from '@/components/CustomerModal';
 import PetModal from '@/components/PetModal';
 import PetProfileRecord from '@/components/PetProfileRecord';
+import LineBindingModal from '@/components/LineBindingModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const Customers = () => {
@@ -21,6 +22,8 @@ const Customers = () => {
   
   const [isPetModalOpen, setIsPetModalOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
+
+  const [isLineModalOpen, setIsLineModalOpen] = useState(false);
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -85,7 +88,10 @@ const Customers = () => {
               )}
             >
               <div>
-                <p className="font-bold text-sm">{customer.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-sm">{customer.name}</p>
+                  {customer.lineId && <div className="w-2 h-2 bg-green-500 rounded-full" title="LINE Connected" />}
+                </div>
                 <p className={cn("text-[10px]", selectedCustomerId === customer.id ? "text-white/60" : "text-gray-400")}>
                   {customer.pets.length} Pets • {customer.membership}
                 </p>
@@ -135,9 +141,28 @@ const Customers = () => {
                       <Edit3 size={18} />
                     </button>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
                     <span className="flex items-center gap-1.5 text-[10px] lg:text-xs text-gray-400 font-bold"><Phone size={14}/> {selectedCustomer.phone}</span>
                     <span className="flex items-center gap-1.5 text-[10px] lg:text-xs text-gray-400 font-bold"><Mail size={14}/> {selectedCustomer.email}</span>
+                  </div>
+
+                  {/* LINE Binding Section */}
+                  <div className="pt-2">
+                    {selectedCustomer.lineId ? (
+                      <div className="flex items-center gap-2 bg-green-50 text-green-600 px-4 py-2 rounded-xl border border-green-100 w-fit">
+                        <MessageSquare size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">LINE Connected</span>
+                        <BadgeCheck size={14} />
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => setIsLineModalOpen(true)}
+                        className="flex items-center gap-2 bg-[#F5F6FA] text-gray-400 hover:text-green-600 hover:bg-green-50 hover:border-green-100 border border-transparent px-4 py-2 rounded-xl transition-all w-fit"
+                      >
+                        <MessageSquare size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Connect LINE</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -198,6 +223,13 @@ const Customers = () => {
           customerId={selectedCustomer.id} 
           pet={editingPet}
           onClose={() => setIsPetModalOpen(false)} 
+        />
+      )}
+
+      {isLineModalOpen && selectedCustomer && (
+        <LineBindingModal 
+          customer={selectedCustomer}
+          onClose={() => setIsLineModalOpen(false)}
         />
       )}
     </div>

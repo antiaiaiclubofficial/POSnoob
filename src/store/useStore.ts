@@ -69,6 +69,7 @@ export interface Customer {
   points: number;
   pets: Pet[];
   totalSpent: number;
+  lineId?: string; // เพิ่มเพื่อรองรับการเชื่อมต่อ LINE
 }
 
 export interface Transaction {
@@ -224,6 +225,7 @@ interface AppState {
 
   addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'totalSpent'>) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
+  bindLineToCustomer: (customerId: string, lineId: string) => void; // ฟังก์ชันผูก LINE
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
   updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
@@ -532,6 +534,14 @@ export const useStore = create<AppState>((set, get) => ({
       customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c)
     }));
     addLog({ staffName: currentUser?.name || 'Unknown', action: 'Update Customer', details: `Modified: ${customer?.name}`, type: 'warning' });
+  },
+  bindLineToCustomer: (customerId, lineId) => {
+    const { currentUser, addLog, customers } = get();
+    const customer = customers.find(c => c.id === customerId);
+    set((state) => ({
+      customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c)
+    }));
+    addLog({ staffName: currentUser?.name || 'Unknown', action: 'LINE Binding', details: `Connected LINE to ${customer?.name}`, type: 'success' });
   },
   addPet: (customerId, petData) => {
     const { currentUser, addLog, customers } = get();
