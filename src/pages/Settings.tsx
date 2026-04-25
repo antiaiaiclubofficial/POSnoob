@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send
+  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -30,14 +30,18 @@ const Settings = () => {
   const { 
     tierRules, updateTierRules, 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen, recurringHolidays, specificHolidays,
+    receiptHeader, receiptFooter, receiptPaperSize,
     lineLiffId, lineChannelToken,
     updateBusinessProfile,
     services, deleteService, toggleServiceActive,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings
   } = useStore();
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
   const [localShopName, setLocalShopName] = useState(shopName);
+  const [localShopLogo, setLocalShopLogo] = useState(shopLogo);
   const [localShopAddress, setLocalShopAddress] = useState(shopAddress);
   const [localShopPhone, setLocalShopPhone] = useState(shopPhone);
   const [localShopLineId, setLocalShopLineId] = useState(shopLineId);
@@ -46,6 +50,10 @@ const Settings = () => {
   const [localRecurringHolidays, setLocalRecurringHolidays] = useState<number[]>(recurringHolidays);
   const [localSpecificHolidays, setLocalSpecificHolidays] = useState<string[]>(specificHolidays);
   
+  const [localReceiptHeader, setLocalReceiptHeader] = useState(receiptHeader);
+  const [localReceiptFooter, setLocalReceiptFooter] = useState(receiptFooter);
+  const [localReceiptPaperSize, setLocalReceiptPaperSize] = useState<'58mm' | '80mm'>(receiptPaperSize);
+
   const [localLineLiffId, setLocalLineLiffId] = useState(lineLiffId);
   const [localLineChannelToken, setLocalLineChannelToken] = useState(lineChannelToken);
 
@@ -65,13 +73,29 @@ const Settings = () => {
     s.title.toLowerCase().includes(serviceQuery.toLowerCase())
   );
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLocalShopLogo(reader.result as string);
+        toast.info("Logo preview updated. Don't forget to Save All.");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveAll = () => {
     updateTierRules(localTierRules);
     updateBusinessProfile({ 
       shopName: localShopName, 
+      shopLogo: localShopLogo,
       shopAddress: localShopAddress,
       shopPhone: localShopPhone,
       shopLineId: localShopLineId,
+      receiptHeader: localReceiptHeader,
+      receiptFooter: localReceiptFooter,
+      receiptPaperSize: localReceiptPaperSize,
       currency: localCurrency,
       shopIsOpen: localShopIsOpen,
       recurringHolidays: localRecurringHolidays,
@@ -175,52 +199,137 @@ const Settings = () => {
 
           <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                      <Store size={24} />
+              <div className="space-y-8">
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                        <Store size={24} />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Shop Management</h2>
+                        <p className="text-xs text-gray-400">Identity and shop status</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Shop Management</h2>
-                      <p className="text-xs text-gray-400">Current status and contact info</p>
+                    <div className={cn(
+                      "flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all",
+                      localShopIsOpen ? "bg-green-50 border-green-100" : "bg-red-50 border-red-100"
+                    )}>
+                      <span className={cn("text-[10px] font-black uppercase tracking-widest", localShopIsOpen ? "text-green-600" : "text-red-600")}>
+                        {localShopIsOpen ? 'Open' : 'Closed'}
+                      </span>
+                      <Switch checked={localShopIsOpen} onCheckedChange={setLocalShopIsOpen} className="data-[state=checked]:bg-green-600" />
                     </div>
                   </div>
-                  <div className={cn(
-                    "flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all",
-                    localShopIsOpen ? "bg-green-50 border-green-100" : "bg-red-50 border-red-100"
-                  )}>
-                    <span className={cn("text-[10px] font-black uppercase tracking-widest", localShopIsOpen ? "text-green-600" : "text-red-600")}>
-                      {localShopIsOpen ? 'Open' : 'Closed'}
-                    </span>
-                    <Switch checked={localShopIsOpen} onCheckedChange={setLocalShopIsOpen} className="data-[state=checked]:bg-green-600" />
-                  </div>
-                </div>
-                
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                      <Store size={12} /> Shop Name
-                    </label>
-                    <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopName} onChange={(e) => setLocalShopName(e.target.value)} />
+
+                  {/* Logo Upload */}
+                  <div className="flex flex-col items-center gap-4 bg-[#F5F6FA] p-8 rounded-[32px] relative overflow-hidden">
+                    <div className="relative group">
+                      <div className="w-24 h-24 bg-white rounded-[28px] overflow-hidden shadow-md border-2 border-dashed border-gray-200 flex items-center justify-center">
+                        {localShopLogo ? (
+                          <img src={localShopLogo} alt="Shop Logo" className="w-full h-full object-cover" />
+                        ) : (
+                          <Scissors className="text-gray-200" size={32} />
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -bottom-2 -right-2 bg-[#1A1F3D] text-white p-2 rounded-xl shadow-lg hover:scale-110 transition-transform"
+                      >
+                        <Camera size={16} />
+                      </button>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Shop Logo</p>
+                      <p className="text-[8px] text-gray-300 font-bold mt-1">Recommended: Square PNG/JPG</p>
+                    </div>
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-6">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                        <Phone size={12} /> Phone Number
+                        <Store size={12} /> Shop Name
                       </label>
-                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopPhone} onChange={(e) => setLocalShopPhone(e.target.value)} />
+                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopName} onChange={(e) => setLocalShopName(e.target.value)} />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                        <MessageSquare size={12} /> Line ID
-                      </label>
-                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopLineId} onChange={(e) => setLocalShopLineId(e.target.value)} />
+                    
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                          <Phone size={12} /> Phone Number
+                        </label>
+                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopPhone} onChange={(e) => setLocalShopPhone(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                          <MessageSquare size={12} /> Line ID
+                        </label>
+                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopLineId} onChange={(e) => setLocalShopLineId(e.target.value)} />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </section>
+                </section>
+
+                {/* Receipt Section */}
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
+                      <FileText size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Receipt Configuration</h2>
+                      <p className="text-xs text-gray-400">Customize your customer bills</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2 flex items-center gap-2">
+                        <Layout size={12} /> Paper Size
+                      </label>
+                      <div className="flex bg-[#F5F6FA] p-1.5 rounded-2xl gap-2">
+                        {(['58mm', '80mm'] as const).map(size => (
+                          <button 
+                            key={size}
+                            onClick={() => setLocalReceiptPaperSize(size)}
+                            className={cn(
+                              "flex-1 py-3 rounded-xl text-[10px] font-black transition-all",
+                              localReceiptPaperSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400"
+                            )}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                        <AlignLeft size={12} /> Header Text
+                      </label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" 
+                        value={localReceiptHeader} 
+                        onChange={(e) => setLocalReceiptHeader(e.target.value)} 
+                        placeholder="e.g. Tactile Sanctuary - Bangkok"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                        <FileText size={12} /> Footer Text / Policy
+                      </label>
+                      <textarea 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" 
+                        value={localReceiptFooter} 
+                        onChange={(e) => setLocalReceiptFooter(e.target.value)}
+                        placeholder="e.g. Terms, Return policy or Thank you note"
+                      />
+                    </div>
+                  </div>
+                </section>
+              </div>
 
               <div className="space-y-8">
                 <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
@@ -289,7 +398,7 @@ const Settings = () => {
                         nav_button_previous: "absolute left-1",
                         nav_button_next: "absolute right-1",
                         table: "w-full border-collapse",
-                        head_row: "flex w-full justify-center mb-2",
+                        head_row: "flex w-full justify-between mb-2",
                         head_cell: "text-gray-300 w-9 font-black text-[8px] uppercase text-center",
                         row: "flex w-full justify-center mt-1",
                         cell: "relative p-0 text-center text-xs w-9",

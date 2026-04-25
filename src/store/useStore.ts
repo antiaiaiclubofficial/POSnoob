@@ -154,6 +154,8 @@ interface AppState {
   shopPhone: string;
   shopLineId: string;
   receiptHeader: string;
+  receiptFooter: string;
+  receiptPaperSize: '58mm' | '80mm';
   currency: string;
   shopIsOpen: boolean;
   recurringHolidays: number[];
@@ -193,6 +195,8 @@ interface AppState {
     shopPhone?: string,
     shopLineId?: string,
     receiptHeader?: string,
+    receiptFooter?: string,
+    receiptPaperSize?: '58mm' | '80mm',
     currency?: string,
     shopIsOpen?: boolean,
     recurringHolidays?: number[],
@@ -270,7 +274,9 @@ export const useStore = create<AppState>((set, get) => ({
   shopAddress: "123 Pet Street, Bangkok, Thailand",
   shopPhone: "02-xxx-xxxx",
   shopLineId: "@tactilesanctuary",
-  receiptHeader: "Thank you for visiting us!",
+  receiptHeader: "Tactile Sanctuary - Premium Pet Care",
+  receiptFooter: "Thank you for trusting us with your furry friend!",
+  receiptPaperSize: '58mm',
   currency: "฿",
   shopIsOpen: true,
   recurringHolidays: [],
@@ -343,6 +349,8 @@ export const useStore = create<AppState>((set, get) => ({
       shopPhone: profile.shopPhone ?? state.shopPhone,
       shopLineId: profile.shopLineId ?? state.shopLineId,
       receiptHeader: profile.receiptHeader ?? state.receiptHeader,
+      receiptFooter: profile.receiptFooter ?? state.receiptFooter,
+      receiptPaperSize: profile.receiptPaperSize ?? state.receiptPaperSize,
       currency: profile.currency ?? state.currency,
       shopIsOpen: profile.shopIsOpen ?? state.shopIsOpen,
       recurringHolidays: profile.recurringHolidays ?? state.recurringHolidays,
