@@ -7,17 +7,52 @@ import {
   ChevronRight, Scissors, Calendar, Award, Target, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, isWithinInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { 
+  format, startOfDay, endOfDay, startOfWeek, endOfWeek, 
+  startOfMonth, endOfMonth, startOfYear, endOfYear 
+} from 'date-fns';
 
 const StaffPerformance = () => {
   const { staff, transactions, currency } = useStore();
   const [selectedStaffId, setSelectedStaffId] = useState<string>(staff[0]?.id || '');
+  const [rangeType, setRangeType] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  
   const [dateRange, setDateRange] = useState({
     start: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
     end: format(endOfMonth(new Date()), 'yyyy-MM-dd')
   });
 
   const activeStaff = staff.find(s => s.id === selectedStaffId);
+
+  const handleRangeSelect = (type: 'today' | 'week' | 'month' | 'year') => {
+    setRangeType(type);
+    const now = new Date();
+    let start, end;
+
+    switch(type) {
+      case 'today':
+        start = startOfDay(now);
+        end = endOfDay(now);
+        break;
+      case 'week':
+        start = startOfWeek(now, { weekStartsOn: 1 });
+        end = endOfWeek(now, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        start = startOfMonth(now);
+        end = endOfMonth(now);
+        break;
+      case 'year':
+        start = startOfYear(now);
+        end = endOfYear(now);
+        break;
+    }
+
+    setDateRange({
+      start: format(start, 'yyyy-MM-dd'),
+      end: format(end, 'yyyy-MM-dd')
+    });
+  };
 
   const stats = useMemo(() => {
     if (!selectedStaffId) return null;
@@ -34,7 +69,6 @@ const StaffPerformance = () => {
     const dogsCount = filteredTx.filter(tx => tx.species.includes('Dog')).length;
     const catsCount = filteredTx.filter(tx => tx.species.includes('Cat')).length;
     
-    // คำนวณระยะเวลาเฉลี่ย
     const timedTx = filteredTx.filter(tx => tx.actualDuration !== undefined);
     const avgDuration = timedTx.length > 0 
       ? Math.round(timedTx.reduce((acc, tx) => acc + (tx.actualDuration || 0), 0) / timedTx.length)
@@ -59,7 +93,7 @@ const StaffPerformance = () => {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
-      <header className="px-10 py-10 shrink-0 flex justify-between items-end">
+      <header className="px-10 py-10 shrink-0 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Target size={14} className="text-[#D9ED5F]" />
@@ -68,20 +102,44 @@ const StaffPerformance = () => {
           <h1 className="text-4xl font-black text-[#1A1F3D]">Staff Analytics</h1>
         </div>
 
-        <div className="flex gap-4 bg-white p-2 rounded-[24px] border border-gray-100 shadow-sm">
-          <input 
-            type="date" 
-            className="bg-[#F5F6FA] border-none rounded-xl px-4 py-2 text-xs font-bold"
-            value={dateRange.start}
-            onChange={e => setDateRange({...dateRange, start: e.target.value})}
-          />
-          <span className="flex items-center text-gray-300">to</span>
-          <input 
-            type="date" 
-            className="bg-[#F5F6FA] border-none rounded-xl px-4 py-2 text-xs font-bold"
-            value={dateRange.end}
-            onChange={e => setDateRange({...dateRange, end: e.target.value})}
-          />
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          {/* Quick Range Selection */}
+          <div className="flex bg-white p-1.5 rounded-[22px] border border-gray-100 shadow-sm gap-1">
+            {(['today', 'week', 'month', 'year'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => handleRangeSelect(type)}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all",
+                  rangeType === type ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-3 bg-white p-2 rounded-[24px] border border-gray-100 shadow-sm">
+            <input 
+              type="date" 
+              className="bg-[#F5F6FA] border-none rounded-xl px-4 py-2 text-xs font-bold"
+              value={dateRange.start}
+              onChange={e => {
+                setDateRange({...dateRange, start: e.target.value});
+                setRangeType('custom');
+              }}
+            />
+            <span className="flex items-center text-gray-300">to</span>
+            <input 
+              type="date" 
+              className="bg-[#F5F6FA] border-none rounded-xl px-4 py-2 text-xs font-bold"
+              value={dateRange.end}
+              onChange={e => {
+                setDateRange({...dateRange, end: e.target.value});
+                setRangeType('custom');
+              }}
+            />
+          </div>
         </div>
       </header>
 
