@@ -22,6 +22,7 @@ import {
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { translations } from '@/utils/translations';
 import { 
   ResponsiveContainer, 
   BarChart, 
@@ -42,10 +43,10 @@ import {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { queue, transactions, inventory, customers, currency, kennelCapacity } = useStore();
+  const { queue, transactions, inventory, customers, currency, kennelCapacity, language } = useStore();
+  const t = translations[language];
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  // Daily Key Metrics
   const todayQueue = queue.filter(q => q.date === today);
   const todayTransactions = transactions.filter(t => t.date === today);
   
@@ -56,7 +57,6 @@ const Dashboard = () => {
     revenue: todayTransactions.reduce((acc, t) => acc + t.amount, 0)
   };
 
-  // 1. Busy Hours Logic (Real Data)
   const busyHoursData = useMemo(() => {
     const hoursMap: Record<string, number> = {};
     for (let i = 9; i <= 19; i += 2) {
@@ -81,7 +81,6 @@ const Dashboard = () => {
     return Object.entries(hoursMap).map(([hour, pets]) => ({ hour, pets }));
   }, [todayQueue]);
 
-  // 2. Customer Loyalty Logic (Real Data)
   const loyaltyData = useMemo(() => {
     if (customers.length === 0) return { regulars: 0, new: 0, percentRegular: 0, percentNew: 0 };
 
@@ -106,11 +105,9 @@ const Dashboard = () => {
     };
   }, [customers, transactions]);
 
-  // Kennel Status
   const occupiedKennels = todayQueue.filter(q => q.status === 'Checked-in' || q.status === 'In Progress').length;
   const availableKennels = Math.max(0, kennelCapacity - occupiedKennels);
 
-  // Alerts
   const lowStockItems = inventory.filter(i => i.stock <= i.minStock);
   const specialCarePets = useMemo(() => {
     const todayPetIds = todayQueue.map(q => q.petId);
@@ -133,10 +130,10 @@ const Dashboard = () => {
         <div className="pl-14 lg:pl-0">
           <div className="flex items-center gap-2 mb-1">
             <LineChartIcon size={14} className="text-[#D9ED5F]" />
-            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Operational Overview</p>
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">{t.dailyOverview}</p>
           </div>
-          <h1 className="text-3xl font-black text-[#1A1F3D]">Hello, Admin!</h1>
-          <p className="text-xs text-gray-400 font-bold mt-1">Today is {format(new Date(), 'EEEE, MMMM do')}</p>
+          <h1 className="text-3xl font-black text-[#1A1F3D]">{t.helloAdmin}</h1>
+          <p className="text-xs text-gray-400 font-bold mt-1">{t.todayIs} {format(new Date(), 'EEEE, MMMM do')}</p>
         </div>
         <div className="flex gap-3 mt-4 sm:mt-0">
           <Popover>
@@ -150,7 +147,7 @@ const Dashboard = () => {
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0 rounded-[32px] border-gray-100 shadow-2xl overflow-hidden" align="end">
               <div className="p-5 border-b border-gray-50 bg-[#F8F9FD]">
-                <h4 className="font-black text-[#1A1F3D] text-sm">Notifications</h4>
+                <h4 className="font-black text-[#1A1F3D] text-sm">{t.alerts}</h4>
               </div>
               <div className="max-h-[350px] overflow-y-auto scrollbar-hide">
                 {!hasAlerts ? (
@@ -191,7 +188,7 @@ const Dashboard = () => {
             onClick={() => navigate('/queue')}
             className="bg-[#1A1F3D] text-white px-6 py-4 rounded-2xl flex items-center gap-2 font-black text-sm shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all"
           >
-            <CalendarIcon size={18} /> Manage Schedule
+            <CalendarIcon size={18} /> {language === 'th' ? 'จัดการตารางงาน' : 'Manage Schedule'}
           </button>
         </div>
       </header>
@@ -202,22 +199,22 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
               <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-6"><CalendarIcon size={24} /></div>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">Today's Queue</p>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">{t.todaysQueue}</p>
               <h2 className="text-4xl font-black text-[#1A1F3D]">{metrics.totalAppointments}</h2>
             </div>
             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
               <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center mb-6"><Activity size={24} /></div>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">In-Shop / Processing</p>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">{t.inShop}</p>
               <h2 className="text-4xl font-black text-[#1A1F3D]">{metrics.activePets}</h2>
             </div>
             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
               <div className="w-12 h-12 bg-green-50 text-green-500 rounded-2xl flex items-center justify-center mb-6"><CheckCircle2 size={24} /></div>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">Completed Today</p>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">{t.completedToday}</p>
               <h2 className="text-4xl font-black text-[#1A1F3D]">{metrics.completed}</h2>
             </div>
             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
               <div className="w-12 h-12 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center mb-6"><DollarSign size={24} /></div>
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">Daily Revenue</p>
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">{t.dailyRevenue}</p>
               <h2 className="text-4xl font-black text-[#1A1F3D]">{currency}{metrics.revenue.toLocaleString()}</h2>
             </div>
           </div>
@@ -226,8 +223,8 @@ const Dashboard = () => {
             <div className="lg:col-span-2 bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
               <div className="p-10 border-b border-gray-50 flex justify-between items-center">
                 <div>
-                  <h3 className="text-2xl font-black text-[#1A1F3D]">Live Timeline</h3>
-                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Real-time queue monitoring</p>
+                  <h3 className="text-2xl font-black text-[#1A1F3D]">{t.liveTimeline}</h3>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{language === 'th' ? 'ตรวจสอบคิวแบบเรียลไทม์' : 'Real-time queue monitoring'}</p>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-10 space-y-6 max-h-[600px] scrollbar-hide">
@@ -265,7 +262,7 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><Home size={20} /></div>
-                    <h3 className="text-xl font-black text-[#1A1F3D]">Kennel Status</h3>
+                    <h3 className="text-xl font-black text-[#1A1F3D]">{t.kennelStatus}</h3>
                   </div>
                   <span className="text-[10px] font-black text-gray-400">{occupiedKennels}/{kennelCapacity}</span>
                 </div>
@@ -280,7 +277,7 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-red-50 text-red-500 rounded-2xl"><Bell size={20} /></div>
-                    <h3 className="text-xl font-black text-[#1A1F3D]">Alerts</h3>
+                    <h3 className="text-xl font-black text-[#1A1F3D]">{t.alerts}</h3>
                   </div>
                 </div>
                 {lowStockItems.length > 0 && (
@@ -301,8 +298,8 @@ const Dashboard = () => {
             <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h3 className="text-xl font-black text-[#1A1F3D]">Busy Hours</h3>
-                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Booking density per time slot</p>
+                  <h3 className="text-xl font-black text-[#1A1F3D]">{t.busyHours}</h3>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{language === 'th' ? 'ความหนาแน่นของการจองตามช่วงเวลา' : 'Booking density per time slot'}</p>
                 </div>
                 <TrendingUp size={20} className="text-blue-500" />
               </div>
@@ -323,20 +320,20 @@ const Dashboard = () => {
 
             <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-10">
               <div className="flex-1">
-                <h3 className="text-xl font-black text-[#1A1F3D]">Customer Loyalty</h3>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1 mb-8">Retention analysis</p>
+                <h3 className="text-xl font-black text-[#1A1F3D]">{t.customerLoyalty}</h3>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1 mb-8">{language === 'th' ? 'วิเคราะห์การกลับมาใช้บริการ' : 'Retention analysis'}</p>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                        <div className="w-3 h-3 rounded-full bg-[#1A1F3D]" />
-                       <span className="text-xs font-bold text-gray-500">Regulars</span>
+                       <span className="text-xs font-bold text-gray-500">{language === 'th' ? 'ลูกค้าประจำ' : 'Regulars'}</span>
                     </div>
                     <span className="text-sm font-black text-[#1A1F3D]">{loyaltyData.percentRegular}%</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                        <div className="w-3 h-3 rounded-full bg-[#D9ED5F]" />
-                       <span className="text-xs font-bold text-gray-500">New Clients</span>
+                       <span className="text-xs font-bold text-gray-500">{language === 'th' ? 'ลูกค้าใหม่' : 'New Clients'}</span>
                     </div>
                     <span className="text-sm font-black text-[#1A1F3D]">{loyaltyData.percentNew}%</span>
                   </div>

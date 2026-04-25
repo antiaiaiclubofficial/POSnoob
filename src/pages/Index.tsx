@@ -7,6 +7,7 @@ import CustomerSearch from '@/components/CustomerSearch';
 import CustomerModal from '@/components/CustomerModal';
 import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2, Dog, Cat } from 'lucide-react';
 import { useStore, QueueItem } from '@/store/useStore';
+import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -23,20 +24,21 @@ const Index = () => {
     queue, 
     customers,
     setActiveQueueItem,
-    cart
+    cart,
+    language
   } = useStore();
+
+  const t = translations[language];
 
   const [speciesFilter, setSpeciesFilter] = useState<'Dog' | 'Cat'>('Dog');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
-  // เมื่อเลือกสัตว์เลี้ยง ให้ปรับตัวกรองประเภทสัตว์โดยอัตโนมัติ
   useEffect(() => {
     if (activePet) {
       setSpeciesFilter(activePet.species === 'Dog' ? 'Dog' : 'Cat');
     }
   }, [activePet]);
 
-  // รายการที่เข้าสู่กระบวนการแล้วและยังไม่ได้จ่ายเงิน
   const pendingCheckout = queue.filter(q => 
     (q.status !== 'Waiting') && !q.isPaid
   );
@@ -64,16 +66,16 @@ const Index = () => {
           <div className="pl-14 lg:pl-0">
             <div className="flex items-center gap-2 mb-1">
               <Sparkles size={14} className="text-[#D9ED5F]" />
-              <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Point of Sale</p>
+              <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">{t.pointOfSale}</p>
             </div>
-            <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">POS System</h1>
+            <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">{t.pos}</h1>
           </div>
           <button 
             onClick={() => setIsCustomerModalOpen(true)}
             className="hidden sm:flex items-center gap-2 bg-[#D9ED5F] text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
           >
             <UserPlus size={16} />
-            New Customer
+            {t.newCustomer}
           </button>
         </header>
 
@@ -97,12 +99,11 @@ const Index = () => {
             )}
           </div>
 
-          {/* Quick Queue Bar */}
           {pendingCheckout.length > 0 && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Active Services ({pendingCheckout.length})</span>
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{t.activeServices} ({pendingCheckout.length})</span>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {pendingCheckout.map(item => (
@@ -122,7 +123,7 @@ const Index = () => {
                         "text-[9px] font-bold uppercase tracking-tighter",
                         item.status === 'Completed' ? "text-green-600" : "text-gray-400"
                       )}>
-                        {item.status === 'Completed' ? 'Ready to Pay' : 'In Service'}
+                        {item.status === 'Completed' ? t.readyToPay : t.inProgress}
                       </p>
                     </div>
                   </button>
@@ -131,7 +132,6 @@ const Index = () => {
             </div>
           )}
 
-          {/* Species & Pet Selector */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="bg-white p-1.5 rounded-[22px] shadow-sm border border-gray-100 flex gap-1 w-fit shrink-0">
               <button 
@@ -141,7 +141,7 @@ const Index = () => {
                   speciesFilter === 'Dog' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400 hover:text-gray-600"
                 )}
               >
-                <Dog size={14} /> DOGS
+                <Dog size={14} /> {language === 'th' ? 'สุนัข' : 'DOGS'}
               </button>
               <button 
                 onClick={() => setSpeciesFilter('Cat')}
@@ -150,13 +150,13 @@ const Index = () => {
                   speciesFilter === 'Cat' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400 hover:text-gray-600"
                 )}
               >
-                <Cat size={14} /> CATS
+                <Cat size={14} /> {language === 'th' ? 'แมว' : 'CATS'}
               </button>
             </div>
 
             {selectedOwner && (
               <div className="flex-1 bg-white p-1.5 rounded-[22px] shadow-sm border border-gray-100 flex items-center gap-2 overflow-x-auto scrollbar-hide animate-in fade-in slide-in-from-left-2">
-                <span className="px-3 py-1 border-r border-gray-100 text-[8px] font-black text-gray-300 uppercase tracking-widest shrink-0">Select Pet</span>
+                <span className="px-3 py-1 border-r border-gray-100 text-[8px] font-black text-gray-300 uppercase tracking-widest shrink-0">{t.selectPet}</span>
                 <div className="flex gap-1">
                   {selectedOwner.pets.filter(p => p.species === speciesFilter).map(pet => (
                     <button
@@ -176,9 +176,6 @@ const Index = () => {
                       {pet.name}
                     </button>
                   ))}
-                  {selectedOwner.pets.filter(p => p.species === speciesFilter).length === 0 && (
-                    <p className="text-[9px] text-gray-300 font-bold px-4">No {speciesFilter}s found</p>
-                  )}
                 </div>
               </div>
             )}
@@ -189,7 +186,7 @@ const Index = () => {
           {filteredServices.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
               <ShoppingBag size={48} className="mb-4" />
-              <h2 className="text-xl font-black">No services found</h2>
+              <h2 className="text-xl font-black">{language === 'th' ? 'ไม่พบบริการ' : 'No services found'}</h2>
               <p className="text-xs font-bold uppercase">For {speciesFilter} category</p>
             </div>
           ) : (
@@ -218,7 +215,7 @@ const Index = () => {
                   </span>
                 </div>
                 <div className="text-left">
-                  <p className="text-[8px] font-black uppercase opacity-60 leading-none mb-0.5">View Cart</p>
+                  <p className="text-[8px] font-black uppercase opacity-60 leading-none mb-0.5">{language === 'th' ? 'ดูตะกร้า' : 'View Cart'}</p>
                   <p className="text-sm font-black">฿{cartTotal.toLocaleString()}</p>
                 </div>
               </button>
