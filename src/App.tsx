@@ -10,6 +10,7 @@ import Queue from "./pages/Queue";
 import Services from "./pages/Services";
 import Customers from "./pages/Customers";
 import Staff from "./pages/Staff";
+import StaffPerformance from "./pages/StaffPerformance";
 import Logs from "./pages/Logs";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/services" element={<Services />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/staff" element={<Staff />} />
+            <Route path="/staff/performance" element={<StaffPerformance />} />
             <Route path="/logs" element={<Logs />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />

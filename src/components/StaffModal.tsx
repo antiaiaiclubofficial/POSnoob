@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, User, Phone, Briefcase, Camera, Lock, Key } from 'lucide-react';
+import { X, User, Phone, Briefcase, Camera, Lock, Key, Percent } from 'lucide-react';
 import { useStore, Staff, StaffRole } from '@/store/useStore';
 import { toast } from 'sonner';
 
@@ -19,7 +19,8 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
     status: 'Active' as 'Active' | 'Inactive',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
     username: '',
-    password: ''
+    password: '',
+    commissionRate: 0
   });
 
   useEffect(() => {
@@ -31,7 +32,8 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
         status: staff.status,
         avatar: staff.avatar,
         username: staff.username || '',
-        password: staff.password || ''
+        password: staff.password || '',
+        commissionRate: staff.commissionRate || 0
       });
     }
   }, [staff]);
@@ -137,6 +139,35 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                   </div>
                 </div>
                 <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Commission (%)</label>
+                  <div className="relative">
+                    <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                    <input 
+                      type="number"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-3.5 text-xs font-bold"
+                      value={formData.commissionRate}
+                      onChange={e => setFormData({...formData, commissionRate: Number(e.target.value)})}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Phone</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                    <input 
+                      type="tel"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold"
+                      value={formData.phone}
+                      onChange={e => setFormData({...formData, phone: e.target.value})}
+                      placeholder="Contact Number"
+                    />
+                  </div>
+                </div>
+                <div>
                   <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Status</label>
                   <select 
                     className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3.5 text-xs font-bold appearance-none"
@@ -146,19 +177,6 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                   </select>
-                </div>
-              </div>
-
-              <div>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                  <input 
-                    type="tel"
-                    className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold"
-                    value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
-                    placeholder="Contact Number"
-                  />
                 </div>
               </div>
             </div>

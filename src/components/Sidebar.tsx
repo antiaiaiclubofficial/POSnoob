@@ -13,7 +13,8 @@ import {
   Menu,
   ShieldCheck,
   History,
-  CalendarDays
+  CalendarDays,
+  Target
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -27,6 +28,7 @@ const menuItems = [
   { icon: CalendarDays, label: 'Pet Queue', path: '/queue' },
   { icon: Users, label: 'Customers', path: '/customers' },
   { icon: ShieldCheck, label: 'Staff Management', path: '/staff' },
+  { icon: Target, label: 'Staff Performance', path: '/staff/performance' },
   { icon: History, label: 'Activity Logs', path: '/logs' },
   { icon: BarChart3, label: 'Reports', path: '/reports' },
   { icon: SettingsIcon, label: 'Settings', path: '/settings' },
@@ -55,7 +57,6 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
       "w-[88px] hover:w-64",
       className
     )}>
-      {/* Logo Section */}
       <div className="flex items-center gap-4 mb-10 px-6 pt-8 shrink-0">
         <div className="w-10 h-10 bg-[#1A1F3D] rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-[#1A1F3D]/10">
           {shopLogo ? (
@@ -72,7 +73,6 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 space-y-2 px-4 overflow-y-auto scrollbar-hide">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -97,7 +97,6 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
         })}
       </nav>
 
-      {/* Bottom Section */}
       <div className="mt-auto space-y-4 px-4 pb-8 shrink-0">
         <div className="pt-6 border-t border-gray-50 space-y-1">
           <a 
@@ -133,10 +132,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
 const Sidebar = () => {
   return (
     <>
-      {/* Desktop Sidebar */}
       <SidebarContent className="hidden lg:flex" />
-      
-      {/* Mobile Trigger */}
       <div className="lg:hidden fixed top-6 left-6 z-50">
         <Sheet>
           <SheetTrigger asChild>
