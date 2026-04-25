@@ -274,10 +274,16 @@ const Settings = () => {
                       mode="multiple"
                       selected={localSpecificHolidays.map(date => parseISO(date)).filter(isValid)}
                       onSelect={handleSpecificHolidaySelect}
+                      modifiers={{
+                        weeklyHoliday: (date) => localRecurringHolidays.includes(date.getDay())
+                      }}
+                      modifiersClassNames={{
+                        weeklyHoliday: "bg-red-100 text-red-400 cursor-not-allowed opacity-50"
+                      }}
                       classNames={{
                         month: "space-y-4",
                         caption: "flex justify-center relative items-center mb-4",
-                        caption_label: "text-xs font-black text-[#1A1F3D] uppercase tracking-widest",
+                        caption_label: "text-sm font-black text-[#1A1F3D] uppercase tracking-widest",
                         nav: "flex items-center",
                         nav_button: "h-6 w-6 bg-white hover:bg-gray-100 rounded-lg flex items-center justify-center shadow-sm",
                         nav_button_previous: "absolute left-1",
@@ -302,6 +308,9 @@ const Settings = () => {
                      ))}
                      {localSpecificHolidays.length === 0 && <p className="text-[10px] text-gray-400 italic">No specific holidays selected</p>}
                   </div>
+                  <p className="text-[9px] text-gray-400 font-medium italic mt-2">
+                    * Light red dates are disabled because they are part of your Weekly Holidays.
+                  </p>
                 </section>
               </div>
             </div>
