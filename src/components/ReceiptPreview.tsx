@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { X, Printer, Scissors } from 'lucide-react';
+import { X, Printer, Scissors, QrCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -23,6 +23,9 @@ const ReceiptPreview = ({
   
   const is80mm = paperSize === '80mm';
   
+  // จำลอง Link สำหรับ Electronic Receipt
+  const electronicReceiptUrl = `https://e-receipt.tactilesanctuary.com/view/INV-2024-001`;
+
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
       <div className="bg-[#E5E7EB] w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -52,20 +55,22 @@ const ReceiptPreview = ({
             )}
             style={{ fontSize: is80mm ? '13px' : '11px' }}
           >
-            {/* Header */}
+            {/* Header Area */}
             <div className="text-center space-y-2 mb-6">
               {shopLogo && (
                 <img src={shopLogo} alt="Logo" className="w-16 h-16 mx-auto rounded-xl object-cover mb-4" />
               )}
               <h4 className="font-bold text-base uppercase leading-tight">{shopName}</h4>
-              <p className="opacity-60 text-[10px] leading-relaxed">{shopAddress}</p>
+              <p className="opacity-60 text-[9px] leading-relaxed max-w-[200px] mx-auto">{shopAddress}</p>
               <p className="opacity-60 text-[10px]">Tel: {shopPhone}</p>
               
               <div className="border-t border-dashed border-gray-300 my-4" />
-              <p className="font-bold uppercase tracking-widest">{header || 'Tax Invoice / Receipt'}</p>
+              <p className="font-bold uppercase tracking-widest leading-relaxed">
+                {header || 'Tax Invoice / Receipt'}
+              </p>
             </div>
 
-            {/* Meta */}
+            {/* Meta Info */}
             <div className="space-y-1 mb-6 opacity-80 text-[10px]">
               <div className="flex justify-between">
                 <span>Date:</span>
@@ -89,7 +94,7 @@ const ReceiptPreview = ({
                 <span>Item</span>
                 <span>Total</span>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span>Full Grooming (Large)</span>
@@ -131,21 +136,29 @@ const ReceiptPreview = ({
 
             <div className="border-t border-dashed border-gray-300 my-4" />
 
-            {/* Footer */}
-            <div className="text-center space-y-4">
+            {/* Footer & E-Receipt QR */}
+            <div className="text-center space-y-4 pt-2">
               <p className="whitespace-pre-wrap leading-relaxed opacity-80">{footer || 'Thank you for your visit!'}</p>
               
-              {/* QR Placeholder */}
-              <div className="w-24 h-24 bg-gray-50 border border-gray-100 mx-auto flex flex-col items-center justify-center rounded-lg opacity-40">
-                <div className="w-16 h-16 border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
-                   <span className="text-[8px] font-bold">QR CODE</span>
+              <div className="py-4 flex flex-col items-center gap-3">
+                <div className="p-2 bg-white border border-gray-100 rounded-xl shadow-sm">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(electronicReceiptUrl)}`} 
+                    className="w-24 h-24"
+                    alt="E-Receipt QR"
+                  />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-[#1A1F3D]">Electronic Receipt</p>
+                  <p className="text-[7px] text-gray-400 font-bold">Scan to save your digital copy</p>
                 </div>
               </div>
               
-              <div className="pt-4 flex items-center justify-center gap-2 text-[9px] opacity-40">
+              <div className="pt-2 flex items-center justify-center gap-2 text-[9px] opacity-20">
                 <Scissors size={10} />
                 <div className="flex-1 border-t border-dotted border-gray-300" />
               </div>
+              <p className="text-[7px] opacity-30 font-bold uppercase tracking-tighter">Powered by Elmony POS</p>
             </div>
           </div>
         </div>

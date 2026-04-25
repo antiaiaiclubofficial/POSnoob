@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout, Eye
+  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout, Eye, MapPin
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -282,7 +282,7 @@ const Settings = () => {
                       </div>
                       <div>
                         <h2 className="text-xl font-bold">Receipt Configuration</h2>
-                        <p className="text-xs text-gray-400">Customize your customer bills</p>
+                        <p className="text-xs text-gray-400">Manage business details on bills</p>
                       </div>
                     </div>
                     <button 
@@ -316,25 +316,49 @@ const Settings = () => {
 
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                        <AlignLeft size={12} /> Header Text
+                        <AlignLeft size={12} /> Receipt Header
                       </label>
                       <input 
                         className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" 
                         value={localReceiptHeader} 
                         onChange={(e) => setLocalReceiptHeader(e.target.value)} 
-                        placeholder="e.g. Tactile Sanctuary - Bangkok"
+                        placeholder="e.g. TAX INVOICE / RECEIPT"
                       />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                          <MapPin size={12} /> Shop Address (on Receipt)
+                        </label>
+                        <textarea 
+                          className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-20 resize-none leading-relaxed" 
+                          value={localShopAddress} 
+                          onChange={(e) => setLocalShopAddress(e.target.value)}
+                          placeholder="Store address..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                          <Phone size={12} /> Contact Number (on Receipt)
+                        </label>
+                        <input 
+                          className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" 
+                          value={localShopPhone} 
+                          onChange={(e) => setLocalShopPhone(e.target.value)}
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                        <FileText size={12} /> Footer Text / Policy
+                        <FileText size={12} /> Footer Text / Policies
                       </label>
                       <textarea 
                         className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" 
                         value={localReceiptFooter} 
                         onChange={(e) => setLocalReceiptFooter(e.target.value)}
-                        placeholder="e.g. Terms, Return policy or Thank you note"
+                        placeholder="e.g. Thank you for your visit!"
                       />
                     </div>
                   </div>
