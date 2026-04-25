@@ -256,6 +256,93 @@ const INITIAL_STAFF: Staff[] = [
   { id: 's2', name: 'Sarah Wilson', role: 'Groomer', phone: '081-333-4444', status: 'Active', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop', username: 'sarah', password: 'password' }
 ];
 
+const INITIAL_SERVICES: Service[] = [
+  // Dog Services
+  {
+    id: 'test-d1',
+    title: 'อาบน้ำสุนัข',
+    description: 'อาบน้ำทำความสะอาด ล้างหู และตัดเล็บพื้นฐาน',
+    category: 'Grooming',
+    icon: 'bath',
+    targetSpecies: 'Dog',
+    isActive: true,
+    subServices: ['ตัดเล็บ', 'เช็ดหู', 'เป่าขน'],
+    prices: {
+      'Small (<10kg)': { price: 350, duration: 45 },
+      'Medium (10-25kg)': { price: 500, duration: 60 },
+      'Large (>25kg)': { price: 750, duration: 90 }
+    }
+  },
+  {
+    id: 'test-d2',
+    title: 'อาบน้ำตัดขนสุนัข',
+    description: 'บริการครบวงจร อาบน้ำและตัดแต่งทรงขนตามสายพันธุ์',
+    category: 'Grooming',
+    icon: 'grooming',
+    targetSpecies: 'Dog',
+    isActive: true,
+    subServices: ['ตัดขนตามทรง', 'ไถท้อง/ก้น/อุ้งเท้า', 'อาบน้ำแปรงขน'],
+    prices: {
+      'Small (<10kg)': { price: 550, duration: 90 },
+      'Medium (10-25kg)': { price: 850, duration: 120 },
+      'Large (>25kg)': { price: 1200, duration: 180 }
+    }
+  },
+  {
+    id: 'test-d3',
+    title: 'สปาน้ำนมบำรุงขน',
+    description: 'แช่น้ำนมเกรดพรีเมียม ช่วยให้ขนนุ่มลื่นและลดการอักเสบของผิวหนัง',
+    category: 'Spa',
+    icon: 'spa',
+    targetSpecies: 'Dog',
+    isActive: true,
+    subServices: ['นวดผ่อนคลาย', 'หมักทรีทเม้นท์', 'เป่าขนหอม'],
+    prices: {
+      'Standard Rate': { price: 800, duration: 45 }
+    }
+  },
+  // Cat Services
+  {
+    id: 'test-c1',
+    title: 'อาบน้ำแมว (ขจัดคราบมัน)',
+    description: 'อาบน้ำด้วยแชมพูสูตรพิเศษสำหรับแมวโดยเฉพาะ',
+    category: 'Grooming',
+    icon: 'bath',
+    targetSpecies: 'Cat',
+    isActive: true,
+    subServices: ['ขจัดคราบมัน', 'ตัดเล็บ', 'เช็ดหู'],
+    prices: {
+      'Standard': { price: 450, duration: 60 }
+    }
+  },
+  {
+    id: 'test-c2',
+    title: 'อาบน้ำตัดขนแมว',
+    description: 'ตัดแต่งขนแมวทรง Lion Cut หรือทรงมาตรฐาน พร้อมอาบน้ำ',
+    category: 'Grooming',
+    icon: 'grooming',
+    targetSpecies: 'Cat',
+    isActive: true,
+    subServices: ['ตัดทรงสิงโต', 'อาบน้ำขจัดคราบมัน', 'เป่าขนแห้งสนิท'],
+    prices: {
+      'Standard': { price: 850, duration: 120 }
+    }
+  },
+  {
+    id: 'test-c3',
+    title: 'สปาโอโซนแมว',
+    description: 'ทำความสะอาดล้ำลึกด้วยเครื่องโอโซน ช่วยฆ่าเชื้อแบคทีเรียและลดกลิ่นตัว',
+    category: 'Spa',
+    icon: 'spa',
+    targetSpecies: 'Cat',
+    isActive: true,
+    subServices: ['แช่โอโซน', 'นวดกระตุ้นรูขุมขน', 'เช็ดหูสะอาด'],
+    prices: {
+      'Standard': { price: 950, duration: 60 }
+    }
+  }
+];
+
 const INITIAL_INVENTORY: InventoryItem[] = [
   { id: 'inv1', name: 'Sensitive Shampoo', stock: 3, minStock: 5, unit: 'Bottle' },
   { id: 'inv2', name: 'Pet Perfume (Classic)', stock: 12, minStock: 5, unit: 'Bottle' },
@@ -284,7 +371,7 @@ export const useStore = create<AppState>((set, get) => ({
   lineLiffId: "",
   lineChannelToken: "",
   
-  services: [],
+  services: INITIAL_SERVICES,
   customers: [],
   inventory: INITIAL_INVENTORY,
   staff: INITIAL_STAFF,
