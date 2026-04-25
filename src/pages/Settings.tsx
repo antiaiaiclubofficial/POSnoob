@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Store, Save, ShieldCheck, Image, Trash2, Upload, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, MapPin, Phone, MessageSquare, Receipt, Calendar, AlertCircle, Share2, Smartphone, Send
+  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ import BroadcastModal from '@/components/BroadcastModal';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 import { DayPicker } from 'react-day-picker';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 
 const DAYS_OF_WEEK = [
   { label: 'Sun', value: 0 },
@@ -29,7 +29,7 @@ const DAYS_OF_WEEK = [
 const Settings = () => {
   const { 
     tierRules, updateTierRules, 
-    shopName, shopLogo, shopAddress, shopPhone, shopLineId, receiptHeader, currency, shopIsOpen, recurringHolidays, specificHolidays,
+    shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen, recurringHolidays, specificHolidays,
     lineLiffId, lineChannelToken,
     updateBusinessProfile,
     services, deleteService, toggleServiceActive,
@@ -38,11 +38,9 @@ const Settings = () => {
 
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
   const [localShopName, setLocalShopName] = useState(shopName);
-  const [localShopLogo, setLocalShopLogo] = useState<string | null>(shopLogo);
   const [localShopAddress, setLocalShopAddress] = useState(shopAddress);
   const [localShopPhone, setLocalShopPhone] = useState(shopPhone);
   const [localShopLineId, setLocalShopLineId] = useState(shopLineId);
-  const [localReceiptHeader, setLocalReceiptHeader] = useState(receiptHeader);
   const [localCurrency, setLocalCurrency] = useState(currency);
   const [localShopIsOpen, setLocalShopIsOpen] = useState(shopIsOpen);
   const [localRecurringHolidays, setLocalRecurringHolidays] = useState<number[]>(recurringHolidays);
@@ -57,8 +55,6 @@ const Settings = () => {
   const [localCloseTime, setLocalCloseTime] = useState(closeTime);
 
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [serviceQuery, setServiceQuery] = useState('');
@@ -73,11 +69,9 @@ const Settings = () => {
     updateTierRules(localTierRules);
     updateBusinessProfile({ 
       shopName: localShopName, 
-      shopLogo: localShopLogo,
       shopAddress: localShopAddress,
       shopPhone: localShopPhone,
       shopLineId: localShopLineId,
-      receiptHeader: localReceiptHeader,
       currency: localCurrency,
       shopIsOpen: localShopIsOpen,
       recurringHolidays: localRecurringHolidays,
@@ -91,7 +85,7 @@ const Settings = () => {
       openTime: localOpenTime,
       closeTime: localCloseTime
     });
-    toast.success("All settings saved successfully!");
+    toast.success("All settings saved and shop policy updated!");
   };
 
   const toggleHoliday = (dayValue: number) => {
@@ -103,7 +97,10 @@ const Settings = () => {
   };
 
   const handleSpecificHolidaySelect = (days: Date[] | undefined) => {
-    if (!days) return;
+    if (!days) {
+      setLocalSpecificHolidays([]);
+      return;
+    }
     const dateStrings = days.map(d => format(d, 'yyyy-MM-dd'));
     setLocalSpecificHolidays(dateStrings);
   };
@@ -275,7 +272,7 @@ const Settings = () => {
                   <div className="flex justify-center bg-[#F5F6FA] p-6 rounded-[32px]">
                     <DayPicker
                       mode="multiple"
-                      selected={localSpecificHolidays.map(date => parseISO(date))}
+                      selected={localSpecificHolidays.map(date => parseISO(date)).filter(isValid)}
                       onSelect={handleSpecificHolidaySelect}
                       classNames={{
                         month: "space-y-4",
@@ -342,15 +339,6 @@ const Settings = () => {
                         onChange={(e) => setLocalLineChannelToken(e.target.value)} 
                       />
                     </div>
-                  </div>
-                  
-                  <div className="bg-green-50 p-6 rounded-[28px] border border-green-100">
-                    <h4 className="text-[10px] font-black text-green-700 uppercase tracking-widest mb-2">How to connect?</h4>
-                    <p className="text-[10px] text-green-600 leading-relaxed font-medium">
-                      1. Go to LINE Developers Console<br/>
-                      2. Create a LIFF App and set Endpoint URL to your app URL<br/>
-                      3. Copy LIFF ID and Messaging Channel Token here
-                    </p>
                   </div>
                 </section>
              </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { X, Calendar as CalendarIcon, User, Scissors, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { X, Calendar as CalendarIcon, User, Scissors, ChevronLeft, ChevronRight, AlertTriangle, Ban } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -45,17 +45,21 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
     setSelectedPetId('');
   };
 
-  const isDayDisabled = (date: Date) => {
-    if (isBefore(date, startOfToday())) return true;
-    
-    // Check recurring weekly holidays (0-6)
+  // ตรวจสอบว่าเป็นวันหยุดหรือไม่
+  const isHoliday = (date: Date) => {
+    // 1. ตรวจสอบวันหยุดประจำสัปดาห์ (0 = Sun, 1 = Mon, ...)
     if (recurringHolidays.includes(date.getDay())) return true;
     
-    // Check specific holidays (YYYY-MM-DD)
+    // 2. ตรวจสอบวันหยุดพิเศษ (YYYY-MM-DD)
     const dateStr = format(date, 'yyyy-MM-dd');
     if (specificHolidays.includes(dateStr)) return true;
     
     return false;
+  };
+
+  const isDayDisabled = (date: Date) => {
+    if (isBefore(date, startOfToday())) return true;
+    return isHoliday(date);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -65,8 +69,13 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
       return;
     }
 
-    if (!selectedPet || !selectedService || !selectedDate || !time) {
-      toast.error("Please select a pet, service, date and time slot");
+    if (!selectedDate || isHoliday(selectedDate)) {
+      toast.error("The selected date is a shop holiday");
+      return;
+    }
+
+    if (!selectedPet || !selectedService || !time) {
+      toast.error("Please select a pet, service, and time slot");
       return;
     }
 
@@ -211,8 +220,17 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
                   <DayPicker
                     mode="single"
                     selected={selectedDate}
-                    onSelect={setSelectedDate}
+                    onSelect={(d) => {
+                      setSelectedDate(d);
+                      setTime(''); // รีเซ็ตเวลาหากเปลี่ยนวันที่
+                    }}
                     disabled={isDayDisabled}
+                    modifiers={{
+                      holiday: (date) => isHoliday(date)
+                    }}
+                    modifiersClassNames={{
+                      holiday: "bg-red-50 text-red-300 line-through opacity-50"
+                    }}
                     classNames={{
                       months: "w-full",
                       month: "w-full space-y-4",
@@ -231,7 +249,7 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
                       day_selected: "bg-[#D9ED5F] text-[#1A1F3D] hover:bg-[#D9ED5F] shadow-lg shadow-[#D9ED5F]/20",
                       day_today: "text-[#1A1F3D] border-2 border-[#D9ED5F]/30",
                       day_outside: "text-gray-100 opacity-50",
-                      day_disabled: "text-gray-200 opacity-20 cursor-not-allowed line-through",
+                      day_disabled: "text-gray-200 opacity-20 cursor-not-allowed line-through relative after:content-[''] after:absolute after:inset-0 after:flex after:items-center after:justify-center",
                     }}
                     components={{
                       IconLeft: () => <ChevronLeft size={14} />,
@@ -239,10 +257,24 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
                     }}
                   />
                 </div>
+                
+                {selectedDate && isHoliday(selectedDate) && (
+                  <div className="mt-6 p-4 bg-red-50 rounded-2xl flex items-center gap-3 text-red-600 animate-in fade-in slide-in-from-top-2">
+                    <Ban size={18} />
+                    <p className="text-xs font-black uppercase tracking-widest">Shop is Closed Today</p>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100/50">
-                <SlotPicker selectedTime={time} onSelect={setTime} />
+                {selectedDate && !isHoliday(selectedDate) ? (
+                  <SlotPicker selectedTime={time} onSelect={setTime} />
+                ) : (
+                  <div className="h-40 flex flex-col items-center justify-center opacity-20 text-center">
+                    <Ban size={32} className="mb-2" />
+                    <p className="text-xs font-bold uppercase">No slots available on holidays</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -253,8 +285,9 @@ const BookingModal = ({ onClose }: BookingModalProps) => {
           <div className="p-10 border-t border-gray-50 bg-white shrink-0">
             <button 
               type="submit"
+              disabled={!selectedDate || isHoliday(selectedDate) || !time}
               onClick={handleSubmit}
-              className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-5 rounded-[28px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D9ED5F]/20 active:scale-95"
+              className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] disabled:bg-gray-100 disabled:text-gray-300 text-[#1A1F3D] font-black py-5 rounded-[28px] flex items-center justify-center gap-2 transition-all shadow-xl shadow-[#D9ED5F]/20 active:scale-95"
             >
               Confirm Appointment
             </button>
