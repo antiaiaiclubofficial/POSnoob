@@ -16,7 +16,8 @@ import {
   Scissors, 
   TrendingUp, 
   UserPlus, 
-  LineChart as LineChartIcon
+  LineChart as LineChartIcon,
+  Info
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -32,8 +33,15 @@ import {
   PieChart, 
   Pie 
 } from 'recharts';
+import { useNavigate } from 'react-router-dom';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { queue, transactions, inventory, customers, currency, kennelCapacity } = useStore();
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -51,7 +59,6 @@ const Dashboard = () => {
   // 1. Busy Hours Logic (Real Data)
   const busyHoursData = useMemo(() => {
     const hoursMap: Record<string, number> = {};
-    // กำหนดช่วงเวลามาตรฐาน 09:00 - 19:00
     for (let i = 9; i <= 19; i += 2) {
       const label = `${i.toString().padStart(2, '0')}:00`;
       hoursMap[label] = 0;
@@ -60,7 +67,6 @@ const Dashboard = () => {
     todayQueue.forEach(q => {
       const hour = q.time.split(':')[0];
       const slot = `${hour.padStart(2, '0')}:00`;
-      // ปรับให้เข้ากับช่วงที่ใกล้ที่สุดในกราฟ
       const closestSlot = Object.keys(hoursMap).find(s => {
         const sHour = parseInt(s.split(':')[0]);
         const qHour = parseInt(hour);
@@ -119,6 +125,8 @@ const Dashboard = () => {
     return petsWithNotes;
   }, [todayQueue, customers]);
 
+  const hasAlerts = lowStockItems.length > 0 || specialCarePets.length > 0;
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
       <header className="px-6 lg:px-12 py-8 flex flex-col sm:flex-row justify-between items-start sm:items-center shrink-0">
@@ -131,13 +139,58 @@ const Dashboard = () => {
           <p className="text-xs text-gray-400 font-bold mt-1">Today is {format(new Date(), 'EEEE, MMMM do')}</p>
         </div>
         <div className="flex gap-3 mt-4 sm:mt-0">
-          <button className="bg-white border border-gray-100 p-4 rounded-2xl shadow-sm hover:bg-gray-50 transition-all relative">
-            <Bell size={20} className="text-gray-400" />
-            {(lowStockItems.length > 0) && (
-              <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full" />
-            )}
-          </button>
-          <button className="bg-[#1A1F3D] text-white px-6 py-4 rounded-2xl flex items-center gap-2 font-black text-sm shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="bg-white border border-gray-100 p-4 rounded-2xl shadow-sm hover:bg-gray-50 transition-all relative">
+                <Bell size={20} className="text-gray-400" />
+                {hasAlerts && (
+                  <span className="absolute top-3.5 right-3.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full" />
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0 rounded-[32px] border-gray-100 shadow-2xl overflow-hidden" align="end">
+              <div className="p-5 border-b border-gray-50 bg-[#F8F9FD]">
+                <h4 className="font-black text-[#1A1F3D] text-sm">Notifications</h4>
+              </div>
+              <div className="max-h-[350px] overflow-y-auto scrollbar-hide">
+                {!hasAlerts ? (
+                  <div className="p-10 text-center">
+                    <p className="text-xs text-gray-400 font-bold">No new alerts</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {lowStockItems.map(item => (
+                      <div key={item.id} className="p-4 flex gap-4 hover:bg-gray-50 transition-all">
+                        <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center shrink-0">
+                          <Package size={18} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-[#1A1F3D]">Low Stock: {item.name}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Only {item.stock} {item.unit} left</p>
+                        </div>
+                      </div>
+                    ))}
+                    {specialCarePets.map((pet, idx) => (
+                      <div key={idx} className="p-4 flex gap-4 hover:bg-gray-50 transition-all">
+                        <div className="w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center shrink-0">
+                          <AlertTriangle size={18} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-[#1A1F3D]">Care Alert: {pet.name}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Note: {pet.note}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <button 
+            onClick={() => navigate('/queue')}
+            className="bg-[#1A1F3D] text-white px-6 py-4 rounded-2xl flex items-center gap-2 font-black text-sm shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all"
+          >
             <CalendarIcon size={18} /> Manage Schedule
           </button>
         </div>
