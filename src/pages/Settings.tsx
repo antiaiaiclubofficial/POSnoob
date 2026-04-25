@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, Share2, Send, Camera, FileText, AlignLeft, Layout, MapPin, Eye
+  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout, Eye, MapPin
 } from 'lucide-react';
 import { useStore, TierRule, MembershipLevel, Service } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -40,7 +40,6 @@ const Settings = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Local States for real-time preview
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
   const [localShopName, setLocalShopName] = useState(shopName);
   const [localShopLogo, setLocalShopLogo] = useState(shopLogo);
@@ -65,6 +64,7 @@ const Settings = () => {
   const [localCloseTime, setLocalCloseTime] = useState(closeTime);
 
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [isReceiptPreviewOpen, setIsReceiptPreviewOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [serviceQuery, setServiceQuery] = useState('');
@@ -81,7 +81,7 @@ const Settings = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setLocalShopLogo(reader.result as string);
-        toast.info("Logo preview updated.");
+        toast.info("Logo preview updated. Don't forget to Save All.");
       };
       reader.readAsDataURL(file);
     }
@@ -111,12 +111,14 @@ const Settings = () => {
       openTime: localOpenTime,
       closeTime: localCloseTime
     });
-    toast.success("Settings saved successfully!");
+    toast.success("All settings saved and shop policy updated!");
   };
 
   const toggleHoliday = (dayValue: number) => {
     setLocalRecurringHolidays(prev => 
-      prev.includes(dayValue) ? prev.filter(d => d !== dayValue) : [...prev, dayValue]
+      prev.includes(dayValue) 
+        ? prev.filter(d => d !== dayValue) 
+        : [...prev, dayValue]
     );
   };
 
@@ -125,11 +127,14 @@ const Settings = () => {
       setLocalSpecificHolidays([]);
       return;
     }
-    setLocalSpecificHolidays(days.map(d => format(d, 'yyyy-MM-dd')));
+    const dateStrings = days.map(d => format(d, 'yyyy-MM-dd'));
+    setLocalSpecificHolidays(dateStrings);
   };
 
   const updateRule = (level: MembershipLevel, field: keyof TierRule, value: any) => {
-    setLocalTierRules(prev => prev.map(r => r.level === level ? { ...r, [field]: value } : r));
+    setLocalTierRules(prev => prev.map(r => 
+      r.level === level ? { ...r, [field]: value } : r
+    ));
   };
 
   const getTierIcon = (level: MembershipLevel) => {
@@ -152,65 +157,76 @@ const Settings = () => {
   };
 
   return (
-    <main className="flex-1 p-6 lg:p-10 overflow-y-auto scrollbar-hide bg-[#F8F9FD]">
-      <div className="max-w-7xl mx-auto">
+    <main className="flex-1 p-10 overflow-y-auto scrollbar-hide">
+      <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-6">
-          <div className="pl-14 lg:pl-0">
-            <h1 className="text-3xl lg:text-4xl font-black text-[#1A1F3D] mb-1">Configuration</h1>
-            <p className="text-sm text-gray-400 font-medium">Control every aspect of your business</p>
+          <div>
+            <h1 className="text-4xl font-black mb-1">Settings</h1>
+            <p className="text-gray-400 font-medium">Manage your shop configurations and business rules</p>
           </div>
-          <div className="flex gap-3 w-full sm:w-auto">
+          <div className="flex gap-3">
             <button 
               onClick={() => setIsBroadcastModalOpen(true)}
-              className="flex-1 sm:flex-none bg-white border border-gray-100 text-[#1A1F3D] px-6 py-4 rounded-2xl font-black text-xs lg:text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
+              className="bg-white border border-gray-100 text-[#1A1F3D] px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
             >
-              <Send size={18} className="text-green-500" /> Messaging
+              <Send size={18} className="text-green-500" /> Messaging Center
             </button>
             <button 
               onClick={handleSaveAll}
-              className="flex-1 sm:flex-none bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-xs lg:text-sm flex items-center justify-center gap-2 hover:bg-[#2A3152] transition-all shadow-xl shadow-[#1A1F3D]/10 active:scale-95"
+              className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-[#2A3152] transition-all shadow-xl shadow-[#1A1F3D]/10 active:scale-95"
             >
-              <Save size={18} /> Save Changes
+              <Save size={18} /> Save All
             </button>
           </div>
         </div>
 
         <Tabs defaultValue="business" className="space-y-8">
-          <TabsList className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm w-auto inline-flex gap-1 h-auto overflow-x-auto scrollbar-hide max-w-full">
-            <TabsTrigger value="business" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-[10px] lg:text-xs font-bold transition-all whitespace-nowrap">
-              <Store size={14} className="mr-2" /> Business & Receipt
+          <TabsList className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm w-auto inline-flex gap-1 h-auto">
+            <TabsTrigger value="business" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+              <Store size={16} className="mr-2" /> Business
             </TabsTrigger>
-            <TabsTrigger value="booking" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-[10px] lg:text-xs font-bold transition-all whitespace-nowrap">
-              <Clock size={14} className="mr-2" /> Booking
+            <TabsTrigger value="booking" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+              <Clock size={16} className="mr-2" /> Booking
             </TabsTrigger>
-            <TabsTrigger value="services" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-[10px] lg:text-xs font-bold transition-all whitespace-nowrap">
-              <Scissors size={14} className="mr-2" /> Services
+            <TabsTrigger value="services" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+              <Scissors size={16} className="mr-2" /> Services
             </TabsTrigger>
-            <TabsTrigger value="integrations" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-[10px] lg:text-xs font-bold transition-all whitespace-nowrap">
-              <Share2 size={14} className="mr-2" /> API
+            <TabsTrigger value="integrations" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+              <Share2 size={16} className="mr-2" /> Integrations
             </TabsTrigger>
-            <TabsTrigger value="membership" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-[10px] lg:text-xs font-bold transition-all whitespace-nowrap">
-              <ShieldCheck size={14} className="mr-2" /> Rewards
+            <TabsTrigger value="membership" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+              <ShieldCheck size={16} className="mr-2" /> Membership
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
-            <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
-              {/* Form Section */}
-              <div className="xl:col-span-3 space-y-8">
-                <section className="bg-white p-8 lg:p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-                  <div className="flex items-center justify-between">
+          <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-8">
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><Store size={24} /></div>
-                      <div>
-                        <h2 className="text-xl font-black text-[#1A1F3D]">Store Info</h2>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Public identity</p>
+                      <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                        <Store size={24} />
                       </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Shop Management</h2>
+                        <p className="text-xs text-gray-400">Identity and shop status</p>
+                      </div>
+                    </div>
+                    <div className={cn(
+                      "flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all",
+                      localShopIsOpen ? "bg-green-50 border-green-100" : "bg-red-50 border-red-100"
+                    )}>
+                      <span className={cn("text-[10px] font-black uppercase tracking-widest", localShopIsOpen ? "text-green-600" : "text-red-600")}>
+                        {localShopIsOpen ? 'Open' : 'Closed'}
+                      </span>
+                      <Switch checked={localShopIsOpen} onCheckedChange={setLocalShopIsOpen} className="data-[state=checked]:bg-green-600" />
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-center gap-8 bg-[#F5F6FA] p-8 rounded-[32px]">
-                    <div className="relative group shrink-0">
+                  {/* Logo Upload */}
+                  <div className="flex flex-col items-center gap-4 bg-[#F5F6FA] p-8 rounded-[32px] relative overflow-hidden">
+                    <div className="relative group">
                       <div className="w-24 h-24 bg-white rounded-[28px] overflow-hidden shadow-md border-2 border-dashed border-gray-200 flex items-center justify-center">
                         {localShopLogo ? (
                           <img src={localShopLogo} alt="Shop Logo" className="w-full h-full object-cover" />
@@ -220,114 +236,274 @@ const Settings = () => {
                       </div>
                       <button 
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-2 -right-2 bg-[#1A1F3D] text-white p-2.5 rounded-xl shadow-lg hover:scale-110 transition-transform"
+                        className="absolute -bottom-2 -right-2 bg-[#1A1F3D] text-white p-2 rounded-xl shadow-lg hover:scale-110 transition-transform"
                       >
                         <Camera size={16} />
                       </button>
                     </div>
-                    <div className="space-y-4 flex-1 w-full">
-                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-2 px-1">Shop Name</label>
-                        <input className="w-full bg-white border-none rounded-2xl px-5 py-3.5 text-sm font-bold shadow-sm" value={localShopName} onChange={(e) => setLocalShopName(e.target.value)} />
-                      </div>
+                    <div className="text-center">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Shop Logo</p>
+                      <p className="text-[8px] text-gray-300 font-bold mt-1">Recommended: Square PNG/JPG</p>
                     </div>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                   </div>
+                  
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                        <Store size={12} /> Shop Name
+                      </label>
+                      <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopName} onChange={(e) => setLocalShopName(e.target.value)} />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                          <Phone size={12} /> Phone Number
+                        </label>
+                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopPhone} onChange={(e) => setLocalShopPhone(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                          <MessageSquare size={12} /> Line ID
+                        </label>
+                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopLineId} onChange={(e) => setLocalShopLineId(e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
                 </section>
 
-                <section className="bg-white p-8 lg:p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-green-50 text-green-600 rounded-2xl"><FileText size={24} /></div>
-                    <div>
-                      <h2 className="text-xl font-black text-[#1A1F3D]">Receipt Details</h2>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Printed materials configuration</p>
+                {/* Receipt Section */}
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
+                        <FileText size={24} />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Receipt Configuration</h2>
+                        <p className="text-xs text-gray-400">Manage business details on bills</p>
+                      </div>
                     </div>
+                    <button 
+                      onClick={() => setIsReceiptPreviewOpen(true)}
+                      className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-blue-100 transition-all"
+                    >
+                      <Eye size={14} /> Preview
+                    </button>
                   </div>
 
                   <div className="space-y-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">Paper Size</label>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2 flex items-center gap-2">
+                        <Layout size={12} /> Paper Size
+                      </label>
                       <div className="flex bg-[#F5F6FA] p-1.5 rounded-2xl gap-2">
                         {(['58mm', '80mm'] as const).map(size => (
                           <button 
                             key={size}
                             onClick={() => setLocalReceiptPaperSize(size)}
                             className={cn(
-                              "flex-1 py-3.5 rounded-xl text-[10px] font-black transition-all",
+                              "flex-1 py-3 rounded-xl text-[10px] font-black transition-all",
                               localReceiptPaperSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400"
                             )}
                           >
-                            {size} Thermal
+                            {size}
                           </button>
                         ))}
                       </div>
                     </div>
 
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                        <AlignLeft size={12} /> Receipt Header
+                      </label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" 
+                        value={localReceiptHeader} 
+                        onChange={(e) => setLocalReceiptHeader(e.target.value)} 
+                        placeholder="e.g. TAX INVOICE / RECEIPT"
+                      />
+                    </div>
+
                     <div className="grid grid-cols-1 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-2 px-1"><AlignLeft size={12} /> Header Title</label>
-                        <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localReceiptHeader} onChange={(e) => setLocalReceiptHeader(e.target.value)} placeholder="e.g. TAX INVOICE" />
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                          <MapPin size={12} /> Shop Address (on Receipt)
+                        </label>
+                        <textarea 
+                          className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-20 resize-none leading-relaxed" 
+                          value={localShopAddress} 
+                          onChange={(e) => setLocalShopAddress(e.target.value)}
+                          placeholder="Store address..."
+                        />
                       </div>
-                      
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-2 px-1"><MapPin size={12} /> Address</label>
-                        <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" value={localShopAddress} onChange={(e) => setLocalShopAddress(e.target.value)} />
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                          <Phone size={12} /> Contact Number (on Receipt)
+                        </label>
+                        <input 
+                          className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" 
+                          value={localShopPhone} 
+                          onChange={(e) => setLocalShopPhone(e.target.value)}
+                        />
                       </div>
+                    </div>
 
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-2 px-1"><Phone size={12} /> Contact No.</label>
-                          <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopPhone} onChange={(e) => setLocalShopPhone(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-2 px-1"><MessageSquare size={12} /> Line ID</label>
-                          <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopLineId} onChange={(e) => setLocalShopLineId(e.target.value)} />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider flex items-center gap-2 px-1"><FileText size={12} /> Footer Note / Policy</label>
-                        <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" value={localReceiptFooter} onChange={(e) => setLocalReceiptFooter(e.target.value)} placeholder="e.g. Thank you for your support!" />
-                      </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
+                        <FileText size={12} /> Footer Text / Policies
+                      </label>
+                      <textarea 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" 
+                        value={localReceiptFooter} 
+                        onChange={(e) => setLocalReceiptFooter(e.target.value)}
+                        placeholder="e.g. Thank you for your visit!"
+                      />
                     </div>
                   </div>
                 </section>
               </div>
 
-              {/* Real-time Preview Section */}
-              <div className="xl:col-span-2">
-                 <div className="sticky top-6">
-                    <ReceiptPreview 
-                      isInline
-                      shopName={localShopName}
-                      shopLogo={localShopLogo}
-                      shopAddress={localShopAddress}
-                      shopPhone={localShopPhone}
-                      header={localReceiptHeader}
-                      footer={localReceiptFooter}
-                      paperSize={localReceiptPaperSize}
-                    />
-                    
-                    <div className="mt-8 p-6 bg-amber-50 border border-amber-100 rounded-3xl flex items-start gap-4">
-                       <div className="p-2 bg-amber-100 text-amber-600 rounded-xl shrink-0"><Eye size={18} /></div>
-                       <p className="text-[10px] text-amber-900 font-bold leading-relaxed">
-                          <span className="uppercase block mb-1">Live Editing Mode</span>
-                          The preview on this page reflects your changes in real-time. Make sure to click "Save Changes" at the top to finalize.
-                       </p>
+              <div className="space-y-8">
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                      <Calendar size={24} />
                     </div>
-                 </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Weekly Holidays</h2>
+                      <p className="text-xs text-gray-400">Recurring days the shop is closed</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#F5F6FA] p-6 rounded-[32px]">
+                    <div className="grid grid-cols-4 gap-3">
+                        {DAYS_OF_WEEK.map((day) => {
+                          const isHoliday = localRecurringHolidays.includes(day.value);
+                          return (
+                            <button
+                              key={day.value}
+                              type="button"
+                              onClick={() => toggleHoliday(day.value)}
+                              className={cn(
+                                "py-3 rounded-xl text-[10px] font-black transition-all border-2",
+                                isHoliday 
+                                  ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20" 
+                                  : "bg-white border-white text-gray-400 hover:border-gray-200"
+                              )}
+                            >
+                              {day.label}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </section>
+
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
+                      <Calendar size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Specific Holidays</h2>
+                      <p className="text-xs text-gray-400">Pick specific dates to close the shop</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center bg-[#F5F6FA] p-6 rounded-[32px]">
+                    <DayPicker
+                      mode="multiple"
+                      selected={localSpecificHolidays.map(date => parseISO(date)).filter(isValid)}
+                      onSelect={handleSpecificHolidaySelect}
+                      modifiers={{
+                        weeklyHoliday: (date) => localRecurringHolidays.includes(date.getDay())
+                      }}
+                      modifiersClassNames={{
+                        weeklyHoliday: "bg-red-100 text-red-400 cursor-not-allowed opacity-50"
+                      }}
+                      classNames={{
+                        month: "space-y-4",
+                        caption: "flex justify-center relative items-center mb-4",
+                        caption_label: "text-sm font-black text-[#1A1F3D] uppercase tracking-widest",
+                        nav: "flex items-center",
+                        nav_button: "h-6 w-6 bg-white hover:bg-gray-100 rounded-lg flex items-center justify-center shadow-sm",
+                        nav_button_previous: "absolute left-1",
+                        nav_button_next: "absolute right-1",
+                        table: "w-full border-collapse",
+                        head_row: "flex w-full justify-between mb-2",
+                        head_cell: "text-gray-300 w-9 font-black text-[8px] uppercase text-center",
+                        row: "flex w-full justify-center mt-1",
+                        cell: "relative p-0 text-center text-xs w-9",
+                        day: "h-8 w-8 p-0 font-bold rounded-lg transition-all hover:bg-white flex items-center justify-center mx-auto",
+                        day_selected: "bg-red-500 text-white hover:bg-red-600 shadow-md",
+                        day_today: "border-2 border-red-200",
+                        day_outside: "opacity-20",
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                     {localSpecificHolidays.sort().map(date => (
+                       <span key={date} className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-[10px] font-black border border-red-100">
+                         {date}
+                       </span>
+                     ))}
+                     {localSpecificHolidays.length === 0 && <p className="text-[10px] text-gray-400 italic">No specific holidays selected</p>}
+                  </div>
+                  <p className="text-[9px] text-gray-400 font-medium italic mt-2">
+                    * Light red dates are disabled because they are part of your Weekly Holidays.
+                  </p>
+                </section>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
+          <TabsContent value="integrations" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+             <div className="max-w-2xl mx-auto">
+                <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-14 h-14 bg-green-50 text-green-600 rounded-[22px] flex items-center justify-center">
+                      <MessageSquare size={28} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">LINE LIFF Connect</h2>
+                      <p className="text-xs text-gray-400">Power your booking system via LINE</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">LIFF ID</label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold font-mono" 
+                        placeholder="16xxxxxxxx-xxxxxxxx"
+                        value={localLineLiffId} 
+                        onChange={(e) => setLocalLineLiffId(e.target.value)} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Channel Access Token</label>
+                      <textarea 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold font-mono h-24 resize-none" 
+                        placeholder="Enter your Long-lived token..."
+                        value={localLineChannelToken} 
+                        onChange={(e) => setLocalLineChannelToken(e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                </section>
+             </div>
+          </TabsContent>
+
+          <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><Clock size={24} /></div>
                   <div>
-                    <h2 className="text-xl font-black">Booking Rules</h2>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Schedule configuration</p>
+                    <h2 className="text-xl font-bold">Booking Rules</h2>
+                    <p className="text-xs text-gray-400">Configure how clients book appointments</p>
                   </div>
                 </div>
                 
@@ -342,17 +518,17 @@ const Settings = () => {
                   </div>
                   
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Max Capacity</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Max Capacity per Slot</label>
                     <input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localMaxCapacity} onChange={e => setLocalMaxCapacity(Number(e.target.value))} />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Open Time</label>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Opening Time</label>
                       <TimePicker value={localOpenTime} onChange={setLocalOpenTime} />
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Close Time</label>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Closing Time</label>
                       <TimePicker value={localCloseTime} onChange={setLocalCloseTime} />
                     </div>
                   </div>
@@ -365,50 +541,176 @@ const Settings = () => {
             </div>
           </TabsContent>
 
-          {/* ... Rest of the tabs (services, integrations, membership) remain as they were ... */}
-          <TabsContent value="services" className="space-y-10 outline-none">
+          <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-10">
              <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
                 <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm shrink-0">
-                  <button onClick={() => setSpeciesTab('Dog')} className={cn("px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all", speciesTab === 'Dog' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400")}><Dog size={14} /> DOGS</button>
-                  <button onClick={() => setSpeciesTab('Cat')} className={cn("px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all", speciesTab === 'Cat' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400")}><Cat size={14} /> CATS</button>
+                  <button 
+                    onClick={() => setSpeciesTab('Dog')}
+                    className={cn(
+                      "px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all",
+                      speciesTab === 'Dog' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400"
+                    )}
+                  >
+                    <Dog size={14} /> DOGS
+                  </button>
+                  <button 
+                    onClick={() => setSpeciesTab('Cat')}
+                    className={cn(
+                      "px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all",
+                      speciesTab === 'Cat' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400"
+                    )}
+                  >
+                    <Cat size={14} /> CATS
+                  </button>
                 </div>
+
                 <div className="flex items-center gap-4 w-full sm:w-auto">
                   <div className="relative flex-1 sm:w-64">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-                    <input type="text" className="bg-white border border-gray-100 pl-10 pr-6 py-3 rounded-2xl text-xs font-bold w-full shadow-sm" placeholder="Search services..." value={serviceQuery} onChange={e => setServiceQuery(e.target.value)}/>
+                    <input 
+                      type="text"
+                      className="bg-white border border-gray-100 pl-10 pr-6 py-3 rounded-2xl text-xs font-bold w-full shadow-sm"
+                      placeholder="Search services..."
+                      value={serviceQuery}
+                      onChange={e => setServiceQuery(e.target.value)}
+                    />
                   </div>
-                  <button onClick={handleAddService} className="bg-[#D9ED5F] text-[#1A1F3D] p-3 rounded-2xl shadow-lg shadow-[#D9ED5F]/20 hover:scale-105 active:scale-95 transition-all"><Plus size={20} /></button>
+                  <button 
+                    onClick={handleAddService}
+                    className="bg-[#D9ED5F] text-[#1A1F3D] p-3 rounded-2xl shadow-lg shadow-[#D9ED5F]/20 hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <Plus size={20} />
+                  </button>
                 </div>
              </div>
+
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredServices.map((service) => (
                   <div key={service.id} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between group transition-all hover:shadow-md">
                     <div className="flex items-center gap-4">
-                      <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0", service.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600")}><Scissors size={20} /></div>
-                      <div><h4 className="text-sm font-black text-[#1A1F3D]">{service.title}</h4><p className="text-[10px] text-gray-400 font-bold uppercase">{service.category}</p></div>
+                      <div className={cn(
+                        "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
+                        service.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600"
+                      )}>
+                        <Scissors size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-[#1A1F3D]">{service.title}</h4>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">{service.category}</p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <Switch checked={service.isActive} onCheckedChange={() => toggleServiceActive(service.id)} className="data-[state=checked]:bg-[#1A1F3D]" />
-                      <button onClick={() => handleEditService(service)} className="p-2 text-gray-300 hover:text-[#1A1F3D] transition-colors"><Edit3 size={18} /></button>
-                      <button onClick={() => deleteService(service.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                      <Switch 
+                        checked={service.isActive} 
+                        onCheckedChange={() => toggleServiceActive(service.id)}
+                        className="data-[state=checked]:bg-[#1A1F3D]"
+                      />
+                      <button onClick={() => handleEditService(service)} className="p-2 text-gray-300 hover:text-[#1A1F3D] transition-colors">
+                        <Edit3 size={18} />
+                      </button>
+                      <button onClick={() => deleteService(service.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </div>
                 ))}
              </div>
           </TabsContent>
 
-          <TabsContent value="integrations" className="outline-none">
-             <div className="max-w-2xl mx-auto"><section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8"><div className="flex items-center gap-3 mb-2"><div className="w-14 h-14 bg-green-50 text-green-600 rounded-[22px] flex items-center justify-center"><MessageSquare size={28} /></div><div><h2 className="text-xl font-black">LINE Connect</h2><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Messaging API integration</p></div></div><div className="space-y-6"><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">LIFF ID</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold font-mono" placeholder="16xxxxxxxx-xxxxxxxx" value={localLineLiffId} onChange={(e) => setLocalLineLiffId(e.target.value)} /></div><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Channel Token</label><textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold font-mono h-24 resize-none" placeholder="Long-lived token..." value={localLineChannelToken} onChange={(e) => setLocalLineChannelToken(e.target.value)} /></div></div></section></div>
-          </TabsContent>
+          <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+             <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-10">
+                <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                  <ShieldCheck size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Membership Tier Logic</h2>
+                  <p className="text-xs text-gray-400">Define rewards and progression rules for your clients</p>
+                </div>
+              </div>
 
-          <TabsContent value="membership" className="outline-none">
-             <section className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm"><div className="flex items-center gap-3 mb-10"><div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><ShieldCheck size={24} /></div><div><h2 className="text-xl font-black">Rewards Logic</h2><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Customer loyalty program</p></div></div><div className="grid grid-cols-1 lg:grid-cols-2 gap-8">{localTierRules.map((rule) => { const tier = getTierIcon(rule.level); const Icon = tier.icon; return ( <div key={rule.level} className="relative group bg-[#F5F6FA] p-8 rounded-[32px] border border-transparent hover:border-purple-100 transition-all"><div className={cn("absolute -top-4 -left-4 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", tier.bg, tier.color)}><Icon size={24} /></div><div className="space-y-6"><div className="flex justify-between items-start"><div className="flex-1"><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Public Label</label><input className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-black text-[#1A1F3D]" value={rule.label} onChange={(e) => updateRule(rule.level, 'label', e.target.value)} /></div></div><div className="grid grid-cols-2 gap-4"><div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Min. Spend</label><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs font-bold">{currency}</span><input type="number" className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-black" value={rule.minSpent} onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))} /></div></div><div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Discount</label><div className="relative"><Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} /><input type="number" className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-black text-green-600" value={rule.discount} onChange={(e) => updateRule(rule.level, 'discount', Number(e.target.value))} /></div></div></div></div></div> ); })}</div></section>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {localTierRules.map((rule) => {
+                  const tier = getTierIcon(rule.level);
+                  const Icon = tier.icon;
+                  return (
+                    <div key={rule.level} className="relative group bg-[#F5F6FA] p-8 rounded-[32px] border border-transparent hover:border-purple-100 transition-all">
+                      <div className={cn("absolute -top-4 -left-4 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", tier.bg, tier.color)}>
+                        <Icon size={24} />
+                      </div>
+                      
+                      <div className="space-y-6">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Public Label</label>
+                            <input 
+                              className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-black text-[#1A1F3D] focus:ring-2 focus:ring-purple-500/10" 
+                              value={rule.label} 
+                              onChange={(e) => updateRule(rule.level, 'label', e.target.value)} 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Min. Spending</label>
+                            <div className="relative">
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs font-bold">{currency}</span>
+                              <input 
+                                type="number"
+                                className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-[#1A1F3D]" 
+                                value={rule.minSpent} 
+                                onChange={(e) => updateRule(rule.level, 'minSpent', Number(e.target.value))} 
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Benefit Discount</label>
+                            <div className="relative">
+                              <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                              <input 
+                                type="number"
+                                className="w-full bg-white border-none rounded-2xl pl-10 pr-4 py-3 text-sm font-bold text-green-600" 
+                                value={rule.discount} 
+                                onChange={(e) => updateRule(rule.level, 'discount', Number(e.target.value))} 
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           </TabsContent>
         </Tabs>
       </div>
 
-      {isServiceModalOpen && <ServiceModal service={selectedService} defaultSpecies={speciesTab} onClose={() => setIsServiceModalOpen(false)} />}
-      {isBroadcastModalOpen && <BroadcastModal onClose={() => setIsBroadcastModalOpen(false)} />}
+      {isServiceModalOpen && (
+        <ServiceModal 
+          service={selectedService} 
+          defaultSpecies={speciesTab}
+          onClose={() => setIsServiceModalOpen(false)} 
+        />
+      )}
+
+      {isBroadcastModalOpen && (
+        <BroadcastModal onClose={() => setIsBroadcastModalOpen(false)} />
+      )}
+
+      {isReceiptPreviewOpen && (
+        <ReceiptPreview 
+          shopName={localShopName}
+          shopLogo={localShopLogo}
+          shopAddress={localShopAddress}
+          shopPhone={localShopPhone}
+          header={localReceiptHeader}
+          footer={localReceiptFooter}
+          paperSize={localReceiptPaperSize}
+          onClose={() => setIsReceiptPreviewOpen(false)}
+        />
+      )}
     </main>
   );
 };
