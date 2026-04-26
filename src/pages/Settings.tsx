@@ -15,18 +15,7 @@ import BroadcastModal from '@/components/BroadcastModal';
 import ReceiptPreview from '@/components/ReceiptPreview';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
-import { DayPicker } from 'react-day-picker';
-import { format, parseISO, isValid } from 'date-fns';
-
-const DAYS_OF_WEEK = [
-  { label: 'Sun', value: 0 },
-  { label: 'Mon', value: 1 },
-  { label: 'Tue', value: 2 },
-  { label: 'Wed', value: 3 },
-  { label: 'Thu', value: 4 },
-  { label: 'Fri', value: 5 },
-  { label: 'Sat', value: 6 },
-];
+import { format } from 'date-fns';
 
 const Settings = () => {
   const { 
@@ -84,7 +73,7 @@ const Settings = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setLocalShopLogo(reader.result as string);
-        toast.info("Logo preview updated. Don't forget to Save All.");
+        toast.info(language === 'th' ? "อัปเดตตัวอย่างโลโก้แล้ว อย่าลืมกดบันทึกทั้งหมด" : "Logo preview updated. Don't forget to Save All.");
       };
       reader.readAsDataURL(file);
     }
@@ -114,24 +103,7 @@ const Settings = () => {
       openTime: localOpenTime,
       closeTime: localCloseTime
     });
-    toast.success("All settings saved and shop policy updated!");
-  };
-
-  const toggleHoliday = (dayValue: number) => {
-    setLocalRecurringHolidays(prev => 
-      prev.includes(dayValue) 
-        ? prev.filter(d => d !== dayValue) 
-        : [...prev, dayValue]
-    );
-  };
-
-  const handleSpecificHolidaySelect = (days: Date[] | undefined) => {
-    if (!days) {
-      setLocalSpecificHolidays([]);
-      return;
-    }
-    const dateStrings = days.map(d => format(d, 'yyyy-MM-dd'));
-    setLocalSpecificHolidays(dateStrings);
+    toast.success(language === 'th' ? "บันทึกการตั้งค่าทั้งหมดเรียบร้อยแล้ว!" : "All settings saved and shop policy updated!");
   };
 
   const updateRule = (level: MembershipLevel, field: keyof TierRule, value: any) => {
@@ -165,14 +137,14 @@ const Settings = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-6">
           <div>
             <h1 className="text-4xl font-black mb-1">{t.settings}</h1>
-            <p className="text-gray-400 font-medium">Manage your shop configurations and business rules</p>
+            <p className="text-gray-400 font-medium">{language === 'th' ? 'จัดการการตั้งค่าร้านและกฎธุรกิจของคุณ' : 'Manage your shop configurations and business rules'}</p>
           </div>
           <div className="flex gap-3">
             <button 
               onClick={() => setIsBroadcastModalOpen(true)}
               className="bg-white border border-gray-100 text-[#1A1F3D] px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
             >
-              <Send size={18} className="text-green-500" /> Messaging Center
+              <Send size={18} className="text-green-500" /> {t.messagingCenter}
             </button>
             <button 
               onClick={handleSaveAll}
@@ -245,8 +217,8 @@ const Settings = () => {
                         <Store size={24} />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold">Shop Management</h2>
-                        <p className="text-xs text-gray-400">Identity and shop status</p>
+                        <h2 className="text-xl font-bold">{t.shopManagement}</h2>
+                        <p className="text-xs text-gray-400">{t.shopIdentityDesc}</p>
                       </div>
                     </div>
                     <div className={cn(
@@ -254,7 +226,7 @@ const Settings = () => {
                       localShopIsOpen ? "bg-green-50 border-green-100" : "bg-red-50 border-red-100"
                     )}>
                       <span className={cn("text-[10px] font-black uppercase tracking-widest", localShopIsOpen ? "text-green-600" : "text-red-600")}>
-                        {localShopIsOpen ? 'Open' : 'Closed'}
+                        {localShopIsOpen ? t.open : t.closed}
                       </span>
                       <Switch checked={localShopIsOpen} onCheckedChange={setLocalShopIsOpen} className="data-[state=checked]:bg-green-600" />
                     </div>
@@ -277,8 +249,8 @@ const Settings = () => {
                       </button>
                     </div>
                     <div className="text-center">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Shop Logo</p>
-                      <p className="text-[8px] text-gray-300 font-bold mt-1">Recommended: Square PNG/JPG</p>
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{t.shopLogo}</p>
+                      <p className="text-[8px] text-gray-300 font-bold mt-1">{t.logoSizeDesc}</p>
                     </div>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                   </div>
@@ -300,7 +272,7 @@ const Settings = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                          <MessageSquare size={12} /> Line ID
+                          <MessageSquare size={12} /> LINE ID
                         </label>
                         <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localShopLineId} onChange={(e) => setLocalShopLineId(e.target.value)} />
                       </div>
@@ -317,22 +289,22 @@ const Settings = () => {
                         <FileText size={24} />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold">Receipt Configuration</h2>
-                        <p className="text-xs text-gray-400">Manage business details on bills</p>
+                        <h2 className="text-xl font-bold">{t.receiptConfig}</h2>
+                        <p className="text-xs text-gray-400">{t.receiptManageDesc}</p>
                       </div>
                     </div>
                     <button 
                       onClick={() => setIsReceiptPreviewOpen(true)}
                       className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-blue-100 transition-all"
                     >
-                      <Eye size={14} /> Preview
+                      <Eye size={14} /> {t.preview}
                     </button>
                   </div>
 
                   <div className="space-y-6">
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2 flex items-center gap-2">
-                        <Layout size={12} /> Paper Size
+                        <Layout size={12} /> {t.paperSize}
                       </label>
                       <div className="flex bg-[#F5F6FA] p-1.5 rounded-2xl gap-2">
                         {(['58mm', '80mm'] as const).map(size => (
@@ -352,13 +324,13 @@ const Settings = () => {
 
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                        <AlignLeft size={12} /> Receipt Header
+                        <AlignLeft size={12} /> {t.receiptHeader}
                       </label>
                       <input 
                         className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" 
                         value={localReceiptHeader} 
                         onChange={(e) => setLocalReceiptHeader(e.target.value)} 
-                        placeholder="e.g. TAX INVOICE / RECEIPT"
+                        placeholder={language === 'th' ? "เช่น ใบกำกับภาษีอย่างย่อ" : "e.g. TAX INVOICE / RECEIPT"}
                       />
                     </div>
 
@@ -371,20 +343,20 @@ const Settings = () => {
                           className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-20 resize-none leading-relaxed" 
                           value={localShopAddress} 
                           onChange={(e) => setLocalShopAddress(e.target.value)}
-                          placeholder="Store address..."
+                          placeholder={language === 'th' ? "ระบุที่อยู่ร้าน..." : "Store address..."}
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2">
-                        <FileText size={12} /> Footer Text / Policies
+                        <FileText size={12} /> {t.receiptFooter}
                       </label>
                       <textarea 
                         className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" 
                         value={localReceiptFooter} 
                         onChange={(e) => setLocalReceiptFooter(e.target.value)}
-                        placeholder="e.g. Thank you for your visit!"
+                        placeholder={language === 'th' ? "เช่น ขอบคุณที่ใช้บริการ" : "e.g. Thank you for your visit!"}
                       />
                     </div>
                   </div>
@@ -401,8 +373,8 @@ const Settings = () => {
                       <MessageSquare size={28} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">LINE LIFF Connect</h2>
-                      <p className="text-xs text-gray-400">Power your booking system via LINE</p>
+                      <h2 className="text-xl font-bold">{t.liffConnect}</h2>
+                      <p className="text-xs text-gray-400">{t.liffDesc}</p>
                     </div>
                   </div>
 
@@ -420,7 +392,7 @@ const Settings = () => {
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2">Channel Access Token</label>
                       <textarea 
                         className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold font-mono h-24 resize-none" 
-                        placeholder="Enter your Long-lived token..."
+                        placeholder={language === 'th' ? "ระบุ Long-lived token ของคุณ..." : "Enter your Long-lived token..."}
                         value={localLineChannelToken} 
                         onChange={(e) => setLocalLineChannelToken(e.target.value)} 
                       />
@@ -436,33 +408,33 @@ const Settings = () => {
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl"><Clock size={24} /></div>
                   <div>
-                    <h2 className="text-xl font-bold">Booking Rules</h2>
-                    <p className="text-xs text-gray-400">Configure how clients book appointments</p>
+                    <h2 className="text-xl font-bold">{t.bookingRules}</h2>
+                    <p className="text-xs text-gray-400">{t.bookingConfigDesc}</p>
                   </div>
                 </div>
                 
                 <div className="space-y-8">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Slot Duration</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.slotDuration}</label>
                     <div className="flex gap-2">
                       {[30, 60].map(duration => (
-                        <button key={duration} onClick={() => setLocalSlotDuration(duration)} className={cn("flex-1 py-4 rounded-2xl border-2 font-bold transition-all", localSlotDuration === duration ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" : "bg-white border-gray-100 text-gray-400")}>{duration} Min</button>
+                        <button key={duration} onClick={() => setLocalSlotDuration(duration)} className={cn("flex-1 py-4 rounded-2xl border-2 font-bold transition-all", localSlotDuration === duration ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" : "bg-white border-gray-100 text-gray-400")}>{duration} {language === 'th' ? 'นาที' : 'Min'}</button>
                       ))}
                     </div>
                   </div>
                   
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Max Capacity per Slot</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.maxCapacitySlot}</label>
                     <input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localMaxCapacity} onChange={e => setLocalMaxCapacity(Number(e.target.value))} />
                   </div>
 
                   <div className="space-y-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Opening Time</label>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.openingTime}</label>
                       <TimePicker value={localOpenTime} onChange={setLocalOpenTime} />
                     </div>
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Closing Time</label>
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.closingTime}</label>
                       <TimePicker value={localCloseTime} onChange={setLocalCloseTime} />
                     </div>
                   </div>
@@ -485,7 +457,7 @@ const Settings = () => {
                       speciesTab === 'Dog' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400"
                     )}
                   >
-                    <Dog size={14} /> DOGS
+                    <Dog size={14} /> {language === 'th' ? 'สุนัข' : 'DOGS'}
                   </button>
                   <button 
                     onClick={() => setSpeciesTab('Cat')}
@@ -494,7 +466,7 @@ const Settings = () => {
                       speciesTab === 'Cat' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400"
                     )}
                   >
-                    <Cat size={14} /> CATS
+                    <Cat size={14} /> {language === 'th' ? 'แมว' : 'CATS'}
                   </button>
                 </div>
 
@@ -504,7 +476,7 @@ const Settings = () => {
                     <input 
                       type="text"
                       className="bg-white border border-gray-100 pl-10 pr-6 py-3 rounded-2xl text-xs font-bold w-full shadow-sm"
-                      placeholder="Search services..."
+                      placeholder={t.searchServices}
                       value={serviceQuery}
                       onChange={e => setServiceQuery(e.target.value)}
                     />
@@ -558,8 +530,8 @@ const Settings = () => {
                   <ShieldCheck size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">Membership Tier Logic</h2>
-                  <p className="text-xs text-gray-400">Define rewards and progression rules for your clients</p>
+                  <h2 className="text-xl font-bold">{t.membershipTierLogic}</h2>
+                  <p className="text-xs text-gray-400">{t.membershipDesc}</p>
                 </div>
               </div>
 
@@ -576,7 +548,7 @@ const Settings = () => {
                       <div className="space-y-6">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Public Label</label>
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.publicLabel}</label>
                             <input 
                               className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-black text-[#1A1F3D] focus:ring-2 focus:ring-purple-500/10" 
                               value={rule.label} 
@@ -587,7 +559,7 @@ const Settings = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Min. Spending</label>
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.minSpending}</label>
                             <div className="relative">
                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs font-bold">{currency}</span>
                               <input 
@@ -599,7 +571,7 @@ const Settings = () => {
                             </div>
                           </div>
                           <div>
-                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">Benefit Discount</label>
+                            <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.benefitDiscount}</label>
                             <div className="relative">
                               <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
                               <input 
