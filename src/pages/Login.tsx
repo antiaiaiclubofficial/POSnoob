@@ -52,7 +52,7 @@ const Login = () => {
 
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-[#1A1F3D] rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-[#1A1F3D]/20 animate-bounce duration-300">
+          <div className="w-20 h-20 bg-[#1A1F3D] rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-[#1A1F3D]/20">
             <Scissors className="text-[#D9ED5F] w-10 h-10" />
           </div>
           <div className="flex items-center justify-center gap-2 mb-2">
