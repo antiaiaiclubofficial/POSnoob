@@ -20,6 +20,10 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
   const { currency } = useStore();
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // ป้องกัน Error กรณี weightHistory เป็น undefined หรือ null
+  const weightHistory = pet.weightHistory || [];
+  const latestWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1]?.value : 'N/A';
+
   return (
     <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden flex flex-col relative group/pet transition-all hover:shadow-md">
       {/* Edit Button */}
@@ -54,7 +58,7 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
               </div>
               <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50/50">
                 <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Weight</p>
-                <p className="text-xs font-black text-[#1A1F3D]">{pet.weightHistory[pet.weightHistory.length-1]?.value} kg</p>
+                <p className="text-xs font-black text-[#1A1F3D]">{latestWeight} {latestWeight !== 'N/A' ? 'kg' : ''}</p>
               </div>
             </div>
           </div>
@@ -72,16 +76,22 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
           </div>
           
           <div className="h-32 w-full mb-6">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={pet.weightHistory}>
-                <XAxis dataKey="date" hide />
-                <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
-                />
-                <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            {weightHistory.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={weightHistory}>
+                  <XAxis dataKey="date" hide />
+                  <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
+                  />
+                  <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center border border-dashed border-gray-100 rounded-2xl">
+                <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">No weight data</p>
+              </div>
+            )}
           </div>
 
           <div className="bg-[#FFF9F2] p-4 rounded-2xl border border-orange-100/50 mt-auto">
