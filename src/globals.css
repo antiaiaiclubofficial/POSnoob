@@ -6,33 +6,24 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
-
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
-
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
+    --radius: 1.5rem;
   }
 }
 
@@ -43,19 +34,41 @@
 
   body {
     @apply bg-background text-foreground;
-    /* Default: Apple System Font Stack (SF Pro) */
-    font-family: -apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+    font-family: 'IBM Plex Sans Thai', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-weight: 400; /* Regular เป็นค่าเริ่มต้น */
   }
 
-  /* สำหรับภาษาไทย: ใช้ Thonburi */
-  html[lang="th"] body {
-    font-family: "Thonburi", -apple-system, "SF Pro Text", sans-serif;
+  /* ปรับการจัดการ Font Weight ให้เหมาะสมกับ IBM Plex Sans Thai */
+  /* เนื่องจากฟอนต์นี้สูงสุดที่ 700 (Bold) เราจะ map ตัวที่หนักกว่านั้นให้เป็น 700 */
+  .font-black, .font-extrabold {
+    font-weight: 700;
+  }
+  
+  .font-bold {
+    font-weight: 600; /* ใช้ Semi-Bold สำหรับคลาส Bold ทั่วไปเพื่อให้ดูนุ่มนวลขึ้น */
   }
 
-  /* สำหรับภาษาอังกฤษ: ใช้ SF Pro */
-  html[lang="en"] body {
-    font-family: -apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
+  .font-semibold {
+    font-weight: 500; /* Medium */
   }
+
+  .font-medium {
+    font-weight: 500;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+    font-weight: 700;
+  }
+}
+
+/* ซ่อน Scrollbar แต่ยังเลื่อนได้ */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
