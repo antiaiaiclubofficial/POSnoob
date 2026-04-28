@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck } from 'lucide-react';
-import { useStore, Customer, Pet } from '@/store/useStore';
+import { useStore, Customer, Pet, MembershipLevel } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import CustomerModal from '@/components/CustomerModal';
 import PetModal from '@/components/PetModal';
@@ -10,13 +10,15 @@ import PetProfileRecord from '@/components/PetProfileRecord';
 import LineBindingModal from '@/components/LineBindingModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { translations } from '@/utils/translations';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 const Customers = () => {
   const isMobile = useIsMobile();
-  const { customers, currency, language } = useStore();
+  const { customers, setCustomers, currency, language, tierRules } = useStore();
   const t = translations[language];
   
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(customers[0]?.id || null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetailOnMobile, setShowDetailOnMobile] = useState(false);
   
@@ -27,6 +29,46 @@ const Customers = () => {
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
 
   const [isLineModalOpen, setIsLineModalOpen] = useState(false);
+
+  // Fetch profiles from Supabase
+  const { isLoading } = useQuery({
+    queryKey: ['profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) throw error;
+
+      // Transform Supabase profiles to local Customer interface
+      const transformedCustomers: Customer[] = data.map((profile: any) => {
+        const totalSpent = profile.total_points || 0;
+        const sortedRules = [...tierRules].sort((a, b) => b.minSpent - a.minSpent);
+        const membership = sortedRules.find(r => totalSpent >= r.minSpent)?.level || 'Standard';
+
+        return {
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'No Name',
+          phone: profile.phone || '-',
+          email: profile.email || '-',
+          membership: membership as MembershipLevel,
+          points: profile.points || 0,
+          pets: Array.isArray(profile.pets_data) ? profile.pets_data : [],
+          totalSpent: totalSpent,
+          lineId: profile.line_id
+        };
+      });
+
+      setCustomers(transformedCustomers);
+      return transformedCustomers;
+    }
+  });
+
+  useEffect(() => {
+    if (customers.length > 0 && !selectedCustomerId) {
+      setSelectedCustomerId(customers[0].id);
+    }
+  }, [customers, selectedCustomerId]);
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -59,6 +101,17 @@ const Customers = () => {
     setEditingPet(null);
     setIsPetModalOpen(true);
   };
+
+  if (isLoading && customers.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#F8F9FD]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#1A1F3D]/10 border-t-[#1A1F3D] rounded-full animate-spin" />
+          <p className="text-sm font-black text-[#1A1F3D] uppercase tracking-widest">Loading CRM...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex overflow-hidden relative">
@@ -201,7 +254,7 @@ const Customers = () => {
                   <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                      <Plus size={24} className="text-gray-200" />
                   </div>
-                  <p className="text-xs lg:text-sm text-gray-400 font-bold">{language === 'th' ? 'ไม่มีข้อมูลสัตว์เลี้ยง' : 'No pets registered'}</p>
+                  <p className="text-xs lg:sm text-gray-400 font-bold">{language === 'th' ? 'ไม่มีข้อมูลสัตว์เลี้ยง' : 'No pets registered'}</p>
                 </div>
               )}
             </div>

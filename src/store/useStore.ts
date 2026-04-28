@@ -176,6 +176,7 @@ interface AppState {
   
   services: Service[];
   customers: Customer[];
+  setCustomers: (customers: Customer[]) => void;
   staff: Staff[];
   inventory: InventoryItem[];
   logs: ActivityLog[];
@@ -323,6 +324,7 @@ export const useStore = create<AppState>((set, get) => ({
   
   services: INITIAL_SERVICES,
   customers: [],
+  setCustomers: (customers) => set({ customers }),
   inventory: [],
   staff: INITIAL_STAFF,
   logs: [],
@@ -403,7 +405,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   removeQueueItem: (id) => set((state) => ({ queue: state.queue.filter(q => q.id !== id) })),
-  markAsPaid: (id) => set((state) => ({ queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
+  maskAsPaid: (id) => set((state) => ({ queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
 
   addCustomer: (customerData) => set((state) => ({
     customers: [...state.customers, { ...customerData, id: 'c' + Math.random().toString(36).substr(2, 4), points: 0, pets: [], totalSpent: 0 }]
