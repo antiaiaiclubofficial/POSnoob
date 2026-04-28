@@ -30,12 +30,13 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
 
   useEffect(() => {
     if (pet) {
+      const history = pet.weightHistory || [];
       setFormData({
         name: pet.name,
         species: pet.species,
         breed: pet.breed,
         birthday: pet.birthday,
-        initialWeight: pet.weightHistory[pet.weightHistory.length - 1]?.value.toString() || '',
+        initialWeight: history.length > 0 ? history[history.length - 1].value.toString() : '',
         notes: pet.notes,
         image: pet.image
       });
