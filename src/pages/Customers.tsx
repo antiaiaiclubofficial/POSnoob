@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 
 const Customers = () => {
   const isMobile = useIsMobile();
-  const { customers, setCustomers, deleteCustomer, currency, language, tierRules } = useStore();
+  const { customers, setCustomers, deleteCustomer, currency, language } = useStore();
   const t = translations[language];
   
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -31,32 +31,54 @@ const Customers = () => {
 
   const [isLineModalOpen, setIsLineModalOpen] = useState(false);
 
-  // Fetch profiles from Supabase
+  // Fetch from 'customers' table with joins for pets and store_customers
   const { isLoading } = useQuery({
-    queryKey: ['profiles'],
+    queryKey: ['customers-crm'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*');
+        .from('customers')
+        .select(`
+          *,
+          pets (*),
+          store_customers (*)
+        `);
       
       if (error) throw error;
 
-      // Transform Supabase profiles to local Customer interface
-      const transformedCustomers: Customer[] = data.map((profile: any) => {
-        const totalSpent = profile.total_points || 0;
-        const sortedRules = [...tierRules].sort((a, b) => b.minSpent - a.minSpent);
-        const membership = sortedRules.find(r => totalSpent >= r.minSpent)?.level || 'Standard';
+      // Transform data to match application interface
+      const transformedCustomers: Customer[] = data.map((item: any) => {
+        const storeData = item.store_customers?.[0] || {};
+        
+        // Map pets data
+        const pets: Pet[] = (item.pets || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          species: (p.type === 'cat' ? 'Cat' : p.type === 'dog' ? 'Dog' : 'Other') as any,
+          breed: p.breed || 'Unknown',
+          birthday: p.age || '', // Using age as proxy if birthday not in schema
+          weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: p.weight }] : [],
+          serviceHistory: [],
+          notes: p.medical_condition || p.precautions || '',
+          image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+        }));
+
+        // Normalize membership tier
+        const rawTier = storeData.tier?.toLowerCase();
+        let membership: MembershipLevel = 'Standard';
+        if (rawTier === 'silver') membership = 'Silver';
+        if (rawTier === 'gold') membership = 'Gold';
+        if (rawTier === 'vip') membership = 'VIP';
 
         return {
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'No Name',
-          phone: profile.phone || '-',
-          email: profile.email || '-',
-          membership: membership as MembershipLevel,
-          points: profile.points || 0,
-          pets: Array.isArray(profile.pets_data) ? profile.pets_data : [],
-          totalSpent: totalSpent,
-          lineId: profile.line_id
+          id: item.id,
+          name: item.first_name ? `${item.first_name} ${item.last_name || ''}`.trim() : (item.display_name || 'No Name'),
+          phone: item.phone || '-',
+          email: item.email || '-',
+          membership: membership,
+          points: storeData.points || 0,
+          pets: pets,
+          totalSpent: storeData.points || 0, // Using points as spending proxy if total_spent not available
+          lineId: item.line_user_id
         };
       });
 
@@ -89,7 +111,7 @@ const Customers = () => {
   };
 
   const handleDeleteCustomer = (id: string) => {
-    const confirmMessage = language === 'th' ? "คุณแน่ใจหรือไม่ว่าต้องการลบรายชื่อลูกค้านี้? ข้อมูลสัตว์เลี้ยงทั้งหมดจะหายไปด้วย" : "Are you sure you want to delete this customer? All pet data will be lost.";
+    const confirmMessage = language === 'th' ? "คุณแน่ใจหรือไม่ว่าต้องการลบรายชื่อลูกค้านี้?" : "Are you sure you want to delete this customer?";
     if (window.confirm(confirmMessage)) {
       deleteCustomer(id);
       toast.success(language === 'th' ? "ลบรายชื่อลูกค้าเรียบร้อยแล้ว" : "Customer deleted successfully.");
@@ -121,7 +143,7 @@ const Customers = () => {
       <div className="flex-1 flex items-center justify-center bg-[#F8F9FD]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-[#1A1F3D]/10 border-t-[#1A1F3D] rounded-full animate-spin" />
-          <p className="text-sm font-black text-[#1A1F3D] uppercase tracking-widest">Loading CRM...</p>
+          <p className="text-sm font-black text-[#1A1F3D] uppercase tracking-widest">Fetching Customers...</p>
         </div>
       </div>
     );
@@ -248,7 +270,7 @@ const Customers = () => {
                 <span className="bg-amber-100 text-amber-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest inline-block mb-2">
                   {selectedCustomer.membership} MEMBER
                 </span>
-                <p className="text-[10px] text-gray-400 font-black uppercase">{t.totalSpent}: <span className="text-[#1A1F3D]">{currency}{selectedCustomer.totalSpent.toFixed(2)}</span></p>
+                <p className="text-[10px] text-gray-400 font-black uppercase">{t.totalSpent}: <span className="text-[#1A1F3D]">{currency}{selectedCustomer.totalSpent.toLocaleString()}</span></p>
               </div>
             </div>
 
