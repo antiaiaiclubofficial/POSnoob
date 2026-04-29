@@ -236,6 +236,7 @@ interface AppState {
 
   addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'totalSpent'>) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
+  deleteCustomer: (id: string) => void;
   bindLineToCustomer: (customerId: string, lineId: string) => void;
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
   updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
@@ -411,6 +412,11 @@ export const useStore = create<AppState>((set, get) => ({
     customers: [...state.customers, { ...customerData, id: 'c' + Math.random().toString(36).substr(2, 4), points: 0, pets: [], totalSpent: 0 }]
   })),
   updateCustomer: (id, customerData) => set((state) => ({ customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c) })),
+  deleteCustomer: (id) => set((state) => ({
+    customers: state.customers.filter(c => c.id !== id),
+    selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
+    activePet: state.selectedOwner?.id === id ? null : state.activePet
+  })),
   bindLineToCustomer: (customerId, lineId) => set((state) => ({ customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c) })),
   addPet: (customerId, petData) => set((state) => ({
     customers: state.customers.map(c => c.id === customerId ? {

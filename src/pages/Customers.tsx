@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck } from 'lucide-react';
+import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2 } from 'lucide-react';
 import { useStore, Customer, Pet, MembershipLevel } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import CustomerModal from '@/components/CustomerModal';
@@ -12,10 +12,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { translations } from '@/utils/translations';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 const Customers = () => {
   const isMobile = useIsMobile();
-  const { customers, setCustomers, currency, language, tierRules } = useStore();
+  const { customers, setCustomers, deleteCustomer, currency, language, tierRules } = useStore();
   const t = translations[language];
   
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -85,6 +86,19 @@ const Customers = () => {
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
     setIsCustomerModalOpen(true);
+  };
+
+  const handleDeleteCustomer = (id: string) => {
+    const confirmMessage = language === 'th' ? "คุณแน่ใจหรือไม่ว่าต้องการลบรายชื่อลูกค้านี้? ข้อมูลสัตว์เลี้ยงทั้งหมดจะหายไปด้วย" : "Are you sure you want to delete this customer? All pet data will be lost.";
+    if (window.confirm(confirmMessage)) {
+      deleteCustomer(id);
+      toast.success(language === 'th' ? "ลบรายชื่อลูกค้าเรียบร้อยแล้ว" : "Customer deleted successfully.");
+      if (filteredCustomers.length > 1) {
+        setSelectedCustomerId(filteredCustomers[0].id === id ? filteredCustomers[1].id : filteredCustomers[0].id);
+      } else {
+        setSelectedCustomerId(null);
+      }
+    }
   };
 
   const handleAddCustomer = () => {
@@ -190,12 +204,20 @@ const Customers = () => {
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <h2 className="text-2xl lg:text-3xl font-black">{selectedCustomer.name}</h2>
-                    <button 
-                      onClick={() => handleEditCustomer(selectedCustomer)}
-                      className="p-2 text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-lg transition-all"
-                    >
-                      <Edit3 size={18} />
-                    </button>
+                    <div className="flex gap-1">
+                      <button 
+                        onClick={() => handleEditCustomer(selectedCustomer)}
+                        className="p-2 text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-lg transition-all"
+                      >
+                        <Edit3 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteCustomer(selectedCustomer.id)}
+                        className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
                     <span className="flex items-center gap-1.5 text-[10px] lg:text-xs text-gray-400 font-bold"><Phone size={14}/> {selectedCustomer.phone}</span>
