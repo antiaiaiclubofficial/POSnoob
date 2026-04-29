@@ -20,11 +20,14 @@ export const translations = {
     createPromo: "Create Promotion",
     couponTemplates: "Coupon Templates",
     createCoupon: "Create Coupon",
+    editCoupon: "Edit Coupon",
     pointsRequired: "Points Required",
     expiryDays: "Expiry (Days)",
     promoTitle: "Promotion Title",
     promoDesc: "Description",
     isActive: "Is Active",
+    couponIcon: "Coupon Icon",
+    couponDetails: "Coupon Details",
     
     // Actions
     saveAll: "Save All Settings",
@@ -253,11 +256,14 @@ export const translations = {
     createPromo: "สร้างโปรโมชั่น",
     couponTemplates: "รูปแบบคูปอง",
     createCoupon: "สร้างคูปอง",
+    editCoupon: "แก้ไขคูปอง",
     pointsRequired: "แต้มที่ต้องใช้",
     expiryDays: "วันหมดอายุ (วัน)",
     promoTitle: "หัวข้อโปรโมชั่น",
     promoDesc: "รายละเอียด",
     isActive: "เปิดใช้งาน",
+    couponIcon: "ไอคอนคูปอง",
+    couponDetails: "รายละเอียดคูปอง",
 
     // Actions
     saveAll: "บันทึกการตั้งค่าทั้งหมด",
