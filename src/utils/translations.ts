@@ -12,6 +12,19 @@ export const translations = {
     settings: "Settings",
     logout: "Sign Out",
     support: "Support",
+    promotions: "Promotions",
+    coupons: "Coupons & Rewards",
+    
+    // Promotions & Coupons
+    activePromos: "Active Promotions",
+    createPromo: "Create Promotion",
+    couponTemplates: "Coupon Templates",
+    createCoupon: "Create Coupon",
+    pointsRequired: "Points Required",
+    expiryDays: "Expiry (Days)",
+    promoTitle: "Promotion Title",
+    promoDesc: "Description",
+    isActive: "Is Active",
     
     // Actions
     saveAll: "Save All Settings",
@@ -232,6 +245,19 @@ export const translations = {
     settings: "ตั้งค่าระบบ",
     logout: "ออกจากระบบ",
     support: "ช่วยเหลือ",
+    promotions: "โปรโมชั่น",
+    coupons: "คูปองและรางวัล",
+
+    // Promotions & Coupons
+    activePromos: "โปรโมชั่นที่เปิดอยู่",
+    createPromo: "สร้างโปรโมชั่น",
+    couponTemplates: "รูปแบบคูปอง",
+    createCoupon: "สร้างคูปอง",
+    pointsRequired: "แต้มที่ต้องใช้",
+    expiryDays: "วันหมดอายุ (วัน)",
+    promoTitle: "หัวข้อโปรโมชั่น",
+    promoDesc: "รายละเอียด",
+    isActive: "เปิดใช้งาน",
 
     // Actions
     saveAll: "บันทึกการตั้งค่าทั้งหมด",
@@ -397,7 +423,7 @@ export const translations = {
     verificationRequired: "ต้องมีการยืนยันตัวตน",
 
     // Logs
-    activityLogs: "บันทึกกิจกรรม",
+    activityLogs: "Activity Logs",
     auditTrail: "ประวัติการดำเนินงาน",
     filterLogs: "กรองบันทึก...",
     noActivities: "ยังไม่มีการบันทึกกิจกรรม",
