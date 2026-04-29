@@ -25,21 +25,29 @@ const Marketing = () => {
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
-  // Fetch Promotions
+  // Fetch Promotions - เรียงตามวันที่สร้าง (ใหม่ไปเก่า) และตาม ID เพื่อให้ตำแหน่งคงที่ 100%
   const { data: promotions, isLoading: promosLoading } = useQuery({
     queryKey: ['deal_templates'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('deal_templates').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('deal_templates')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true }); // เพิ่มการเรียงลำดับลำดับที่สองเพื่อความแม่นยำ
       if (error) throw error;
       return data;
     }
   });
 
-  // Fetch Coupons
+  // Fetch Coupons - เรียงตามวันที่สร้าง (ใหม่ไปเก่า) และตาม ID เพื่อให้ตำแหน่งคงที่ 100%
   const { data: coupons, isLoading: couponsLoading } = useQuery({
     queryKey: ['coupon_templates'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('coupon_templates').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('coupon_templates')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true });
       if (error) throw error;
       return data;
     }
@@ -56,7 +64,6 @@ const Marketing = () => {
       return { table, is_active };
     },
     onSuccess: (data) => {
-      // Refresh the specific table data
       queryClient.invalidateQueries({ queryKey: [data.table] });
       toast.success(language === 'th' ? "อัปเดตสถานะสำเร็จ" : "Status updated successfully");
     },
