@@ -25,7 +25,7 @@ const Marketing = () => {
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
-  // Fetch Data
+  // Fetch Promotions
   const { data: promotions, isLoading: promosLoading } = useQuery({
     queryKey: ['deal_templates'],
     queryFn: async () => {
@@ -35,6 +35,7 @@ const Marketing = () => {
     }
   });
 
+  // Fetch Coupons
   const { data: coupons, isLoading: couponsLoading } = useQuery({
     queryKey: ['coupon_templates'],
     queryFn: async () => {
@@ -44,19 +45,24 @@ const Marketing = () => {
     }
   });
 
-  // Mutations
+  // Mutation for Toggle Switch
   const toggleMutation = useMutation({
     mutationFn: async ({ table, id, is_active }: { table: string, id: string, is_active: boolean }) => {
-      const { error } = await supabase.from(table).update({ is_active }).eq('id', id);
+      const { error } = await supabase
+        .from(table)
+        .update({ is_active: is_active })
+        .eq('id', id);
       if (error) throw error;
+      return { table, is_active };
     },
-    onSuccess: (_, variables) => {
-      // รีเฟรชข้อมูลในตารางที่เกี่ยวข้องทันที
-      queryClient.invalidateQueries({ queryKey: [variables.table] });
-      toast.success(language === 'th' ? "อัปเดตสถานะเรียบร้อย" : "Status updated successfully");
+    onSuccess: (data) => {
+      // Refresh the specific table data
+      queryClient.invalidateQueries({ queryKey: [data.table] });
+      toast.success(language === 'th' ? "อัปเดตสถานะสำเร็จ" : "Status updated successfully");
     },
-    onError: () => {
-      toast.error(language === 'th' ? "เกิดข้อผิดพลาดในการอัปเดต" : "Failed to update status");
+    onError: (error) => {
+      console.error('Toggle Error:', error);
+      toast.error(language === 'th' ? "ไม่สามารถอัปเดตสถานะได้" : "Failed to update status");
     }
   });
 
@@ -64,9 +70,10 @@ const Marketing = () => {
     mutationFn: async ({ table, id }: { table: string, id: string }) => {
       const { error } = await supabase.from(table).delete().eq('id', id);
       if (error) throw error;
+      return { table };
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [variables.table] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [data.table] });
       toast.success(language === 'th' ? "ลบรายการเรียบร้อย" : "Item deleted successfully");
     }
   });
@@ -180,7 +187,7 @@ const Marketing = () => {
                     </div>
                   </div>
                ))}
-               {(promosLoading) && <div className="col-span-full py-20 text-center font-black opacity-20">Loading Promotions...</div>}
+               {promosLoading && <div className="col-span-full py-20 text-center font-black opacity-20 animate-pulse">Loading Promotions...</div>}
                {(!promosLoading && filteredPromos?.length === 0) && <div className="col-span-full py-20 text-center opacity-20 font-black">No Promotions Found</div>}
              </div>
           </TabsContent>
@@ -238,7 +245,7 @@ const Marketing = () => {
                   </div>
                 );
               })}
-              {(couponsLoading) && <div className="col-span-full py-20 text-center font-black opacity-20">Loading Coupons...</div>}
+              {couponsLoading && <div className="col-span-full py-20 text-center font-black opacity-20 animate-pulse">Loading Coupons...</div>}
               {(!couponsLoading && filteredCoupons?.length === 0) && <div className="col-span-full py-20 text-center opacity-20 font-black">No Coupons Found</div>}
             </div>
           </TabsContent>
