@@ -51,8 +51,12 @@ const Marketing = () => {
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
+      // รีเฟรชข้อมูลในตารางที่เกี่ยวข้องทันที
       queryClient.invalidateQueries({ queryKey: [variables.table] });
-      toast.success("Status updated");
+      toast.success(language === 'th' ? "อัปเดตสถานะเรียบร้อย" : "Status updated successfully");
+    },
+    onError: () => {
+      toast.error(language === 'th' ? "เกิดข้อผิดพลาดในการอัปเดต" : "Failed to update status");
     }
   });
 
@@ -63,7 +67,7 @@ const Marketing = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [variables.table] });
-      toast.success("Item deleted");
+      toast.success(language === 'th' ? "ลบรายการเรียบร้อย" : "Item deleted successfully");
     }
   });
 
@@ -155,7 +159,16 @@ const Marketing = () => {
                         />
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => handleEdit(promo)} className="p-2 text-gray-400 hover:text-[#1A1F3D] rounded-xl"><Edit3 size={16}/></button>
-                          <button onClick={() => deleteMutation.mutate({ table: 'deal_templates', id: promo.id })} className="p-2 text-gray-400 hover:text-red-500 rounded-xl"><Trash2 size={16}/></button>
+                          <button 
+                            onClick={() => {
+                              if(window.confirm(language === 'th' ? "ยืนยันการลบโปรโมชั่น?" : "Confirm deletion?")) {
+                                deleteMutation.mutate({ table: 'deal_templates', id: promo.id });
+                              }
+                            }} 
+                            className="p-2 text-gray-400 hover:text-red-500 rounded-xl"
+                          >
+                            <Trash2 size={16}/>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -167,7 +180,8 @@ const Marketing = () => {
                     </div>
                   </div>
                ))}
-               {filteredPromos?.length === 0 && <div className="col-span-full py-20 text-center opacity-20 font-black">No Promotions Found</div>}
+               {(promosLoading) && <div className="col-span-full py-20 text-center font-black opacity-20">Loading Promotions...</div>}
+               {(!promosLoading && filteredPromos?.length === 0) && <div className="col-span-full py-20 text-center opacity-20 font-black">No Promotions Found</div>}
              </div>
           </TabsContent>
 
@@ -192,7 +206,16 @@ const Marketing = () => {
                         />
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => handleEdit(coupon)} className="p-2 text-gray-400 hover:text-[#1A1F3D] rounded-xl"><Edit3 size={16}/></button>
-                          <button onClick={() => deleteMutation.mutate({ table: 'coupon_templates', id: coupon.id })} className="p-2 text-gray-400 hover:text-red-500 rounded-xl"><Trash2 size={16}/></button>
+                          <button 
+                            onClick={() => {
+                              if(window.confirm(language === 'th' ? "ยืนยันการลบคูปอง?" : "Confirm deletion?")) {
+                                deleteMutation.mutate({ table: 'coupon_templates', id: coupon.id });
+                              }
+                            }} 
+                            className="p-2 text-gray-400 hover:text-red-500 rounded-xl"
+                          >
+                            <Trash2 size={16}/>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -215,7 +238,8 @@ const Marketing = () => {
                   </div>
                 );
               })}
-              {filteredCoupons?.length === 0 && <div className="col-span-full py-20 text-center opacity-20 font-black">No Coupons Found</div>}
+              {(couponsLoading) && <div className="col-span-full py-20 text-center font-black opacity-20">Loading Coupons...</div>}
+              {(!couponsLoading && filteredCoupons?.length === 0) && <div className="col-span-full py-20 text-center opacity-20 font-black">No Coupons Found</div>}
             </div>
           </TabsContent>
         </Tabs>

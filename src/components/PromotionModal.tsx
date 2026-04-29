@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Tag, Info, Check } from 'lucide-react';
+import { X, Tag } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 interface PromotionModalProps {
   promotion?: any | null;
@@ -50,14 +49,20 @@ const PromotionModal = ({ promotion, onClose }: PromotionModalProps) => {
       }
     },
     onSuccess: () => {
+      // รีเฟรชข้อมูลหน้าจอหลักทันที
       queryClient.invalidateQueries({ queryKey: ['deal_templates'] });
-      toast.success(promotion ? "Promotion updated" : "Promotion created");
+      toast.success(promotion ? (language === 'th' ? "อัปเดตโปรโมชั่นเรียบร้อย" : "Promotion updated") : (language === 'th' ? "สร้างโปรโมชั่นเรียบร้อย" : "Promotion created"));
       onClose();
+    },
+    onError: (error) => {
+      toast.error(language === 'th' ? "บันทึกข้อมูลไม่สำเร็จ" : "Failed to save data");
+      console.error(error);
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title) return;
     upsertMutation.mutate(formData);
   };
 
@@ -74,7 +79,7 @@ const PromotionModal = ({ promotion, onClose }: PromotionModalProps) => {
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t.promoDetails}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all">
+          <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-all">
             <X size={20} className="text-gray-400" />
           </button>
         </div>
@@ -84,10 +89,11 @@ const PromotionModal = ({ promotion, onClose }: PromotionModalProps) => {
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.promoTitle}</label>
               <input 
-                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
+                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-blue-500/5 transition-all"
                 value={formData.title}
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
                 required
+                placeholder="e.g. Weekend Special Discount"
               />
             </div>
 
@@ -104,9 +110,10 @@ const PromotionModal = ({ promotion, onClose }: PromotionModalProps) => {
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.promoDesc}</label>
               <textarea 
-                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none"
+                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none focus:ring-4 focus:ring-blue-500/5 transition-all"
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Details of the deal..."
               />
             </div>
           </div>
@@ -114,7 +121,7 @@ const PromotionModal = ({ promotion, onClose }: PromotionModalProps) => {
           <button 
             type="submit"
             disabled={upsertMutation.isPending}
-            className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[28px] shadow-xl shadow-[#1A1F3D]/20 transition-all active:scale-95"
+            className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[28px] shadow-xl shadow-[#1A1F3D]/20 transition-all active:scale-95 disabled:opacity-50"
           >
             {upsertMutation.isPending ? "Saving..." : t.saveChanges}
           </button>

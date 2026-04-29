@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Ticket, Gift, Star, Award, Zap, Heart, Trash2 } from 'lucide-react';
+import { X, Ticket, Gift, Star, Award, Zap, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '@/store/useStore';
@@ -21,14 +21,6 @@ const ICONS = [
   { id: 'Award', icon: Award },
   { id: 'Zap', icon: Zap },
   { id: 'Heart', icon: Heart },
-];
-
-const COLORS = [
-  { id: 'bg-pink-50', text: 'text-pink-600', label: 'Pink' },
-  { id: 'bg-blue-50', text: 'text-blue-600', label: 'Blue' },
-  { id: 'bg-purple-50', text: 'text-purple-600', label: 'Purple' },
-  { id: 'bg-amber-50', text: 'text-amber-600', label: 'Amber' },
-  { id: 'bg-green-50', text: 'text-green-600', label: 'Green' },
 ];
 
 const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
@@ -71,14 +63,20 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
       }
     },
     onSuccess: () => {
+      // บังคับให้หน้าจอหลักรีเฟรชข้อมูลใหม่
       queryClient.invalidateQueries({ queryKey: ['coupon_templates'] });
-      toast.success(coupon ? "Coupon updated" : "Coupon created");
+      toast.success(coupon ? (language === 'th' ? "อัปเดตคูปองเรียบร้อย" : "Coupon updated") : (language === 'th' ? "สร้างคูปองเรียบร้อย" : "Coupon created"));
       onClose();
+    },
+    onError: (error) => {
+      toast.error(language === 'th' ? "บันทึกข้อมูลไม่สำเร็จ" : "Failed to save data");
+      console.error(error);
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title) return;
     upsertMutation.mutate(formData);
   };
 
@@ -95,7 +93,7 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t.couponDetails}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all">
+          <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-all">
             <X size={20} className="text-gray-400" />
           </button>
         </div>
@@ -105,10 +103,11 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.promoTitle}</label>
               <input 
-                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
+                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-pink-500/5 transition-all"
                 value={formData.title}
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
                 required
+                placeholder="e.g. 50% Off Grooming"
               />
             </div>
 
@@ -145,7 +144,7 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
                     onClick={() => setFormData({ ...formData, icon_name: item.id })}
                     className={cn(
                       "flex-1 p-3 rounded-xl flex items-center justify-center transition-all",
-                      formData.icon_name === item.id ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-300"
+                      formData.icon_name === item.id ? "bg-white text-pink-600 shadow-sm" : "text-gray-300 hover:text-gray-400"
                     )}
                   >
                     <item.icon size={18} />
@@ -157,16 +156,18 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.promoDesc}</label>
               <textarea 
-                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none"
+                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none focus:ring-4 focus:ring-pink-500/5 transition-all"
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe this reward..."
               />
             </div>
           </div>
 
           <button 
             type="submit"
-            className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[28px] shadow-xl shadow-[#1A1F3D]/20 transition-all active:scale-95"
+            disabled={upsertMutation.isPending}
+            className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[28px] shadow-xl shadow-[#1A1F3D]/20 transition-all active:scale-95 disabled:opacity-50"
           >
             {upsertMutation.isPending ? "Saving..." : t.saveChanges}
           </button>
