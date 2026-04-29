@@ -11,8 +11,7 @@ import Index from "./pages/Index";
 import Queue from "./pages/Queue";
 import Services from "./pages/Services";
 import Customers from "./pages/Customers";
-import Promotions from "./pages/Promotions";
-import Coupons from "./pages/Coupons";
+import Marketing from "./pages/Marketing";
 import Staff from "./pages/Staff";
 import StaffPerformance from "./pages/StaffPerformance";
 import Logs from "./pages/Logs";
@@ -46,8 +45,7 @@ const App = () => {
               <Route path="/queue" element={<Queue />} />
               <Route path="/services" element={<Services />} />
               <Route path="/customers" element={<Customers />} />
-              <Route path="/promotions" element={<Promotions />} />
-              <Route path="/coupons" element={<Coupons />} />
+              <Route path="/marketing" element={<Marketing />} />
               <Route path="/staff" element={<Staff />} />
               <Route path="/staff/performance" element={<StaffPerformance />} />
               <Route path="/logs" element={<Logs />} />

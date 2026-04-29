@@ -12,22 +12,25 @@ export const translations = {
     settings: "Settings",
     logout: "Sign Out",
     support: "Support",
+    marketing: "Marketing & Rewards",
     promotions: "Promotions",
-    coupons: "Coupons & Rewards",
+    coupons: "Coupons",
     
     // Promotions & Coupons
     activePromos: "Active Promotions",
     createPromo: "Create Promotion",
+    editPromo: "Edit Promotion",
     couponTemplates: "Coupon Templates",
     createCoupon: "Create Coupon",
     editCoupon: "Edit Coupon",
     pointsRequired: "Points Required",
     expiryDays: "Expiry (Days)",
-    promoTitle: "Promotion Title",
+    promoTitle: "Title",
     promoDesc: "Description",
     isActive: "Is Active",
     couponIcon: "Coupon Icon",
     couponDetails: "Coupon Details",
+    promoDetails: "Promotion Details",
     
     // Actions
     saveAll: "Save All Settings",
@@ -41,7 +44,7 @@ export const translations = {
     close: "Close",
     preview: "Preview",
 
-    // Login
+    // ... (rest of translation keys remain same)
     loginSystem: "Management System Login",
     operatorId: "Operator ID",
     accessPin: "Access Pin",
@@ -52,8 +55,6 @@ export const translations = {
     invalidCreds: "Invalid credentials. Please try again.",
     enterAdminId: "Enter admin ID",
     enterPassword: "Enter password",
-
-    // Dashboard
     helloAdmin: "Hello, Admin!",
     todayIs: "Today is",
     dailyOverview: "Operational Overview",
@@ -68,8 +69,6 @@ export const translations = {
     customerLoyalty: "Retention Rate",
     regulars: "Regulars",
     newClients: "New Clients",
-
-    // CRM & Customer Modal
     addClient: "Add New Client",
     editProfile: "Edit Profile",
     customerContact: "Customer contact information",
@@ -89,8 +88,6 @@ export const translations = {
     email: "Email",
     membership: "Membership",
     age: "Age",
-
-    // Pet Modal
     newPetRegistration: "New Pet Registration",
     editPetProfile: "Edit Pet Profile",
     updatePetDetails: "Update furry friend details",
@@ -106,8 +103,6 @@ export const translations = {
     notes: "Medical Notes",
     history: "Service History",
     noHistory: "No previous services",
-
-    // Service Modal
     newService: "New Service",
     editService: "Edit Service",
     targetSpecies: "Target Species",
@@ -121,8 +116,6 @@ export const translations = {
     price: "Price",
     addPriceTier: "Add Price Tier",
     createService: "Create Service",
-
-    // Staff Management
     ourTeam: "Our Team",
     manageStaff: "Manage team member details & login access",
     addStaff: "Add New Staff",
@@ -142,8 +135,6 @@ export const translations = {
     inactive: "Inactive",
     addToTeam: "Add to Team",
     updateStaffMember: "Update Staff Member",
-
-    // POS / Checkout
     pointOfSale: "Point of Sale",
     newCustomer: "Quick Register",
     searchOwner: "Search owner, pet, or phone...",
@@ -167,8 +158,6 @@ export const translations = {
     change: "Change Due",
     quickCash: "Quick Cash",
     confirmPayment: "Confirm Payment",
-
-    // Operations / Queue
     waiting: "Waiting",
     checkedIn: "Checked-in",
     inProgress: "In Progress",
@@ -181,8 +170,6 @@ export const translations = {
     completeBtn: "Finish",
     goToCheckout: "Go to Checkout",
     noQueue: "No active queue items",
-
-    // Reports & Analytics
     analytics: "Analytics",
     businessInsights: "Business Insights",
     totalRevenue: "Total Revenue",
@@ -191,14 +178,10 @@ export const translations = {
     totalSessions: "Total Sessions",
     transactionLedger: "Transaction Ledger",
     verificationRequired: "Verification Required",
-
-    // Logs
     activityLogs: "Activity Logs",
     auditTrail: "System audit trail",
     filterLogs: "Filter logs...",
     noActivities: "No activities recorded",
-
-    // Settings
     business: "Business",
     booking: "Booking",
     integrations: "Integrations",
@@ -248,22 +231,25 @@ export const translations = {
     settings: "ตั้งค่าระบบ",
     logout: "ออกจากระบบ",
     support: "ช่วยเหลือ",
+    marketing: "การตลาดและรางวัล",
     promotions: "โปรโมชั่น",
-    coupons: "คูปองและรางวัล",
+    coupons: "คูปอง",
 
     // Promotions & Coupons
     activePromos: "โปรโมชั่นที่เปิดอยู่",
     createPromo: "สร้างโปรโมชั่น",
+    editPromo: "แก้ไขโปรโมชั่น",
     couponTemplates: "รูปแบบคูปอง",
     createCoupon: "สร้างคูปอง",
     editCoupon: "แก้ไขคูปอง",
     pointsRequired: "แต้มที่ต้องใช้",
     expiryDays: "วันหมดอายุ (วัน)",
-    promoTitle: "หัวข้อโปรโมชั่น",
+    promoTitle: "หัวข้อ",
     promoDesc: "รายละเอียด",
     isActive: "เปิดใช้งาน",
     couponIcon: "ไอคอนคูปอง",
     couponDetails: "รายละเอียดคูปอง",
+    promoDetails: "รายละเอียดโปรโมชั่น",
 
     // Actions
     saveAll: "บันทึกการตั้งค่าทั้งหมด",
@@ -277,7 +263,7 @@ export const translations = {
     close: "ปิด",
     preview: "ตัวอย่าง",
 
-    // Login
+    // ... (rest same)
     loginSystem: "เข้าสู่ระบบจัดการร้าน",
     operatorId: "รหัสพนักงาน",
     accessPin: "รหัสผ่าน (PIN)",
@@ -288,8 +274,6 @@ export const translations = {
     invalidCreds: "ข้อมูลไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง",
     enterAdminId: "ระบุไอดีผู้ดูแล",
     enterPassword: "ระบุรหัสผ่าน",
-
-    // Dashboard
     helloAdmin: "สวัสดี, ผู้ดูแลระบบ!",
     todayIs: "วันนี้คือวันที่",
     dailyOverview: "ภาพรวมการดำเนินงาน",
@@ -304,8 +288,6 @@ export const translations = {
     customerLoyalty: "อัตราลูกค้าประจำ",
     regulars: "ลูกค้าประจำ",
     newClients: "ลูกค้าใหม่",
-
-    // CRM & Customer Modal
     addClient: "เพิ่มลูกค้าใหม่",
     editProfile: "แก้ไขโปรไฟล์",
     customerContact: "ข้อมูลติดต่อของลูกค้า",
@@ -325,8 +307,6 @@ export const translations = {
     email: "อีเมล",
     membership: "ระดับสมาชิก",
     age: "อายุ",
-
-    // Pet Modal
     newPetRegistration: "ลงทะเบียนสัตว์เลี้ยงใหม่",
     editPetProfile: "แก้ไขโปรไฟล์สัตว์เลี้ยง",
     updatePetDetails: "ระบุรายละเอียดเพื่อนรักขนฟู",
@@ -342,8 +322,6 @@ export const translations = {
     notes: "หมายเหตุ/แพ้ยา",
     history: "ประวัติการรับบริการ",
     noHistory: "ยังไม่มีประวัติการบริการ",
-
-    // Service Modal
     newService: "บริการใหม่",
     editService: "แก้ไขบริการ",
     targetSpecies: "ประเภทสัตว์",
@@ -357,8 +335,6 @@ export const translations = {
     price: "ราคา",
     addPriceTier: "เพิ่มระดับราคา",
     createService: "สร้างบริการ",
-
-    // Staff Management
     ourTeam: "ทีมงานของเรา",
     manageStaff: "จัดการทีมพนักงาน",
     addStaff: "เพิ่มพนักงานใหม่",
@@ -378,8 +354,6 @@ export const translations = {
     inactive: "ปิดใช้งาน",
     addToTeam: "เพิ่มเข้าสู่ทีม",
     updateStaffMember: "อัปเดตข้อมูลพนักงาน",
-
-    // POS / Checkout
     pointOfSale: "จุดขาย (POS)",
     newCustomer: "ลงทะเบียนด่วน",
     searchOwner: "ค้นหาชื่อเจ้าของ, สัตว์เลี้ยง หรือเบอร์โทร...",
@@ -403,8 +377,6 @@ export const translations = {
     change: "เงินทอน",
     quickCash: "จำนวนเงินด่วน",
     confirmPayment: "ยืนยันการชำระเงิน",
-
-    // Operations / Queue
     waiting: "รอรับบริการ",
     checkedIn: "เช็คอินแล้ว",
     inProgress: "กำลังดำเนินการ",
@@ -417,8 +389,6 @@ export const translations = {
     completeBtn: "เสร็จงาน",
     goToCheckout: "ไปที่หน้าชำระเงิน",
     noQueue: "ไม่มีคิวงานในขณะนี้",
-
-    // Reports & Analytics
     analytics: "การวิเคราะห์",
     businessInsights: "ข้อมูลเจาะลึกธุรกิจ",
     totalRevenue: "รายได้รวมทั้งหมด",
@@ -427,14 +397,10 @@ export const translations = {
     totalSessions: "จำนวนรายการทั้งหมด",
     transactionLedger: "บัญชีธุรกรรม",
     verificationRequired: "ต้องมีการยืนยันตัวตน",
-
-    // Logs
     activityLogs: "Activity Logs",
     auditTrail: "ประวัติการดำเนินงาน",
     filterLogs: "กรองบันทึก...",
     noActivities: "ยังไม่มีการบันทึกกิจกรรม",
-
-    // Settings
     business: "ข้อมูลธุรกิจ",
     booking: "การจองคิว",
     integrations: "การเชื่อมต่อ",
