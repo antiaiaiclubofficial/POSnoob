@@ -65,6 +65,10 @@ export interface Pet {
 export interface Customer {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
+  gender?: string;
+  age?: string;
   phone: string;
   email: string;
   membership: MembershipLevel;
@@ -72,6 +76,15 @@ export interface Customer {
   pets: Pet[];
   totalSpent: number;
   lineId?: string;
+  // Address Fields
+  houseNo?: string;
+  villageNo?: string;
+  soi?: string;
+  road?: string;
+  subDistrict?: string;
+  district?: string;
+  province?: string;
+  postalCode?: string;
 }
 
 export interface Transaction {
@@ -385,7 +398,7 @@ export const useStore = create<AppState>((set, get) => ({
   toggleServiceActive: (id) => set((state) => ({ services: state.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
 
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
-  setActivePet: (pet) => set({ activePet: pet }),
+  setActivePet: (pet) => set({ setActivePet: pet }),
   setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
 
   addBooking: (booking) => set((state) => ({
