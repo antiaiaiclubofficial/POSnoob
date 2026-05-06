@@ -398,7 +398,7 @@ export const useStore = create<AppState>((set, get) => ({
   toggleServiceActive: (id) => set((state) => ({ services: state.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
 
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
-  setActivePet: (pet) => set({ setActivePet: pet }),
+  setActivePet: (pet) => set({ activePet: pet }),
   setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
 
   addBooking: (booking) => set((state) => ({
