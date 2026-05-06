@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Language } from '@/utils/translations';
+import { supabase } from '@/integrations/supabase/client';
 
 export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health' | 'brush' | 'hotel' | 'love' | 'food' | 'premium';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
@@ -170,7 +171,8 @@ interface AppState {
   language: Language;
   setLanguage: (lang: Language) => void;
   isAuthenticated: boolean;
-  currentUser: { name: string; role: string; username?: string } | null;
+  currentUser: { id: string; name: string; role: string; username?: string; email?: string } | null;
+  storeId: string | null;
   shopName: string;
   shopLogo: string | null;
   shopAddress: string;
@@ -209,8 +211,10 @@ interface AppState {
   kennelCapacity: number;
   
   login: (id: string, pass: string) => boolean;
+  loginWithGoogle: () => Promise<void>;
+  setSession: (user: any) => void;
   verifyPassword: (pass: string) => boolean;
-  logout: () => void;
+  logout: () => Promise<void>;
   
   updateBusinessProfile: (profile: { 
     shopName?: string, 
@@ -321,6 +325,7 @@ export const useStore = create<AppState>((set, get) => ({
   setLanguage: (lang) => set({ language: lang }),
   isAuthenticated: false,
   currentUser: null,
+  storeId: null,
   shopName: "Tactile Sanctuary",
   shopLogo: null,
   shopAddress: "123 Pet Street, Bangkok, Thailand",
@@ -360,19 +365,50 @@ export const useStore = create<AppState>((set, get) => ({
   login: (id, pass) => {
     const { addLog } = get();
     if (id === 'admin' && pass === '1234') {
-      const user = { name: 'Admin', role: 'Admin', username: 'admin' };
-      set({ isAuthenticated: true, currentUser: user });
+      const user = { id: 'admin', name: 'Admin', role: 'Admin', username: 'admin' };
+      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store' });
       addLog({ staffName: 'System', action: 'Login Success', details: 'Super Admin logged into the system', type: 'success' });
       return true;
     }
     const member = get().staff.find(s => s.username === id && s.password === pass && s.status === 'Active');
     if (member) {
-      const user = { name: member.name, role: member.role, username: member.username };
-      set({ isAuthenticated: true, currentUser: user });
+      const user = { id: member.id, name: member.name, role: member.role, username: member.username };
+      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store' });
       addLog({ staffName: 'System', action: 'Login Success', details: `Staff member ${member.name} logged in`, type: 'success' });
       return true;
     }
     return false;
+  },
+
+  loginWithGoogle: async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    if (error) throw error;
+  },
+
+  setSession: (user) => {
+    if (user) {
+      // ในระบบจริง store_id จะถูกดึงมาจากตาราง profiles ใน Supabase
+      // ที่นี่เราจำลองการดึง store_id จาก user metadata หรือกำหนดค่าเริ่มต้น
+      const storeIdFromMetadata = user.user_metadata?.store_id || 'default-store';
+      
+      set({ 
+        isAuthenticated: true, 
+        currentUser: {
+          id: user.id,
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          role: 'Admin', // Default role for Google Login
+          email: user.email
+        },
+        storeId: storeIdFromMetadata
+      });
+    } else {
+      set({ isAuthenticated: false, currentUser: null, storeId: null });
+    }
   },
 
   verifyPassword: (pass) => {
@@ -383,7 +419,10 @@ export const useStore = create<AppState>((set, get) => ({
     return member?.password === pass;
   },
   
-  logout: () => set({ isAuthenticated: false, currentUser: null }),
+  logout: async () => {
+    await supabase.auth.signOut();
+    set({ isAuthenticated: false, currentUser: null, storeId: null });
+  },
   
   updateBusinessProfile: (profile) => set((state) => ({ ...state, ...profile })),
 

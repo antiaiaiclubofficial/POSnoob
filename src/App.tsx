@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useStore } from "@/store/useStore";
+import { supabase } from "@/integrations/supabase/client";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
@@ -24,12 +25,27 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const language = useStore((state) => state.language);
+  const { language, setSession } = useStore();
 
   // Sync language state with HTML lang attribute for CSS font selection
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
+
+  // Auth Listener
+  useEffect(() => {
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session?.user ?? null);
+    });
+
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [setSession]);
 
   return (
     <QueryClientProvider client={queryClient}>
