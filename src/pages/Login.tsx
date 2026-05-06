@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Lock, User, Scissors, Sparkles, ArrowRight, Chrome } from 'lucide-react';
@@ -13,9 +13,16 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   
-  const { login, loginWithGoogle, language, setLanguage } = useStore();
+  const { login, loginWithGoogle, language, setLanguage, isAuthenticated } = useStore();
   const t = translations[language];
   const navigate = useNavigate();
+
+  // ตรวจสอบว่าถ้าล็อกอินสำเร็จแล้ว (รวมถึงกลับมาจาก Google OAuth) ให้ไปหน้าหลักทันที
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +39,8 @@ const Login = () => {
     setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
+      // หมายเหตุ: หลังจากเรียก loginWithGoogle หน้าจอจะ redirect ไปที่ Google
+      // และเมื่อกลับมา Logic ใน useEffect ข้างบนจะพาเข้าหน้า Dashboard เองครับ
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in with Google");
       setIsGoogleLoading(false);
