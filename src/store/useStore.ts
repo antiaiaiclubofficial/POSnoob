@@ -171,6 +171,7 @@ interface AppState {
   language: Language;
   setLanguage: (lang: Language) => void;
   isAuthenticated: boolean;
+  isAuthLoading: boolean;
   currentUser: { id: string; name: string; role: string; username?: string; email?: string } | null;
   storeId: string | null;
   shopName: string;
@@ -324,6 +325,7 @@ export const useStore = create<AppState>((set, get) => ({
   language: 'th',
   setLanguage: (lang) => set({ language: lang }),
   isAuthenticated: false,
+  isAuthLoading: true,
   currentUser: null,
   storeId: null,
   shopName: "Tactile Sanctuary",
@@ -366,14 +368,14 @@ export const useStore = create<AppState>((set, get) => ({
     const { addLog } = get();
     if (id === 'admin' && pass === '1234') {
       const user = { id: 'admin', name: 'Admin', role: 'Admin', username: 'admin' };
-      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store' });
+      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
       addLog({ staffName: 'System', action: 'Login Success', details: 'Super Admin logged into the system', type: 'success' });
       return true;
     }
     const member = get().staff.find(s => s.username === id && s.password === pass && s.status === 'Active');
     if (member) {
       const user = { id: member.id, name: member.name, role: member.role, username: member.username };
-      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store' });
+      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
       addLog({ staffName: 'System', action: 'Login Success', details: `Staff member ${member.name} logged in`, type: 'success' });
       return true;
     }
@@ -392,22 +394,20 @@ export const useStore = create<AppState>((set, get) => ({
 
   setSession: (user) => {
     if (user) {
-      // ในระบบจริง store_id จะถูกดึงมาจากตาราง profiles ใน Supabase
-      // ที่นี่เราจำลองการดึง store_id จาก user metadata หรือกำหนดค่าเริ่มต้น
       const storeIdFromMetadata = user.user_metadata?.store_id || 'default-store';
-      
       set({ 
         isAuthenticated: true, 
+        isAuthLoading: false,
         currentUser: {
           id: user.id,
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          role: 'Admin', // Default role for Google Login
+          role: 'Admin',
           email: user.email
         },
         storeId: storeIdFromMetadata
       });
     } else {
-      set({ isAuthenticated: false, currentUser: null, storeId: null });
+      set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
     }
   },
 
