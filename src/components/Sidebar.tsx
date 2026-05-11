@@ -32,7 +32,7 @@ interface SidebarProps {
 export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { shopName, shopLogo, logout, language } = useStore();
+  const { shopName, shopLogo, logout, language, currentUser } = useStore();
   const t = translations[language];
 
   const menuItems = [
@@ -54,6 +54,11 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     navigate('/login');
     if (onClose) onClose();
   };
+
+  const userDisplayName = currentUser?.name || 'Admin User';
+  const userDisplayRole = currentUser?.role || 'Store Owner';
+  const userAvatar = currentUser?.avatar;
+  const userInitial = userDisplayName.charAt(0).toUpperCase();
 
   return (
     <div className={cn(
@@ -122,10 +127,16 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
         </div>
         
         <div className="bg-[#F5F6FA] p-3 rounded-2xl flex items-center gap-3 overflow-hidden whitespace-nowrap">
-          <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-[10px] font-black border border-gray-100 shrink-0">A</div>
+          <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-[10px] font-black border border-gray-100 shrink-0 overflow-hidden">
+            {userAvatar ? (
+              <img src={userAvatar} alt="User Avatar" className="w-full h-full object-cover" />
+            ) : (
+              userInitial
+            )}
+          </div>
           <div className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 min-w-0">
-            <p className="text-[10px] font-black text-[#1A1F3D] truncate">Admin User</p>
-            <p className="text-[8px] text-gray-400 font-bold uppercase">Store Owner</p>
+            <p className="text-[10px] font-black text-[#1A1F3D] truncate">{userDisplayName}</p>
+            <p className="text-[8px] text-gray-400 font-bold uppercase">{userDisplayRole}</p>
           </div>
         </div>
       </div>

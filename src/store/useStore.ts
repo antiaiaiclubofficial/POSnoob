@@ -172,7 +172,7 @@ interface AppState {
   setLanguage: (lang: Language) => void;
   isAuthenticated: boolean;
   isAuthLoading: boolean;
-  currentUser: { id: string; name: string; role: string; username?: string; email?: string } | null;
+  currentUser: { id: string; name: string; role: string; username?: string; email?: string; avatar?: string } | null;
   storeId: string | null;
   shopName: string;
   shopLogo: string | null;
@@ -395,14 +395,16 @@ export const useStore = create<AppState>((set, get) => ({
   setSession: (user) => {
     if (user) {
       const storeIdFromMetadata = user.user_metadata?.store_id || 'default-store';
+      
       set({ 
         isAuthenticated: true, 
         isAuthLoading: false,
         currentUser: {
           id: user.id,
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          role: 'Admin',
-          email: user.email
+          role: 'Admin', // Default role for Google Login
+          email: user.email,
+          avatar: user.user_metadata?.avatar_url || undefined // ดึง avatar_url จาก Google
         },
         storeId: storeIdFromMetadata
       });
