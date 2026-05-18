@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Package, Plus, Trash2, Edit3, CheckCircle2, Star, Gift } from 'lucide-react';
+import { X, Package, Plus, Trash2, Edit3, CheckCircle2, Star, Gift, AlertCircle } from 'lucide-react';
 import { useStore, PackageTemplate } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -72,6 +72,23 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
       toast.success("Package assigned to customer successfully");
       onClose();
     }
+  };
+
+  // Mutually exclusive logic: update one and clear the other
+  const handleUpdateRecurring = (val: string) => {
+    setFormData({ 
+      ...formData, 
+      recurringFreebie: val,
+      oneTimeFreebie: val ? '' : formData.oneTimeFreebie 
+    });
+  };
+
+  const handleUpdateOneTime = (val: string) => {
+    setFormData({ 
+      ...formData, 
+      oneTimeFreebie: val,
+      recurringFreebie: val ? '' : formData.recurringFreebie 
+    });
   };
 
   return (
@@ -151,26 +168,45 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
                 </div>
               </div>
 
-              <div className="p-6 bg-indigo-50/50 rounded-[32px] space-y-4">
-                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-1">Freebies & Add-ons</p>
+              <div className="p-6 bg-indigo-50/50 rounded-[32px] space-y-4 border border-indigo-100">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Bonus Service (Select one)</p>
+                  <AlertCircle size={14} className="text-indigo-300" />
+                </div>
+                
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-[9px] font-bold text-gray-400 uppercase mb-1 block">Recurring Freebie (Every visit)</label>
-                    <input 
-                      className="w-full bg-white border-none rounded-xl px-4 py-3 text-xs font-bold shadow-sm"
-                      placeholder="e.g. Free Tooth Brushing"
-                      value={formData.recurringFreebie}
-                      onChange={e => setFormData({...formData, recurringFreebie: e.target.value})}
-                    />
+                  <div className={cn("transition-opacity", formData.oneTimeFreebie && "opacity-50")}>
+                    <label className="text-[9px] font-bold text-gray-400 uppercase mb-1 block">Recurring Bonus (Every visit)</label>
+                    <div className="relative">
+                      <Star className={cn("absolute left-3 top-1/2 -translate-y-1/2", formData.recurringFreebie ? "text-green-500" : "text-gray-300")} size={14} />
+                      <input 
+                        className="w-full bg-white border-none rounded-xl pl-10 pr-4 py-3 text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500/10"
+                        placeholder="e.g. Free Tooth Brushing"
+                        disabled={!!formData.oneTimeFreebie}
+                        value={formData.recurringFreebie}
+                        onChange={e => handleUpdateRecurring(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[9px] font-bold text-gray-400 uppercase mb-1 block">One-time Special (Once in package)</label>
-                    <input 
-                      className="w-full bg-white border-none rounded-xl px-4 py-3 text-xs font-bold shadow-sm"
-                      placeholder="e.g. Free Mud Spa 1 time"
-                      value={formData.oneTimeFreebie}
-                      onChange={e => setFormData({...formData, oneTimeFreebie: e.target.value})}
-                    />
+
+                  <div className="flex items-center gap-4">
+                    <div className="h-px flex-1 bg-indigo-100" />
+                    <span className="text-[8px] font-black text-indigo-200 uppercase">OR</span>
+                    <div className="h-px flex-1 bg-indigo-100" />
+                  </div>
+
+                  <div className={cn("transition-opacity", formData.recurringFreebie && "opacity-50")}>
+                    <label className="text-[9px] font-bold text-gray-400 uppercase mb-1 block">One-time Special (Once per package)</label>
+                    <div className="relative">
+                      <Gift className={cn("absolute left-3 top-1/2 -translate-y-1/2", formData.oneTimeFreebie ? "text-amber-500" : "text-gray-300")} size={14} />
+                      <input 
+                        className="w-full bg-white border-none rounded-xl pl-10 pr-4 py-3 text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500/10"
+                        placeholder="e.g. Free Mud Spa 1 time"
+                        disabled={!!formData.recurringFreebie}
+                        value={formData.oneTimeFreebie}
+                        onChange={e => handleUpdateOneTime(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
