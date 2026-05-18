@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage, StockMovement } from './types';
+import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage, StockMovement, StockTakeRecord } from './types';
 import { createAuthSlice } from './slices/authSlice';
 import { createCRMSlice } from './slices/crmSlice';
 
@@ -74,6 +74,7 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
   inventory: INITIAL_INVENTORY,
   vendors: INITIAL_VENDORS,
   stockMovements: [],
+  stockTakeHistory: [],
   staff: INITIAL_STAFF,
   logs: [],
   cart: [],
@@ -168,6 +169,27 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
     return {
       inventory: newInventory,
       stockMovements: [movement, ...state.stockMovements].slice(0, 500)
+    };
+  }),
+
+  saveStockTake: (record) => set((state) => {
+    const newRecord: StockTakeRecord = {
+      ...record,
+      id: 'st-' + Math.random().toString(36).substr(2, 9)
+    };
+    
+    // Update inventory levels based on stock take
+    const newInventory = state.inventory.map(item => {
+      const takeItem = record.items.find(i => i.itemId === item.id);
+      if (takeItem) {
+        return { ...item, stock: takeItem.actualStock };
+      }
+      return item;
+    });
+
+    return {
+      stockTakeHistory: [newRecord, ...state.stockTakeHistory],
+      inventory: newInventory
     };
   }),
 

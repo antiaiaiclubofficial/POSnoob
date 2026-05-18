@@ -36,6 +36,20 @@ export interface StockMovement {
   staffName: string;
 }
 
+export interface StockTakeRecord {
+  id: string;
+  date: string;
+  staffName: string;
+  items: {
+    itemId: string;
+    itemName: string;
+    systemStock: number;
+    actualStock: number;
+    difference: number;
+  }[];
+  notes: string;
+}
+
 export interface Vendor {
   id: string;
   name: string;
@@ -283,6 +297,7 @@ export interface AppState {
   inventory: InventoryItem[];
   vendors: Vendor[];
   stockMovements: StockMovement[];
+  stockTakeHistory: StockTakeRecord[];
   logs: ActivityLog[];
   cart: CartItem[];
   queue: QueueItem[];
@@ -336,6 +351,7 @@ export interface AppState {
   updateInventoryItem: (id: string, item: Partial<InventoryItem>, reason?: string) => void;
   deleteInventoryItem: (id: string) => void;
   adjustStock: (id: string, amount: number, type: StockMovement['type'], reason: string) => void;
+  saveStockTake: (record: Omit<StockTakeRecord, 'id'>) => void;
 
   addVendor: (vendor: Omit<Vendor, 'id'>) => void;
   updateVendor: (id: string, vendor: Partial<Vendor>) => void;

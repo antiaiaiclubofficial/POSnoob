@@ -19,6 +19,15 @@ export const translations = {
     promotions: "Promotions",
     coupons: "Coupons",
     
+    // Inventory Sub-modules
+    allInventory: "All Inventory",
+    lowStockAlert: "Low Stock Alert",
+    restockInbound: "Restock (Inbound)",
+    monthlyStockTake: "Monthly Stock Take",
+    salesReport: "Sales Report",
+    pdfHistory: "PDF Report History",
+    vendorManagement: "Manage Partners",
+    
     // Inventory & Consignment
     stockManagement: "Stock Management",
     consignment: "Consignment",
@@ -268,6 +277,15 @@ export const translations = {
     marketing: "การตลาดและรางวัล",
     promotions: "โปรโมชั่น",
     coupons: "คูปอง",
+
+    // Inventory Sub-modules
+    allInventory: "คลังสินค้าทั้งหมด",
+    lowStockAlert: "สินค้าใกล้หมด",
+    restockInbound: "เติมสินค้า (รับเข้า)",
+    monthlyStockTake: "นับสต๊อกประจำเดือน",
+    salesReport: "รายงานยอดขาย",
+    pdfHistory: "ประวัติรายงาน PDF",
+    vendorManagement: "จัดการคู่ค้า",
 
     // Inventory & Consignment
     stockManagement: "จัดการสต็อกสินค้า",
