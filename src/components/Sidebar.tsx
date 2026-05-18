@@ -15,7 +15,8 @@ import {
   History,
   CalendarDays,
   Target,
-  Megaphone
+  Megaphone,
+  Package
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -40,6 +41,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     { icon: ShoppingBag, label: t.pos, path: '/pos' },
     { icon: CalendarDays, label: t.queue, path: '/queue' },
     { icon: Users, label: t.customers, path: '/customers' },
+    { icon: Package, label: t.inventory, path: '/inventory' },
     { icon: Megaphone, label: t.marketing, path: '/marketing' },
     { icon: ShieldCheck, label: t.staff, path: '/staff' },
     { icon: Target, label: t.performance, path: '/staff/performance' },

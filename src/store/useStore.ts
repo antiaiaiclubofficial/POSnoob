@@ -15,9 +15,22 @@ export interface InventoryItem {
   stock: number;
   minStock: number;
   price: number;
+  costPrice?: number;
   unit: string;
   category: string;
   image?: string;
+  isConsignment: boolean;
+  vendorId?: string;
+  consignmentRate?: number; // % that goes to vendor
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  notes: string;
 }
 
 export interface Staff {
@@ -66,10 +79,10 @@ export interface CustomerPackage {
   templateId: string;
   name: string;
   targetServiceId: string;
-  totalSlots: number; // e.g. 10 (8 paid + 2 free)
+  totalSlots: number; 
   usedSlots: number;
   remainingSlots: number;
-  recurringFreebie?: string; // e.g. "Free Tooth Brushing"
+  recurringFreebie?: string;
   oneTimeFreebie?: {
     name: string;
     isUsed: boolean;
@@ -117,7 +130,6 @@ export interface Customer {
   packages: CustomerPackage[];
   totalSpent: number;
   lineId?: string;
-  // Address Fields
   houseNo?: string;
   villageNo?: string;
   soi?: string;
@@ -126,6 +138,16 @@ export interface Customer {
   district?: string;
   province?: string;
   postalCode?: string;
+}
+
+export interface TransactionItem {
+  id: string;
+  title: string;
+  price: number;
+  type: 'Service' | 'Product';
+  isConsignment: boolean;
+  vendorId?: string;
+  consignmentRate?: number;
 }
 
 export interface Transaction {
@@ -139,6 +161,7 @@ export interface Transaction {
   paymentMethod: PaymentMethod;
   bookingType: BookingType;
   itemsCount: number;
+  items: TransactionItem[];
   staffId: string; 
   staffName: string;
   processedBy: string;
@@ -239,6 +262,7 @@ interface AppState {
   setCustomers: (customers: Customer[]) => void;
   staff: Staff[];
   inventory: InventoryItem[];
+  vendors: Vendor[];
   logs: ActivityLog[];
   cart: CartItem[];
   queue: QueueItem[];
@@ -287,6 +311,15 @@ interface AppState {
   deleteService: (id: string) => void;
   toggleServiceActive: (id: string) => void;
   
+  addInventoryItem: (item: Omit<InventoryItem, 'id'>) => void;
+  updateInventoryItem: (id: string, item: Partial<InventoryItem>) => void;
+  deleteInventoryItem: (id: string) => void;
+  adjustStock: (id: string, amount: number) => void;
+
+  addVendor: (vendor: Omit<Vendor, 'id'>) => void;
+  updateVendor: (id: string, vendor: Partial<Vendor>) => void;
+  deleteVendor: (id: string) => void;
+
   addPackageTemplate: (template: Omit<PackageTemplate, 'id'>) => void;
   updatePackageTemplate: (id: string, template: Partial<PackageTemplate>) => void;
   deletePackageTemplate: (id: string) => void;
@@ -352,28 +385,17 @@ const INITIAL_SERVICES: Service[] = [
       'Medium (10-25kg)': { price: 500, duration: 60 },
       'Large (>25kg)': { price: 750, duration: 90 }
     }
-  },
-  {
-    id: 'svc-groom',
-    title: 'อาบน้ำตัดขนสุนัข',
-    description: 'บริการครบวงจร อาบน้ำและตัดแต่งทรงขนตามสายพันธุ์',
-    category: 'Grooming',
-    icon: 'grooming',
-    targetSpecies: 'Dog',
-    isActive: true,
-    subServices: ['ตัดขนตามทรง', 'ไถท้อง/ก้น/อุ้งเท้า', 'อาบน้ำแปรงขน'],
-    prices: {
-      'Small (<10kg)': { price: 550, duration: 90 },
-      'Medium (10-25kg)': { price: 850, duration: 120 },
-      'Large (>25kg)': { price: 1200, duration: 180 }
-    }
   }
 ];
 
+const INITIAL_VENDORS: Vendor[] = [
+  { id: 'v1', name: 'PetCare Co., Ltd.', contactPerson: 'Somchai', phone: '02-111-2222', email: 'sales@petcare.com', notes: 'Main supplier for shampoos' },
+  { id: 'v2', name: 'Organic Pet Treats', contactPerson: 'Mary', phone: '089-888-7777', email: 'mary@organic.com', notes: 'Consignment partner for healthy snacks' }
+];
+
 const INITIAL_INVENTORY: InventoryItem[] = [
-  { id: 'prod-1', name: 'Organic Shampoo', stock: 15, minStock: 5, price: 450, unit: 'Bottle', category: 'Supplies', image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200&h=200&fit=crop' },
-  { id: 'prod-2', name: 'Premium Dog Treats', stock: 24, minStock: 10, price: 180, unit: 'Pack', category: 'Food', image: 'https://images.unsplash.com/photo-1582747154341-0766828a21ad?w=200&h=200&fit=crop' },
-  { id: 'prod-3', name: 'Grooming Brush', stock: 8, minStock: 3, price: 320, unit: 'Piece', category: 'Accessories', image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=200&h=200&fit=crop' },
+  { id: 'prod-1', name: 'Organic Shampoo', stock: 15, minStock: 5, price: 450, costPrice: 280, unit: 'Bottle', category: 'Supplies', isConsignment: false },
+  { id: 'prod-2', name: 'Consigned Dog Treats', stock: 24, minStock: 10, price: 180, unit: 'Pack', category: 'Food', isConsignment: true, vendorId: 'v2', consignmentRate: 70 }
 ];
 
 export const useStore = create<AppState>((set, get) => ({
@@ -403,6 +425,7 @@ export const useStore = create<AppState>((set, get) => ({
   customers: [],
   setCustomers: (customers) => set({ customers }),
   inventory: INITIAL_INVENTORY,
+  vendors: INITIAL_VENDORS,
   staff: INITIAL_STAFF,
   logs: [],
   cart: [],
@@ -451,7 +474,6 @@ export const useStore = create<AppState>((set, get) => ({
   setSession: (user) => {
     if (user) {
       const storeIdFromMetadata = user.user_metadata?.store_id || 'default-store';
-      
       set({ 
         isAuthenticated: true, 
         isAuthLoading: false,
@@ -494,13 +516,21 @@ export const useStore = create<AppState>((set, get) => ({
   deleteService: (id) => set((state) => ({ services: state.services.filter(s => s.id !== id) })),
   toggleServiceActive: (id) => set((state) => ({ services: state.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
 
+  addInventoryItem: (item) => set((state) => ({ inventory: [...state.inventory, { ...item, id: 'prod-' + Math.random().toString(36).substr(2, 5) }] })),
+  updateInventoryItem: (id, item) => set((state) => ({ inventory: state.inventory.map(i => i.id === id ? { ...i, ...item } : i) })),
+  deleteInventoryItem: (id) => set((state) => ({ inventory: state.inventory.filter(i => i.id !== id) })),
+  adjustStock: (id, amount) => set((state) => ({ inventory: state.inventory.map(i => i.id === id ? { ...i, stock: i.stock + amount } : i) })),
+
+  addVendor: (vendor) => set((state) => ({ vendors: [...state.vendors, { ...vendor, id: 'v-' + Math.random().toString(36).substr(2, 5) }] })),
+  updateVendor: (id, vendor) => set((state) => ({ vendors: state.vendors.map(v => v.id === id ? { ...v, ...vendor } : v) })),
+  deleteVendor: (id) => set((state) => ({ vendors: state.vendors.filter(v => v.id !== id) })),
+
   addPackageTemplate: (template) => set((state) => ({ packageTemplates: [...state.packageTemplates, { ...template, id: 'pkg-' + Math.random().toString(36).substr(2, 5) }] })),
   updatePackageTemplate: (id, template) => set((state) => ({ packageTemplates: state.packageTemplates.map(t => t.id === id ? { ...t, ...template } : t) })),
   deletePackageTemplate: (id) => set((state) => ({ packageTemplates: state.packageTemplates.filter(t => t.id !== id) })),
   assignPackageToCustomer: (customerId, templateId) => {
     const template = get().packageTemplates.find(t => t.id === templateId);
     if (!template) return;
-
     const newPackage: CustomerPackage = {
       id: 'cpkg-' + Math.random().toString(36).substr(2, 5),
       templateId: template.id,
@@ -514,12 +544,8 @@ export const useStore = create<AppState>((set, get) => ({
       usageHistory: [],
       purchaseDate: new Date().toISOString().split('T')[0]
     };
-
     set((state) => ({
-      customers: state.customers.map(c => c.id === customerId ? {
-        ...c,
-        packages: [...(c.packages || []), newPackage]
-      } : c)
+      customers: state.customers.map(c => c.id === customerId ? { ...c, packages: [...(c.packages || []), newPackage] } : c)
     }));
   },
 
@@ -580,10 +606,26 @@ export const useStore = create<AppState>((set, get) => ({
   })),
 
   processPayment: (customerId, amount, discount, items, method = 'Cash', details) => {
-    const { customers, transactions, queue, currentUser } = get();
+    const { customers, transactions, queue, currentUser, inventory } = get();
     const today = new Date().toISOString().split('T')[0];
     
-    // Update Package Usage if method is Package
+    // Deduct Stock and collect transaction item details
+    const txItems: TransactionItem[] = items.map(item => {
+      const invItem = inventory.find(i => i.id === item.id);
+      if (invItem && item.type === 'Product') {
+        get().adjustStock(invItem.id, -1);
+      }
+      return {
+        id: item.id,
+        title: item.title,
+        price: item.price,
+        type: item.type,
+        isConsignment: invItem?.isConsignment || false,
+        vendorId: invItem?.vendorId,
+        consignmentRate: invItem?.consignmentRate
+      };
+    });
+
     if (method === 'Package' && details?.packageId) {
       set((state) => ({
         customers: state.customers.map(c => {
@@ -592,20 +634,8 @@ export const useStore = create<AppState>((set, get) => ({
             ...c,
             packages: c.packages.map(pkg => {
               if (pkg.id !== details.packageId) return pkg;
-              
-              const usageRecord: PackageUsage = {
-                id: Math.random().toString(36).substr(2, 9),
-                date: today,
-                serviceName: items[0].title,
-                isFreebie: false 
-              };
-              
-              return {
-                ...pkg,
-                usedSlots: pkg.usedSlots + 1,
-                remainingSlots: pkg.remainingSlots - 1,
-                usageHistory: [...pkg.usageHistory, usageRecord]
-              };
+              const usageRecord = { id: Math.random().toString(36).substr(2, 9), date: today, serviceName: items[0].title, isFreebie: false };
+              return { ...pkg, usedSlots: pkg.usedSlots + 1, remainingSlots: pkg.remainingSlots - 1, usageHistory: [...pkg.usageHistory, usageRecord] };
             })
           };
         })
@@ -635,6 +665,7 @@ export const useStore = create<AppState>((set, get) => ({
       paymentMethod: method,
       bookingType: relatedQueueItem ? 'Appointment' : 'Walk-in',
       itemsCount: items.length,
+      items: txItems,
       processedBy: currentUser?.name || 'Admin User',
       staffId: relatedQueueItem?.staffId || 's2', 
       staffName: get().staff.find(s => s.id === (relatedQueueItem?.staffId || 's2'))?.name || 'Unknown',

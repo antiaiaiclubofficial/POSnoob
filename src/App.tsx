@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Queue from "./pages/Queue";
 import Services from "./pages/Services";
 import Customers from "./pages/Customers";
+import Inventory from "./pages/Inventory";
 import Marketing from "./pages/Marketing";
 import Staff from "./pages/Staff";
 import StaffPerformance from "./pages/StaffPerformance";
@@ -27,23 +28,17 @@ const queryClient = new QueryClient();
 const App = () => {
   const { language, setSession } = useStore();
 
-  // Sync language state with HTML lang attribute for CSS font selection
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
 
-  // Auth Listener
   useEffect(() => {
-    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session?.user ?? null);
     });
-
-    // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session?.user ?? null);
     });
-
     return () => subscription.unsubscribe();
   }, [setSession]);
 
@@ -61,6 +56,7 @@ const App = () => {
               <Route path="/queue" element={<Queue />} />
               <Route path="/services" element={<Services />} />
               <Route path="/customers" element={<Customers />} />
+              <Route path="/inventory" element={<Inventory />} />
               <Route path="/marketing" element={<Marketing />} />
               <Route path="/staff" element={<Staff />} />
               <Route path="/staff/performance" element={<StaffPerformance />} />
