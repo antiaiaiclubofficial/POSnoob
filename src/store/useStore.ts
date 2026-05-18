@@ -14,7 +14,10 @@ export interface InventoryItem {
   name: string;
   stock: number;
   minStock: number;
+  price: number;
   unit: string;
+  category: string;
+  image?: string;
 }
 
 export interface Staff {
@@ -193,17 +196,18 @@ export interface QueueItem {
 
 export interface CartItem {
   id: string;
-  icon: ServiceIcon;
+  icon?: ServiceIcon;
   title: string;
   price: number;
-  petId: string;
-  petName: string;
-  ownerName: string;
+  petId?: string;
+  petName?: string;
+  ownerName?: string;
   size?: string;
   queueItemId?: string;
   staffId?: string;
   staffName?: string;
   isPackageUsage?: boolean;
+  type: 'Service' | 'Product';
 }
 
 interface AppState {
@@ -366,17 +370,10 @@ const INITIAL_SERVICES: Service[] = [
   }
 ];
 
-const INITIAL_PACKAGES: PackageTemplate[] = [
-  {
-    id: 'pkg-8-2',
-    name: 'Package 8 Free 2 (Small Dog)',
-    serviceId: 'svc-bath',
-    paidSlots: 8,
-    freeSlots: 2,
-    price: 2800, // 350 * 8
-    recurringFreebie: 'แปรงฟันฟรี',
-    oneTimeFreebie: 'สปาโคลนฟรี 1 ครั้ง'
-  }
+const INITIAL_INVENTORY: InventoryItem[] = [
+  { id: 'prod-1', name: 'Organic Shampoo', stock: 15, minStock: 5, price: 450, unit: 'Bottle', category: 'Supplies', image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200&h=200&fit=crop' },
+  { id: 'prod-2', name: 'Premium Dog Treats', stock: 24, minStock: 10, price: 180, unit: 'Pack', category: 'Food', image: 'https://images.unsplash.com/photo-1582747154341-0766828a21ad?w=200&h=200&fit=crop' },
+  { id: 'prod-3', name: 'Grooming Brush', stock: 8, minStock: 3, price: 320, unit: 'Piece', category: 'Accessories', image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=200&h=200&fit=crop' },
 ];
 
 export const useStore = create<AppState>((set, get) => ({
@@ -402,10 +399,10 @@ export const useStore = create<AppState>((set, get) => ({
   lineChannelToken: "",
   
   services: INITIAL_SERVICES,
-  packageTemplates: INITIAL_PACKAGES,
+  packageTemplates: [],
   customers: [],
   setCustomers: (customers) => set({ customers }),
-  inventory: [],
+  inventory: INITIAL_INVENTORY,
   staff: INITIAL_STAFF,
   logs: [],
   cart: [],
@@ -461,9 +458,9 @@ export const useStore = create<AppState>((set, get) => ({
         currentUser: {
           id: user.id,
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          role: 'Admin', // Default role for Google Login
+          role: 'Admin', 
           email: user.email,
-          avatar: user.user_metadata?.avatar_url || undefined // ดึง avatar_url จาก Google
+          avatar: user.user_metadata?.avatar_url || undefined 
         },
         storeId: storeIdFromMetadata
       });
@@ -596,17 +593,12 @@ export const useStore = create<AppState>((set, get) => ({
             packages: c.packages.map(pkg => {
               if (pkg.id !== details.packageId) return pkg;
               
-              const isFreebie = pkg.usedSlots >= (pkg.totalSlots - (get().packageTemplates.find(t => t.id === pkg.templateId)?.freeSlots || 0));
-              
               const usageRecord: PackageUsage = {
                 id: Math.random().toString(36).substr(2, 9),
                 date: today,
                 serviceName: items[0].title,
-                isFreebie: isFreebie
+                isFreebie: false 
               };
-
-              // If it's a package use, the "oneTimeFreebie" might be consumed here if logic was added,
-              // but for now we follow the user's "recurring" or "one-time" mention as traits.
               
               return {
                 ...pkg,

@@ -33,8 +33,6 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
     }
   }, [activePet?.id, service.id, availableSizes]);
 
-  // ลบเงื่อนไข if (!activePet) ออกเพื่อให้แสดงผลได้ตลอดเวลา
-  // แต่ยังคงตรวจสอบประเภทสัตว์หากมีการเลือกสัตว์เลี้ยงไว้แล้ว เพื่อความถูกต้อง
   if (activePet && activePet.species !== service.targetSpecies) return null;
 
   const currentPrice = selectedSize ? service.prices[selectedSize].price : 0;
@@ -90,7 +88,8 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       petName: activePet.name,
       ownerName: selectedOwner.name,
       size: isFixedPrice ? undefined : selectedSize,
-      queueItemId: activeQueueItemId || undefined
+      queueItemId: activeQueueItemId || undefined,
+      type: 'Service'
     });
     toast.success(`Added ${service.title} for ${activePet.name}`);
   };

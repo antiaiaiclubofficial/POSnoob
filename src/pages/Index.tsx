@@ -2,16 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import ServiceCard from '@/components/ServiceCard';
+import ProductCard from '@/components/ProductCard';
 import OrderSummary from '@/components/OrderSummary';
 import CustomerSearch from '@/components/CustomerSearch';
 import CustomerModal from '@/components/CustomerModal';
-import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2, Dog, Cat } from 'lucide-react';
+import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2, Dog, Cat, Scissors, Package } from 'lucide-react';
 import { useStore, QueueItem } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -19,6 +21,7 @@ const Index = () => {
     selectedOwner, 
     activePet, 
     services, 
+    inventory,
     selectOwner, 
     setActivePet, 
     queue, 
@@ -30,7 +33,9 @@ const Index = () => {
 
   const t = translations[language];
 
+  const [posTab, setPosTab] = useState('services');
   const [speciesFilter, setSpeciesFilter] = useState<'Dog' | 'Cat'>('Dog');
+  const [productSearch, setProductQuery] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   useEffect(() => {
@@ -52,11 +57,17 @@ const Index = () => {
         setActivePet(pet);
         setActiveQueueItem(item.id);
         toast.success(`Active Session: ${item.petName}`);
+        setPosTab('services');
       }
     }
   };
 
   const filteredServices = services.filter(s => s.targetSpecies === speciesFilter && s.isActive);
+  const filteredProducts = inventory.filter(p => 
+    p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
+    p.category.toLowerCase().includes(productSearch.toLowerCase())
+  );
+  
   const cartTotal = cart.reduce((acc, item) => acc + item.price, 0);
 
   return (
@@ -79,7 +90,7 @@ const Index = () => {
           </button>
         </header>
 
-        <div className="px-6 lg:px-10 space-y-6 shrink-0 mb-6 lg:mb-8">
+        <div className="px-6 lg:px-10 space-y-6 shrink-0 mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <CustomerSearch />
             
@@ -132,70 +143,72 @@ const Index = () => {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="bg-white p-1.5 rounded-[22px] shadow-sm border border-gray-100 flex gap-1 w-fit shrink-0">
-              <button 
-                onClick={() => setSpeciesFilter('Dog')}
-                className={cn(
-                  "px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all",
-                  speciesFilter === 'Dog' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400 hover:text-gray-600"
-                )}
-              >
-                <Dog size={14} /> {language === 'th' ? 'สุนัข' : 'DOGS'}
-              </button>
-              <button 
-                onClick={() => setSpeciesFilter('Cat')}
-                className={cn(
-                  "px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all",
-                  speciesFilter === 'Cat' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400 hover:text-gray-600"
-                )}
-              >
-                <Cat size={14} /> {language === 'th' ? 'แมว' : 'CATS'}
-              </button>
-            </div>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-gray-100 pb-2">
+            <Tabs value={posTab} onValueChange={setPosTab} className="w-full sm:w-auto">
+              <TabsList className="bg-[#F5F6FA] p-1 rounded-[20px] flex gap-1 h-auto">
+                <TabsTrigger value="services" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
+                  <Scissors size={14} className="mr-2" /> Grooming
+                </TabsTrigger>
+                <TabsTrigger value="products" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
+                  <Package size={14} className="mr-2" /> Products
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-            {selectedOwner && (
-              <div className="flex-1 bg-white p-1.5 rounded-[22px] shadow-sm border border-gray-100 flex items-center gap-2 overflow-x-auto scrollbar-hide animate-in fade-in slide-in-from-left-2">
-                <span className="px-3 py-1 border-r border-gray-100 text-[8px] font-black text-gray-300 uppercase tracking-widest shrink-0">{t.selectPet}</span>
-                <div className="flex gap-1">
-                  {selectedOwner.pets.filter(p => p.species === speciesFilter).map(pet => (
-                    <button
-                      key={pet.id}
-                      onClick={() => {
-                        setActivePet(pet);
-                        setActiveQueueItem(null);
-                      }}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-xl transition-all border font-bold text-xs shrink-0",
-                        activePet?.id === pet.id 
-                          ? "bg-[#D9ED5F] border-[#D9ED5F] text-[#1A1F3D] shadow-md" 
-                          : "bg-transparent border-transparent text-gray-400 hover:bg-gray-50"
-                      )}
-                    >
-                      <img src={pet.image} alt={pet.name} className="w-5 h-5 rounded-lg object-cover" />
-                      {pet.name}
-                    </button>
-                  ))}
-                </div>
+            {posTab === 'services' && (
+               <div className="bg-white p-1 rounded-2xl border border-gray-100 flex gap-1 animate-in zoom-in-95">
+                 <button onClick={() => setSpeciesFilter('Dog')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black flex items-center gap-2 transition-all", speciesFilter === 'Dog' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}><Dog size={12} /> DOG</button>
+                 <button onClick={() => setSpeciesFilter('Cat')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black flex items-center gap-2 transition-all", speciesFilter === 'Cat' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}><Cat size={12} /> CAT</button>
+               </div>
+            )}
+
+            {posTab === 'products' && (
+              <div className="relative w-full sm:w-64 animate-in zoom-in-95">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                <input 
+                  className="w-full bg-[#F5F6FA] border-none rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold"
+                  placeholder="Search products..."
+                  value={productSearch}
+                  onChange={e => setProductQuery(e.target.value)}
+                />
               </div>
             )}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 lg:px-10 pb-24 lg:pb-10 scrollbar-hide">
-          {filteredServices.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
-              <ShoppingBag size={48} className="mb-4" />
-              <h2 className="text-xl font-black">{language === 'th' ? 'ไม่พบบริการ' : 'No services found'}</h2>
-              <p className="text-xs font-bold uppercase">For {speciesFilter} category</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
-              {filteredServices.map((service) => (
-                <ServiceCard key={service.id} service={service} />
-              ))}
-            </div>
-          )}
+          <Tabs value={posTab} className="h-full">
+            <TabsContent value="services" className="m-0 h-full">
+              {filteredServices.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+                  <ShoppingBag size={48} className="mb-4" />
+                  <h2 className="text-xl font-black">{language === 'th' ? 'ไม่พบบริการ' : 'No services found'}</h2>
+                  <p className="text-xs font-bold uppercase">For {speciesFilter} category</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
+                  {filteredServices.map((service) => (
+                    <ServiceCard key={service.id} service={service} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="products" className="m-0 h-full">
+              {filteredProducts.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+                  <Package size={48} className="mb-4" />
+                  <h2 className="text-xl font-black">{language === 'th' ? 'ไม่พบสินค้า' : 'No products found'}</h2>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
+                  {filteredProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
