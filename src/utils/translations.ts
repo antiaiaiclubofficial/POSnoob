@@ -49,6 +49,19 @@ export const translations = {
     close: "Close",
     preview: "Preview",
 
+    // Coupons & Promos
+    editCoupon: "Edit Coupon",
+    createCoupon: "Create Coupon",
+    couponDetails: "Coupon Details",
+    promoTitle: "Promo Title",
+    pointsRequired: "Points Required",
+    expiryDays: "Expiry Days",
+    couponIcon: "Icon",
+    promoDesc: "Description",
+    editPromo: "Edit Promotion",
+    createPromo: "Create Promotion",
+    promoDetails: "Promotion Details",
+
     firstName: "First Name",
     lastName: "Last Name",
     gender: "Gender",
@@ -285,6 +298,19 @@ export const translations = {
     search: "ค้นหา...",
     close: "ปิด",
     preview: "ตัวอย่าง",
+
+    // Coupons & Promos
+    editCoupon: "แก้ไขคูปอง",
+    createCoupon: "สร้างคูปอง",
+    couponDetails: "รายละเอียดคูปอง",
+    promoTitle: "หัวข้อโปรโมชั่น",
+    pointsRequired: "แต้มที่ต้องใช้",
+    expiryDays: "อายุการใช้งาน (วัน)",
+    couponIcon: "ไอคอน",
+    promoDesc: "รายละเอียด",
+    editPromo: "แก้ไขโปรโมชั่น",
+    createPromo: "สร้างโปรโมชั่น",
+    promoDetails: "รายละเอียดโปรโมชั่น",
 
     firstName: "ชื่อ",
     lastName: "นามสกุล",

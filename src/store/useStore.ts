@@ -1,362 +1,9 @@
 import { create } from 'zustand';
-import { Language } from '@/utils/translations';
-import { supabase } from '@/integrations/supabase/client';
+import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage } from './types';
+import { createAuthSlice } from './slices/authSlice';
+import { createCRMSlice } from './slices/crmSlice';
 
-export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health' | 'brush' | 'hotel' | 'love' | 'food' | 'premium';
-export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
-export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
-export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package';
-export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
-export type BookingType = 'Appointment' | 'Walk-in';
-
-export interface InventoryItem {
-  id: string;
-  name: string;
-  stock: number;
-  minStock: number;
-  price: number;
-  costPrice?: number;
-  unit: string;
-  category: string;
-  image?: string;
-  isConsignment: boolean;
-  vendorId?: string;
-  consignmentRate?: number; // % that goes to vendor
-}
-
-export interface Vendor {
-  id: string;
-  name: string;
-  contactPerson: string;
-  phone: string;
-  email: string;
-  notes: string;
-}
-
-export interface Staff {
-  id: string;
-  name: string;
-  role: StaffRole;
-  phone: string;
-  status: 'Active' | 'Inactive';
-  avatar: string;
-  username?: string;
-  password?: string;
-  commissionRate: number; 
-}
-
-export interface ActivityLog {
-  id: string;
-  timestamp: string;
-  staffName: string;
-  action: string;
-  details: string;
-  type: 'info' | 'success' | 'warning' | 'danger';
-}
-
-export interface WeightEntry {
-  date: string;
-  value: number;
-}
-
-export interface ServiceHistoryEntry {
-  id: string;
-  date: string;
-  serviceName: string;
-  price: number;
-  size?: string;
-}
-
-export interface PackageUsage {
-  id: string;
-  date: string;
-  serviceName: string;
-  isFreebie: boolean;
-}
-
-export interface CustomerPackage {
-  id: string;
-  templateId: string;
-  name: string;
-  targetServiceId: string;
-  totalSlots: number; 
-  usedSlots: number;
-  remainingSlots: number;
-  recurringFreebie?: string;
-  oneTimeFreebie?: {
-    name: string;
-    isUsed: boolean;
-  };
-  usageHistory: PackageUsage[];
-  purchaseDate: string;
-  expiryDate?: string;
-}
-
-export interface PackageTemplate {
-  id: string;
-  name: string;
-  serviceId: string;
-  paidSlots: number;
-  freeSlots: number;
-  price: number;
-  recurringFreebie?: string;
-  oneTimeFreebie?: string;
-}
-
-export interface Pet {
-  id: string;
-  name: string;
-  species: 'Dog' | 'Cat' | 'Other';
-  breed: string;
-  birthday: string;
-  weightHistory: WeightEntry[];
-  serviceHistory: ServiceHistoryEntry[];
-  notes: string;
-  image: string;
-}
-
-export interface Customer {
-  id: string;
-  name: string;
-  firstName?: string;
-  lastName?: string;
-  gender?: string;
-  age?: string;
-  phone: string;
-  email: string;
-  membership: MembershipLevel;
-  points: number;
-  pets: Pet[];
-  packages: CustomerPackage[];
-  totalSpent: number;
-  lineId?: string;
-  houseNo?: string;
-  villageNo?: string;
-  soi?: string;
-  road?: string;
-  subDistrict?: string;
-  district?: string;
-  province?: string;
-  postalCode?: string;
-}
-
-export interface TransactionItem {
-  id: string;
-  title: string;
-  price: number;
-  type: 'Service' | 'Product';
-  isConsignment: boolean;
-  vendorId?: string;
-  consignmentRate?: number;
-}
-
-export interface Transaction {
-  id: string;
-  date: string;
-  amount: number;
-  discountAmount: number;
-  customerId: string;
-  customerName: string;
-  species: ('Dog' | 'Cat' | 'Other')[];
-  paymentMethod: PaymentMethod;
-  bookingType: BookingType;
-  itemsCount: number;
-  items: TransactionItem[];
-  staffId: string; 
-  staffName: string;
-  processedBy: string;
-  actualDuration?: number; 
-  paymentDetails?: {
-    cashReceived?: number;
-    change?: number;
-    cardLast4?: string;
-    cardType?: string;
-    referenceNo?: string;
-    packageId?: string;
-  };
-}
-
-export interface TierRule {
-  level: MembershipLevel;
-  label: string;
-  minSpent: number;
-  discount: number;
-}
-
-export interface ServicePriceInfo {
-  price: number;
-  duration: number;
-}
-
-export interface Service {
-  id: string;
-  icon: ServiceIcon;
-  title: string;
-  description: string;
-  subServices: string[];
-  category: string;
-  targetSpecies: 'Dog' | 'Cat';
-  prices: Record<string, ServicePriceInfo>;
-  isActive: boolean;
-  isPopular?: boolean;
-}
-
-export interface QueueItem {
-  id: string;
-  petId: string;
-  petName: string;
-  ownerName: string;
-  serviceName: string;
-  date: string;
-  time: string;
-  status: QueueStatus;
-  image: string;
-  isPaid?: boolean;
-  staffId?: string;
-  startTime?: string; 
-  endTime?: string;   
-}
-
-export interface CartItem {
-  id: string;
-  icon?: ServiceIcon;
-  title: string;
-  price: number;
-  petId?: string;
-  petName?: string;
-  ownerName?: string;
-  size?: string;
-  queueItemId?: string;
-  staffId?: string;
-  staffName?: string;
-  isPackageUsage?: boolean;
-  type: 'Service' | 'Product';
-}
-
-interface AppState {
-  language: Language;
-  setLanguage: (lang: Language) => void;
-  isAuthenticated: boolean;
-  isAuthLoading: boolean;
-  currentUser: { id: string; name: string; role: string; username?: string; email?: string; avatar?: string } | null;
-  storeId: string | null;
-  shopName: string;
-  shopLogo: string | null;
-  shopAddress: string;
-  shopPhone: string;
-  shopLineId: string;
-  receiptHeader: string;
-  receiptFooter: string;
-  receiptPaperSize: '58mm' | '80mm';
-  currency: string;
-  shopIsOpen: boolean;
-  recurringHolidays: number[];
-  specificHolidays: string[];
-  
-  lineLiffId: string;
-  lineChannelToken: string;
-  
-  services: Service[];
-  packageTemplates: PackageTemplate[];
-  customers: Customer[];
-  setCustomers: (customers: Customer[]) => void;
-  staff: Staff[];
-  inventory: InventoryItem[];
-  vendors: Vendor[];
-  logs: ActivityLog[];
-  cart: CartItem[];
-  queue: QueueItem[];
-  transactions: Transaction[];
-  tierRules: TierRule[];
-  selectedOwner: Customer | null;
-  activePet: Pet | null;
-  activeQueueItemId: string | null;
-  
-  slotDuration: number;
-  maxCapacity: number;
-  openTime: string;
-  closeTime: string;
-  disabledSlots: string[];
-  kennelCapacity: number;
-  
-  login: (id: string, pass: string) => boolean;
-  loginWithGoogle: () => Promise<void>;
-  setSession: (user: any) => void;
-  verifyPassword: (pass: string) => boolean;
-  logout: () => Promise<void>;
-  
-  updateBusinessProfile: (profile: { 
-    shopName?: string, 
-    shopLogo?: string | null,
-    shopAddress?: string,
-    shopPhone?: string,
-    shopLineId?: string,
-    receiptHeader?: string,
-    receiptFooter?: string,
-    receiptPaperSize?: '58mm' | '80mm',
-    currency?: string,
-    shopIsOpen?: boolean,
-    recurringHolidays?: number[],
-    specificHolidays?: string[],
-    lineLiffId?: string,
-    lineChannelToken?: string
-  }) => void;
-  addToCart: (item: CartItem) => void;
-  removeFromCart: (index: number) => void;
-  customAddToCart: (item: CartItem) => void;
-  clearCart: () => void;
-  
-  addService: (service: Omit<Service, 'id'>) => void;
-  updateService: (id: string, service: Partial<Service>) => void;
-  deleteService: (id: string) => void;
-  toggleServiceActive: (id: string) => void;
-  
-  addInventoryItem: (item: Omit<InventoryItem, 'id'>) => void;
-  updateInventoryItem: (id: string, item: Partial<InventoryItem>) => void;
-  deleteInventoryItem: (id: string) => void;
-  adjustStock: (id: string, amount: number) => void;
-
-  addVendor: (vendor: Omit<Vendor, 'id'>) => void;
-  updateVendor: (id: string, vendor: Partial<Vendor>) => void;
-  deleteVendor: (id: string) => void;
-
-  addPackageTemplate: (template: Omit<PackageTemplate, 'id'>) => void;
-  updatePackageTemplate: (id: string, template: Partial<PackageTemplate>) => void;
-  deletePackageTemplate: (id: string) => void;
-  assignPackageToCustomer: (customerId: string, templateId: string) => void;
-
-  selectOwner: (owner: Customer | null) => void;
-  setActivePet: (pet: Pet | null) => void;
-  setActiveQueueItem: (id: string | null) => void;
-  
-  addBooking: (booking: Omit<QueueItem, 'id'>) => void;
-  updateQueueStatus: (id: string, status: QueueStatus) => void;
-  removeQueueItem: (id: string) => void;
-  markAsPaid: (queueItemId: string) => void;
-
-  addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'packages' | 'totalSpent'>) => void;
-  updateCustomer: (id: string, customer: Partial<Customer>) => void;
-  deleteCustomer: (id: string) => void;
-  bindLineToCustomer: (customerId: string, lineId: string) => void;
-  addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
-  updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
-  updatePetWeight: (customerId: string, petId: string, weight: number) => void;
-  processPayment: (customerId: string, amount: number, discount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails']) => void;
-  
-  updateTransaction: (id: string, data: Partial<Transaction>) => void;
-  deleteTransaction: (id: string) => void;
-  recalculateCustomerStats: (customerId: string) => void;
-
-  updateTierRules: (rules: TierRule[]) => void;
-  
-  addStaff: (staff: Omit<Staff, 'id'>) => void;
-  updateStaff: (id: string, staff: Partial<Staff>) => void;
-  deleteStaff: (id: string) => void;
-  addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
-
-  updateBookingSettings: (settings: { slotDuration?: number, maxCapacity?: number, openTime?: string, closeTime?: string, kennelCapacity?: number }) => void;
-  toggleSlotStatus: (time: string) => void;
-}
+export * from './types'; // Re-export for components that expect types here
 
 const INITIAL_TIER_RULES: TierRule[] = [
   { level: 'Standard', label: 'Standard', minSpent: 0, discount: 0 },
@@ -394,17 +41,14 @@ const INITIAL_VENDORS: Vendor[] = [
 ];
 
 const INITIAL_INVENTORY: InventoryItem[] = [
-  { id: 'prod-1', name: 'Organic Shampoo', stock: 15, minStock: 5, price: 450, costPrice: 280, unit: 'Bottle', category: 'Supplies', isConsignment: false },
+  { id: 'prod-1', name: 'Organic Shampoo', stock: 15, minStock: 5, price: 450, unit: 'Bottle', category: 'Supplies', isConsignment: false },
   { id: 'prod-2', name: 'Consigned Dog Treats', stock: 24, minStock: 10, price: 180, unit: 'Pack', category: 'Food', isConsignment: true, vendorId: 'v2', consignmentRate: 70 }
 ];
 
-export const useStore = create<AppState>((set, get) => ({
+export const useStore = create<AppState>()((set, get, ...args) => ({
+  // Business Profile
   language: 'th',
   setLanguage: (lang) => set({ language: lang }),
-  isAuthenticated: false,
-  isAuthLoading: true,
-  currentUser: null,
-  storeId: null,
   shopName: "Tactile Sanctuary",
   shopLogo: null,
   shopAddress: "123 Pet Street, Bangkok, Thailand",
@@ -419,23 +63,23 @@ export const useStore = create<AppState>((set, get) => ({
   specificHolidays: [],
   lineLiffId: "",
   lineChannelToken: "",
-  
+
+  // Slices
+  ...createAuthSlice(set, get, ...args),
+  ...createCRMSlice(set, get, ...args),
+
+  // Operations State
   services: INITIAL_SERVICES,
   packageTemplates: [],
-  customers: [],
-  setCustomers: (customers) => set({ customers }),
   inventory: INITIAL_INVENTORY,
   vendors: INITIAL_VENDORS,
   staff: INITIAL_STAFF,
   logs: [],
   cart: [],
-  queue: [],
   transactions: [],
   tierRules: INITIAL_TIER_RULES,
-  selectedOwner: null,
-  activePet: null,
-  activeQueueItemId: null,
-  
+
+  // Booking Settings
   slotDuration: 30,
   maxCapacity: 2,
   openTime: "09:00",
@@ -443,67 +87,7 @@ export const useStore = create<AppState>((set, get) => ({
   disabledSlots: [],
   kennelCapacity: 12,
 
-  login: (id, pass) => {
-    const { addLog } = get();
-    if (id === 'admin' && pass === '1234') {
-      const user = { id: 'admin', name: 'Admin', role: 'Admin', username: 'admin' };
-      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
-      addLog({ staffName: 'System', action: 'Login Success', details: 'Super Admin logged into the system', type: 'success' });
-      return true;
-    }
-    const member = get().staff.find(s => s.username === id && s.password === pass && s.status === 'Active');
-    if (member) {
-      const user = { id: member.id, name: member.name, role: member.role, username: member.username };
-      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
-      addLog({ staffName: 'System', action: 'Login Success', details: `Staff member ${member.name} logged in`, type: 'success' });
-      return true;
-    }
-    return false;
-  },
-
-  loginWithGoogle: async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin
-      }
-    });
-    if (error) throw error;
-  },
-
-  setSession: (user) => {
-    if (user) {
-      const storeIdFromMetadata = user.user_metadata?.store_id || 'default-store';
-      set({ 
-        isAuthenticated: true, 
-        isAuthLoading: false,
-        currentUser: {
-          id: user.id,
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          role: 'Admin', 
-          email: user.email,
-          avatar: user.user_metadata?.avatar_url || undefined 
-        },
-        storeId: storeIdFromMetadata
-      });
-    } else {
-      set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
-    }
-  },
-
-  verifyPassword: (pass) => {
-    const { currentUser, staff } = get();
-    if (!currentUser) return false;
-    if (currentUser.username === 'admin') return pass === '1234';
-    const member = staff.find(s => s.username === currentUser.username);
-    return member?.password === pass;
-  },
-  
-  logout: async () => {
-    await supabase.auth.signOut();
-    set({ isAuthenticated: false, currentUser: null, storeId: null });
-  },
-  
+  // Remaining Actions
   updateBusinessProfile: (profile) => set((state) => ({ ...state, ...profile })),
 
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
@@ -549,67 +133,10 @@ export const useStore = create<AppState>((set, get) => ({
     }));
   },
 
-  selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
-  setActivePet: (pet) => set({ activePet: pet }),
-  setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
-
-  addBooking: (booking) => set((state) => ({
-    queue: [...state.queue, { ...booking, id: Math.random().toString(36).substr(2, 9), isPaid: false }].sort((a, b) => a.time.localeCompare(b.time))
-  })),
-
-  updateQueueStatus: (id, status) => {
-    const now = new Date().toISOString();
-    set((state) => ({
-      queue: state.queue.map(q => {
-        if (q.id !== id) return q;
-        let update: Partial<QueueItem> = { status };
-        if (status === 'In Progress') update.startTime = now;
-        if (status === 'Completed') update.endTime = now;
-        return { ...q, ...update };
-      })
-    }));
-  },
-
-  removeQueueItem: (id) => set((state) => ({ queue: state.queue.filter(q => q.id !== id) })),
-  markAsPaid: (id) => set((state) => ({ queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
-
-  addCustomer: (customerData) => set((state) => ({
-    customers: [...state.customers, { ...customerData, id: 'c' + Math.random().toString(36).substr(2, 4), points: 0, pets: [], packages: [], totalSpent: 0 }]
-  })),
-  updateCustomer: (id, customerData) => set((state) => ({ customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c) })),
-  deleteCustomer: (id) => set((state) => ({
-    customers: state.customers.filter(c => c.id !== id),
-    selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
-    activePet: state.selectedOwner?.id === id ? null : state.activePet
-  })),
-  bindLineToCustomer: (customerId, lineId) => set((state) => ({ customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c) })),
-  addPet: (customerId, petData) => set((state) => ({
-    customers: state.customers.map(c => c.id === customerId ? {
-      ...c,
-      pets: [...c.pets, { ...petData, id: 'p' + Math.random().toString(36).substr(2, 4), serviceHistory: [] }]
-    } : c)
-  })),
-  updatePet: (customerId, petId, petData) => set((state) => ({
-    customers: state.customers.map(c => c.id === customerId ? {
-      ...c,
-      pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
-    } : c)
-  })),
-  updatePetWeight: (customerId, petId, weight) => set((state) => ({
-    customers: state.customers.map(c => c.id === customerId ? {
-      ...c,
-      pets: c.pets.map(p => p.id === petId ? {
-        ...p,
-        weightHistory: [...p.weightHistory, { date: new Date().toISOString().split('T')[0], value: weight }]
-      } : p)
-    } : c)
-  })),
-
   processPayment: (customerId, amount, discount, items, method = 'Cash', details) => {
     const { customers, transactions, queue, currentUser, inventory } = get();
     const today = new Date().toISOString().split('T')[0];
     
-    // Deduct Stock and collect transaction item details
     const txItems: TransactionItem[] = items.map(item => {
       const invItem = inventory.find(i => i.id === item.id);
       if (invItem && item.type === 'Product') {
@@ -687,11 +214,12 @@ export const useStore = create<AppState>((set, get) => ({
     const sortedRules = [...tierRules].sort((a, b) => b.minSpent - a.minSpent);
     const membership = sortedRules.find(r => totalSpent >= r.minSpent)?.level || 'Standard';
     set((state) => ({
-      customers: state.customers.map(c => c.id === customerId ? { ...c, totalSpent, points, membership: membership as MembershipLevel } : c)
+      customers: state.customers.map(c => c.id === customerId ? { ...c, totalSpent, points, membership: membership as any } : c)
     }));
   },
 
   updateTierRules: (rules) => set({ tierRules: rules }),
+  
   addStaff: (staffData) => set((state) => ({ staff: [...state.staff, { ...staffData, id: 's' + Math.random().toString(36).substr(2, 4) }] })),
   updateStaff: (id, staffData) => set((state) => ({ staff: state.staff.map(s => s.id === id ? { ...s, ...staffData } : s) })),
   deleteStaff: (id) => set((state) => ({ staff: state.staff.filter(s => s.id !== id) })),
