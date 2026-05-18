@@ -10,6 +10,7 @@ export type BookingType = 'Appointment' | 'Walk-in';
 export interface InventoryItem {
   id: string;
   name: string;
+  barcode?: string;
   stock: number;
   minStock: number;
   price: number;
@@ -20,6 +21,19 @@ export interface InventoryItem {
   isConsignment: boolean;
   vendorId?: string;
   consignmentRate?: number;
+}
+
+export interface StockMovement {
+  id: string;
+  itemId: string;
+  itemName: string;
+  type: 'In' | 'Out' | 'Adjustment' | 'Damage';
+  quantity: number;
+  previousStock: number;
+  currentStock: number;
+  reason: string;
+  timestamp: string;
+  staffName: string;
 }
 
 export interface Vendor {
@@ -128,6 +142,10 @@ export interface Customer {
   packages: CustomerPackage[];
   totalSpent: number;
   lineId?: string;
+  // Tax Info
+  taxId?: string;
+  branchName?: string;
+  // Address Fields
   houseNo?: string;
   villageNo?: string;
   soi?: string;
@@ -142,6 +160,7 @@ export interface TransactionItem {
   id: string;
   title: string;
   price: number;
+  quantity: number;
   type: 'Service' | 'Product';
   isConsignment: boolean;
   vendorId?: string;
@@ -164,6 +183,7 @@ export interface Transaction {
   staffName: string;
   processedBy: string;
   actualDuration?: number; 
+  isTaxInvoice?: boolean;
   paymentDetails?: {
     cashReceived?: number;
     change?: number;
@@ -220,6 +240,7 @@ export interface CartItem {
   icon?: ServiceIcon;
   title: string;
   price: number;
+  quantity: number;
   petId?: string;
   petName?: string;
   ownerName?: string;
@@ -261,6 +282,7 @@ export interface AppState {
   staff: Staff[];
   inventory: InventoryItem[];
   vendors: Vendor[];
+  stockMovements: StockMovement[];
   logs: ActivityLog[];
   cart: CartItem[];
   queue: QueueItem[];
@@ -300,6 +322,7 @@ export interface AppState {
     lineChannelToken?: string
   }) => void;
   addToCart: (item: CartItem) => void;
+  updateCartQuantity: (index: number, delta: number) => void;
   removeFromCart: (index: number) => void;
   customAddToCart: (item: CartItem) => void;
   clearCart: () => void;
@@ -310,9 +333,9 @@ export interface AppState {
   toggleServiceActive: (id: string) => void;
   
   addInventoryItem: (item: Omit<InventoryItem, 'id'>) => void;
-  updateInventoryItem: (id: string, item: Partial<InventoryItem>) => void;
+  updateInventoryItem: (id: string, item: Partial<InventoryItem>, reason?: string) => void;
   deleteInventoryItem: (id: string) => void;
-  adjustStock: (id: string, amount: number) => void;
+  adjustStock: (id: string, amount: number, type: StockMovement['type'], reason: string) => void;
 
   addVendor: (vendor: Omit<Vendor, 'id'>) => void;
   updateVendor: (id: string, vendor: Partial<Vendor>) => void;
@@ -335,11 +358,11 @@ export interface AppState {
   addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'packages' | 'totalSpent'>) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
-  bindLineToCustomer: (customerId: string, lineId: string) => void;
+  bindLineToCustomer: (customerId, lineId: string) => void;
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
   updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
-  processPayment: (customerId: string, amount: number, discount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails']) => void;
+  processPayment: (customerId: string, amount: number, discount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails'], isTaxInvoice?: boolean) => void;
   
   updateTransaction: (id: string, data: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;

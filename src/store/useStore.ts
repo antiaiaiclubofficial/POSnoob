@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage } from './types';
+import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage, StockMovement } from './types';
 import { createAuthSlice } from './slices/authSlice';
 import { createCRMSlice } from './slices/crmSlice';
 
-export * from './types'; // Re-export for components that expect types here
+export * from './types';
 
 const INITIAL_TIER_RULES: TierRule[] = [
   { level: 'Standard', label: 'Standard', minSpent: 0, discount: 0 },
@@ -41,8 +41,8 @@ const INITIAL_VENDORS: Vendor[] = [
 ];
 
 const INITIAL_INVENTORY: InventoryItem[] = [
-  { id: 'prod-1', name: 'Organic Shampoo', stock: 15, minStock: 5, price: 450, unit: 'Bottle', category: 'Supplies', isConsignment: false },
-  { id: 'prod-2', name: 'Consigned Dog Treats', stock: 24, minStock: 10, price: 180, unit: 'Pack', category: 'Food', isConsignment: true, vendorId: 'v2', consignmentRate: 70 }
+  { id: 'prod-1', name: 'Organic Shampoo', barcode: '8850000001', stock: 15, minStock: 5, price: 450, costPrice: 280, unit: 'Bottle', category: 'Supplies', isConsignment: false },
+  { id: 'prod-2', name: 'Consigned Dog Treats', barcode: '8850000002', stock: 24, minStock: 10, price: 180, unit: 'Pack', category: 'Food', isConsignment: true, vendorId: 'v2', consignmentRate: 70 }
 ];
 
 export const useStore = create<AppState>()((set, get, ...args) => ({
@@ -73,6 +73,7 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
   packageTemplates: [],
   inventory: INITIAL_INVENTORY,
   vendors: INITIAL_VENDORS,
+  stockMovements: [],
   staff: INITIAL_STAFF,
   logs: [],
   cart: [],
@@ -90,7 +91,33 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
   // Remaining Actions
   updateBusinessProfile: (profile) => set((state) => ({ ...state, ...profile })),
 
-  addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
+  addToCart: (item) => set((state) => {
+    // If it's a product and already in cart for same pet (or no pet), merge quantity
+    if (item.type === 'Product') {
+      const existingIdx = state.cart.findIndex(i => i.id === item.id && i.type === 'Product');
+      if (existingIdx > -1) {
+        const newCart = [...state.cart];
+        newCart[existingIdx].quantity += item.quantity || 1;
+        return { cart: newCart };
+      }
+    }
+    return { cart: [...state.cart, { ...item, quantity: item.quantity || 1 }] };
+  }),
+
+  updateCartQuantity: (index, delta) => set((state) => {
+    const newCart = [...state.cart];
+    const item = newCart[index];
+    if (!item) return state;
+    
+    const newQty = item.quantity + delta;
+    if (newQty <= 0) {
+      return { cart: state.cart.filter((_, i) => i !== index) };
+    }
+    
+    newCart[index] = { ...item, quantity: newQty };
+    return { cart: newCart };
+  }),
+
   removeFromCart: (index) => set((state) => ({ cart: state.cart.filter((_, i) => i !== index) })),
   customAddToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
   clearCart: () => set({ cart: [], activeQueueItemId: null }),
@@ -101,9 +128,48 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
   toggleServiceActive: (id) => set((state) => ({ services: state.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
 
   addInventoryItem: (item) => set((state) => ({ inventory: [...state.inventory, { ...item, id: 'prod-' + Math.random().toString(36).substr(2, 5) }] })),
-  updateInventoryItem: (id, item) => set((state) => ({ inventory: state.inventory.map(i => i.id === id ? { ...i, ...item } : i) })),
+  
+  updateInventoryItem: (id, item, reason = 'Manual Adjustment') => {
+    const { inventory, adjustStock } = get();
+    const oldItem = inventory.find(i => i.id === id);
+    if (oldItem && item.stock !== undefined && item.stock !== oldItem.stock) {
+      adjustStock(id, item.stock - oldItem.stock, 'Adjustment', reason);
+    } else {
+      set((state) => ({ inventory: state.inventory.map(i => i.id === id ? { ...i, ...item } : i) }));
+    }
+  },
+
   deleteInventoryItem: (id) => set((state) => ({ inventory: state.inventory.filter(i => i.id !== id) })),
-  adjustStock: (id, amount) => set((state) => ({ inventory: state.inventory.map(i => i.id === id ? { ...i, stock: i.stock + amount } : i) })),
+
+  adjustStock: (id, amount, type, reason) => set((state) => {
+    const itemIdx = state.inventory.findIndex(i => i.id === id);
+    if (itemIdx === -1) return state;
+
+    const item = state.inventory[itemIdx];
+    const previousStock = item.stock;
+    const currentStock = previousStock + amount;
+
+    const movement: StockMovement = {
+      id: 'm-' + Math.random().toString(36).substr(2, 9),
+      itemId: id,
+      itemName: item.name,
+      type,
+      quantity: Math.abs(amount),
+      previousStock,
+      currentStock,
+      reason,
+      timestamp: new Date().toISOString(),
+      staffName: state.currentUser?.name || 'System'
+    };
+
+    const newInventory = [...state.inventory];
+    newInventory[itemIdx] = { ...item, stock: currentStock };
+
+    return {
+      inventory: newInventory,
+      stockMovements: [movement, ...state.stockMovements].slice(0, 500)
+    };
+  }),
 
   addVendor: (vendor) => set((state) => ({ vendors: [...state.vendors, { ...vendor, id: 'v-' + Math.random().toString(36).substr(2, 5) }] })),
   updateVendor: (id, vendor) => set((state) => ({ vendors: state.vendors.map(v => v.id === id ? { ...v, ...vendor } : v) })),
@@ -133,19 +199,20 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
     }));
   },
 
-  processPayment: (customerId, amount, discount, items, method = 'Cash', details) => {
-    const { customers, transactions, queue, currentUser, inventory } = get();
+  processPayment: (customerId, amount, discount, items, method = 'Cash', details, isTaxInvoice = false) => {
+    const { customers, transactions, queue, currentUser, inventory, adjustStock } = get();
     const today = new Date().toISOString().split('T')[0];
     
     const txItems: TransactionItem[] = items.map(item => {
       const invItem = inventory.find(i => i.id === item.id);
       if (invItem && item.type === 'Product') {
-        get().adjustStock(invItem.id, -1);
+        adjustStock(invItem.id, -item.quantity, 'Out', `Sale: ${item.title}`);
       }
       return {
         id: item.id,
         title: item.title,
         price: item.price,
+        quantity: item.quantity,
         type: item.type,
         isConsignment: invItem?.isConsignment || false,
         vendorId: invItem?.vendorId,
@@ -191,12 +258,13 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
       }))),
       paymentMethod: method,
       bookingType: relatedQueueItem ? 'Appointment' : 'Walk-in',
-      itemsCount: items.length,
+      itemsCount: items.reduce((acc, i) => acc + i.quantity, 0),
       items: txItems,
       processedBy: currentUser?.name || 'Admin User',
       staffId: relatedQueueItem?.staffId || 's2', 
       staffName: get().staff.find(s => s.id === (relatedQueueItem?.staffId || 's2'))?.name || 'Unknown',
       actualDuration,
+      isTaxInvoice,
       paymentDetails: details
     };
 

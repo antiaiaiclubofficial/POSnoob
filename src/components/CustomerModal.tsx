@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, User, Phone, Mail, Shield, MapPin, Info } from 'lucide-react';
+import { X, User, Phone, Mail, Shield, MapPin, Info, FileText } from 'lucide-react';
 import { useStore, Customer, MembershipLevel } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
@@ -23,6 +23,8 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
     phone: '',
     email: '',
     membership: 'Standard' as MembershipLevel,
+    taxId: '',
+    branchName: '',
     houseNo: '',
     villageNo: '',
     soi: '',
@@ -43,6 +45,8 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
         phone: customer.phone,
         email: customer.email,
         membership: customer.membership,
+        taxId: customer.taxId || '',
+        branchName: customer.branchName || '',
         houseNo: customer.houseNo || '',
         villageNo: customer.villageNo || '',
         soi: customer.soi || '',
@@ -85,201 +89,54 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
             <h2 className="text-2xl font-bold text-[#1A1F3D]">{customer ? t.editProfile : t.addClient}</h2>
             <p className="text-xs text-gray-400 font-medium">{t.customerContact}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
-            <X size={20} className="text-gray-400" />
-          </button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-colors"><X size={20} className="text-gray-400" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-8 overflow-y-auto scrollbar-hide">
-          {/* ข้อมูลส่วนตัว */}
           <div className="space-y-5">
-            <div className="flex items-center gap-2 mb-2">
-              <Info size={16} className="text-blue-500" />
-              <h3 className="text-[11px] font-black uppercase text-[#1A1F3D] tracking-widest">{t.personalInfo}</h3>
-            </div>
-            
+            <div className="flex items-center gap-2 mb-2"><Info size={16} className="text-blue-500" /><h3 className="text-[11px] font-black uppercase text-[#1A1F3D] tracking-widest">{t.personalInfo}</h3></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.firstName}</label>
-                <input 
-                  type="text"
-                  placeholder="John"
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
-                  value={formData.firstName}
-                  onChange={e => setFormData({...formData, firstName: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.lastName}</label>
-                <input 
-                  type="text"
-                  placeholder="Doe"
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
-                  value={formData.lastName}
-                  onChange={e => setFormData({...formData, lastName: e.target.value})}
-                />
-              </div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.firstName}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.lastName}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} /></div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.gender}</label>
-                <select 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold appearance-none"
-                  value={formData.gender}
-                  onChange={e => setFormData({...formData, gender: e.target.value})}
-                >
-                  <option value="Male">{t.male}</option>
-                  <option value="Female">{t.female}</option>
-                  <option value="Other">{t.other}</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.age}</label>
-                <input 
-                  type="number"
-                  placeholder="25"
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold"
-                  value={formData.age}
-                  onChange={e => setFormData({...formData, age: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.membershipLevel}</label>
-                <select 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold appearance-none"
-                  value={formData.membership}
-                  onChange={e => setFormData({...formData, membership: e.target.value as MembershipLevel})}
-                >
-                  <option value="Standard">Standard</option>
-                  <option value="Silver">Silver</option>
-                  <option value="Gold">Gold</option>
-                  <option value="VIP">VIP</option>
-                </select>
-              </div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.gender}</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold appearance-none" value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})}><option value="Male">{t.male}</option><option value="Female">{t.female}</option><option value="Other">{t.other}</option></select></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.age}</label><input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.membershipLevel}</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold appearance-none" value={formData.membership} onChange={e => setFormData({...formData, membership: e.target.value as MembershipLevel})}><option value="Standard">Standard</option><option value="Silver">Silver</option><option value="Gold">Gold</option><option value="VIP">VIP</option></select></div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.phoneNumber}</label>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-                  <input 
-                    type="tel"
-                    placeholder="08x-xxx-xxxx"
-                    className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
-                    value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.emailAddress}</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-                  <input 
-                    type="email"
-                    placeholder="example@mail.com"
-                    className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
-                    value={formData.email}
-                    onChange={e => setFormData({...formData, email: e.target.value})}
-                  />
-                </div>
-              </div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.phoneNumber}</label><div className="relative"><Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} /><input type="tel" className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} /></div></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.emailAddress}</label><div className="relative"><Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} /><input type="email" className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} /></div></div>
             </div>
           </div>
 
-          {/* ข้อมูลที่อยู่ */}
           <div className="space-y-5">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin size={16} className="text-orange-500" />
-              <h3 className="text-[11px] font-black uppercase text-[#1A1F3D] tracking-widest">{t.addressInfo}</h3>
+            <div className="flex items-center gap-2 mb-2"><FileText size={16} className="text-purple-500" /><h3 className="text-[11px] font-black uppercase text-[#1A1F3D] tracking-widest">{language === 'th' ? 'ข้อมูลภาษี' : 'Tax Information'}</h3></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Tax ID / เลขผู้เสียภาษี</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.taxId} onChange={e => setFormData({...formData, taxId: e.target.value})} placeholder="0123456789xxx" /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Branch / สาขา</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.branchName} onChange={e => setFormData({...formData, branchName: e.target.value})} placeholder="Head Office / สาขา..." /></div>
             </div>
+          </div>
 
+          <div className="space-y-5">
+            <div className="flex items-center gap-2 mb-2"><MapPin size={16} className="text-orange-500" /><h3 className="text-[11px] font-black uppercase text-[#1A1F3D] tracking-widest">{t.addressInfo}</h3></div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.houseNo}</label>
-                <input 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold"
-                  value={formData.houseNo}
-                  onChange={e => setFormData({...formData, houseNo: e.target.value})}
-                  placeholder="123/4"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.villageNo}</label>
-                <input 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold"
-                  value={formData.villageNo}
-                  onChange={e => setFormData({...formData, villageNo: e.target.value})}
-                  placeholder="5"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.soi}</label>
-                <input 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold"
-                  value={formData.soi}
-                  onChange={e => setFormData({...formData, soi: e.target.value})}
-                  placeholder="Sukhumvit 23"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.road}</label>
-                <input 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold"
-                  value={formData.road}
-                  onChange={e => setFormData({...formData, road: e.target.value})}
-                  placeholder="Rama 4"
-                />
-              </div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.houseNo}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.houseNo} onChange={e => setFormData({...formData, houseNo: e.target.value})} /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.villageNo}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.villageNo} onChange={e => setFormData({...formData, villageNo: e.target.value})} /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.soi}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.soi} onChange={e => setFormData({...formData, soi: e.target.value})} /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.road}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.road} onChange={e => setFormData({...formData, road: e.target.value})} /></div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.subDistrict}</label>
-                <input 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold"
-                  value={formData.subDistrict}
-                  onChange={e => setFormData({...formData, subDistrict: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.district}</label>
-                <input 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold"
-                  value={formData.district}
-                  onChange={e => setFormData({...formData, district: e.target.value})}
-                />
-              </div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.subDistrict}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.subDistrict} onChange={e => setFormData({...formData, subDistrict: e.target.value})} /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.district}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.district} onChange={e => setFormData({...formData, district: e.target.value})} /></div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.province}</label>
-                <input 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold"
-                  value={formData.province}
-                  onChange={e => setFormData({...formData, province: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.postalCode}</label>
-                <input 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold"
-                  value={formData.postalCode}
-                  onChange={e => setFormData({...formData, postalCode: e.target.value})}
-                  placeholder="10xxx"
-                />
-              </div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.province}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.province} onChange={e => setFormData({...formData, province: e.target.value})} /></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.postalCode}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.postalCode} onChange={e => setFormData({...formData, postalCode: e.target.value})} /></div>
             </div>
           </div>
 
-          <div className="pt-4 shrink-0">
-            <button className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg">
-              {customer ? t.updateInformation : t.registerCustomer}
-            </button>
-          </div>
+          <div className="pt-4 shrink-0"><button className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-4 rounded-2xl shadow-lg">{customer ? t.updateInformation : t.registerCustomer}</button></div>
         </form>
       </div>
     </div>

@@ -27,6 +27,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       id: product.id,
       title: product.name,
       price: product.price,
+      quantity: 1,
       ownerName: selectedOwner.name,
       type: 'Product'
     });

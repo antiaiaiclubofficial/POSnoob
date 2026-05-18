@@ -84,6 +84,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       icon: service.icon,
       title: itemTitle + selectedText,
       price: currentPrice,
+      quantity: 1,
       petId: activePet.id,
       petName: activePet.name,
       ownerName: selectedOwner.name,
