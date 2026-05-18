@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, Check, Save, CreditCard, Wallet, X, Trash2
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, Check, Save, CreditCard, Wallet, X, Trash2, Package
 } from 'lucide-react';
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -15,17 +15,19 @@ interface OrderSummaryProps {
 }
 
 const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
-  const { cart, removeFromCart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules, currency, language } = useStore();
+  const { cart, removeFromCart, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules, services, currency, language } = useStore();
   const t = translations[language];
   
   const [newWeight, setNewWeight] = useState('');
   const [isWeightSaved, setIsWeightSaved] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
 
   useEffect(() => {
     setNewWeight('');
     setIsWeightSaved(false);
+    setSelectedPackageId(null);
   }, [activePet]);
 
   const subtotal = cart.reduce((acc, item) => acc + item.price, 0);
@@ -35,22 +37,30 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
   const tax = (subtotal - discountAmount) * 0.07;
   const total = subtotal - discountAmount + tax;
 
+  // Check if any cart item matches a customer package
+  const availablePackages = selectedOwner?.packages?.filter(pkg => {
+    return cart.some(item => {
+      const service = services.find(s => s.id === item.id);
+      return pkg.targetServiceId === item.id && pkg.remainingSlots > 0;
+    });
+  }) || [];
+
   const handleSaveWeight = () => {
-    if (!newWeight || !activePet || !selectedOwner) {
-      toast.error(language === 'th' ? "กรุณาระบุน้ำหนัก" : "Please enter weight");
-      return;
-    }
+    if (!newWeight || !activePet || !selectedOwner) return;
     updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
     setIsWeightSaved(true);
-    toast.success(language === 'th' ? `บันทึกน้ำหนักของ ${activePet.name} เป็น ${newWeight} กก.` : `Updated ${activePet.name}'s weight to ${newWeight} kg`);
+    toast.success(`Weight updated to ${newWeight} kg`);
     setTimeout(() => setIsWeightSaved(false), 2000);
   };
 
   const handleInitiatePayment = () => {
-    if (cart.length === 0 || !selectedOwner) {
-      toast.error(language === 'th' ? "ไม่มีรายการในตะกร้า" : "Cart or customer missing");
+    if (cart.length === 0 || !selectedOwner) return;
+    
+    if (paymentMethod === 'Package' && !selectedPackageId) {
+      toast.error("Please select a package to use");
       return;
     }
+    
     setIsPaymentModalOpen(true);
   };
 
@@ -61,17 +71,23 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
     }
 
-    processPayment(selectedOwner.id, total, discountAmount, cart, paymentMethod, details);
+    const finalDetails = {
+      ...details,
+      packageId: paymentMethod === 'Package' ? selectedPackageId : undefined
+    };
+
+    processPayment(selectedOwner.id, total, discountAmount, cart, paymentMethod, finalDetails);
     
     cart.forEach(item => {
       if (item.queueItemId) markAsPaid(item.queueItemId);
     });
 
-    toast.success(language === 'th' ? `ชำระเงินเรียบร้อย! ${currency}${total.toFixed(2)} ผ่าน ${paymentMethod}` : `Checkout Complete! ${currency}${total.toFixed(2)} paid via ${paymentMethod}.`);
+    toast.success("Transaction Complete!");
     clearCart();
     setNewWeight('');
     setIsWeightSaved(false);
     setIsPaymentModalOpen(false);
+    setSelectedPackageId(null);
   };
 
   return (
@@ -79,27 +95,24 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       "bg-white h-full flex flex-col shrink-0",
       isMobile ? "w-full p-6" : "w-96 p-8 border-l border-gray-100"
     )}>
-      <div className="flex items-center justify-between mb-6 lg:mb-8">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-[#1A1F3D]">{t.orderSummary}</h2>
+          <h2 className="text-2xl font-bold text-[#1A1F3D]">{t.orderSummary}</h2>
           {selectedOwner && (
             <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter mt-1 inline-block">
-              {selectedOwner.membership} {language === 'th' ? 'สมาชิก' : 'MEMBER'}
+              {selectedOwner.membership} MEMBER
             </span>
           )}
         </div>
         {cart.length > 0 && (
-          <button 
-            onClick={clearCart}
-            className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors"
-          >
+          <button onClick={clearCart} className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors">
             {t.clearAll}
           </button>
         )}
       </div>
 
       {activePet && (
-        <div className="mb-6 lg:mb-8 p-4 lg:p-5 bg-[#F5F6FA] rounded-[28px] border border-blue-100/50 shadow-sm transition-all">
+        <div className="mb-8 p-5 bg-[#F5F6FA] rounded-[28px] border border-blue-100/50 shadow-sm transition-all">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
@@ -113,30 +126,20 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
           </div>
           
           <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input 
-                type="number" 
-                step="0.1"
-                placeholder="0.0"
-                className="w-full bg-white border-none rounded-2xl px-4 lg:px-5 py-3 lg:py-3.5 text-sm font-black focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
-                value={newWeight}
-                onChange={(e) => {
-                  setNewWeight(e.target.value);
-                  setIsWeightSaved(false);
-                }}
-              />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <span className="text-[10px] font-black text-gray-300 uppercase">{t.kg}</span>
-              </div>
-            </div>
+            <input 
+              type="number" 
+              placeholder="0.0"
+              className="flex-1 bg-white border-none rounded-2xl px-5 py-3.5 text-sm font-black focus:ring-2 focus:ring-blue-500/20"
+              value={newWeight}
+              onChange={(e) => { setNewWeight(e.target.value); setIsWeightSaved(false); }}
+            />
             <button
               onClick={handleSaveWeight}
               disabled={!newWeight || isWeightSaved}
-              className={`px-4 rounded-2xl transition-all flex items-center justify-center ${
-                isWeightSaved 
-                ? "bg-green-500 text-white" 
-                : "bg-[#1A1F3D] text-white hover:bg-[#2A3152] shadow-lg shadow-[#1A1F3D]/20 active:scale-95 disabled:bg-gray-200 disabled:shadow-none"
-              }`}
+              className={cn(
+                "px-4 rounded-2xl transition-all flex items-center justify-center",
+                isWeightSaved ? "bg-green-500 text-white" : "bg-[#1A1F3D] text-white"
+              )}
             >
               {isWeightSaved ? <Check size={18} /> : <Save size={18} />}
             </button>
@@ -150,7 +153,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <ShoppingBag size={32} className="text-gray-400" />
             </div>
-            <p className="text-sm font-bold text-gray-500">{language === 'th' ? 'ไม่มีรายการ' : 'Cart is empty'}</p>
+            <p className="text-sm font-bold text-gray-500">Cart is empty</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -165,13 +168,10 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
                   <p className="text-[9px] text-gray-400 font-black uppercase mt-0.5">{item.petName}</p>
                 </div>
                 <div className="flex flex-col items-end justify-between self-stretch py-0.5">
-                  <span className="font-black text-[#1A1F3D] text-[13px]">{currency}{item.price.toFixed(2)}</span>
-                  <button 
-                    onClick={() => removeFromCart(idx)}
-                    className="p-1.5 text-red-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <span className={cn("font-black text-[13px]", paymentMethod === 'Package' ? "text-indigo-600" : "text-[#1A1F3D]")}>
+                    {paymentMethod === 'Package' ? "PKG" : `${currency}${item.price.toFixed(2)}`}
+                  </span>
+                  <button onClick={() => removeFromCart(idx)} className="p-1.5 text-red-200 hover:text-red-500"><Trash2 size={14} /></button>
                 </div>
               </div>
             ))}
@@ -179,57 +179,78 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
         )}
       </div>
 
-      <div className="pt-6 lg:pt-8 mb-4 lg:mb-6 space-y-3">
+      <div className="pt-8 mb-6 space-y-4">
         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.paymentMethod}</p>
-        <div className="flex gap-2">
-          {(['Cash', 'Transfer', 'Credit Card'] as PaymentMethod[]).map((method) => {
-            const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Banknote : CreditCard;
-            const label = method === 'Cash' ? t.cash : method === 'Transfer' ? t.transfer : t.creditCard;
+        <div className="grid grid-cols-4 gap-2">
+          {(['Cash', 'Transfer', 'Credit Card', 'Package'] as const).map((method) => {
+            const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Banknote : method === 'Credit Card' ? CreditCard : Package;
+            const isDisabled = method === 'Package' && availablePackages.length === 0;
             return (
               <button
                 key={method}
+                disabled={isDisabled}
                 onClick={() => setPaymentMethod(method)}
                 className={cn(
-                  "flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all",
-                  paymentMethod === method 
-                    ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-lg" 
-                    : "bg-white border-gray-100 text-gray-400 hover:border-gray-300"
+                  "flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all",
+                  paymentMethod === method ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-lg" : "bg-white border-gray-100 text-gray-400",
+                  isDisabled && "opacity-20 cursor-not-allowed grayscale"
                 )}
               >
                 <Icon size={16} />
-                <span className="text-[8px] lg:text-[9px] font-black uppercase">{label}</span>
+                <span className="text-[8px] font-black uppercase">{method === 'Package' ? "PKG" : method}</span>
               </button>
             );
           })}
         </div>
+
+        {paymentMethod === 'Package' && availablePackages.length > 0 && (
+          <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 animate-in zoom-in-95">
+             <label className="text-[9px] font-black text-indigo-600 uppercase mb-2 block">Available Bundles</label>
+             <div className="space-y-2">
+               {availablePackages.map(pkg => (
+                 <button 
+                  key={pkg.id}
+                  onClick={() => setSelectedPackageId(pkg.id)}
+                  className={cn(
+                    "w-full text-left p-2.5 rounded-xl border text-[10px] font-bold flex justify-between transition-all",
+                    selectedPackageId === pkg.id ? "bg-white border-indigo-300 text-indigo-600 shadow-sm" : "bg-white/50 border-transparent text-gray-400"
+                  )}
+                 >
+                   <span>{pkg.name}</span>
+                   <span>{pkg.remainingSlots} left</span>
+                 </button>
+               ))}
+             </div>
+          </div>
+        )}
       </div>
 
-      <div className="pt-4 lg:pt-6 space-y-3 border-t border-dashed border-gray-200 mt-auto">
-        {tierDiscountPercent > 0 && (
+      <div className="pt-6 space-y-3 border-t border-dashed border-gray-200 mt-auto">
+        {tierDiscountPercent > 0 && paymentMethod !== 'Package' && (
           <div className="flex justify-between items-center text-xs text-green-600 font-bold bg-green-50 px-4 py-3 rounded-2xl">
-            <span className="flex items-center gap-2">
-              <ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)
-            </span>
+            <span className="flex items-center gap-2"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
             <span>-{currency}{discountAmount.toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between items-end pt-2 px-2">
-          <span className="text-lg lg:text-xl font-bold text-[#1A1F3D]">{t.total}</span>
-          <span className="text-2xl lg:text-3xl font-extrabold text-[#1A1F3D]">{currency}{total.toFixed(2)}</span>
+          <span className="text-xl font-bold text-[#1A1F3D]">{t.total}</span>
+          <span className="text-3xl font-extrabold text-[#1A1F3D]">
+            {paymentMethod === 'Package' ? "0.00" : `${currency}${total.toFixed(2)}`}
+          </span>
         </div>
       </div>
 
       <button 
         onClick={handleInitiatePayment}
         disabled={cart.length === 0}
-        className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] disabled:bg-gray-100 disabled:text-gray-300 text-[#1A1F3D] font-extrabold py-4 lg:py-5 rounded-[28px] flex items-center justify-center gap-3 mt-4 lg:mt-6 shadow-xl shadow-[#D9ED5F]/20 transition-all active:scale-95"
+        className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 mt-6 shadow-xl transition-all"
       >
-        <Banknote size={20} /> {t.checkout}
+        <Banknote size={20} /> {paymentMethod === 'Package' ? "Deduct from Package" : t.checkout}
       </button>
 
       {isPaymentModalOpen && (
         <PaymentModal 
-          total={total}
+          total={paymentMethod === 'Package' ? 0 : total}
           method={paymentMethod}
           onClose={() => setIsPaymentModalOpen(false)}
           onComplete={handleCompletePayment}

@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2 } from 'lucide-react';
+import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2, Package, Clock, Star, Gift } from 'lucide-react';
 import { useStore, Customer, Pet, MembershipLevel } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import CustomerModal from '@/components/CustomerModal';
 import PetModal from '@/components/PetModal';
 import PetProfileRecord from '@/components/PetProfileRecord';
 import LineBindingModal from '@/components/LineBindingModal';
+import PackageModal from '@/components/PackageModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { translations } from '@/utils/translations';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,8 +31,9 @@ const Customers = () => {
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
 
   const [isLineModalOpen, setIsLineModalOpen] = useState(false);
+  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
 
-  // Fetch from 'customers' table with joins for pets and store_customers
+  // Fetch from 'customers' table with joins
   const { isLoading } = useQuery({
     queryKey: ['customers-crm'],
     queryFn: async () => {
@@ -45,24 +47,21 @@ const Customers = () => {
       
       if (error) throw error;
 
-      // Transform data to match application interface
       const transformedCustomers: Customer[] = data.map((item: any) => {
         const storeData = item.store_customers?.[0] || {};
         
-        // Map pets data
         const pets: Pet[] = (item.pets || []).map((p: any) => ({
           id: p.id,
           name: p.name,
           species: (p.type === 'cat' ? 'Cat' : p.type === 'dog' ? 'Dog' : 'Other') as any,
           breed: p.breed || 'Unknown',
-          birthday: p.age || '', // Using age as proxy if birthday not in schema
+          birthday: p.age || '',
           weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: p.weight }] : [],
           serviceHistory: [],
           notes: p.medical_condition || p.precautions || '',
           image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
         }));
 
-        // Normalize membership tier
         const rawTier = storeData.tier?.toLowerCase();
         let membership: MembershipLevel = 'Standard';
         if (rawTier === 'silver') membership = 'Silver';
@@ -77,7 +76,8 @@ const Customers = () => {
           membership: membership,
           points: storeData.points || 0,
           pets: pets,
-          totalSpent: storeData.points || 0, // Using points as spending proxy if total_spent not available
+          packages: [], // Local storage will handle state for now as schema might not have it
+          totalSpent: storeData.points || 0,
           lineId: item.line_user_id
         };
       });
@@ -105,37 +105,15 @@ const Customers = () => {
     if (isMobile) setShowDetailOnMobile(true);
   };
 
-  const handleEditCustomer = (customer: Customer) => {
-    setEditingCustomer(customer);
-    setIsCustomerModalOpen(true);
-  };
-
   const handleDeleteCustomer = (id: string) => {
-    const confirmMessage = language === 'th' ? "คุณแน่ใจหรือไม่ว่าต้องการลบรายชื่อลูกค้านี้?" : "Are you sure you want to delete this customer?";
-    if (window.confirm(confirmMessage)) {
+    if (window.confirm("Confirm deletion?")) {
       deleteCustomer(id);
-      toast.success(language === 'th' ? "ลบรายชื่อลูกค้าเรียบร้อยแล้ว" : "Customer deleted successfully.");
       if (filteredCustomers.length > 1) {
         setSelectedCustomerId(filteredCustomers[0].id === id ? filteredCustomers[1].id : filteredCustomers[0].id);
       } else {
         setSelectedCustomerId(null);
       }
     }
-  };
-
-  const handleAddCustomer = () => {
-    setEditingCustomer(null);
-    setIsCustomerModalOpen(true);
-  };
-
-  const handleEditPet = (pet: Pet) => {
-    setEditingPet(pet);
-    setIsPetModalOpen(true);
-  };
-
-  const handleAddPet = () => {
-    setEditingPet(null);
-    setIsPetModalOpen(true);
   };
 
   if (isLoading && customers.length === 0) {
@@ -182,7 +160,9 @@ const Customers = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <p className="font-bold text-sm">{customer.name}</p>
-                  {customer.lineId && <div className="w-2 h-2 bg-green-500 rounded-full" title="LINE Connected" />}
+                  {customer.packages && customer.packages.length > 0 && (
+                    <div className="bg-[#D9ED5F] text-[#1A1F3D] text-[7px] font-black px-1.5 rounded-md uppercase tracking-tighter">PKG</div>
+                  )}
                 </div>
                 <p className={cn("text-[10px]", selectedCustomerId === customer.id ? "text-white/60" : "text-gray-400")}>
                   {customer.pets.length} {language === 'th' ? 'ตัว' : 'Pets'} • {customer.membership}
@@ -194,7 +174,7 @@ const Customers = () => {
 
         <div className="p-6 border-t border-gray-50">
           <button 
-            onClick={handleAddCustomer}
+            onClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }}
             className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-bold py-3.5 rounded-xl text-sm flex items-center justify-center gap-2"
           >
             <Plus size={18} /> {language === 'th' ? 'เพิ่มลูกค้าใหม่' : 'Add Client'}
@@ -227,26 +207,14 @@ const Customers = () => {
                   <div className="flex items-center gap-3 mb-1">
                     <h2 className="text-2xl lg:text-3xl font-black">{selectedCustomer.name}</h2>
                     <div className="flex gap-1">
-                      <button 
-                        onClick={() => handleEditCustomer(selectedCustomer)}
-                        className="p-2 text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-lg transition-all"
-                      >
-                        <Edit3 size={18} />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteCustomer(selectedCustomer.id)}
-                        className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <button onClick={() => { setEditingCustomer(selectedCustomer); setIsCustomerModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={18} /></button>
+                      <button onClick={() => handleDeleteCustomer(selectedCustomer.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={18} /></button>
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
                     <span className="flex items-center gap-1.5 text-[10px] lg:text-xs text-gray-400 font-bold"><Phone size={14}/> {selectedCustomer.phone}</span>
                     <span className="flex items-center gap-1.5 text-[10px] lg:text-xs text-gray-400 font-bold"><Mail size={14}/> {selectedCustomer.email}</span>
                   </div>
-
-                  {/* LINE Binding Section */}
                   <div className="pt-2">
                     {selectedCustomer.lineId ? (
                       <div className="flex items-center gap-2 bg-green-50 text-green-600 px-4 py-2 rounded-xl border border-green-100 w-fit">
@@ -255,10 +223,7 @@ const Customers = () => {
                         <BadgeCheck size={14} />
                       </div>
                     ) : (
-                      <button 
-                        onClick={() => setIsLineModalOpen(true)}
-                        className="flex items-center gap-2 bg-[#F5F6FA] text-gray-400 hover:text-green-600 hover:bg-green-50 hover:border-green-100 border border-transparent px-4 py-2 rounded-xl transition-all w-fit"
-                      >
+                      <button onClick={() => setIsLineModalOpen(true)} className="flex items-center gap-2 bg-[#F5F6FA] text-gray-400 hover:text-green-600 border border-transparent px-4 py-2 rounded-xl transition-all w-fit">
                         <MessageSquare size={14} />
                         <span className="text-[10px] font-black uppercase tracking-widest">{t.connectLine}</span>
                       </button>
@@ -274,33 +239,97 @@ const Customers = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between mb-6 lg:mb-8">
+            {/* Package Section */}
+            <div className="mb-12">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl lg:text-2xl font-black text-[#1A1F3D]">Active Packages</h3>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Bundle tracking & Freebies</p>
+                </div>
+                <button 
+                  onClick={() => setIsPackageModalOpen(true)}
+                  className="bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 shadow-lg shadow-indigo-500/10 transition-all hover:scale-105"
+                >
+                  <Plus size={16} /> Assign Package
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {selectedCustomer.packages && selectedCustomer.packages.map(pkg => (
+                  <div key={pkg.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm overflow-hidden relative group">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center">
+                        <Package size={24} />
+                      </div>
+                      <div className="text-right">
+                        <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                          {pkg.remainingSlots} Left
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <h4 className="text-lg font-black text-[#1A1F3D] mb-4">{pkg.name}</h4>
+
+                    <div className="space-y-3 mb-8">
+                       {pkg.recurringFreebie && (
+                         <div className="flex items-center gap-2 text-xs font-bold text-green-600">
+                           <Star size={14} /> {pkg.recurringFreebie} (Every visit)
+                         </div>
+                       )}
+                       {pkg.oneTimeFreebie && (
+                         <div className={cn(
+                           "flex items-center gap-2 text-xs font-bold",
+                           pkg.oneTimeFreebie.isUsed ? "text-gray-300 line-through" : "text-amber-600"
+                         )}>
+                           <Gift size={14} /> {pkg.oneTimeFreebie.name} (One-time)
+                         </div>
+                       )}
+                    </div>
+
+                    <div className="w-full bg-[#F5F6FA] h-2 rounded-full overflow-hidden mb-8">
+                      <div 
+                        className="bg-indigo-500 h-full transition-all duration-500" 
+                        style={{ width: `${(pkg.usedSlots / pkg.totalSlots) * 100}%` }}
+                      />
+                    </div>
+
+                    <div className="pt-6 border-t border-gray-50">
+                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-3">Usage History</p>
+                      <div className="space-y-2 max-h-32 overflow-y-auto scrollbar-hide">
+                        {pkg.usageHistory.length > 0 ? (
+                          pkg.usageHistory.map(usage => (
+                            <div key={usage.id} className="flex justify-between items-center text-[10px] font-bold text-gray-600">
+                              <span className="flex items-center gap-2"><Clock size={10} /> {usage.date}</span>
+                              <span className={usage.isFreebie ? "text-green-500" : ""}>{usage.isFreebie ? "(Freebie Session)" : "Session"}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-[10px] text-gray-300 font-medium italic">No usage recorded yet</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {(!selectedCustomer.packages || selectedCustomer.packages.length === 0) && (
+                  <div className="col-span-2 py-12 text-center bg-white rounded-[40px] border border-dashed border-gray-100">
+                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">No active packages</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mb-8">
               <h3 className="text-xl lg:text-2xl font-black text-[#1A1F3D]">{t.petRegistry}</h3>
-              <button 
-                onClick={handleAddPet}
-                className="bg-[#D9ED5F] text-[#1A1F3D] px-4 lg:px-5 py-2 lg:2.5 rounded-xl text-[10px] lg:text-xs font-black flex items-center gap-2 shadow-lg shadow-[#D9ED5F]/20 transition-all hover:scale-105"
-              >
+              <button onClick={() => { setEditingPet(null); setIsPetModalOpen(true); }} className="bg-[#D9ED5F] text-[#1A1F3D] px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-[#D9ED5F]/20 transition-all hover:scale-105">
                 <Plus size={16} /> {t.registerPet}
               </button>
             </div>
 
-            <div className="space-y-6 lg:space-y-8 pb-10">
+            <div className="space-y-8 pb-10">
               {selectedCustomer.pets.map(pet => (
-                <PetProfileRecord 
-                  key={pet.id} 
-                  pet={pet} 
-                  onEdit={handleEditPet} 
-                />
+                <PetProfileRecord key={pet.id} pet={pet} onEdit={(p) => { setEditingPet(p); setIsPetModalOpen(true); }} />
               ))}
-              
-              {selectedCustomer.pets.length === 0 && (
-                <div className="py-16 lg:py-20 text-center bg-white rounded-[40px] border border-dashed border-gray-200">
-                  <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                     <Plus size={24} className="text-gray-200" />
-                  </div>
-                  <p className="text-xs lg:sm text-gray-400 font-bold">{language === 'th' ? 'ไม่มีข้อมูลสัตว์เลี้ยง' : 'No pets registered'}</p>
-                </div>
-              )}
             </div>
           </div>
         ) : (
@@ -311,27 +340,10 @@ const Customers = () => {
         )}
       </div>
 
-      {isCustomerModalOpen && (
-        <CustomerModal 
-          customer={editingCustomer} 
-          onClose={() => setIsCustomerModalOpen(false)} 
-        />
-      )}
-      
-      {isPetModalOpen && selectedCustomer && (
-        <PetModal 
-          customerId={selectedCustomer.id} 
-          pet={editingPet}
-          onClose={() => setIsPetModalOpen(false)} 
-        />
-      )}
-
-      {isLineModalOpen && selectedCustomer && (
-        <LineBindingModal 
-          customer={selectedCustomer}
-          onClose={() => setIsLineModalOpen(false)}
-        />
-      )}
+      {isCustomerModalOpen && <CustomerModal customer={editingCustomer} onClose={() => setIsCustomerModalOpen(false)} />}
+      {isPetModalOpen && selectedCustomer && <PetModal customerId={selectedCustomer.id} pet={editingPet} onClose={() => setIsPetModalOpen(false)} />}
+      {isLineModalOpen && selectedCustomer && <LineBindingModal customer={selectedCustomer} onClose={() => setIsLineModalOpen(false)} />}
+      {isPackageModalOpen && selectedCustomer && <PackageModal customerId={selectedCustomer.id} onClose={() => setIsPackageModalOpen(false)} />}
     </div>
   );
 };

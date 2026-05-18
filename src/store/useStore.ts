@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health' | 'brush' | 'hotel' | 'love' | 'food' | 'premium';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
-export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card';
+export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package';
 export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
 export type BookingType = 'Appointment' | 'Walk-in';
 
@@ -51,6 +51,42 @@ export interface ServiceHistoryEntry {
   size?: string;
 }
 
+export interface PackageUsage {
+  id: string;
+  date: string;
+  serviceName: string;
+  isFreebie: boolean;
+}
+
+export interface CustomerPackage {
+  id: string;
+  templateId: string;
+  name: string;
+  targetServiceId: string;
+  totalSlots: number; // e.g. 10 (8 paid + 2 free)
+  usedSlots: number;
+  remainingSlots: number;
+  recurringFreebie?: string; // e.g. "Free Tooth Brushing"
+  oneTimeFreebie?: {
+    name: string;
+    isUsed: boolean;
+  };
+  usageHistory: PackageUsage[];
+  purchaseDate: string;
+  expiryDate?: string;
+}
+
+export interface PackageTemplate {
+  id: string;
+  name: string;
+  serviceId: string;
+  paidSlots: number;
+  freeSlots: number;
+  price: number;
+  recurringFreebie?: string;
+  oneTimeFreebie?: string;
+}
+
 export interface Pet {
   id: string;
   name: string;
@@ -75,6 +111,7 @@ export interface Customer {
   membership: MembershipLevel;
   points: number;
   pets: Pet[];
+  packages: CustomerPackage[];
   totalSpent: number;
   lineId?: string;
   // Address Fields
@@ -109,6 +146,7 @@ export interface Transaction {
     cardLast4?: string;
     cardType?: string;
     referenceNo?: string;
+    packageId?: string;
   };
 }
 
@@ -165,6 +203,7 @@ export interface CartItem {
   queueItemId?: string;
   staffId?: string;
   staffName?: string;
+  isPackageUsage?: boolean;
 }
 
 interface AppState {
@@ -191,6 +230,7 @@ interface AppState {
   lineChannelToken: string;
   
   services: Service[];
+  packageTemplates: PackageTemplate[];
   customers: Customer[];
   setCustomers: (customers: Customer[]) => void;
   staff: Staff[];
@@ -243,6 +283,11 @@ interface AppState {
   deleteService: (id: string) => void;
   toggleServiceActive: (id: string) => void;
   
+  addPackageTemplate: (template: Omit<PackageTemplate, 'id'>) => void;
+  updatePackageTemplate: (id: string, template: Partial<PackageTemplate>) => void;
+  deletePackageTemplate: (id: string) => void;
+  assignPackageToCustomer: (customerId: string, templateId: string) => void;
+
   selectOwner: (owner: Customer | null) => void;
   setActivePet: (pet: Pet | null) => void;
   setActiveQueueItem: (id: string | null) => void;
@@ -252,7 +297,7 @@ interface AppState {
   removeQueueItem: (id: string) => void;
   markAsPaid: (queueItemId: string) => void;
 
-  addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'totalSpent'>) => void;
+  addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'packages' | 'totalSpent'>) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
   bindLineToCustomer: (customerId: string, lineId: string) => void;
@@ -290,7 +335,7 @@ const INITIAL_STAFF: Staff[] = [
 
 const INITIAL_SERVICES: Service[] = [
   {
-    id: 'test-d1',
+    id: 'svc-bath',
     title: 'อาบน้ำสุนัข',
     description: 'อาบน้ำทำความสะอาด ล้างหู และตัดเล็บพื้นฐาน',
     category: 'Grooming',
@@ -305,7 +350,7 @@ const INITIAL_SERVICES: Service[] = [
     }
   },
   {
-    id: 'test-d2',
+    id: 'svc-groom',
     title: 'อาบน้ำตัดขนสุนัข',
     description: 'บริการครบวงจร อาบน้ำและตัดแต่งทรงขนตามสายพันธุ์',
     category: 'Grooming',
@@ -318,6 +363,19 @@ const INITIAL_SERVICES: Service[] = [
       'Medium (10-25kg)': { price: 850, duration: 120 },
       'Large (>25kg)': { price: 1200, duration: 180 }
     }
+  }
+];
+
+const INITIAL_PACKAGES: PackageTemplate[] = [
+  {
+    id: 'pkg-8-2',
+    name: 'Package 8 Free 2 (Small Dog)',
+    serviceId: 'svc-bath',
+    paidSlots: 8,
+    freeSlots: 2,
+    price: 2800, // 350 * 8
+    recurringFreebie: 'แปรงฟันฟรี',
+    oneTimeFreebie: 'สปาโคลนฟรี 1 ครั้ง'
   }
 ];
 
@@ -344,6 +402,7 @@ export const useStore = create<AppState>((set, get) => ({
   lineChannelToken: "",
   
   services: INITIAL_SERVICES,
+  packageTemplates: INITIAL_PACKAGES,
   customers: [],
   setCustomers: (customers) => set({ customers }),
   inventory: [],
@@ -438,6 +497,35 @@ export const useStore = create<AppState>((set, get) => ({
   deleteService: (id) => set((state) => ({ services: state.services.filter(s => s.id !== id) })),
   toggleServiceActive: (id) => set((state) => ({ services: state.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
 
+  addPackageTemplate: (template) => set((state) => ({ packageTemplates: [...state.packageTemplates, { ...template, id: 'pkg-' + Math.random().toString(36).substr(2, 5) }] })),
+  updatePackageTemplate: (id, template) => set((state) => ({ packageTemplates: state.packageTemplates.map(t => t.id === id ? { ...t, ...template } : t) })),
+  deletePackageTemplate: (id) => set((state) => ({ packageTemplates: state.packageTemplates.filter(t => t.id !== id) })),
+  assignPackageToCustomer: (customerId, templateId) => {
+    const template = get().packageTemplates.find(t => t.id === templateId);
+    if (!template) return;
+
+    const newPackage: CustomerPackage = {
+      id: 'cpkg-' + Math.random().toString(36).substr(2, 5),
+      templateId: template.id,
+      name: template.name,
+      targetServiceId: template.serviceId,
+      totalSlots: template.paidSlots + template.freeSlots,
+      usedSlots: 0,
+      remainingSlots: template.paidSlots + template.freeSlots,
+      recurringFreebie: template.recurringFreebie,
+      oneTimeFreebie: template.oneTimeFreebie ? { name: template.oneTimeFreebie, isUsed: false } : undefined,
+      usageHistory: [],
+      purchaseDate: new Date().toISOString().split('T')[0]
+    };
+
+    set((state) => ({
+      customers: state.customers.map(c => c.id === customerId ? {
+        ...c,
+        packages: [...(c.packages || []), newPackage]
+      } : c)
+    }));
+  },
+
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
   setActivePet: (pet) => set({ activePet: pet }),
   setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
@@ -463,7 +551,7 @@ export const useStore = create<AppState>((set, get) => ({
   markAsPaid: (id) => set((state) => ({ queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
 
   addCustomer: (customerData) => set((state) => ({
-    customers: [...state.customers, { ...customerData, id: 'c' + Math.random().toString(36).substr(2, 4), points: 0, pets: [], totalSpent: 0 }]
+    customers: [...state.customers, { ...customerData, id: 'c' + Math.random().toString(36).substr(2, 4), points: 0, pets: [], packages: [], totalSpent: 0 }]
   })),
   updateCustomer: (id, customerData) => set((state) => ({ customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c) })),
   deleteCustomer: (id) => set((state) => ({
@@ -498,6 +586,40 @@ export const useStore = create<AppState>((set, get) => ({
     const { customers, transactions, queue, currentUser } = get();
     const today = new Date().toISOString().split('T')[0];
     
+    // Update Package Usage if method is Package
+    if (method === 'Package' && details?.packageId) {
+      set((state) => ({
+        customers: state.customers.map(c => {
+          if (c.id !== customerId) return c;
+          return {
+            ...c,
+            packages: c.packages.map(pkg => {
+              if (pkg.id !== details.packageId) return pkg;
+              
+              const isFreebie = pkg.usedSlots >= (pkg.totalSlots - (get().packageTemplates.find(t => t.id === pkg.templateId)?.freeSlots || 0));
+              
+              const usageRecord: PackageUsage = {
+                id: Math.random().toString(36).substr(2, 9),
+                date: today,
+                serviceName: items[0].title,
+                isFreebie: isFreebie
+              };
+
+              // If it's a package use, the "oneTimeFreebie" might be consumed here if logic was added,
+              // but for now we follow the user's "recurring" or "one-time" mention as traits.
+              
+              return {
+                ...pkg,
+                usedSlots: pkg.usedSlots + 1,
+                remainingSlots: pkg.remainingSlots - 1,
+                usageHistory: [...pkg.usageHistory, usageRecord]
+              };
+            })
+          };
+        })
+      }));
+    }
+
     const relatedQueueItem = items[0]?.queueItemId ? queue.find(q => q.id === items[0].queueItemId) : null;
     let actualDuration = undefined;
     if (relatedQueueItem?.startTime && relatedQueueItem?.endTime) {
@@ -509,7 +631,7 @@ export const useStore = create<AppState>((set, get) => ({
     const newTransaction: Transaction = {
       id: 'tx-' + Math.random().toString(36).substr(2, 9),
       date: today,
-      amount: amount,
+      amount: method === 'Package' ? 0 : amount,
       discountAmount: discount,
       customerId: customerId,
       customerName: customers.find(c => c.id === customerId)?.name || 'Unknown',
