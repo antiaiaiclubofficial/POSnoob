@@ -7,11 +7,9 @@ import OrderSummary from '@/components/OrderSummary';
 import CustomerSearch from '@/components/CustomerSearch';
 import CustomerModal from '@/components/CustomerModal';
 import GroomingServiceModal from '@/components/GroomingServiceModal';
-import AddOnModal from '@/components/AddOnModal';
 import { 
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
-  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, 
-  Clock, Zap, Star, Smile, Droplets, Eye, Brush, PlusCircle 
+  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock 
 } from 'lucide-react';
 import { useStore, QueueItem } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -21,15 +19,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
-
-const QUICK_ADDONS = [
-  { id: 'face', name: 'Face Cleaning', defaultPrice: 150, icon: Smile },
-  { id: 'teeth', name: 'Tooth Brushing', defaultPrice: 100, icon: Zap },
-  { id: 'anal', name: 'Anal Glands', defaultPrice: 100, icon: Droplets },
-  { id: 'nails', name: 'Nail Clippings', defaultPrice: 100, icon: Scissors },
-  { id: 'eyes_ears', name: 'Eye & Ear Cleaning', defaultPrice: 100, icon: Eye },
-  { id: 'detangle', name: 'Detangling', defaultPrice: 100, icon: Brush },
-];
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -44,8 +33,7 @@ const Index = () => {
     customers,
     setActiveQueueItem,
     cart,
-    language,
-    currency
+    language
   } = useStore();
 
   const t = translations[language];
@@ -57,7 +45,6 @@ const Index = () => {
   const [productSearch, setProductQuery] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
-  const [selectedAddOn, setSelectedAddOn] = useState<typeof QUICK_ADDONS[0] | null>(null);
 
   useEffect(() => {
     if (activePet) {
@@ -179,10 +166,7 @@ const Index = () => {
             <Tabs value={posTab} onValueChange={setPosTab} className="w-full sm:w-auto">
               <TabsList className="bg-[#F5F6FA] p-1 rounded-[20px] flex gap-1 h-auto">
                 <TabsTrigger value="services" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
-                  <Scissors size={14} className="mr-2" /> Grooming
-                </TabsTrigger>
-                <TabsTrigger value="addons" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
-                  <PlusCircle size={14} className="mr-2" /> Add-ons
+                  <Scissors size={14} className="mr-2" /> Services
                 </TabsTrigger>
                 <TabsTrigger value="products" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
                   <Package size={14} className="mr-2" /> Products
@@ -206,12 +190,12 @@ const Index = () => {
                </div>
             )}
 
-            {(posTab === 'products' || posTab === 'addons') && (
+            {posTab === 'products' && (
               <div className="relative w-full sm:w-64 animate-in zoom-in-95">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
                 <input 
                   className="w-full bg-[#F5F6FA] border-none rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold"
-                  placeholder={posTab === 'products' ? "Search products..." : "Search add-ons..."}
+                  placeholder="Search products..."
                   value={productSearch}
                   onChange={e => setProductQuery(e.target.value)}
                 />
@@ -236,27 +220,6 @@ const Index = () => {
                   ))}
                 </div>
               )}
-            </TabsContent>
-
-            <TabsContent value="addons" className="m-0 h-full">
-               <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
-                  {QUICK_ADDONS.filter(a => a.name.toLowerCase().includes(productSearch.toLowerCase())).map(addon => (
-                    <button 
-                      key={addon.id}
-                      onClick={() => setSelectedAddOn(addon)}
-                      className="bg-white border border-transparent rounded-[40px] p-8 flex flex-col items-center text-center transition-all hover:shadow-2xl hover:border-gray-100 group"
-                    >
-                      <div className="w-20 h-20 bg-[#F5F6FA] rounded-[28px] flex items-center justify-center text-[#1A1F3D] mb-6 group-hover:bg-[#1A1F3D] group-hover:text-[#D9ED5F] transition-all group-hover:scale-110">
-                        <addon.icon size={32} />
-                      </div>
-                      <h3 className="text-lg font-black text-[#1A1F3D] mb-2 uppercase">{addon.name}</h3>
-                      <p className="text-2xl font-black text-blue-600 mb-6">{currency}{addon.defaultPrice}</p>
-                      <div className="mt-auto w-full py-3.5 bg-gray-50 rounded-2xl text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:bg-[#1A1F3D] group-hover:text-white transition-colors">
-                        Add to Order
-                      </div>
-                    </button>
-                  ))}
-               </div>
             </TabsContent>
 
             <TabsContent value="products" className="m-0 h-full">
@@ -311,10 +274,6 @@ const Index = () => {
 
       {intakeItem && (
         <GroomingServiceModal item={intakeItem} onClose={() => setIntakeItem(null)} />
-      )}
-
-      {selectedAddOn && (
-        <AddOnModal addOn={selectedAddOn} onClose={() => setSelectedAddOn(null)} />
       )}
     </div>
   );

@@ -125,6 +125,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
         )}
       </div>
 
+      {/* Barcode Input */}
       <form onSubmit={handleBarcodeSubmit} className="mb-6">
         <div className="relative">
           <Package size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { X, Package, DollarSign, Percent, Users, Barcode, Trash2, Save, ShoppingBag, Plus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Package, DollarSign, Percent, Users, Barcode, Trash2, Save, ShoppingBag, Plus, Upload, Camera } from 'lucide-react';
 import { useStore, InventoryItem } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ interface InventoryModalProps {
 const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
   const { addInventoryItem, updateInventoryItem, vendors, currency, language } = useStore();
   const t = translations[language];
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,9 +27,10 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
     minStock: 5,
     unit: 'Unit',
     category: 'General',
+    image: '',
     isConsignment: false,
     vendorId: '',
-    consignmentRate: 20 // Default GP % for the shop
+    consignmentRate: 20
   });
 
   useEffect(() => {
@@ -42,6 +44,7 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
         minStock: item.minStock,
         unit: item.unit,
         category: item.category,
+        image: item.image || '',
         isConsignment: item.isConsignment,
         vendorId: item.vendorId || '',
         consignmentRate: item.consignmentRate || 20
@@ -49,7 +52,17 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
     }
   }, [item]);
 
-  // คำนวณราคาหลังหัก GP (ยอดที่ต้องจ่ายให้คู่ค้า)
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const vendorPayout = formData.isConsignment 
     ? formData.price * (1 - formData.consignmentRate / 100)
     : 0;
@@ -64,12 +77,6 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
       toast.error(language === 'th' ? "กรุณากรอกชื่อสินค้า" : "Name is required");
       return;
     }
-
-    if (formData.isConsignment && !formData.vendorId) {
-      toast.error(language === 'th' ? "สินค้าฝากขายต้องเลือกคู่ค้า" : "Consignment item needs a vendor");
-      return;
-    }
-
     if (item) {
       updateInventoryItem(item.id, formData);
       toast.success(language === 'th' ? "อัปเดตข้อมูลสินค้าเรียบร้อย" : "Product updated");
@@ -99,13 +106,34 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 lg:p-10 space-y-8 scrollbar-hide">
-          {/* Basic Info */}
+          {/* Image Section */}
+          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="relative group">
+              <div className="w-32 h-32 bg-[#F5F6FA] rounded-[32px] overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center">
+                {formData.image ? (
+                  <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <Camera size={32} className="text-gray-300" />
+                )}
+              </div>
+              <button 
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#1A1F3D] text-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+              >
+                <Upload size={16} />
+              </button>
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+            </div>
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Product Photo</p>
+          </div>
+
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.productName}</label>
                 <input 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5"
+                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
                   placeholder="e.g. Organic Puppy Shampoo"
@@ -119,7 +147,7 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
                     className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold"
                     value={formData.barcode}
                     onChange={e => setFormData({...formData, barcode: e.target.value})}
-                    placeholder="885..."
+                    placeholder="Scan or type barcode..."
                   />
                 </div>
               </div>
@@ -145,7 +173,6 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
             </div>
           </div>
 
-          {/* Pricing & Consignment */}
           <div className="p-8 bg-[#F5F6FA] rounded-[40px] space-y-8 border border-gray-100">
             <div className="flex items-center justify-between">
                <div className="flex items-center gap-3">
@@ -176,7 +203,6 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
                       />
                     </div>
                   </div>
-
                   {!formData.isConsignment && (
                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">{t.costPrice}</label>
@@ -192,10 +218,9 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
                     </div>
                   )}
                </div>
-
                <div className="space-y-6">
-                  {formData.isConsignment ? (
-                    <div className="space-y-6 animate-in slide-in-from-right-4">
+                  {formData.isConsignment && (
+                    <div className="space-y-6">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">{t.vendorName}</label>
                         <select 
@@ -207,7 +232,6 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
                           {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                         </select>
                       </div>
-
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">Shop GP (%)</label>
                         <div className="relative">
@@ -221,15 +245,9 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-200 rounded-[32px] opacity-40">
-                       <p className="text-[10px] font-black uppercase tracking-widest">Regular Inventory</p>
-                    </div>
                   )}
                </div>
             </div>
-
-            {/* Calculations Preview */}
             <div className="grid grid-cols-2 gap-4 pt-4">
                <div className="bg-white/60 p-5 rounded-3xl border border-white">
                   <p className="text-[9px] font-black text-gray-400 uppercase mb-1">{formData.isConsignment ? t.vendorPayout : t.costPrice}</p>
@@ -245,10 +263,7 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
 
         <div className="p-8 lg:p-10 border-t border-gray-50 bg-white shrink-0 flex gap-4">
           <button onClick={onClose} className="flex-1 py-5 text-sm font-black text-gray-400 uppercase tracking-widest">Cancel</button>
-          <button 
-            onClick={handleSubmit}
-            className="flex-[2] bg-[#1A1F3D] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-2xl shadow-[#1A1F3D]/20 active:scale-95 transition-all"
-          >
+          <button onClick={handleSubmit} className="flex-[2] bg-[#1A1F3D] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-2xl shadow-[#1A1F3D]/20 active:scale-95 transition-all">
             <Save size={20} /> {item ? t.saveChanges : t.add}
           </button>
         </div>
