@@ -7,7 +7,8 @@ import OrderSummary from '@/components/OrderSummary';
 import CustomerSearch from '@/components/CustomerSearch';
 import CustomerModal from '@/components/CustomerModal';
 import GroomingServiceModal from '@/components/GroomingServiceModal';
-import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock } from 'lucide-react';
+import AddOnModal from '@/components/AddOnModal';
+import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star } from 'lucide-react';
 import { useStore, QueueItem } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,11 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
+
+const QUICK_ADDONS = [
+  { id: 'teeth', name: 'แปรงฟัน', defaultPrice: 100, icon: Zap },
+  { id: 'mud', name: 'สปาโคลน', defaultPrice: 150, icon: Star },
+];
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -30,7 +36,8 @@ const Index = () => {
     customers,
     setActiveQueueItem,
     cart,
-    language
+    language,
+    currency
   } = useStore();
 
   const t = translations[language];
@@ -41,6 +48,7 @@ const Index = () => {
   const [productSearch, setProductQuery] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
+  const [selectedAddOn, setSelectedAddOn] = useState<typeof QUICK_ADDONS[0] | null>(null);
 
   useEffect(() => {
     if (activePet) {
@@ -48,7 +56,6 @@ const Index = () => {
     }
   }, [activePet]);
 
-  // คิวงานของวันนี้ที่ยังไม่ได้จ่ายเงิน
   const todayQueue = queue.filter(q => q.date === today && !q.isPaid);
 
   const handleQuickSelectFromQueue = (item: QueueItem) => {
@@ -139,8 +146,6 @@ const Index = () => {
                         </div>
                       </div>
                     </button>
-                    
-                    {/* ปุ่ม Checklist สำหรับ Check-in & Signature */}
                     <button 
                       onClick={() => setIntakeItem(item)}
                       className={cn(
@@ -153,6 +158,33 @@ const Index = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Quick Add-ons Section */}
+          {selectedOwner && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+               <div className="flex items-center gap-2 mb-3">
+                 <Zap size={14} className="text-amber-500" />
+                 <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Quick Add-ons</span>
+               </div>
+               <div className="flex gap-3">
+                  {QUICK_ADDONS.map(addon => (
+                    <button 
+                      key={addon.id}
+                      onClick={() => setSelectedAddOn(addon)}
+                      className="bg-white border border-gray-100 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-sm hover:shadow-md transition-all active:scale-95 group"
+                    >
+                      <div className="w-8 h-8 bg-[#F5F6FA] rounded-xl flex items-center justify-center text-[#1A1F3D] group-hover:bg-[#1A1F3D] group-hover:text-[#D9ED5F] transition-colors">
+                        <addon.icon size={16} />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-[10px] font-black text-[#1A1F3D] uppercase">{addon.name}</p>
+                        <p className="text-[9px] font-bold text-gray-400">{currency}{addon.defaultPrice}</p>
+                      </div>
+                    </button>
+                  ))}
+               </div>
             </div>
           )}
 
@@ -259,6 +291,10 @@ const Index = () => {
 
       {intakeItem && (
         <GroomingServiceModal item={intakeItem} onClose={() => setIntakeItem(null)} />
+      )}
+
+      {selectedAddOn && (
+        <AddOnModal addOn={selectedAddOn} onClose={() => setSelectedAddOn(null)} />
       )}
     </div>
   );
