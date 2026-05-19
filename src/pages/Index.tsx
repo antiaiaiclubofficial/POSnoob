@@ -7,9 +7,10 @@ import OrderSummary from '@/components/OrderSummary';
 import CustomerSearch from '@/components/CustomerSearch';
 import CustomerModal from '@/components/CustomerModal';
 import GroomingServiceModal from '@/components/GroomingServiceModal';
+import AddOnModal from '@/components/AddOnModal';
 import { 
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
-  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock 
+  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush
 } from 'lucide-react';
 import { useStore, QueueItem } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -19,6 +20,13 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
+
+const QUICK_ADDONS = [
+  { id: 'brushing', name: 'แปรงฟัน', defaultPrice: 100, icon: Brush },
+  { id: 'mud-spa', name: 'สปาโคลน', defaultPrice: 250, icon: Sparkles },
+  { id: 'nail-file', name: 'ตะไบเล็บ', defaultPrice: 80, icon: Zap },
+  { id: 'perfume', name: 'ฉีดน้ำหอม', defaultPrice: 50, icon: Heart },
+];
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -45,6 +53,7 @@ const Index = () => {
   const [productSearch, setProductQuery] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
+  const [selectedAddOn, setSelectedAddOn] = useState<any>(null);
 
   useEffect(() => {
     if (activePet) {
@@ -119,6 +128,27 @@ const Index = () => {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Quick Add-ons Bar */}
+          <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="flex items-center gap-2 shrink-0 bg-white border border-gray-100 p-1 rounded-2xl shadow-sm">
+               <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                  <Zap size={14} />
+               </div>
+               <span className="text-[9px] font-black uppercase text-gray-400 pr-2">Add-ons</span>
+            </div>
+            {QUICK_ADDONS.map(addon => (
+              <button
+                key={addon.id}
+                onClick={() => setSelectedAddOn(addon)}
+                className="flex items-center gap-2 bg-white border border-gray-100 px-4 py-2.5 rounded-2xl shrink-0 hover:border-[#1A1F3D] hover:shadow-md transition-all group"
+              >
+                <addon.icon size={14} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+                <span className="text-[10px] font-black text-[#1A1F3D] uppercase whitespace-nowrap">{addon.name}</span>
+                <span className="text-[9px] font-bold text-gray-400">฿{addon.defaultPrice}</span>
+              </button>
+            ))}
           </div>
 
           {todayQueue.length > 0 && (
@@ -274,6 +304,10 @@ const Index = () => {
 
       {intakeItem && (
         <GroomingServiceModal item={intakeItem} onClose={() => setIntakeItem(null)} />
+      )}
+
+      {selectedAddOn && (
+        <AddOnModal addOn={selectedAddOn} onClose={() => setSelectedAddOn(null)} />
       )}
     </div>
   );
