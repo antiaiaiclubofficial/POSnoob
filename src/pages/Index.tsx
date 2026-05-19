@@ -6,7 +6,8 @@ import ProductCard from '@/components/ProductCard';
 import OrderSummary from '@/components/OrderSummary';
 import CustomerSearch from '@/components/CustomerSearch';
 import CustomerModal from '@/components/CustomerModal';
-import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2, Dog, Cat, Scissors, Package } from 'lucide-react';
+import GroomingServiceModal from '@/components/GroomingServiceModal';
+import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock } from 'lucide-react';
 import { useStore, QueueItem } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
@@ -14,6 +15,7 @@ import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from 'date-fns';
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -32,11 +34,13 @@ const Index = () => {
   } = useStore();
 
   const t = translations[language];
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   const [posTab, setPosTab] = useState('services');
   const [speciesFilter, setSpeciesFilter] = useState<'Dog' | 'Cat'>('Dog');
   const [productSearch, setProductQuery] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
 
   useEffect(() => {
     if (activePet) {
@@ -44,9 +48,8 @@ const Index = () => {
     }
   }, [activePet]);
 
-  const pendingCheckout = queue.filter(q => 
-    (q.status !== 'Waiting') && !q.isPaid
-  );
+  // คิวงานของวันนี้ที่ยังไม่ได้จ่ายเงิน
+  const todayQueue = queue.filter(q => q.date === today && !q.isPaid);
 
   const handleQuickSelectFromQueue = (item: QueueItem) => {
     const owner = customers.find(c => c.name === item.ownerName);
@@ -68,7 +71,7 @@ const Index = () => {
     p.category.toLowerCase().includes(productSearch.toLowerCase())
   );
   
-  const cartTotal = cart.reduce((acc, item) => acc + item.price, 0);
+  const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
   return (
     <div className="flex-1 flex overflow-hidden">
@@ -110,34 +113,44 @@ const Index = () => {
             )}
           </div>
 
-          {pendingCheckout.length > 0 && (
+          {todayQueue.length > 0 && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{t.activeServices} ({pendingCheckout.length})</span>
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Today's Appointments ({todayQueue.length})</span>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {pendingCheckout.map(item => (
-                  <button
+                {todayQueue.map(item => (
+                  <div
                     key={item.id}
-                    onClick={() => handleQuickSelectFromQueue(item)}
                     className={cn(
-                      "flex items-center gap-3 bg-white border px-4 py-3 rounded-[20px] shrink-0 transition-all group hover:border-[#1A1F3D]/20",
-                      activePet?.id === item.petId ? "border-orange-200 bg-orange-50/30" : "border-gray-100",
-                      item.status === 'Completed' && "border-green-100"
+                      "flex items-center gap-3 bg-white border px-4 py-3 rounded-[24px] shrink-0 transition-all group relative",
+                      activePet?.id === item.petId ? "border-[#1A1F3D] ring-2 ring-[#1A1F3D]/5" : "border-gray-100",
+                      item.status === 'Waiting' ? "border-orange-100" : "border-green-100"
                     )}
                   >
-                    <img src={item.image} className="w-10 h-10 rounded-xl object-cover shadow-sm" />
-                    <div className="text-left">
-                      <p className="text-xs font-black text-[#1A1F3D]">{item.petName}</p>
-                      <p className={cn(
-                        "text-[9px] font-bold uppercase tracking-tighter",
-                        item.status === 'Completed' ? "text-green-600" : "text-gray-400"
-                      )}>
-                        {item.status === 'Completed' ? t.readyToPay : t.inProgress}
-                      </p>
-                    </div>
-                  </button>
+                    <button onClick={() => handleQuickSelectFromQueue(item)} className="flex items-center gap-3 text-left">
+                      <img src={item.image} className="w-10 h-10 rounded-xl object-cover shadow-sm" />
+                      <div className="pr-10">
+                        <p className="text-xs font-black text-[#1A1F3D]">{item.petName}</p>
+                        <div className="flex items-center gap-1.5">
+                           <Clock size={8} className="text-gray-300" />
+                           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{item.time}</p>
+                        </div>
+                      </div>
+                    </button>
+                    
+                    {/* ปุ่ม Checklist สำหรับ Check-in & Signature */}
+                    <button 
+                      onClick={() => setIntakeItem(item)}
+                      className={cn(
+                        "absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center transition-all",
+                        item.status === 'Waiting' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20" : "bg-gray-50 text-gray-300"
+                      )}
+                    >
+                      <ClipboardList size={14} />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -242,6 +255,10 @@ const Index = () => {
 
       {isCustomerModalOpen && (
         <CustomerModal onClose={() => setIsCustomerModalOpen(false)} />
+      )}
+
+      {intakeItem && (
+        <GroomingServiceModal item={intakeItem} onClose={() => setIntakeItem(null)} />
       )}
     </div>
   );
