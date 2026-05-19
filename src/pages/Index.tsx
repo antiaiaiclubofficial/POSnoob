@@ -10,9 +10,9 @@ import GroomingServiceModal from '@/components/GroomingServiceModal';
 import AddOnModal from '@/components/AddOnModal';
 import { 
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
-  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath, Gem
+  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath
 } from 'lucide-react';
-import { useStore, QueueItem, ServiceIcon, CreditPackageTemplate } from '@/store/useStore';
+import { useStore, QueueItem, ServiceIcon } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -21,11 +21,38 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 
+const getIcon = (iconName: ServiceIcon) => {
+  switch(iconName) {
+    case 'grooming': return Scissors;
+    case 'bath': return Bath;
+    case 'spa': return Sparkles;
+    case 'nail': return Zap;
+    case 'dry': return Wind;
+    case 'brush': return Brush;
+    case 'health': return Stethoscope;
+    case 'hotel': return Home;
+    case 'love': return Heart;
+    case 'food': return Bone;
+    case 'premium': return Award;
+    default: return Zap;
+  }
+};
+
 const Index = () => {
   const isMobile = useIsMobile();
   const { 
-    selectedOwner, activePet, services, addons, inventory, creditPackages,
-    selectOwner, setActivePet, queue, customers, setActiveQueueItem, cart, addToCart, language, currency
+    selectedOwner, 
+    activePet, 
+    services, 
+    addons,
+    inventory,
+    selectOwner, 
+    setActivePet, 
+    queue, 
+    customers,
+    setActiveQueueItem,
+    cart,
+    language
   } = useStore();
 
   const t = translations[language];
@@ -40,30 +67,38 @@ const Index = () => {
   const [selectedAddOn, setSelectedAddOn] = useState<any>(null);
 
   useEffect(() => {
-    if (activePet) setSpeciesFilter(activePet.species === 'Dog' ? 'Dog' : 'Cat');
+    if (activePet) {
+      setSpeciesFilter(activePet.species === 'Dog' ? 'Dog' : 'Cat');
+    }
   }, [activePet]);
 
   const todayQueue = queue.filter(q => q.date === today && !q.isPaid);
 
-  const handleBuyCredit = (pkg: CreditPackageTemplate) => {
-    if (!selectedOwner) {
-      toast.error("Please select a customer first");
-      return;
+  const handleQuickSelectFromQueue = (item: QueueItem) => {
+    const owner = customers.find(c => c.name === item.ownerName);
+    if (owner) {
+      selectOwner(owner);
+      const pet = owner.pets.find(p => p.id === item.petId);
+      if (pet) {
+        setActivePet(pet);
+        setActiveQueueItem(item.id);
+        toast.success(`Active Session: ${item.petName}`);
+        setPosTab('services');
+      }
     }
-    addToCart({
-      id: pkg.id,
-      title: pkg.name,
-      price: pkg.price,
-      quantity: 1,
-      ownerName: selectedOwner.name,
-      type: 'Credit',
-      creditAmount: pkg.creditAmount
-    });
-    toast.success(`Added ${pkg.name} to order`);
   };
 
-  const filteredServices = services.filter(s => s.targetSpecies === speciesFilter && s.isActive && (!s.coatType || s.coatType === coatFilter));
-  const filteredProducts = inventory.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.category.toLowerCase().includes(productSearch.toLowerCase()));
+  const filteredServices = services.filter(s => 
+    s.targetSpecies === speciesFilter && 
+    s.isActive && 
+    (!s.coatType || s.coatType === coatFilter)
+  );
+  
+  const filteredProducts = inventory.filter(p => 
+    p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
+    p.category.toLowerCase().includes(productSearch.toLowerCase())
+  );
+  
   const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
   return (
@@ -77,71 +112,229 @@ const Index = () => {
             </div>
             <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">{t.pos}</h1>
           </div>
-          <button onClick={() => setIsCustomerModalOpen(true)} className="hidden sm:flex items-center gap-2 bg-[#D9ED5F] text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"><UserPlus size={16} /> {t.newCustomer}</button>
+          <button 
+            onClick={() => setIsCustomerModalOpen(true)}
+            className="hidden sm:flex items-center gap-2 bg-[#D9ED5F] text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
+          >
+            <UserPlus size={16} />
+            {t.newCustomer}
+          </button>
         </header>
 
         <div className="px-6 lg:px-10 space-y-6 shrink-0 mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <CustomerSearch />
+            
             {selectedOwner && (
               <div className="flex items-center gap-3 bg-[#1A1F3D] text-white pl-4 pr-2 py-2 rounded-full shadow-xl shadow-[#1A1F3D]/10 animate-in slide-in-from-right-4 duration-300">
-                <div className="flex items-center gap-2"><Home size={14} className="text-[#D9ED5F]" /><span className="text-[11px] font-black uppercase tracking-tight">{selectedOwner.name}</span></div>
-                <div className="h-4 w-px bg-white/10 mx-1" />
-                <div className="flex items-center gap-1.5 px-2 text-[#D9ED5F]"><Gem size={12}/><span className="text-[10px] font-black">{(selectedOwner.creditBalance || 0).toLocaleString()}</span></div>
-                <button onClick={() => selectOwner(null)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"><X size={14} /></button>
+                <div className="flex items-center gap-2">
+                  <Home size={14} className="text-[#D9ED5F]" />
+                  <span className="text-[11px] font-black uppercase tracking-tight">{selectedOwner.name}</span>
+                </div>
+                <button 
+                  onClick={() => selectOwner(null)}
+                  className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <X size={14} />
+                </button>
               </div>
             )}
           </div>
 
+          {todayQueue.length > 0 && (
+            <div className="animate-in fade-in slide-in-from-top-2 duration-500">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Today's Appointments ({todayQueue.length})</span>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {todayQueue.map(item => (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "flex items-center gap-3 bg-white border px-4 py-3 rounded-[24px] shrink-0 transition-all group relative",
+                      activePet?.id === item.petId ? "border-[#1A1F3D] ring-2 ring-[#1A1F3D]/5" : "border-gray-100",
+                      item.status === 'Waiting' ? "border-orange-100" : "border-green-100"
+                    )}
+                  >
+                    <button onClick={() => handleQuickSelectFromQueue(item)} className="flex items-center gap-3 text-left">
+                      <img src={item.image} className="w-10 h-10 rounded-xl object-cover shadow-sm" />
+                      <div className="pr-10">
+                        <p className="text-xs font-black text-[#1A1F3D]">{item.petName}</p>
+                        <div className="flex items-center gap-1.5">
+                           <Clock size={8} className="text-gray-300" />
+                           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{item.time}</p>
+                        </div>
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => setIntakeItem(item)}
+                      className={cn(
+                        "absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center transition-all",
+                        item.status === 'Waiting' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20" : "bg-gray-50 text-gray-300"
+                      )}
+                    >
+                      <ClipboardList size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-gray-100 pb-2">
             <Tabs value={posTab} onValueChange={setPosTab} className="w-full sm:w-auto">
               <TabsList className="bg-[#F5F6FA] p-1 rounded-[20px] flex gap-1 h-auto">
-                <TabsTrigger value="services" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all"><Scissors size={14} className="mr-2" /> Services</TabsTrigger>
-                <TabsTrigger value="addons" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all"><Zap size={14} className="mr-2" /> Add-ons</TabsTrigger>
-                <TabsTrigger value="products" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all"><Package size={14} className="mr-2" /> Products</TabsTrigger>
-                <TabsTrigger value="credit" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all"><Gem size={14} className="mr-2" /> Credits</TabsTrigger>
+                <TabsTrigger value="services" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
+                  <Scissors size={14} className="mr-2" /> Services
+                </TabsTrigger>
+                <TabsTrigger value="addons" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
+                  <Zap size={14} className="mr-2" /> Add-ons
+                </TabsTrigger>
+                <TabsTrigger value="products" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
+                  <Package size={14} className="mr-2" /> Products
+                </TabsTrigger>
               </TabsList>
             </Tabs>
-            {/* Filter logic same as before... */}
+
+            {posTab === 'services' && (
+               <div className="flex gap-4 animate-in zoom-in-95">
+                 {/* Species Filter */}
+                 <div className="bg-white p-1 rounded-2xl border border-gray-100 flex gap-1">
+                   <button onClick={() => setSpeciesFilter('Dog')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black flex items-center gap-2 transition-all", speciesFilter === 'Dog' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}><Dog size={12} /> DOG</button>
+                   <button onClick={() => setSpeciesFilter('Cat')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black flex items-center gap-2 transition-all", speciesFilter === 'Cat' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}><Cat size={12} /> CAT</button>
+                 </div>
+
+                 {/* Coat Filter */}
+                 <div className="bg-white p-1 rounded-2xl border border-gray-100 flex gap-1">
+                   <button onClick={() => setCoatFilter('Short')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black transition-all", coatFilter === 'Short' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}>SHORT COAT</button>
+                   <button onClick={() => setCoatFilter('Long')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black transition-all", coatFilter === 'Long' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}>LONG COAT</button>
+                 </div>
+               </div>
+            )}
+
+            {posTab === 'products' && (
+              <div className="relative w-full sm:w-64 animate-in zoom-in-95">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                <input 
+                  className="w-full bg-[#F5F6FA] border-none rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold"
+                  placeholder="Search products..."
+                  value={productSearch}
+                  onChange={e => setProductQuery(e.target.value)}
+                />
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 lg:px-10 pb-24 lg:pb-10 scrollbar-hide">
           <Tabs value={posTab} className="h-full">
-            {/* Services Content same as before... */}
-            <TabsContent value="credit" className="m-0 h-full">
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in zoom-in-95 duration-500">
-                  {creditPackages.map(pkg => (
-                    <button
-                      key={pkg.id}
-                      onClick={() => handleBuyCredit(pkg)}
-                      className="bg-white rounded-[40px] p-8 border border-transparent hover:border-purple-100 hover:shadow-2xl transition-all flex flex-col items-center group text-center"
-                    >
-                      <div className="w-20 h-20 bg-purple-50 text-purple-600 rounded-[28px] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                         <Gem size={32} />
-                      </div>
-                      <h3 className="text-xl font-black text-[#1A1F3D] mb-1">{pkg.name}</h3>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">Store Prepaid</p>
-                      <div className="bg-purple-100 text-purple-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter mb-8">
-                         Receive {pkg.creditAmount} Credits
-                      </div>
-                      <div className="mt-auto w-full pt-6 border-t border-gray-50 flex justify-between items-center">
-                         <span className="text-[10px] font-black text-gray-300 uppercase">Pay Only</span>
-                         <span className="text-xl font-black text-[#1A1F3D]">{currency}{pkg.price.toLocaleString()}</span>
-                      </div>
-                    </button>
+            <TabsContent value="services" className="m-0 h-full">
+              {filteredServices.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+                  <ShoppingBag size={48} className="mb-4" />
+                  <h2 className="text-xl font-black">{language === 'th' ? 'ไม่พบบริการ' : 'No services found'}</h2>
+                  <p className="text-xs font-bold uppercase">For {speciesFilter} - {coatFilter} category</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
+                  {filteredServices.map((service) => (
+                    <ServiceCard key={service.id} service={service} />
                   ))}
-               </div>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="addons" className="m-0 h-full">
+               {addons.length === 0 ? (
+                 <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+                    <Zap size={48} className="mb-4" />
+                    <h2 className="text-xl font-black">No Add-ons Configured</h2>
+                    <p className="text-xs font-bold uppercase">Go to Settings to add global add-ons</p>
+                 </div>
+               ) : (
+                 <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
+                    {addons.map(addon => {
+                      const Icon = getIcon(addon.icon);
+                      return (
+                        <button
+                          key={addon.id}
+                          onClick={() => setSelectedAddOn({ ...addon, defaultPrice: addon.price, icon: Icon })}
+                          className="bg-white rounded-[40px] p-8 border border-transparent hover:border-gray-100 hover:shadow-2xl transition-all duration-300 flex flex-col items-center text-center group"
+                        >
+                          <div className={cn("w-20 h-20 rounded-[28px] flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:scale-110 bg-blue-50")}>
+                            <Icon className={cn("w-10 h-10 text-blue-600")} />
+                          </div>
+                          <h3 className="text-xl font-black text-[#1A1F3D] mb-1">{addon.name}</h3>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">Service Add-on</p>
+                          <div className="mt-auto w-full pt-6 border-t border-gray-50 flex justify-between items-center">
+                            <span className="text-[10px] font-black text-gray-300 uppercase">Default</span>
+                            <span className="text-lg font-black text-[#1A1F3D]">฿{addon.price}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                 </div>
+               )}
+            </TabsContent>
+
+            <TabsContent value="products" className="m-0 h-full">
+              {filteredProducts.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+                  <Package size={48} className="mb-4" />
+                  <h2 className="text-xl font-black">{language === 'th' ? 'ไม่พบสินค้า' : 'No products found'}</h2>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
+                  {filteredProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
       </main>
 
-      <OrderSummary />
+      <div className="hidden lg:block">
+        <OrderSummary />
+      </div>
 
-      {isCustomerModalOpen && <CustomerModal onClose={() => setIsCustomerModalOpen(false)} />}
-      {intakeItem && <GroomingServiceModal item={intakeItem} onClose={() => setIntakeItem(null)} />}
-      {selectedAddOn && <AddOnModal addOn={selectedAddOn} onClose={() => setSelectedAddOn(null)} />}
+      {cart.length > 0 && (
+        <div className="lg:hidden fixed bottom-6 right-6 z-40">
+          <Sheet>
+            <SheetTrigger asChild>
+              <button className="bg-[#1A1F3D] text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="relative">
+                  <ShoppingBag size={20} />
+                  <span className="absolute -top-2 -right-2 bg-[#D9ED5F] text-[#1A1F3D] text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
+                    {cart.length}
+                  </span>
+                </div>
+                <div className="text-left">
+                  <p className="text-[8px] font-black uppercase opacity-60 leading-none mb-0.5">{language === 'th' ? 'ดูตะกร้า' : 'View Cart'}</p>
+                  <p className="text-sm font-black">฿{cartTotal.toLocaleString()}</p>
+                </div>
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="p-0 w-full sm:max-w-md border-none">
+              <OrderSummary isMobile />
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
+
+      {isCustomerModalOpen && (
+        <CustomerModal onClose={() => setIsCustomerModalOpen(false)} />
+      )}
+
+      {intakeItem && (
+        <GroomingServiceModal item={intakeItem} onClose={() => setIntakeItem(null)} />
+      )}
+
+      {selectedAddOn && (
+        <AddOnModal addOn={selectedAddOn} onClose={() => setSelectedAddOn(null)} />
+      )}
     </div>
   );
 };

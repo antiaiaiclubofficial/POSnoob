@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText, Gem
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText
 } from 'lucide-react';
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -11,22 +11,63 @@ import PaymentModal from './PaymentModal';
 import { translations } from '@/utils/translations';
 import { Switch } from "@/components/ui/switch";
 
-const OrderSummary = ({ isMobile }: { isMobile?: boolean }) => {
-  const { cart, removeFromCart, updateCartQuantity, clearCart, selectedOwner, markAsPaid, processPayment, tierRules, currency, language } = useStore();
+interface OrderSummaryProps {
+  isMobile?: boolean;
+}
+
+const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
+  const { cart, removeFromCart, updateCartQuantity, clearCart, selectedOwner, activePet, markAsPaid, processPayment, tierRules, inventory, addToCart, currency, language } = useStore();
   const t = translations[language];
+  
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [isTaxInvoice, setIsTaxInvoice] = useState(false);
+  const [barcodeQuery, setBarcodeQuery] = useState('');
+
+  useEffect(() => {
+    setSelectedPackageId(null);
+  }, [activePet]);
+
+  const handleBarcodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOwner) {
+      toast.error("Please select a customer first");
+      setBarcodeQuery('');
+      return;
+    }
+    const product = inventory.find(i => i.barcode === barcodeQuery);
+    if (product) {
+      addToCart({
+        id: product.id,
+        title: product.name,
+        price: product.price,
+        quantity: 1,
+        ownerName: selectedOwner.name,
+        type: 'Product'
+      });
+      toast.success(`Scanned: ${product.name}`);
+    } else {
+      toast.error("Barcode not found");
+    }
+    setBarcodeQuery('');
+  };
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const discountAmount = selectedOwner ? (subtotal * (tierRules.find(r => r.level === selectedOwner.membership)?.discount || 0)) / 100 : 0;
-  const total = subtotal - discountAmount + (subtotal - discountAmount) * 0.07;
+  const userTier = selectedOwner ? tierRules.find(r => r.level === selectedOwner.membership) : null;
+  const tierDiscountPercent = userTier?.discount || 0;
+  const discountAmount = (subtotal * tierDiscountPercent) / 100;
+  const tax = (subtotal - discountAmount) * 0.07;
+  const total = subtotal - discountAmount + tax;
+
+  const availablePackages = selectedOwner?.packages?.filter(pkg => {
+    return cart.some(item => pkg.targetServiceId === item.id && pkg.remainingSlots > 0);
+  }) || [];
 
   const handleInitiatePayment = () => {
     if (cart.length === 0 || !selectedOwner) return;
-    if (paymentMethod === 'Store Credit' && (selectedOwner.creditBalance || 0) < total) {
-      toast.error("Insufficient credit balance");
+    if (paymentMethod === 'Package' && !selectedPackageId) {
+      toast.error("Please select a package to use");
       return;
     }
     setIsPaymentModalOpen(true);
@@ -34,81 +75,130 @@ const OrderSummary = ({ isMobile }: { isMobile?: boolean }) => {
 
   const handleCompletePayment = (details: any) => {
     if (!selectedOwner) return;
-    processPayment(selectedOwner.id, total, discountAmount, cart, paymentMethod, details, isTaxInvoice);
+    const finalDetails = {
+      ...details,
+      packageId: paymentMethod === 'Package' ? selectedPackageId : undefined
+    };
+    processPayment(selectedOwner.id, total, discountAmount, cart, paymentMethod, finalDetails, isTaxInvoice);
     cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
     toast.success("Transaction Complete!");
     clearCart();
     setIsPaymentModalOpen(false);
+    setSelectedPackageId(null);
   };
 
-  const availablePackages = selectedOwner?.packages?.filter(pkg => cart.some(item => pkg.targetServiceId === item.id && pkg.remainingSlots > 0)) || [];
-
   return (
-    <div className={cn("bg-white h-full flex flex-col shrink-0", isMobile ? "w-full p-6" : "w-96 p-8 border-l border-gray-100")}>
+    <div className={cn(
+      "bg-white h-full flex flex-col shrink-0",
+      isMobile ? "w-full p-6" : "w-96 p-8 border-l border-gray-100"
+    )}>
       <div className="flex items-center justify-between mb-8">
         <div>
-           <h2 className="text-2xl font-bold text-[#1A1F3D]">{t.orderSummary}</h2>
-           {selectedOwner && (
-             <div className="flex gap-2 items-center mt-1">
-                <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase">{selectedOwner.membership}</span>
-                <span className="text-[8px] font-black text-gray-400">CREDIT: <span className="text-purple-600">{(selectedOwner.creditBalance || 0).toLocaleString()}</span></span>
-             </div>
-           )}
+          <h2 className="text-2xl font-bold text-[#1A1F3D]">{t.orderSummary}</h2>
+          {selectedOwner && (
+            <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter mt-1 inline-block">
+              {selectedOwner.membership} MEMBER
+            </span>
+          )}
         </div>
-        <button onClick={clearCart} className="text-[9px] font-black text-red-400 uppercase">{t.clearAll}</button>
+        {cart.length > 0 && (
+          <button onClick={clearCart} className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors">
+            {t.clearAll}
+          </button>
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-hide space-y-4">
-        {cart.map((item, idx) => (
-          <div key={idx} className="p-4 bg-white border border-gray-100 rounded-[24px] shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center shrink-0">
-                {item.type === 'Credit' ? <Gem size={18} className="text-purple-600"/> : <Dog className="text-[#1A1F3D] w-5 h-5" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-bold text-[12px] truncate">{item.title}</h4>
-                <p className="text-[8px] text-gray-400 uppercase">{item.petName || 'Retail'}</p>
-              </div>
-              <button onClick={() => removeFromCart(idx)}><X size={14} className="text-gray-300"/></button>
-            </div>
-            <div className="flex justify-between mt-3 pt-2 border-t border-gray-50">
-               <div className="flex items-center bg-[#F5F6FA] rounded-xl p-1 gap-3">
-                  <button onClick={() => updateCartQuantity(idx, -1)} className="w-6 h-6 bg-white rounded-lg flex items-center justify-center"><Minus size={12}/></button>
-                  <span className="text-[10px] font-black">{item.quantity}</span>
-                  <button onClick={() => updateCartQuantity(idx, 1)} className="w-6 h-6 bg-white rounded-lg flex items-center justify-center"><Plus size={12}/></button>
-               </div>
-               <span className="font-black text-[12px]">{currency}{(item.price * item.quantity).toFixed(2)}</span>
-            </div>
+      {/* Barcode Input */}
+      <form onSubmit={handleBarcodeSubmit} className="mb-6">
+        <div className="relative">
+          <Package size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
+          <input 
+            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-3 text-[10px] font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
+            placeholder="Scan Barcode / Enter code..."
+            value={barcodeQuery}
+            onChange={e => setBarcodeQuery(e.target.value)}
+          />
+        </div>
+      </form>
+
+      <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
+        {cart.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center opacity-30 py-10">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><ShoppingBag size={32} className="text-gray-400" /></div>
+            <p className="text-sm font-bold text-gray-500">Cart is empty</p>
           </div>
-        ))}
+        ) : (
+          <div className="space-y-4">
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.services}</p>
+            {cart.map((item, idx) => (
+              <div key={`${item.id}-${idx}`} className="flex flex-col gap-3 p-4 bg-white border border-gray-100 rounded-[24px] shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center shrink-0">
+                    <Dog className="text-[#1A1F3D] w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-[#1A1F3D] text-[12px] leading-tight truncate">{item.title}</h4>
+                    <p className="text-[8px] text-gray-400 font-black uppercase mt-0.5">{item.petName || 'Retail Item'}</p>
+                  </div>
+                  <button onClick={() => removeFromCart(idx)} className="p-1.5 text-red-200 hover:text-red-500"><X size={14} /></button>
+                </div>
+                
+                <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                   <div className="flex items-center bg-[#F5F6FA] rounded-xl p-1 gap-3">
+                      <button onClick={() => updateCartQuantity(idx, -1)} className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Minus size={12} /></button>
+                      <span className="text-[10px] font-black w-4 text-center">{item.quantity}</span>
+                      <button onClick={() => updateCartQuantity(idx, 1)} className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Plus size={12} /></button>
+                   </div>
+                   <span className="font-black text-[12px] text-[#1A1F3D]">{currency}{(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="pt-6 space-y-4 mb-6">
+      <div className="pt-6 mb-6 space-y-4">
+        <div className="bg-[#F8F9FD] p-4 rounded-2xl flex items-center justify-between border border-gray-100">
+           <div className="flex items-center gap-2">
+              <FileText size={16} className="text-gray-400" />
+              <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{language === 'th' ? 'ขอใบกำกับภาษี' : 'Tax Invoice'}</span>
+           </div>
+           <Switch checked={isTaxInvoice} onCheckedChange={setIsTaxInvoice} className="data-[state=checked]:bg-[#1A1F3D]" />
+        </div>
+
         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.paymentMethod}</p>
-        <div className="grid grid-cols-5 gap-2">
-          {(['Cash', 'Transfer', 'Credit Card', 'Package', 'Store Credit'] as const).map((method) => {
-            const Icon = { Cash: Wallet, Transfer: Banknote, 'Credit Card': CreditCard, Package: Package, 'Store Credit': Gem }[method];
-            const isCredit = method === 'Store Credit';
-            const disabled = (method === 'Package' && availablePackages.length === 0) || (isCredit && (!selectedOwner || (selectedOwner.creditBalance || 0) < total));
+        <div className="grid grid-cols-4 gap-2">
+          {(['Cash', 'Transfer', 'Credit Card', 'Package'] as const).map((method) => {
+            const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Banknote : method === 'Credit Card' ? CreditCard : Package;
+            const isDisabled = method === 'Package' && availablePackages.length === 0;
             return (
-              <button key={method} disabled={disabled} onClick={() => setPaymentMethod(method)} className={cn("flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all", paymentMethod === method ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F]" : "bg-white border-gray-100 text-gray-400", disabled && "opacity-20 grayscale cursor-not-allowed")}>
-                <Icon size={14} />
-                <span className="text-[7px] font-black uppercase">{method === 'Store Credit' ? 'Credit' : method === 'Package' ? 'PKG' : method}</span>
+              <button key={method} disabled={isDisabled} onClick={() => setPaymentMethod(method)} className={cn("flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all", paymentMethod === method ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-lg" : "bg-white border-gray-100 text-gray-400", isDisabled && "opacity-20 cursor-not-allowed grayscale")}>
+                <Icon size={16} />
+                <span className="text-[8px] font-black uppercase">{method === 'Package' ? "PKG" : method}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="pt-6 border-t border-dashed border-gray-200 mt-auto">
-        <div className="flex justify-between items-end">
+      <div className="pt-6 space-y-3 border-t border-dashed border-gray-200 mt-auto">
+        {tierDiscountPercent > 0 && paymentMethod !== 'Package' && (
+          <div className="flex justify-between items-center text-xs text-green-600 font-bold bg-green-50 px-4 py-3 rounded-2xl">
+            <span className="flex items-center gap-2"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
+            <span>-{currency}{discountAmount.toFixed(2)}</span>
+          </div>
+        )}
+        <div className="flex justify-between items-end pt-2 px-2">
           <span className="text-xl font-bold text-[#1A1F3D]">{t.total}</span>
-          <span className="text-3xl font-extrabold text-[#1A1F3D]">{currency}{total.toFixed(2)}</span>
+          <span className="text-3xl font-extrabold text-[#1A1F3D]">{paymentMethod === 'Package' ? "0.00" : `${currency}${total.toFixed(2)}`}</span>
         </div>
-        <button onClick={handleInitiatePayment} disabled={cart.length === 0} className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 mt-6 shadow-xl transition-all"><Banknote size={20} /> {paymentMethod === 'Store Credit' ? 'Deduct Credits' : t.checkout}</button>
       </div>
 
-      {isPaymentModalOpen && <PaymentModal total={paymentMethod === 'Store Credit' ? 0 : total} method={paymentMethod} onClose={() => setIsPaymentModalOpen(false)} onComplete={handleCompletePayment} />}
+      <button onClick={handleInitiatePayment} disabled={cart.length === 0} className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 mt-6 shadow-xl transition-all">
+        <Banknote size={20} /> {paymentMethod === 'Package' ? "Deduct from Package" : t.checkout}
+      </button>
+
+      {isPaymentModalOpen && <PaymentModal total={paymentMethod === 'Package' ? 0 : total} method={paymentMethod} onClose={() => setIsPaymentModalOpen(false)} onComplete={handleCompletePayment} />}
     </div>
   );
 };
