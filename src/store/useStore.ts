@@ -19,11 +19,12 @@ const INITIAL_STAFF: Staff[] = [
 const INITIAL_SERVICES: Service[] = [
   {
     id: 'svc-basic-short',
-    title: 'Basic Groom (Short Coat)',
+    title: 'Basic Groom',
     description: 'Bath & brush, nail trim, anal glands, sanitary & paw trim, eye & ear cleaning',
     category: 'Grooming',
     icon: 'bath',
     targetSpecies: 'Dog',
+    coatType: 'Short',
     isActive: true,
     subServices: [],
     prices: {
@@ -36,11 +37,12 @@ const INITIAL_SERVICES: Service[] = [
   },
   {
     id: 'svc-basic-long',
-    title: 'Basic Groom (Long Coat)',
+    title: 'Basic Groom',
     description: 'Bath & brush, nail trim, anal glands, sanitary & paw trim, eye & ear cleaning',
     category: 'Grooming',
     icon: 'bath',
     targetSpecies: 'Dog',
+    coatType: 'Long',
     isActive: true,
     subServices: [],
     prices: {
@@ -53,11 +55,12 @@ const INITIAL_SERVICES: Service[] = [
   },
   {
     id: 'svc-full-short',
-    title: 'Full Groom (Short Coat)',
+    title: 'Full Groom',
     description: 'Basic groom + haircut',
     category: 'Grooming',
     icon: 'grooming',
     targetSpecies: 'Dog',
+    coatType: 'Short',
     isActive: true,
     subServices: [],
     prices: {
@@ -70,11 +73,12 @@ const INITIAL_SERVICES: Service[] = [
   },
   {
     id: 'svc-full-long',
-    title: 'Full Groom (Long Coat)',
+    title: 'Full Groom',
     description: 'Basic groom + haircut',
     category: 'Grooming',
     icon: 'grooming',
     targetSpecies: 'Dog',
+    coatType: 'Long',
     isActive: true,
     subServices: [],
     prices: {

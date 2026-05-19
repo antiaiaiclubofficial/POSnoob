@@ -53,6 +53,7 @@ const Index = () => {
 
   const [posTab, setPosTab] = useState('services');
   const [speciesFilter, setSpeciesFilter] = useState<'Dog' | 'Cat'>('Dog');
+  const [coatFilter, setCoatFilter] = useState<'Short' | 'Long'>('Short');
   const [productSearch, setProductQuery] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
@@ -80,7 +81,12 @@ const Index = () => {
     }
   };
 
-  const filteredServices = services.filter(s => s.targetSpecies === speciesFilter && s.isActive);
+  const filteredServices = services.filter(s => 
+    s.targetSpecies === speciesFilter && 
+    s.isActive && 
+    (!s.coatType || s.coatType === coatFilter)
+  );
+  
   const filteredProducts = inventory.filter(p => 
     p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
     p.category.toLowerCase().includes(productSearch.toLowerCase())
@@ -185,9 +191,18 @@ const Index = () => {
             </Tabs>
 
             {posTab === 'services' && (
-               <div className="bg-white p-1 rounded-2xl border border-gray-100 flex gap-1 animate-in zoom-in-95">
-                 <button onClick={() => setSpeciesFilter('Dog')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black flex items-center gap-2 transition-all", speciesFilter === 'Dog' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}><Dog size={12} /> DOG</button>
-                 <button onClick={() => setSpeciesFilter('Cat')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black flex items-center gap-2 transition-all", speciesFilter === 'Cat' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}><Cat size={12} /> CAT</button>
+               <div className="flex gap-4 animate-in zoom-in-95">
+                 {/* Species Filter */}
+                 <div className="bg-white p-1 rounded-2xl border border-gray-100 flex gap-1">
+                   <button onClick={() => setSpeciesFilter('Dog')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black flex items-center gap-2 transition-all", speciesFilter === 'Dog' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}><Dog size={12} /> DOG</button>
+                   <button onClick={() => setSpeciesFilter('Cat')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black flex items-center gap-2 transition-all", speciesFilter === 'Cat' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}><Cat size={12} /> CAT</button>
+                 </div>
+
+                 {/* Coat Filter */}
+                 <div className="bg-white p-1 rounded-2xl border border-gray-100 flex gap-1">
+                   <button onClick={() => setCoatFilter('Short')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black transition-all", coatFilter === 'Short' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}>SHORT COAT</button>
+                   <button onClick={() => setCoatFilter('Long')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black transition-all", coatFilter === 'Long' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}>LONG COAT</button>
+                 </div>
                </div>
             )}
 
@@ -212,7 +227,7 @@ const Index = () => {
                 <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
                   <ShoppingBag size={48} className="mb-4" />
                   <h2 className="text-xl font-black">{language === 'th' ? 'ไม่พบบริการ' : 'No services found'}</h2>
-                  <p className="text-xs font-bold uppercase">For {speciesFilter} category</p>
+                  <p className="text-xs font-bold uppercase">For {speciesFilter} - {coatFilter} category</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">

@@ -254,6 +254,7 @@ export interface Service {
   subServices: SubService[];
   category: string;
   targetSpecies: 'Dog' | 'Cat';
+  coatType?: 'Short' | 'Long';
   prices: Record<string, ServicePriceInfo>;
   isActive: boolean;
   isPopular?: boolean;
