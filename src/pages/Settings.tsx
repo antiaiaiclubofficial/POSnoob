@@ -93,6 +93,16 @@ const Settings = () => {
     toast.success("Settings saved successfully!");
   };
 
+  const handleEditService = (s: Service) => {
+    setSelectedService(s);
+    setIsServiceModalOpen(true);
+  };
+
+  const handleAddService = () => {
+    setSelectedService(null);
+    setIsServiceModalOpen(true);
+  };
+
   return (
     <main className="flex-1 p-10 overflow-y-auto scrollbar-hide">
       <div className="max-w-6xl mx-auto">
@@ -113,26 +123,6 @@ const Settings = () => {
             <TabsTrigger value="credits" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all"><Wallet size={16} className="mr-2" /> Credit Packs</TabsTrigger>
             <TabsTrigger value="membership" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all"><ShieldCheck size={16} className="mr-2" /> Membership</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="credits" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><Wallet size={24} /></div>
-                    <div><h2 className="text-xl font-bold">Credit Package Templates</h2><p className="text-xs text-gray-400">Configure prepaid top-up deals</p></div>
-                  </div>
-                  <button onClick={() => setIsCreditModalOpen(true)} className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2"><Plus size={16} /> Manage Credits</button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {creditPackages.map(pkg => (
-                    <div key={pkg.id} className="p-6 bg-[#F5F6FA] rounded-[32px] flex justify-between items-center group">
-                      <div><h4 className="font-black text-[#1A1F3D]">{pkg.name}</h4><p className="text-[10px] text-gray-400 font-bold uppercase">Paid: {currency}{pkg.price.toLocaleString()} → Recv: {currency}{pkg.creditValue.toLocaleString()}</p></div>
-                      <button onClick={() => deleteCreditPackage(pkg.id)} className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={18} /></button>
-                    </div>
-                  ))}
-                </div>
-             </div>
-          </TabsContent>
 
           <TabsContent value="business" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -156,6 +146,136 @@ const Settings = () => {
                     <div className="space-y-6"><div className="space-y-3"><label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2 flex items-center gap-2"><Layout size={12} /> {t.paperSize}</label><div className="flex bg-[#F5F6FA] p-1.5 rounded-2xl gap-2">{(['58mm', '80mm'] as const).map(size => (<button key={size} onClick={() => setLocalReceiptPaperSize(size)} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all", localReceiptPaperSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{size}</button>))}</div></div><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2"><AlignLeft size={12} /> {t.receiptHeader}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localReceiptHeader} onChange={(e) => setLocalReceiptHeader(e.target.value)} /></div><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2"><MapPin size={12} /> {t.address}</label><textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-20 resize-none leading-relaxed" value={localShopAddress} onChange={(e) => setLocalShopAddress(e.target.value)} /></div><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-wider ml-2 flex items-center gap-2"><FileText size={12} /> {t.receiptFooter}</label><textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" value={localReceiptFooter} onChange={(e) => setLocalReceiptFooter(e.target.value)} /></div></div>
                   </section>
                </div>
+             </div>
+          </TabsContent>
+
+          <TabsContent value="booking" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                <div className="flex items-center gap-3 mb-2"><div className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><Clock size={24} /></div><div><h2 className="text-xl font-bold">{t.bookingRules}</h2><p className="text-xs text-gray-400">{t.bookingConfigDesc}</p></div></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                   <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.slotDuration} (Min)</label><input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localSlotDuration} onChange={e => setLocalSlotDuration(Number(e.target.value))} /></div>
+                   <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.maxCapacitySlot}</label><input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localMaxCapacity} onChange={e => setLocalMaxCapacity(Number(e.target.value))} /></div>
+                   <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.openingTime}</label><TimePicker value={localOpenTime} onChange={setLocalOpenTime} /></div>
+                   <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.closingTime}</label><TimePicker value={localCloseTime} onChange={setLocalCloseTime} /></div>
+                </div>
+             </div>
+          </TabsContent>
+
+          <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-8">
+             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                   <div className="flex items-center gap-3"><div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><Scissors size={24} /></div><div><h2 className="text-xl font-bold">Service Catalog</h2><p className="text-xs text-gray-400">Add or update your services</p></div></div>
+                   <div className="flex items-center gap-4">
+                      <div className="bg-[#F5F6FA] p-1 rounded-2xl flex gap-1">
+                        <button onClick={() => setSpeciesTab('Dog')} className={cn("px-4 py-2 rounded-xl text-[10px] font-black transition-all", speciesTab === 'Dog' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>DOG</button>
+                        <button onClick={() => setSpeciesTab('Cat')} className={cn("px-4 py-2 rounded-xl text-[10px] font-black transition-all", speciesTab === 'Cat' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>CAT</button>
+                      </div>
+                      <button onClick={handleAddService} className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2"><Plus size={16} /> {t.add}</button>
+                   </div>
+                </div>
+
+                <div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-3.5 text-sm font-bold" placeholder={t.searchServices} value={serviceQuery} onChange={e => setServiceQuery(e.target.value)} /></div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {filteredServices.map(s => (
+                      <div key={s.id} className="p-5 bg-white border border-gray-100 rounded-[28px] flex items-center justify-between group hover:shadow-lg transition-all">
+                         <div className="flex items-center gap-4">
+                            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm", s.targetSpecies === 'Dog' ? "bg-blue-500" : "bg-pink-500")}><Scissors size={20}/></div>
+                            <div><h4 className="font-black text-[#1A1F3D] text-sm">{s.title}</h4><p className="text-[10px] text-gray-400 font-bold uppercase">{s.category}</p></div>
+                         </div>
+                         <div className="flex items-center gap-3">
+                            <Switch checked={s.isActive} onCheckedChange={() => toggleServiceActive(s.id)} className="data-[state=checked]:bg-[#1A1F3D]" />
+                            <button onClick={() => handleEditService(s)} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={16}/></button>
+                            <button onClick={() => { if(confirm('Delete service?')) deleteService(s.id); }} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+             </div>
+
+             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><Zap size={24} /></div>
+                    <div><h2 className="text-xl font-bold">Global Add-ons</h2><p className="text-xs text-gray-400">Configurable extra services for any appointment</p></div>
+                  </div>
+                  <button onClick={() => { setSelectedAddon(null); setIsAddonModalOpen(true); }} className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2"><Plus size={16} /> Add Add-on</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                   {addons.map(addon => (
+                     <div key={addon.id} className="p-6 bg-[#F5F6FA] rounded-[32px] flex justify-between items-center group">
+                        <div className="flex items-center gap-4">
+                           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-500 shadow-sm"><Zap size={18} /></div>
+                           <div><p className="text-sm font-black text-[#1A1F3D]">{addon.name}</p><p className="text-[10px] text-gray-400 font-bold uppercase">{currency}{addon.price}</p></div>
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <button onClick={() => { setSelectedAddon(addon); setIsAddonModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={14}/></button>
+                           <button onClick={() => deleteAddon(addon.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={14}/></button>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+             </div>
+          </TabsContent>
+
+          <TabsContent value="packages" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                <div className="flex justify-between items-center">
+                   <div className="flex items-center gap-3">
+                      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Package size={24} /></div>
+                      <div><h2 className="text-xl font-bold">Service Bundle Templates</h2><p className="text-xs text-gray-400">Manage multi-session packages (e.g. 8 Free 2)</p></div>
+                   </div>
+                   <button onClick={() => setIsPackageModalOpen(true)} className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2"><Plus size={16} /> Manage Bundles</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                   {packageTemplates.map(t => (
+                      <div key={t.id} className="p-6 bg-[#F5F6FA] rounded-[32px] flex justify-between items-center group">
+                         <div><h4 className="font-black text-[#1A1F3D]">{t.name}</h4><p className="text-[10px] text-gray-400 font-bold uppercase">{t.paidSlots}+{t.freeSlots} Sessions • {currency}{t.price.toLocaleString()}</p></div>
+                         <button onClick={() => deletePackageTemplate(t.id)} className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={18} /></button>
+                      </div>
+                   ))}
+                </div>
+             </div>
+          </TabsContent>
+
+          <TabsContent value="credits" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><Wallet size={24} /></div>
+                    <div><h2 className="text-xl font-bold">Credit Package Templates</h2><p className="text-xs text-gray-400">Configure prepaid top-up deals</p></div>
+                  </div>
+                  <button onClick={() => setIsCreditModalOpen(true)} className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2"><Plus size={16} /> Manage Credits</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {creditPackages.map(pkg => (
+                    <div key={pkg.id} className="p-6 bg-[#F5F6FA] rounded-[32px] flex justify-between items-center group">
+                      <div><h4 className="font-black text-[#1A1F3D]">{pkg.name}</h4><p className="text-[10px] text-gray-400 font-bold uppercase">Paid: {currency}{pkg.price.toLocaleString()} → Recv: {currency}{pkg.creditValue.toLocaleString()}</p></div>
+                      <button onClick={() => deleteCreditPackage(pkg.id)} className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={18} /></button>
+                    </div>
+                  ))}
+                </div>
+             </div>
+          </TabsContent>
+
+          <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+             <div className="bg-white p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-10">
+                <div className="flex items-center gap-3"><div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><ShieldCheck size={24} /></div><div><h2 className="text-xl font-bold">{t.membershipTierLogic}</h2><p className="text-xs text-gray-400">{t.membershipDesc}</p></div></div>
+                <div className="grid grid-cols-1 gap-6">
+                  {localTierRules.map((rule, idx) => (
+                    <div key={rule.level} className="flex flex-col lg:flex-row items-center gap-6 p-8 bg-[#F5F6FA] rounded-[32px] relative overflow-hidden">
+                       <div className="absolute top-0 left-0 w-2 h-full bg-[#1A1F3D]" />
+                       <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm shrink-0">
+                          {rule.level === 'VIP' ? <Gem className="text-purple-500" size={24} /> : rule.level === 'Gold' ? <Crown className="text-amber-500" size={24} /> : <Star className="text-blue-500" size={24} />}
+                       </div>
+                       <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                          <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.publicLabel}</label><input className="w-full bg-white border-none rounded-xl px-4 py-3 text-xs font-bold" value={rule.label} onChange={e => { const newRules = [...localTierRules]; newRules[idx].label = e.target.value; setLocalTierRules(newRules); }} /></div>
+                          <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.minSpending}</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 font-bold text-xs">{currency}</span><input type="number" className="w-full bg-white border-none rounded-xl pl-8 pr-4 py-3 text-xs font-bold" value={rule.minSpent} onChange={e => { const newRules = [...localTierRules]; newRules[idx].minSpent = Number(e.target.value); setLocalTierRules(newRules); }} /></div></div>
+                          <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.benefitDiscount}</label><div className="relative"><Percent className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} /><input type="number" className="w-full bg-white border-none rounded-xl px-4 py-3 text-xs font-bold" value={rule.discount} onChange={e => { const newRules = [...localTierRules]; newRules[idx].discount = Number(e.target.value); setLocalTierRules(newRules); }} /></div></div>
+                       </div>
+                    </div>
+                  ))}
+                </div>
              </div>
           </TabsContent>
         </Tabs>
