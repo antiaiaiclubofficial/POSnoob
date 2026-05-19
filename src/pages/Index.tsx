@@ -22,10 +22,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 
 const QUICK_ADDONS = [
-  { id: 'brushing', name: 'แปรงฟัน', defaultPrice: 100, icon: Brush },
-  { id: 'mud-spa', name: 'สปาโคลน', defaultPrice: 250, icon: Sparkles },
-  { id: 'nail-file', name: 'ตะไบเล็บ', defaultPrice: 80, icon: Zap },
-  { id: 'perfume', name: 'ฉีดน้ำหอม', defaultPrice: 50, icon: Heart },
+  { id: 'brushing', name: 'แปรงฟัน', defaultPrice: 100, icon: Brush, color: 'text-blue-500', bg: 'bg-blue-50' },
+  { id: 'mud-spa', name: 'สปาโคลน', defaultPrice: 250, icon: Sparkles, color: 'text-purple-500', bg: 'bg-purple-50' },
+  { id: 'nail-file', name: 'ตะไบเล็บ', defaultPrice: 80, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
+  { id: 'perfume', name: 'ฉีดน้ำหอม', defaultPrice: 50, icon: Heart, color: 'text-pink-500', bg: 'bg-pink-50' },
 ];
 
 const Index = () => {
@@ -130,27 +130,6 @@ const Index = () => {
             )}
           </div>
 
-          {/* Quick Add-ons Bar */}
-          <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
-            <div className="flex items-center gap-2 shrink-0 bg-white border border-gray-100 p-1 rounded-2xl shadow-sm">
-               <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-                  <Zap size={14} />
-               </div>
-               <span className="text-[9px] font-black uppercase text-gray-400 pr-2">Add-ons</span>
-            </div>
-            {QUICK_ADDONS.map(addon => (
-              <button
-                key={addon.id}
-                onClick={() => setSelectedAddOn(addon)}
-                className="flex items-center gap-2 bg-white border border-gray-100 px-4 py-2.5 rounded-2xl shrink-0 hover:border-[#1A1F3D] hover:shadow-md transition-all group"
-              >
-                <addon.icon size={14} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
-                <span className="text-[10px] font-black text-[#1A1F3D] uppercase whitespace-nowrap">{addon.name}</span>
-                <span className="text-[9px] font-bold text-gray-400">฿{addon.defaultPrice}</span>
-              </button>
-            ))}
-          </div>
-
           {todayQueue.length > 0 && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="flex items-center gap-2 mb-3">
@@ -197,6 +176,9 @@ const Index = () => {
               <TabsList className="bg-[#F5F6FA] p-1 rounded-[20px] flex gap-1 h-auto">
                 <TabsTrigger value="services" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
                   <Scissors size={14} className="mr-2" /> Services
+                </TabsTrigger>
+                <TabsTrigger value="addons" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
+                  <Zap size={14} className="mr-2" /> Add-ons
                 </TabsTrigger>
                 <TabsTrigger value="products" className="flex-1 sm:px-8 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all">
                   <Package size={14} className="mr-2" /> Products
@@ -250,6 +232,28 @@ const Index = () => {
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="addons" className="m-0 h-full">
+               <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
+                  {QUICK_ADDONS.map(addon => (
+                    <button
+                      key={addon.id}
+                      onClick={() => setSelectedAddOn(addon)}
+                      className="bg-white rounded-[40px] p-8 border border-transparent hover:border-gray-100 hover:shadow-2xl transition-all duration-300 flex flex-col items-center text-center group"
+                    >
+                      <div className={cn("w-20 h-20 rounded-[28px] flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:scale-110", addon.bg)}>
+                        <addon.icon className={cn("w-10 h-10", addon.color)} />
+                      </div>
+                      <h3 className="text-xl font-black text-[#1A1F3D] mb-1">{addon.name}</h3>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">Service Add-on</p>
+                      <div className="mt-auto w-full pt-6 border-t border-gray-50 flex justify-between items-center">
+                        <span className="text-[10px] font-black text-gray-300 uppercase">Default</span>
+                        <span className="text-lg font-black text-[#1A1F3D]">฿{addon.defaultPrice}</span>
+                      </div>
+                    </button>
+                  ))}
+               </div>
             </TabsContent>
 
             <TabsContent value="products" className="m-0 h-full">
