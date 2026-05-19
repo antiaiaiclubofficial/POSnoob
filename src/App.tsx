@@ -26,21 +26,49 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const { language, setSession } = useStore();
+  const { language, setSession, setCustomers } = useStore();
 
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
 
   useEffect(() => {
+    // Auth Session Handling
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session?.user ?? null);
+      if (session) fetchInitialData();
     });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session?.user ?? null);
+      if (session) fetchInitialData();
     });
+
+    // CRM Data Sync Logic
+    const fetchInitialData = async () => {
+      const { data: customersData } = await supabase
+        .from('customers')
+        .select('*, pets(*), packages(*), credit_history(*)');
+      
+      if (customersData) {
+        // Map snake_case from DB to camelCase for the app
+        const formattedCustomers = customersData.map(c => ({
+          ...c,
+          creditBalance: c.credit_balance,
+          totalSpent: c.total_spent,
+          lineId: c.line_id,
+          pets: c.pets.map(p => ({
+            ...p,
+            weightHistory: p.weight_history || [],
+            serviceHistory: p.service_history || []
+          }))
+        }));
+        setCustomers(formattedCustomers);
+      }
+    };
+
     return () => subscription.unsubscribe();
-  }, [setSession]);
+  }, [setSession, setCustomers]);
 
   return (
     <QueryClientProvider client={queryClient}>

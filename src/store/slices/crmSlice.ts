@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { AppState, Customer, Pet, QueueStatus, MembershipLevel, QueueItem } from '../types';
+import { supabase } from '@/integrations/supabase/client';
 
 export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'customers' | 'setCustomers' | 'queue' | 'selectedOwner' | 'activePet' | 'activeQueueItemId' | 'selectOwner' | 'setActivePet' | 'setActiveQueueItem' | 'addBooking' | 'updateQueueStatus' | 'removeQueueItem' | 'markAsPaid' | 'addCustomer' | 'updateCustomer' | 'deleteCustomer' | 'bindLineToCustomer' | 'addPet' | 'updatePet' | 'updatePetWeight'>> = (set, get) => ({
   customers: [],
@@ -13,64 +14,141 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   setActivePet: (pet) => set({ activePet: pet }),
   setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
 
-  addBooking: (booking) => set((state) => ({
-    queue: [...state.queue, { ...booking, id: Math.random().toString(36).substr(2, 9), isPaid: false }].sort((a, b) => a.time.localeCompare(b.time))
-  })),
+  addBooking: async (booking) => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .insert([{ ...booking, is_paid: false }])
+      .select()
+      .single();
 
-  updateQueueStatus: (id, status) => {
-    const now = new Date().toISOString();
-    set((state) => ({
-      queue: state.queue.map(q => {
-        if (q.id !== id) return q;
-        let update: Partial<QueueItem> = { status };
-        if (status === 'In Progress') update.startTime = now;
-        if (status === 'Completed') update.endTime = now;
-        return { ...q, ...update };
-      })
-    }));
+    if (!error && data) {
+      set((state) => ({
+        queue: [...state.queue, data].sort((a, b) => a.time.localeCompare(b.time))
+      }));
+    }
   },
 
-  removeQueueItem: (id) => set((state) => ({ queue: state.queue.filter(q => q.id !== id) })),
-  markAsPaid: (id) => set((state) => ({ queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
+  updateQueueStatus: async (id, status) => {
+    const now = new Date().toISOString();
+    const update: any = { status };
+    if (status === 'In Progress') update.start_time = now;
+    if (status === 'Completed') update.end_time = now;
 
-  addCustomer: (customerData) => set((state) => ({
-    customers: [...state.customers, { 
-      ...customerData, 
-      id: 'c' + Math.random().toString(36).substr(2, 4), 
-      points: 0, 
-      pets: [], 
-      packages: [], 
-      totalSpent: 0,
-      creditBalance: 0,
-      creditHistory: []
-    }]
-  })),
-  updateCustomer: (id, customerData) => set((state) => ({ customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c) })),
-  deleteCustomer: (id) => set((state) => ({
-    customers: state.customers.filter(c => c.id !== id),
-    selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
-    activePet: state.selectedOwner?.id === id ? null : state.activePet
-  })),
-  bindLineToCustomer: (customerId, lineId) => set((state) => ({ customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c) })),
-  addPet: (customerId, petData) => set((state) => ({
-    customers: state.customers.map(c => c.id === customerId ? {
-      ...c,
-      pets: [...c.pets, { ...petData, id: 'p' + Math.random().toString(36).substr(2, 4), serviceHistory: [] }]
-    } : c)
-  })),
-  updatePet: (customerId, petId, petData) => set((state) => ({
-    customers: state.customers.map(c => c.id === customerId ? {
-      ...c,
-      pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
-    } : c)
-  })),
-  updatePetWeight: (customerId, petId, weight) => set((state) => ({
-    customers: state.customers.map(c => c.id === customerId ? {
-      ...c,
-      pets: c.pets.map(p => p.id === petId ? {
-        ...p,
-        weightHistory: [...p.weightHistory, { date: new Date().toISOString().split('T')[0], value: weight }]
-      } : p)
-    } : c)
-  })),
+    const { error } = await supabase
+      .from('bookings')
+      .update(update)
+      .eq('id', id);
+
+    if (!error) {
+      set((state) => ({
+        queue: state.queue.map(q => {
+          if (q.id !== id) return q;
+          return { ...q, status, startTime: update.start_time || q.startTime, endTime: update.end_time || q.endTime };
+        })
+      }));
+    }
+  },
+
+  removeQueueItem: async (id) => {
+    const { error } = await supabase.from('bookings').delete().eq('id', id);
+    if (!error) {
+      set((state) => ({ queue: state.queue.filter(q => q.id !== id) }));
+    }
+  },
+
+  markAsPaid: async (id) => {
+    const { error } = await supabase.from('bookings').update({ is_paid: true }).eq('id', id);
+    if (!error) {
+      set((state) => ({ queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) }));
+    }
+  },
+
+  addCustomer: async (customerData) => {
+    const { data, error } = await supabase
+      .from('customers')
+      .insert([{ 
+        ...customerData, 
+        points: 0, 
+        total_spent: 0,
+        credit_balance: 0
+      }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      set((state) => ({
+        customers: [...state.customers, { ...data, pets: [], packages: [], creditHistory: [] }]
+      }));
+    }
+  },
+
+  updateCustomer: async (id, customerData) => {
+    const { error } = await supabase.from('customers').update(customerData).eq('id', id);
+    if (!error) {
+      set((state) => ({ customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c) }));
+    }
+  },
+
+  deleteCustomer: async (id) => {
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (!error) {
+      set((state) => ({
+        customers: state.customers.filter(c => c.id !== id),
+        selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
+        activePet: state.selectedOwner?.id === id ? null : state.activePet
+      }));
+    }
+  },
+
+  bindLineToCustomer: async (customerId, lineId) => {
+    const { error } = await supabase.from('customers').update({ line_id: lineId }).eq('id', customerId);
+    if (!error) {
+      set((state) => ({ customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c) }));
+    }
+  },
+
+  addPet: async (customerId, petData) => {
+    const { data, error } = await supabase
+      .from('pets')
+      .insert([{ ...petData, customer_id: customerId }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      set((state) => ({
+        customers: state.customers.map(c => c.id === customerId ? {
+          ...c,
+          pets: [...c.pets, { ...data, serviceHistory: [] }]
+        } : c)
+      }));
+    }
+  },
+
+  updatePet: async (customerId, petId, petData) => {
+    const { error } = await supabase.from('pets').update(petData).eq('id', petId);
+    if (!error) {
+      set((state) => ({
+        customers: state.customers.map(c => c.id === customerId ? {
+          ...c,
+          pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
+        } : c)
+      }));
+    }
+  },
+
+  updatePetWeight: async (customerId, petId, weight) => {
+    const { data: currentPet } = await supabase.from('pets').select('weight_history').eq('id', petId).single();
+    const newHistory = [...(currentPet?.weight_history || []), { date: new Date().toISOString().split('T')[0], value: weight }];
+    
+    const { error } = await supabase.from('pets').update({ weight_history: newHistory }).eq('id', petId);
+    
+    if (!error) {
+      set((state) => ({
+        customers: state.customers.map(c => c.id === customerId ? {
+          ...c,
+          pets: c.pets.map(p => p.id === petId ? { ...p, weightHistory: newHistory } : p)
+        } : c)
+      }));
+    }
+  },
 });
