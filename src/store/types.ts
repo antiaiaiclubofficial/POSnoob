@@ -3,7 +3,7 @@ import { Language } from '@/utils/translations';
 export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health' | 'brush' | 'hotel' | 'love' | 'food' | 'premium';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
-export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package';
+export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package' | 'Store Credit';
 export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
 export type BookingType = 'Appointment' | 'Walk-in';
 
@@ -12,6 +12,23 @@ export interface AddonItem {
   name: string;
   price: number;
   icon: ServiceIcon;
+}
+
+export interface CreditPackageTemplate {
+  id: string;
+  name: string;
+  price: number;
+  creditValue: number;
+}
+
+export interface CreditTransaction {
+  id: string;
+  date: string;
+  type: 'Top-up' | 'Payment';
+  description: string;
+  previousBalance: number;
+  amount: number;
+  newBalance: number;
 }
 
 export interface IntakeRecord {
@@ -186,6 +203,8 @@ export interface Customer {
   points: number;
   pets: Pet[];
   packages: CustomerPackage[];
+  creditBalance: number;
+  creditHistory: CreditTransaction[];
   totalSpent: number;
   lineId?: string;
   // Tax Info
@@ -207,7 +226,7 @@ export interface TransactionItem {
   title: string;
   price: number;
   quantity: number;
-  type: 'Service' | 'Product';
+  type: 'Service' | 'Product' | 'Credit';
   isConsignment: boolean;
   vendorId?: string;
   consignmentRate?: number;
@@ -301,7 +320,7 @@ export interface CartItem {
   staffId?: string;
   staffName?: string;
   isPackageUsage?: boolean;
-  type: 'Service' | 'Product';
+  type: 'Service' | 'Product' | 'Credit';
 }
 
 export interface AppState {
@@ -330,6 +349,7 @@ export interface AppState {
   services: Service[];
   addons: AddonItem[];
   packageTemplates: PackageTemplate[];
+  creditPackages: CreditPackageTemplate[];
   customers: Customer[];
   setCustomers: (customers: Customer[]) => void;
   staff: Staff[];
@@ -405,6 +425,11 @@ export interface AppState {
   deletePackageTemplate: (id: string) => void;
   assignPackageToCustomer: (customerId: string, templateId: string) => void;
 
+  addCreditPackage: (pkg: Omit<CreditPackageTemplate, 'id'>) => void;
+  updateCreditPackage: (id: string, pkg: Partial<CreditPackageTemplate>) => void;
+  deleteCreditPackage: (id: string) => void;
+  buyCreditPackage: (customerId: string, packageId: string) => void;
+
   selectOwner: (owner: Customer | null) => void;
   setActivePet: (pet: Pet | null) => void;
   setActiveQueueItem: (id: string | null) => void;
@@ -414,7 +439,7 @@ export interface AppState {
   removeQueueItem: (id: string) => void;
   markAsPaid: (queueItemId: string) => void;
 
-  addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'packages' | 'totalSpent'>) => void;
+  addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'packages' | 'totalSpent' | 'creditBalance' | 'creditHistory'>) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
   bindLineToCustomer: (customerId, lineId: string) => void;

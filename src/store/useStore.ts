@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage, StockMovement, StockTakeRecord, IntakeRecord, AddonItem } from './types';
+import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage, StockMovement, StockTakeRecord, IntakeRecord, AddonItem, CreditPackageTemplate, CreditTransaction } from './types';
 import { createAuthSlice } from './slices/authSlice';
 import { createCRMSlice } from './slices/crmSlice';
 
@@ -21,6 +21,12 @@ const INITIAL_ADDONS: AddonItem[] = [
   { id: 'addon-2', name: 'สปาโคลน', price: 250, icon: 'spa' },
   { id: 'addon-3', name: 'ตะไบเล็บ', price: 80, icon: 'nail' },
   { id: 'addon-4', name: 'ฉีดน้ำหอม', price: 50, icon: 'love' },
+];
+
+const INITIAL_CREDIT_PACKAGES: CreditPackageTemplate[] = [
+  { id: 'cp-1', name: 'Premium Saver', price: 1000, creditValue: 1200 },
+  { id: 'cp-2', name: 'VIP Wallet', price: 3000, creditValue: 4000 },
+  { id: 'cp-3', name: 'Whale Bundle', price: 5000, creditValue: 7000 },
 ];
 
 const INITIAL_SERVICES: Service[] = [
@@ -62,14 +68,6 @@ const INITIAL_SERVICES: Service[] = [
   }
 ];
 
-const INITIAL_VENDORS: Vendor[] = [
-  { id: 'v1', name: 'PetCare Co., Ltd.', contactPerson: 'Somchai', phone: '02-111-2222', email: 'sales@petcare.com', notes: 'Main supplier for shampoos' }
-];
-
-const INITIAL_INVENTORY: InventoryItem[] = [
-  { id: 'prod-1', name: 'Organic Shampoo', barcode: '8850000001', stock: 15, minStock: 5, price: 450, costPrice: 280, unit: 'Bottle', category: 'Supplies', isConsignment: false }
-];
-
 export const useStore = create<AppState>()((set, get, ...args) => ({
   // Business Profile
   language: 'th',
@@ -97,8 +95,9 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
   services: INITIAL_SERVICES,
   addons: INITIAL_ADDONS,
   packageTemplates: [],
-  inventory: INITIAL_INVENTORY,
-  vendors: INITIAL_VENDORS,
+  creditPackages: INITIAL_CREDIT_PACKAGES,
+  inventory: [],
+  vendors: [],
   stockMovements: [],
   stockTakeHistory: [],
   staff: INITIAL_STAFF,
@@ -156,6 +155,36 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
   addAddon: (addonData) => set((state) => ({ addons: [...state.addons, { ...addonData, id: 'addon-' + Math.random().toString(36).substr(2, 5) }] })),
   updateAddon: (id, addonData) => set((state) => ({ addons: state.addons.map(a => a.id === id ? { ...a, ...addonData } : a) })),
   deleteAddon: (id) => set((state) => ({ addons: state.addons.filter(a => a.id !== id) })),
+
+  addCreditPackage: (pkg) => set((state) => ({ creditPackages: [...state.creditPackages, { ...pkg, id: 'cp-' + Math.random().toString(36).substr(2, 5) }] })),
+  updateCreditPackage: (id, pkg) => set((state) => ({ creditPackages: state.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p) })),
+  deleteCreditPackage: (id) => set((state) => ({ creditPackages: state.creditPackages.filter(p => p.id !== id) })),
+  buyCreditPackage: (customerId, packageId) => {
+    const pkg = get().creditPackages.find(p => p.id === packageId);
+    if (!pkg) return;
+    
+    set((state) => ({
+      customers: state.customers.map(c => {
+        if (c.id !== customerId) return c;
+        const prev = c.creditBalance || 0;
+        const newBal = prev + pkg.creditValue;
+        const record: CreditTransaction = {
+          id: Math.random().toString(36).substr(2, 9),
+          date: new Date().toISOString(),
+          type: 'Top-up',
+          description: `Top-up: ${pkg.name}`,
+          previousBalance: prev,
+          amount: pkg.creditValue,
+          newBalance: newBal
+        };
+        return {
+          ...c,
+          creditBalance: newBal,
+          creditHistory: [record, ...(c.creditHistory || [])]
+        };
+      })
+    }));
+  },
 
   addInventoryItem: (item) => set((state) => ({ inventory: [...state.inventory, { ...item, id: 'prod-' + Math.random().toString(36).substr(2, 5) }] })),
   
@@ -302,6 +331,30 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
               const usageRecord = { id: Math.random().toString(36).substr(2, 9), date: today, serviceName: items[0].title, isFreebie: false };
               return { ...pkg, usedSlots: pkg.usedSlots + 1, remainingSlots: pkg.remainingSlots - 1, usageHistory: [...pkg.usageHistory, usageRecord] };
             })
+          };
+        })
+      }));
+    }
+
+    if (method === 'Store Credit') {
+      set((state) => ({
+        customers: state.customers.map(c => {
+          if (c.id !== customerId) return c;
+          const prev = c.creditBalance || 0;
+          const newBal = prev - amount;
+          const record: CreditTransaction = {
+            id: Math.random().toString(36).substr(2, 9),
+            date: new Date().toISOString(),
+            type: 'Payment',
+            description: `Payment for Order #${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+            previousBalance: prev,
+            amount: -amount,
+            newBalance: newBal
+          };
+          return {
+            ...c,
+            creditBalance: newBal,
+            creditHistory: [record, ...(c.creditHistory || [])]
           };
         })
       }));

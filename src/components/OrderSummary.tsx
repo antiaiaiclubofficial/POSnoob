@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText, Landmark
 } from 'lucide-react';
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -66,10 +66,20 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
 
   const handleInitiatePayment = () => {
     if (cart.length === 0 || !selectedOwner) return;
+    
     if (paymentMethod === 'Package' && !selectedPackageId) {
-      toast.error("Please select a package to use");
+      toast.error("Please select a service package to use");
       return;
     }
+
+    if (paymentMethod === 'Store Credit') {
+      const balance = selectedOwner.creditBalance || 0;
+      if (balance < total) {
+        toast.error(`Insufficient credits. Balance: ${currency}${balance.toLocaleString()}`);
+        return;
+      }
+    }
+
     setIsPaymentModalOpen(true);
   };
 
@@ -96,9 +106,14 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
         <div>
           <h2 className="text-2xl font-bold text-[#1A1F3D]">{t.orderSummary}</h2>
           {selectedOwner && (
-            <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter mt-1 inline-block">
-              {selectedOwner.membership} MEMBER
-            </span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
+                {selectedOwner.membership} MEMBER
+              </span>
+              <span className="text-[8px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
+                CREDIT: {currency}{(selectedOwner.creditBalance || 0).toLocaleString()}
+              </span>
+            </div>
           )}
         </div>
         {cart.length > 0 && (
@@ -167,14 +182,14 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
         </div>
 
         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.paymentMethod}</p>
-        <div className="grid grid-cols-4 gap-2">
-          {(['Cash', 'Transfer', 'Credit Card', 'Package'] as const).map((method) => {
-            const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Banknote : method === 'Credit Card' ? CreditCard : Package;
-            const isDisabled = method === 'Package' && availablePackages.length === 0;
+        <div className="grid grid-cols-5 gap-1.5">
+          {(['Cash', 'Transfer', 'Credit Card', 'Package', 'Store Credit'] as const).map((method) => {
+            const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Landmark : method === 'Credit Card' ? CreditCard : method === 'Package' ? Package : Wallet;
+            const isDisabled = (method === 'Package' && availablePackages.length === 0) || (method === 'Store Credit' && (!selectedOwner || (selectedOwner.creditBalance || 0) < total));
             return (
               <button key={method} disabled={isDisabled} onClick={() => setPaymentMethod(method)} className={cn("flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all", paymentMethod === method ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-lg" : "bg-white border-gray-100 text-gray-400", isDisabled && "opacity-20 cursor-not-allowed grayscale")}>
-                <Icon size={16} />
-                <span className="text-[8px] font-black uppercase">{method === 'Package' ? "PKG" : method}</span>
+                <Icon size={14} />
+                <span className="text-[7px] font-black uppercase whitespace-nowrap">{method === 'Package' ? "PKG" : method === 'Store Credit' ? "CREDIT" : method.split(' ')[0]}</span>
               </button>
             );
           })}
@@ -195,10 +210,10 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       </div>
 
       <button onClick={handleInitiatePayment} disabled={cart.length === 0} className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 mt-6 shadow-xl transition-all">
-        <Banknote size={20} /> {paymentMethod === 'Package' ? "Deduct from Package" : t.checkout}
+        <Banknote size={20} /> {paymentMethod === 'Package' ? "Deduct from Package" : paymentMethod === 'Store Credit' ? "Deduct Credit" : t.checkout}
       </button>
 
-      {isPaymentModalOpen && <PaymentModal total={paymentMethod === 'Package' ? 0 : total} method={paymentMethod} onClose={() => setIsPaymentModalOpen(false)} onComplete={handleCompletePayment} />}
+      {isPaymentModalOpen && <PaymentModal total={paymentMethod === 'Package' || paymentMethod === 'Store Credit' ? 0 : total} method={paymentMethod === 'Store Credit' ? 'Cash' : paymentMethod} onClose={() => setIsPaymentModalOpen(false)} onComplete={handleCompletePayment} />}
     </div>
   );
 };

@@ -34,7 +34,16 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   markAsPaid: (id) => set((state) => ({ queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
 
   addCustomer: (customerData) => set((state) => ({
-    customers: [...state.customers, { ...customerData, id: 'c' + Math.random().toString(36).substr(2, 4), points: 0, pets: [], packages: [], totalSpent: 0 }]
+    customers: [...state.customers, { 
+      ...customerData, 
+      id: 'c' + Math.random().toString(36).substr(2, 4), 
+      points: 0, 
+      pets: [], 
+      packages: [], 
+      totalSpent: 0,
+      creditBalance: 0,
+      creditHistory: []
+    }]
   })),
   updateCustomer: (id, customerData) => set((state) => ({ customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c) })),
   deleteCustomer: (id) => set((state) => ({
