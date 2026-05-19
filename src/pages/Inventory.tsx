@@ -5,13 +5,14 @@ import {
   Package, Plus, Search, Edit3, Trash2, History, 
   AlertTriangle, Users, DollarSign, Clock, ArrowUpRight, 
   ArrowDownRight, CheckCircle2, FileText, LayoutGrid, 
-  PackagePlus, ClipboardCheck, BarChart3, Receipt
+  PackagePlus, ClipboardCheck, BarChart3, Receipt, Tag
 } from 'lucide-react';
 import { useStore, InventoryItem, Vendor, StockMovement, StockTakeRecord } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import InventoryModal from '@/components/InventoryModal';
 
 type InventoryTab = 'all' | 'low' | 'restock' | 'stocktake' | 'sales' | 'pdf' | 'vendors';
 
@@ -26,6 +27,10 @@ const Inventory = () => {
   const [activeTab, setActiveTab] = useState<InventoryTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Modal States
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  
   // States for Stock Take
   const [stockTakeValues, setStockTakeValues] = useState<Record<string, number>>({});
 
@@ -35,6 +40,16 @@ const Inventory = () => {
   const filteredVendors = vendors.filter(v => v.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   // Handlers
+  const handleEditItem = (item: InventoryItem) => {
+    setEditingItem(item);
+    setIsInventoryModalOpen(true);
+  };
+
+  const handleAddItem = () => {
+    setEditingItem(null);
+    setIsInventoryModalOpen(true);
+  };
+
   const handleQuickRestock = (id: string) => {
     const amount = prompt("Enter quantity to add:");
     if (amount && !isNaN(Number(amount))) {
@@ -100,7 +115,7 @@ const Inventory = () => {
               if(activeTab === 'vendors') {
                 addVendor({ name: 'New Partner', contactPerson: '', phone: '', email: '', notes: '' });
               } else {
-                addInventoryItem({ name: 'New Product', stock: 0, minStock: 5, price: 0, unit: 'Unit', category: 'General', isConsignment: false });
+                handleAddItem();
               }
             }}
             className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl"
@@ -143,29 +158,57 @@ const Inventory = () => {
               <input className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-6 py-4 text-sm font-bold shadow-sm" placeholder={t.search} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredStock.map(item => (
-                <div key={item.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group transition-all hover:shadow-lg">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center"><Package size={24} /></div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={16}/></button>
-                      <button onClick={() => deleteInventoryItem(item.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
+              {filteredStock.map(item => {
+                const vendor = vendors.find(v => v.id === item.vendorId);
+                const payout = item.isConsignment ? item.price * (1 - (item.consignmentRate || 0) / 100) : item.costPrice || 0;
+
+                return (
+                  <div key={item.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group transition-all hover:shadow-lg relative overflow-hidden">
+                    {item.isConsignment && (
+                      <div className="absolute top-0 right-0">
+                         <div className="bg-amber-500 text-white text-[8px] font-black uppercase px-4 py-1.5 rounded-bl-2xl shadow-sm">Consignment</div>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center"><Package size={24} /></div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleEditItem(item)} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={16}/></button>
+                        <button onClick={() => deleteInventoryItem(item.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-black mb-1">{item.name}</h3>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">{item.category} • {item.barcode || 'NO BARCODE'}</p>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="bg-[#F5F6FA] p-4 rounded-2xl">
+                        <p className="text-[8px] font-black text-gray-400 uppercase mb-1">Price</p>
+                        <p className="text-lg font-black">{currency}{item.price.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-[#F5F6FA] p-4 rounded-2xl">
+                        <p className="text-[8px] font-black text-gray-400 uppercase mb-1">Stock</p>
+                        <p className={cn("text-lg font-black", item.stock <= item.minStock ? "text-red-500" : "text-[#1A1F3D]")}>{item.stock} {item.unit}</p>
+                      </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-gray-50 flex justify-between items-center">
+                       <div>
+                          <p className="text-[8px] font-black text-gray-400 uppercase">{item.isConsignment ? 'Vendor Payout' : 'Cost'}</p>
+                          <p className="text-sm font-black text-gray-400">{currency}{payout.toLocaleString()}</p>
+                       </div>
+                       {item.isConsignment && vendor && (
+                         <div className="text-right">
+                            <p className="text-[8px] font-black text-gray-400 uppercase">Partner</p>
+                            <div className="flex items-center gap-1 justify-end">
+                               <Users size={10} className="text-amber-500" />
+                               <span className="text-[10px] font-bold text-[#1A1F3D]">{vendor.name}</span>
+                            </div>
+                         </div>
+                       )}
                     </div>
                   </div>
-                  <h3 className="text-xl font-black mb-1">{item.name}</h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">{item.category} • {item.barcode || 'NO BARCODE'}</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-[#F5F6FA] p-4 rounded-2xl">
-                      <p className="text-[8px] font-black text-gray-400 uppercase mb-1">Price</p>
-                      <p className="text-lg font-black">{currency}{item.price.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-[#F5F6FA] p-4 rounded-2xl">
-                      <p className="text-[8px] font-black text-gray-400 uppercase mb-1">Stock</p>
-                      <p className={cn("text-lg font-black", item.stock <= item.minStock ? "text-red-500" : "text-[#1A1F3D]")}>{item.stock} {item.unit}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -356,6 +399,13 @@ const Inventory = () => {
           </div>
         )}
       </div>
+
+      {isInventoryModalOpen && (
+        <InventoryModal 
+          item={editingItem} 
+          onClose={() => setIsInventoryModalOpen(false)} 
+        />
+      )}
     </div>
   );
 };
