@@ -3,7 +3,7 @@ import { Language } from '@/utils/translations';
 export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health' | 'brush' | 'hotel' | 'love' | 'food' | 'premium';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
-export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package';
+export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package' | 'Store Credit';
 export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
 export type BookingType = 'Appointment' | 'Walk-in';
 
@@ -12,6 +12,23 @@ export interface AddonItem {
   name: string;
   price: number;
   icon: ServiceIcon;
+}
+
+export interface CreditPackageTemplate {
+  id: string;
+  name: string;
+  price: number;
+  creditAmount: number;
+}
+
+export interface CreditTransaction {
+  id: string;
+  date: string;
+  type: 'Top-up' | 'Usage';
+  amount: number;
+  previousBalance: number;
+  remainingBalance: number;
+  description: string;
 }
 
 export interface IntakeRecord {
@@ -32,7 +49,7 @@ export interface IntakeRecord {
     additionalConcerns: string;
   };
   weight?: number;
-  signature?: string; // base4 image
+  signature?: string; 
 }
 
 export interface InventoryItem {
@@ -186,12 +203,12 @@ export interface Customer {
   points: number;
   pets: Pet[];
   packages: CustomerPackage[];
+  creditBalance: number;
+  creditHistory: CreditTransaction[];
   totalSpent: number;
   lineId?: string;
-  // Tax Info
   taxId?: string;
   branchName?: string;
-  // Address Fields
   houseNo?: string;
   villageNo?: string;
   soi?: string;
@@ -207,7 +224,7 @@ export interface TransactionItem {
   title: string;
   price: number;
   quantity: number;
-  type: 'Service' | 'Product';
+  type: 'Service' | 'Product' | 'Credit';
   isConsignment: boolean;
   vendorId?: string;
   consignmentRate?: number;
@@ -301,7 +318,8 @@ export interface CartItem {
   staffId?: string;
   staffName?: string;
   isPackageUsage?: boolean;
-  type: 'Service' | 'Product';
+  type: 'Service' | 'Product' | 'Credit';
+  creditAmount?: number;
 }
 
 export interface AppState {
@@ -330,6 +348,7 @@ export interface AppState {
   services: Service[];
   addons: AddonItem[];
   packageTemplates: PackageTemplate[];
+  creditPackages: CreditPackageTemplate[];
   customers: Customer[];
   setCustomers: (customers: Customer[]) => void;
   staff: Staff[];
@@ -389,6 +408,10 @@ export interface AppState {
   addAddon: (addon: Omit<AddonItem, 'id'>) => void;
   updateAddon: (id: string, addon: Partial<AddonItem>) => void;
   deleteAddon: (id: string) => void;
+
+  addCreditPackage: (template: Omit<CreditPackageTemplate, 'id'>) => void;
+  updateCreditPackage: (id: string, template: Partial<CreditPackageTemplate>) => void;
+  deleteCreditPackage: (id: string) => void;
   
   addInventoryItem: (item: Omit<InventoryItem, 'id'>) => void;
   updateInventoryItem: (id: string, item: Partial<InventoryItem>, reason?: string) => void;
@@ -414,7 +437,7 @@ export interface AppState {
   removeQueueItem: (id: string) => void;
   markAsPaid: (queueItemId: string) => void;
 
-  addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'packages' | 'totalSpent'>) => void;
+  addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'packages' | 'totalSpent' | 'creditBalance' | 'creditHistory'>) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
   bindLineToCustomer: (customerId, lineId: string) => void;
