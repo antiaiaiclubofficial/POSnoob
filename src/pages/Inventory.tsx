@@ -5,7 +5,7 @@ import {
   Package, Plus, Search, Edit3, Trash2, History, 
   AlertTriangle, Users, DollarSign, Clock, ArrowUpRight, 
   ArrowDownRight, CheckCircle2, FileText, LayoutGrid, 
-  PackagePlus, ClipboardCheck, BarChart3, Receipt, Tag
+  PackagePlus, ClipboardCheck, BarChart3, Receipt, Tag, FileSearch
 } from 'lucide-react';
 import { useStore, InventoryItem, Vendor, StockMovement, StockTakeRecord } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -13,14 +13,15 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import InventoryModal from '@/components/InventoryModal';
+import VendorModal from '@/components/VendorModal';
+import VendorInventoryView from '@/components/VendorInventoryView';
 
 type InventoryTab = 'all' | 'low' | 'restock' | 'stocktake' | 'sales' | 'pdf' | 'vendors';
 
 const Inventory = () => {
   const { 
     inventory, vendors, stockMovements, stockTakeHistory, transactions,
-    deleteInventoryItem, deleteVendor, addInventoryItem, addVendor, 
-    updateInventoryItem, adjustStock, saveStockTake, currency, language, currentUser 
+    deleteInventoryItem, deleteVendor, currency, language, currentUser 
   } = useStore();
   
   const t = translations[language];
@@ -30,6 +31,10 @@ const Inventory = () => {
   // Modal States
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  
+  const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [selectedViewVendor, setSelectedViewVendor] = useState<Vendor | null>(null);
   
   // States for Stock Take
   const [stockTakeValues, setStockTakeValues] = useState<Record<string, number>>({});
@@ -50,7 +55,18 @@ const Inventory = () => {
     setIsInventoryModalOpen(true);
   };
 
+  const handleEditVendor = (v: Vendor) => {
+    setEditingVendor(v);
+    setIsVendorModalOpen(true);
+  };
+
+  const handleAddVendor = () => {
+    setEditingVendor(null);
+    setIsVendorModalOpen(true);
+  };
+
   const handleQuickRestock = (id: string) => {
+    const { adjustStock } = useStore.getState();
     const amount = prompt("Enter quantity to add:");
     if (amount && !isNaN(Number(amount))) {
       adjustStock(id, Number(amount), 'In', "Quick Restock");
@@ -59,6 +75,7 @@ const Inventory = () => {
   };
 
   const handleSaveStockTake = () => {
+    const { saveStockTake } = useStore.getState();
     if (Object.keys(stockTakeValues).length === 0) return;
     
     const items = Object.entries(stockTakeValues).map(([itemId, actualStock]) => {
@@ -113,14 +130,14 @@ const Inventory = () => {
           <button 
             onClick={() => {
               if(activeTab === 'vendors') {
-                addVendor({ name: 'New Partner', contactPerson: '', phone: '', email: '', notes: '' });
+                handleAddVendor();
               } else {
                 handleAddItem();
               }
             }}
             className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl"
           >
-            <Plus size={20} /> {activeTab === 'vendors' ? t.addClient : t.add}
+            <Plus size={20} /> {activeTab === 'vendors' ? 'Add Partner' : t.add}
           </button>
         </div>
       </header>
@@ -380,32 +397,50 @@ const Inventory = () => {
         {activeTab === 'vendors' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredVendors.map(vendor => (
-              <div key={vendor.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group transition-all hover:shadow-lg">
+              <div key={vendor.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group transition-all hover:shadow-xl relative overflow-hidden">
                 <div className="flex justify-between items-start mb-6">
-                  <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center"><Users size={24} /></div>
+                  <div className="w-16 h-16 bg-[#1A1F3D] text-white rounded-[24px] flex items-center justify-center shadow-lg"><Users size={24} /></div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={16}/></button>
-                    <button onClick={() => deleteVendor(vendor.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
+                    <button onClick={() => handleEditVendor(vendor)} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={18}/></button>
+                    <button onClick={() => deleteVendor(vendor.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={18}/></button>
                   </div>
                 </div>
-                <h3 className="text-xl font-black mb-1">{vendor.name}</h3>
-                <p className="text-xs text-gray-400 font-bold mb-6">{vendor.contactPerson}</p>
-                <div className="space-y-3 pt-6 border-t border-gray-50">
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase text-gray-400"><span>Phone</span><span className="text-[#1A1F3D]">{vendor.phone}</span></div>
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase text-gray-400"><span>Email</span><span className="text-[#1A1F3D]">{vendor.email}</span></div>
+
+                <div className="mb-6">
+                   <h3 className="text-xl font-black text-[#1A1F3D] mb-1">{vendor.name}</h3>
+                   <div className="flex items-center gap-2">
+                      <span className="bg-indigo-50 text-indigo-600 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                         {vendor.mainCategory || 'General Partner'}
+                      </span>
+                   </div>
                 </div>
+
+                <div className="space-y-3 pt-6 border-t border-gray-50 mb-8">
+                   <div className="flex justify-between items-center text-xs font-bold">
+                      <span className="text-gray-400">Contact:</span>
+                      <span className="text-[#1A1F3D]">{vendor.contactPerson}</span>
+                   </div>
+                   <div className="flex justify-between items-center text-xs font-bold">
+                      <span className="text-gray-400">Phone:</span>
+                      <span className="text-[#1A1F3D]">{vendor.phone}</span>
+                   </div>
+                </div>
+
+                <button 
+                  onClick={() => setSelectedViewVendor(vendor)}
+                  className="w-full bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-sm"
+                >
+                  <FileSearch size={16} /> ตรวจสอบสินค้า
+                </button>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {isInventoryModalOpen && (
-        <InventoryModal 
-          item={editingItem} 
-          onClose={() => setIsInventoryModalOpen(false)} 
-        />
-      )}
+      {isInventoryModalOpen && <InventoryModal item={editingItem} onClose={() => setIsInventoryModalOpen(false)} />}
+      {isVendorModalOpen && <VendorModal vendor={editingVendor} onClose={() => setIsVendorModalOpen(false)} />}
+      {selectedViewVendor && <VendorInventoryView vendor={selectedViewVendor} onClose={() => setSelectedViewVendor(null)} />}
     </div>
   );
 };

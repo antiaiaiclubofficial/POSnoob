@@ -73,6 +73,9 @@ export interface StockTakeRecord {
 export interface Vendor {
   id: string;
   name: string;
+  taxId?: string;
+  address?: string;
+  mainCategory?: string;
   contactPerson: string;
   phone: string;
   email: string;
