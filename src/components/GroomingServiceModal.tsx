@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
-import { X, Printer, Save, Dog, Scissors, AlertCircle, User, Info, Check, Pencil } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Printer, Save, Dog, Scissors, AlertCircle, User, Info, Check, Pencil, Scale } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStore, QueueItem } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -14,11 +14,12 @@ interface GroomingServiceModalProps {
 }
 
 const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: GroomingServiceModalProps) => {
-  const { language, currentUser, updateQueueStatus, customers, saveIntakeRecord } = useStore();
+  const { language, currentUser, updateQueueStatus, customers, saveIntakeRecord, updatePetWeight } = useStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   
-  // Form State - initialized with intakeData if readOnly
+  // Form State
+  const [weight, setWeight] = useState('');
   const [formData, setFormData] = useState(intakeData?.details || {
     spayed: 'No',
     sex: 'Male',
@@ -35,14 +36,17 @@ const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: G
     groomerAssigned: '',
   });
 
+  useEffect(() => {
+    if (intakeData?.weight) {
+      setWeight(intakeData.weight.toString());
+    }
+  }, [intakeData]);
+
   const basicServices = [
     'Shower', 'Nail Clipping', 'Anal Sac', 'Eye Cleaning', 
     'Ear Cleaning', 'Partial Cleaning', 'Paw Trim', 'Belly Trim', 
     'Apply Lotion', 'Pluck Ear Hair', 'Sanitary Trim', 'Apply Perfume'
   ];
-
-  const addOns = ['Tooth Brushing', 'Mud Spa'];
-  const lengths = ['Shaved', 'Short', 'Medium', 'Long (Trim)', 'Partial Trim'];
 
   // Signature Pad Logic
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
@@ -107,12 +111,19 @@ const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: G
     // Find customer for this pet
     const owner = customers.find(c => c.name === item.ownerName);
     if (owner) {
+      // 1. Save Form Record
       saveIntakeRecord(owner.id, item.petId, {
         queueItemId: item.id,
         staffName: currentUser?.name || 'Admin',
         details: formData,
+        weight: weight ? Number(weight) : undefined,
         signature
       });
+
+      // 2. Update actual pet weight history if provided
+      if (weight) {
+        updatePetWeight(owner.id, item.petId, Number(weight));
+      }
     }
 
     updateQueueStatus(item.id, 'Checked-in');
@@ -142,16 +153,42 @@ const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: G
 
         <div className="flex-1 overflow-y-auto p-8 lg:p-12 space-y-12 scrollbar-hide bg-[#FDFDFD]">
           
-          {/* Section 1: Info */}
+          {/* Section 1: Info & Weight */}
           <section className="space-y-6">
             <div className="flex items-center gap-3 border-b-4 border-[#00B4FF] pb-2">
                <span className="bg-[#00B4FF] text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Pet & Owner Info</span>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              <div><label className="text-[9px] font-black uppercase text-gray-400">Pet Name</label><p className="text-sm font-bold border-b-2 border-gray-100 pb-1 text-blue-600">{item.petName}</p></div>
-              <div><label className="text-[9px] font-black uppercase text-gray-400">Owner</label><p className="text-sm font-bold border-b-2 border-gray-100 pb-1">{item.ownerName}</p></div>
-              <div><label className="text-[9px] font-black uppercase text-gray-400">Service</label><p className="text-sm font-bold border-b-2 border-gray-100 pb-1">{item.serviceName}</p></div>
-              <div><label className="text-[9px] font-black uppercase text-gray-400">Time</label><p className="text-sm font-bold border-b-2 border-gray-100 pb-1">{item.time}</p></div>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
+              <div className="lg:col-span-1">
+                <label className="text-[9px] font-black uppercase text-gray-400">Pet Name</label>
+                <p className="text-sm font-bold border-b-2 border-gray-100 pb-1 text-blue-600">{item.petName}</p>
+              </div>
+              <div>
+                <label className="text-[9px] font-black uppercase text-gray-400">Owner</label>
+                <p className="text-sm font-bold border-b-2 border-gray-100 pb-1">{item.ownerName}</p>
+              </div>
+              <div className="lg:col-span-1">
+                <label className="text-[9px] font-black uppercase text-gray-400">Service</label>
+                <p className="text-sm font-bold border-b-2 border-gray-100 pb-1">{item.serviceName}</p>
+              </div>
+              <div>
+                <label className="text-[9px] font-black uppercase text-gray-400">Time</label>
+                <p className="text-sm font-bold border-b-2 border-gray-100 pb-1">{item.time}</p>
+              </div>
+              {/* Weight Input Added Here */}
+              <div className="col-span-2 lg:col-span-1">
+                <label className="text-[9px] font-black uppercase text-blue-500 flex items-center gap-1">
+                  <Scale size={10} /> Weight (kg)
+                </label>
+                <input 
+                  type="number" 
+                  disabled={readOnly}
+                  className="w-full bg-blue-50 border-none rounded-lg px-3 py-1.5 text-sm font-black text-[#1A1F3D] focus:ring-2 focus:ring-blue-200"
+                  placeholder="0.0"
+                  value={weight}
+                  onChange={e => setWeight(e.target.value)}
+                />
+              </div>
             </div>
           </section>
 

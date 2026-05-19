@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Scale, Check, Save, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText
 } from 'lucide-react';
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -16,11 +16,9 @@ interface OrderSummaryProps {
 }
 
 const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
-  const { cart, removeFromCart, updateCartQuantity, clearCart, selectedOwner, activePet, markAsPaid, processPayment, updatePetWeight, tierRules, services, inventory, addToCart, currency, language } = useStore();
+  const { cart, removeFromCart, updateCartQuantity, clearCart, selectedOwner, activePet, markAsPaid, processPayment, tierRules, inventory, addToCart, currency, language } = useStore();
   const t = translations[language];
   
-  const [newWeight, setNewWeight] = useState('');
-  const [isWeightSaved, setIsWeightSaved] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
@@ -28,8 +26,6 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
   const [barcodeQuery, setBarcodeQuery] = useState('');
 
   useEffect(() => {
-    setNewWeight('');
-    setIsWeightSaved(false);
     setSelectedPackageId(null);
   }, [activePet]);
 
@@ -68,14 +64,6 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
     return cart.some(item => pkg.targetServiceId === item.id && pkg.remainingSlots > 0);
   }) || [];
 
-  const handleSaveWeight = () => {
-    if (!newWeight || !activePet || !selectedOwner) return;
-    updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
-    setIsWeightSaved(true);
-    toast.success(`Weight updated to ${newWeight} kg`);
-    setTimeout(() => setIsWeightSaved(false), 2000);
-  };
-
   const handleInitiatePayment = () => {
     if (cart.length === 0 || !selectedOwner) return;
     if (paymentMethod === 'Package' && !selectedPackageId) {
@@ -87,9 +75,6 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
 
   const handleCompletePayment = (details: any) => {
     if (!selectedOwner) return;
-    if (newWeight && activePet && !isWeightSaved) {
-      updatePetWeight(selectedOwner.id, activePet.id, Number(newWeight));
-    }
     const finalDetails = {
       ...details,
       packageId: paymentMethod === 'Package' ? selectedPackageId : undefined
@@ -98,8 +83,6 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
     cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
     toast.success("Transaction Complete!");
     clearCart();
-    setNewWeight('');
-    setIsWeightSaved(false);
     setIsPaymentModalOpen(false);
     setSelectedPackageId(null);
   };
@@ -137,28 +120,6 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
           />
         </div>
       </form>
-
-      {activePet && (
-        <div className="mb-6 p-5 bg-[#F5F6FA] rounded-[28px] border border-blue-100/50 shadow-sm transition-all">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-                <Scale size={16} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-gray-400 leading-none mb-1">{t.weight}</p>
-                <p className="text-xs font-bold text-[#1A1F3D]">{activePet.name}</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <input type="number" placeholder="0.0" className="flex-1 bg-white border-none rounded-2xl px-5 py-3.5 text-sm font-black focus:ring-2 focus:ring-blue-500/20" value={newWeight} onChange={(e) => { setNewWeight(e.target.value); setIsWeightSaved(false); }} />
-            <button onClick={handleSaveWeight} disabled={!newWeight || isWeightSaved} className={cn("px-4 rounded-2xl transition-all flex items-center justify-center", isWeightSaved ? "bg-green-500 text-white" : "bg-[#1A1F3D] text-white")}>
-              {isWeightSaved ? <Check size={18} /> : <Save size={18} />}
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
         {cart.length === 0 ? (

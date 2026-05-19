@@ -31,6 +31,7 @@ export interface IntakeRecord {
     dislikes: string;
     additionalConcerns: string;
   };
+  weight?: number;
   signature?: string; // base4 image
 }
 
