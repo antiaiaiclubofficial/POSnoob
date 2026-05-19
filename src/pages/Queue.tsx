@@ -12,9 +12,11 @@ import {
   ChevronRight,
   ChevronLeft,
   CreditCard,
+  ClipboardList
 } from 'lucide-react';
-import { useStore, QueueStatus } from '@/store/useStore';
+import { useStore, QueueStatus, QueueItem } from '@/store/useStore';
 import BookingModal from '@/components/BookingModal';
+import GroomingServiceModal from '@/components/GroomingServiceModal';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { translations } from '@/utils/translations';
@@ -25,6 +27,7 @@ const Queue = () => {
   const t = translations[language];
   
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
   const [filter, setFilter] = useState<QueueStatus | 'All'>('All');
   
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -186,6 +189,15 @@ const Queue = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {/* New Intake Button */}
+                    <button 
+                      onClick={() => setIntakeItem(item)}
+                      className="p-2 lg:p-3 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                      title="Intake Checklist"
+                    >
+                      <ClipboardList size={20} />
+                    </button>
+
                     {item.status === 'Completed' ? (
                       <button 
                         onClick={() => handleGoToCheckout(item)}
@@ -239,6 +251,7 @@ const Queue = () => {
       </div>
 
       {isBookingOpen && <BookingModal onClose={() => setIsBookingOpen(false)} />}
+      {intakeItem && <GroomingServiceModal item={intakeItem} onClose={() => setIntakeItem(null)} />}
     </div>
   );
 };
