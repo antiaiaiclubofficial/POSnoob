@@ -9,15 +9,17 @@ import { toast } from 'sonner';
 interface GroomingServiceModalProps {
   item: QueueItem;
   onClose: () => void;
+  readOnly?: boolean;
+  intakeData?: any;
 }
 
-const GroomingServiceModal = ({ item, onClose }: GroomingServiceModalProps) => {
-  const { language, currentUser, updateQueueStatus } = useStore();
+const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: GroomingServiceModalProps) => {
+  const { language, currentUser, updateQueueStatus, customers, saveIntakeRecord } = useStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   
-  // Form State
-  const [formData, setFormData] = useState({
+  // Form State - initialized with intakeData if readOnly
+  const [formData, setFormData] = useState(intakeData?.details || {
     spayed: 'No',
     sex: 'Male',
     basicGrooming: [] as string[],
@@ -44,6 +46,7 @@ const GroomingServiceModal = ({ item, onClose }: GroomingServiceModalProps) => {
 
   // Signature Pad Logic
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    if (readOnly) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -63,7 +66,7 @@ const GroomingServiceModal = ({ item, onClose }: GroomingServiceModalProps) => {
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing) return;
+    if (!isDrawing || readOnly) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -78,6 +81,7 @@ const GroomingServiceModal = ({ item, onClose }: GroomingServiceModalProps) => {
   };
 
   const clearSignature = () => {
+    if (readOnly) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -85,6 +89,7 @@ const GroomingServiceModal = ({ item, onClose }: GroomingServiceModalProps) => {
   };
 
   const toggleBasic = (service: string) => {
+    if (readOnly) return;
     setFormData(prev => ({
       ...prev,
       basicGrooming: prev.basicGrooming.includes(service)
@@ -94,9 +99,24 @@ const GroomingServiceModal = ({ item, onClose }: GroomingServiceModalProps) => {
   };
 
   const handleSave = () => {
-    // อัปเดตสถานะเป็น Checked-in อัตโนมัติเมื่อกดเซ็นยืนยัน
+    if (readOnly) return;
+    
+    const canvas = canvasRef.current;
+    const signature = canvas?.toDataURL();
+    
+    // Find customer for this pet
+    const owner = customers.find(c => c.name === item.ownerName);
+    if (owner) {
+      saveIntakeRecord(owner.id, item.petId, {
+        queueItemId: item.id,
+        staffName: currentUser?.name || 'Admin',
+        details: formData,
+        signature
+      });
+    }
+
     updateQueueStatus(item.id, 'Checked-in');
-    toast.success("Service Form Signed & Pet Checked-in!");
+    toast.success("Service Form Saved & Pet Checked-in!");
     onClose();
   };
 
@@ -111,7 +131,9 @@ const GroomingServiceModal = ({ item, onClose }: GroomingServiceModalProps) => {
               <Scissors size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-[#1A1F3D] uppercase tracking-tighter">SERVICE INTAKE & CHECK-IN</h1>
+              <h1 className="text-2xl font-black text-[#1A1F3D] uppercase tracking-tighter">
+                {readOnly ? "COMPLETED SERVICE FORM" : "SERVICE INTAKE & CHECK-IN"}
+              </h1>
               <p className="text-[10px] font-black text-[#1A1F3D]/60 uppercase tracking-widest">Mellow Fellow Sanctuary</p>
             </div>
           </div>
@@ -140,7 +162,7 @@ const GroomingServiceModal = ({ item, onClose }: GroomingServiceModalProps) => {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {basicServices.map(service => (
-                <button key={service} onClick={() => toggleBasic(service)} className="flex items-center gap-3 group text-left">
+                <button key={service} disabled={readOnly} onClick={() => toggleBasic(service)} className="flex items-center gap-3 group text-left disabled:opacity-100">
                   <div className={cn("w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all", formData.basicGrooming.includes(service) ? "bg-[#00B4FF] border-[#00B4FF] text-white shadow-md" : "border-gray-100")}>
                     {formData.basicGrooming.includes(service) && <Check size={12} strokeWidth={4} />}
                   </div>
@@ -154,7 +176,6 @@ const GroomingServiceModal = ({ item, onClose }: GroomingServiceModalProps) => {
           <section className="space-y-6">
             <div className="flex items-center gap-3 border-b-4 border-[#1A1F3D] pb-2">
                <span className="bg-[#1A1F3D] text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Customer Authorization</span>
-               <span className="text-[9px] font-bold text-gray-400 italic">Please sign below to confirm services and health status.</span>
             </div>
 
             <div className="bg-[#F5F6FA] p-8 rounded-[32px] border-2 border-dashed border-gray-200">
@@ -162,39 +183,44 @@ const GroomingServiceModal = ({ item, onClose }: GroomingServiceModalProps) => {
                   <div className="flex items-center gap-2 text-[#1A1F3D] font-black uppercase text-[10px]">
                     <Pencil size={14} /> Owner's Signature
                   </div>
-                  <button onClick={clearSignature} className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors">Clear Space</button>
+                  {!readOnly && <button onClick={clearSignature} className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors">Clear Space</button>}
                </div>
-               <div className="bg-white rounded-2xl shadow-inner overflow-hidden border border-gray-100 touch-none">
-                  <canvas 
-                    ref={canvasRef}
-                    width={800}
-                    height={200}
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={() => setIsDrawing(false)}
-                    onMouseLeave={() => setIsDrawing(false)}
-                    onTouchStart={startDrawing}
-                    onTouchMove={draw}
-                    onTouchEnd={() => setIsDrawing(false)}
-                    className="w-full h-[150px] cursor-crosshair"
-                  />
+               <div className="bg-white rounded-2xl shadow-inner overflow-hidden border border-gray-100 touch-none relative">
+                  {readOnly && intakeData?.signature ? (
+                    <img src={intakeData.signature} className="w-full h-[150px] object-contain" />
+                  ) : (
+                    <canvas 
+                      ref={canvasRef}
+                      width={800}
+                      height={200}
+                      onMouseDown={startDrawing}
+                      onMouseMove={draw}
+                      onMouseUp={() => setIsDrawing(false)}
+                      onMouseLeave={() => setIsDrawing(false)}
+                      onTouchStart={startDrawing}
+                      onTouchMove={draw}
+                      onTouchEnd={() => setIsDrawing(false)}
+                      className="w-full h-[150px] cursor-crosshair"
+                    />
+                  )}
                </div>
-               <p className="text-center text-[9px] text-gray-400 mt-4 font-medium italic">
-                 I confirm that the information provided is correct and I agree to the service terms.
-               </p>
             </div>
           </section>
         </div>
 
         {/* Action Footer */}
         <div className="p-8 border-t border-gray-50 bg-white shrink-0 flex gap-4">
-          <button onClick={onClose} className="flex-1 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Cancel</button>
-          <button 
-            onClick={handleSave}
-            className="flex-[2] bg-[#1A1F3D] text-[#D9ED5F] font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95"
-          >
-            <Check size={20} /> Sign & Confirm Check-in
+          <button onClick={onClose} className="flex-1 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">
+            {readOnly ? "Close View" : "Cancel"}
           </button>
+          {!readOnly && (
+            <button 
+              onClick={handleSave}
+              className="flex-[2] bg-[#1A1F3D] text-[#D9ED5F] font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95"
+            >
+              <Check size={20} /> Sign & Confirm Check-in
+            </button>
+          )}
         </div>
       </div>
     </div>

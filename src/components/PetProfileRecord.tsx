@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 import { 
   Edit3, TrendingUp, History, ClipboardList, Calendar, 
-  ChevronDown, ChevronUp, Scale 
+  ChevronDown, ChevronUp, Scale, FileSearch 
 } from 'lucide-react';
 import { useStore, Pet } from '@/store/useStore';
 import { calculateAge } from '@/utils/petData';
 import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
+import GroomingServiceModal from './GroomingServiceModal';
 
 interface PetProfileRecordProps {
   pet: Pet;
@@ -19,8 +20,8 @@ interface PetProfileRecordProps {
 const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
   const { currency } = useStore();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedIntake, setSelectedIntake] = useState<any>(null);
 
-  // ป้องกัน Error กรณี weightHistory เป็น undefined หรือ null
   const weightHistory = pet.weightHistory || [];
   const latestWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1]?.value : 'N/A';
 
@@ -110,9 +111,9 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
         )}
       >
         {isExpanded ? (
-          <>Close Service History <ChevronUp size={14} /></>
+          <>Close History <ChevronUp size={14} /></>
         ) : (
-          <>View Service History <ChevronDown size={14} /></>
+          <>View Records & Intake Forms <ChevronDown size={14} /></>
         )}
       </button>
 
@@ -126,40 +127,92 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="overflow-hidden bg-[#F8F9FD]/30"
           >
-            <div className="p-8 space-y-3">
-              {pet.serviceHistory && pet.serviceHistory.length > 0 ? (
-                [...pet.serviceHistory].reverse().map((history) => (
-                  <div key={history.id} className="bg-white p-5 rounded-2xl flex items-center justify-between border border-gray-100 shadow-sm transition-all hover:border-[#1A1F3D]/20">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[#F5F6FA] rounded-xl flex items-center justify-center text-[#1A1F3D]">
-                        <ClipboardList size={20} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-[#1A1F3D]">{history.serviceName}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Calendar size={12} className="text-gray-300" />
-                          <p className="text-[10px] text-gray-400 font-bold uppercase">{history.date}</p>
+            <div className="p-8 space-y-6">
+              {/* Service History */}
+              <div className="space-y-3">
+                 <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-2 mb-2">Service History</p>
+                 {pet.serviceHistory && pet.serviceHistory.length > 0 ? (
+                    [...pet.serviceHistory].reverse().map((history) => (
+                      <div key={history.id} className="bg-white p-5 rounded-2xl flex items-center justify-between border border-gray-100 shadow-sm transition-all hover:border-[#1A1F3D]/20">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-[#F5F6FA] rounded-xl flex items-center justify-center text-[#1A1F3D]">
+                            <ClipboardList size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-[#1A1F3D]">{history.serviceName}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Calendar size={12} className="text-gray-300" />
+                              <p className="text-[10px] text-gray-400 font-bold uppercase">{history.date}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-black text-[#1A1F3D]">{currency}{history.price.toFixed(2)}</p>
+                          <span className="bg-green-100 text-green-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Paid</span>
                         </div>
                       </div>
+                    ))
+                 ) : (
+                    <div className="py-8 text-center bg-white rounded-2xl border border-dashed border-gray-200 opacity-50">
+                       <p className="text-[10px] font-bold uppercase tracking-widest">No previous services</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-black text-[#1A1F3D]">{currency}{history.price.toFixed(2)}</p>
-                      <span className="bg-green-100 text-green-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Paid</span>
+                 )}
+              </div>
+
+              {/* Intake Records */}
+              <div className="space-y-3">
+                 <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-2 mb-2">Saved Intake Forms</p>
+                 {pet.intakeHistory && pet.intakeHistory.length > 0 ? (
+                    pet.intakeHistory.map((record) => (
+                      <button 
+                        key={record.id} 
+                        onClick={() => setSelectedIntake(record)}
+                        className="w-full bg-white p-5 rounded-2xl flex items-center justify-between border border-gray-100 shadow-sm transition-all hover:border-blue-200 group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <FileSearch size={20} />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-black text-[#1A1F3D]">Grooming Intake Form</p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(record.date).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                           <span className="text-[9px] font-black uppercase text-gray-300 group-hover:text-blue-500 transition-colors">View Details</span>
+                        </div>
+                      </button>
+                    ))
+                 ) : (
+                    <div className="py-8 text-center bg-white rounded-2xl border border-dashed border-gray-200 opacity-50">
+                       <p className="text-[10px] font-bold uppercase tracking-widest">No intake forms recorded</p>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="py-12 text-center">
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <History size={24} className="text-gray-200" />
-                  </div>
-                  <p className="text-xs font-bold text-gray-300 uppercase tracking-widest">No previous services found</p>
-                </div>
-              )}
+                 )}
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Intake Viewer Modal */}
+      {selectedIntake && (
+        <GroomingServiceModal 
+          item={{
+            id: selectedIntake.queueItemId,
+            petId: pet.id,
+            petName: pet.name,
+            ownerName: 'Customer', // Simple mock for detail view
+            serviceName: 'Past Service',
+            date: selectedIntake.date,
+            time: 'Recorded',
+            status: 'Completed',
+            image: pet.image
+          }} 
+          intakeData={selectedIntake}
+          readOnly={true}
+          onClose={() => setSelectedIntake(null)} 
+        />
+      )}
     </div>
   );
 };

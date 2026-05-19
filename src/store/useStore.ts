@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage, StockMovement, StockTakeRecord } from './types';
+import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage, StockMovement, StockTakeRecord, IntakeRecord } from './types';
 import { createAuthSlice } from './slices/authSlice';
 import { createCRMSlice } from './slices/crmSlice';
 
@@ -220,6 +220,27 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
       customers: state.customers.map(c => c.id === customerId ? { ...c, packages: [...(c.packages || []), newPackage] } : c)
     }));
   },
+
+  saveIntakeRecord: (customerId, petId, record) => set((state) => ({
+    customers: state.customers.map(c => {
+      if (c.id !== customerId) return c;
+      return {
+        ...c,
+        pets: c.pets.map(p => {
+          if (p.id !== petId) return p;
+          const newIntake: IntakeRecord = {
+            ...record,
+            id: 'intake-' + Math.random().toString(36).substr(2, 9),
+            date: new Date().toISOString()
+          };
+          return {
+            ...p,
+            intakeHistory: [newIntake, ...(p.intakeHistory || [])]
+          };
+        })
+      };
+    })
+  })),
 
   processPayment: (customerId, amount, discount, items, method = 'Cash', details, isTaxInvoice = false) => {
     const { customers, transactions, queue, currentUser, inventory, adjustStock } = get();

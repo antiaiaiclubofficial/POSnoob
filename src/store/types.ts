@@ -7,6 +7,26 @@ export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package';
 export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
 export type BookingType = 'Appointment' | 'Walk-in';
 
+export interface IntakeRecord {
+  id: string;
+  date: string;
+  queueItemId: string;
+  staffName: string;
+  details: {
+    sex: string;
+    spayed: string;
+    basicGrooming: string[];
+    addOns: string[];
+    bathProduct: string;
+    hairTrimLength: string;
+    styleFocus: string;
+    shaveShortIfMatted: string;
+    dislikes: string;
+    additionalConcerns: string;
+  };
+  signature?: string; // base64 image
+}
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -137,6 +157,7 @@ export interface Pet {
   birthday: string;
   weightHistory: WeightEntry[];
   serviceHistory: ServiceHistoryEntry[];
+  intakeHistory?: IntakeRecord[];
   notes: string;
   image: string;
 }
@@ -378,6 +399,7 @@ export interface AppState {
   addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
   updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
+  saveIntakeRecord: (customerId: string, petId: string, record: Omit<IntakeRecord, 'id' | 'date'>) => void;
   processPayment: (customerId: string, amount: number, discount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails'], isTaxInvoice?: boolean) => void;
   
   updateTransaction: (id: string, data: Partial<Transaction>) => void;
