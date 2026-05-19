@@ -13,52 +13,98 @@ const INITIAL_TIER_RULES: TierRule[] = [
 ];
 
 const INITIAL_STAFF: Staff[] = [
-  { id: 's1', name: 'Alex Smith', role: 'Admin', phone: '081-111-2222', status: 'Active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop', username: 'alex', password: 'password', commissionRate: 10 },
-  { id: 's2', name: 'Sarah Wilson', role: 'Groomer', phone: '081-333-4444', status: 'Active', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop', username: 'sarah', password: 'password', commissionRate: 15 }
+  { id: 's1', name: 'Alex Smith', role: 'Admin', phone: '081-111-2222', status: 'Active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop', username: 'admin', password: 'password', commissionRate: 10 },
 ];
 
 const INITIAL_SERVICES: Service[] = [
   {
-    id: 'svc-bath',
-    title: 'อาบน้ำสุนัข',
-    description: 'อาบน้ำทำความสะอาด ล้างหู และตัดเล็บพื้นฐาน',
+    id: 'svc-basic-short',
+    title: 'Basic Groom (Short Coat)',
+    description: 'Bath & brush, nail trim, anal glands, sanitary & paw trim, eye & ear cleaning',
     category: 'Grooming',
     icon: 'bath',
     targetSpecies: 'Dog',
     isActive: true,
-    subServices: [
-      { name: 'ตัดเล็บ', price: 0 },
-      { name: 'เช็ดหู', price: 0 },
-      { name: 'แปรงฟัน (เพิ่ม)', price: 100 }
-    ],
+    subServices: [],
     prices: {
-      'Small (<10kg)': { price: 350, duration: 45 },
-      'Medium (10-25kg)': { price: 500, duration: 60 },
-      'Large (>25kg)': { price: 750, duration: 90 }
+      'TINY (≤ 5kg)': { price: 450, duration: 45 },
+      'SMALL (5.1-10kg)': { price: 600, duration: 60 },
+      'MEDIUM (10.1-15kg)': { price: 700, duration: 60 },
+      'LARGE (15.1-25kg)': { price: 800, duration: 90 },
+      'GIANT (25.1-40kg)': { price: 950, duration: 120 }
+    }
+  },
+  {
+    id: 'svc-basic-long',
+    title: 'Basic Groom (Long Coat)',
+    description: 'Bath & brush, nail trim, anal glands, sanitary & paw trim, eye & ear cleaning',
+    category: 'Grooming',
+    icon: 'bath',
+    targetSpecies: 'Dog',
+    isActive: true,
+    subServices: [],
+    prices: {
+      'TINY (≤ 5kg)': { price: 600, duration: 60 },
+      'SMALL (5.1-10kg)': { price: 750, duration: 75 },
+      'MEDIUM (10.1-15kg)': { price: 850, duration: 75 },
+      'LARGE (15.1-25kg)': { price: 1300, duration: 120 },
+      'GIANT (25.1-40kg)': { price: 1600, duration: 150 }
+    }
+  },
+  {
+    id: 'svc-full-short',
+    title: 'Full Groom (Short Coat)',
+    description: 'Basic groom + haircut',
+    category: 'Grooming',
+    icon: 'grooming',
+    targetSpecies: 'Dog',
+    isActive: true,
+    subServices: [],
+    prices: {
+      'TINY (≤ 5kg)': { price: 650, duration: 90 },
+      'SMALL (5.1-10kg)': { price: 850, duration: 105 },
+      'MEDIUM (10.1-15kg)': { price: 1000, duration: 120 },
+      'LARGE (15.1-25kg)': { price: 1200, duration: 150 },
+      'GIANT (25.1-40kg)': { price: 1700, duration: 180 }
+    }
+  },
+  {
+    id: 'svc-full-long',
+    title: 'Full Groom (Long Coat)',
+    description: 'Basic groom + haircut',
+    category: 'Grooming',
+    icon: 'grooming',
+    targetSpecies: 'Dog',
+    isActive: true,
+    subServices: [],
+    prices: {
+      'TINY (≤ 5kg)': { price: 900, duration: 120 },
+      'SMALL (5.1-10kg)': { price: 1100, duration: 135 },
+      'MEDIUM (10.1-15kg)': { price: 1300, duration: 150 },
+      'LARGE (15.1-25kg)': { price: 2000, duration: 180 },
+      'GIANT (25.1-40kg)': { price: 2500, duration: 210 }
     }
   }
 ];
 
 const INITIAL_VENDORS: Vendor[] = [
-  { id: 'v1', name: 'PetCare Co., Ltd.', contactPerson: 'Somchai', phone: '02-111-2222', email: 'sales@petcare.com', notes: 'Main supplier for shampoos' },
-  { id: 'v2', name: 'Organic Pet Treats', contactPerson: 'Mary', phone: '089-888-7777', email: 'mary@organic.com', notes: 'Consignment partner for healthy snacks' }
+  { id: 'v1', name: 'PetCare Co., Ltd.', contactPerson: 'Somchai', phone: '02-111-2222', email: 'sales@petcare.com', notes: 'Main supplier for shampoos' }
 ];
 
 const INITIAL_INVENTORY: InventoryItem[] = [
-  { id: 'prod-1', name: 'Organic Shampoo', barcode: '8850000001', stock: 15, minStock: 5, price: 450, costPrice: 280, unit: 'Bottle', category: 'Supplies', isConsignment: false },
-  { id: 'prod-2', name: 'Consigned Dog Treats', barcode: '8850000002', stock: 24, minStock: 10, price: 180, unit: 'Pack', category: 'Food', isConsignment: true, vendorId: 'v2', consignmentRate: 70 }
+  { id: 'prod-1', name: 'Organic Shampoo', barcode: '8850000001', stock: 15, minStock: 5, price: 450, costPrice: 280, unit: 'Bottle', category: 'Supplies', isConsignment: false }
 ];
 
 export const useStore = create<AppState>()((set, get, ...args) => ({
   // Business Profile
   language: 'th',
   setLanguage: (lang) => set({ language: lang }),
-  shopName: "Tactile Sanctuary",
+  shopName: "Mellow Fellow",
   shopLogo: null,
   shopAddress: "123 Pet Street, Bangkok, Thailand",
   shopPhone: "02-xxx-xxxx",
-  shopLineId: "@tactilesanctuary",
-  receiptHeader: "Tactile Sanctuary - Premium Pet Care",
+  shopLineId: "@mellowfellow",
+  receiptHeader: "Mellow Fellow - Premium Pet Care",
   receiptFooter: "Thank you for trusting us with your furry friend!",
   receiptPaperSize: '58mm',
   currency: "฿",
@@ -97,7 +143,6 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
   updateBusinessProfile: (profile) => set((state) => ({ ...state, ...profile })),
 
   addToCart: (item) => set((state) => {
-    // If it's a product and already in cart for same pet (or no pet), merge quantity
     if (item.type === 'Product') {
       const existingIdx = state.cart.findIndex(i => i.id === item.id && i.type === 'Product');
       if (existingIdx > -1) {
@@ -182,7 +227,6 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
       id: 'st-' + Math.random().toString(36).substr(2, 9)
     };
     
-    // Update inventory levels based on stock take
     const newInventory = state.inventory.map(item => {
       const takeItem = record.items.find(i => i.itemId === item.id);
       if (takeItem) {
