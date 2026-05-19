@@ -24,7 +24,7 @@ export interface IntakeRecord {
     dislikes: string;
     additionalConcerns: string;
   };
-  signature?: string; // base64 image
+  signature?: string; // base4 image
 }
 
 export interface InventoryItem {
@@ -241,12 +241,17 @@ export interface ServicePriceInfo {
   duration: number;
 }
 
+export interface SubService {
+  name: string;
+  price: number;
+}
+
 export interface Service {
   id: string;
   icon: ServiceIcon;
   title: string;
   description: string;
-  subServices: string[];
+  subServices: SubService[];
   category: string;
   targetSpecies: 'Dog' | 'Cat';
   prices: Record<string, ServicePriceInfo>;

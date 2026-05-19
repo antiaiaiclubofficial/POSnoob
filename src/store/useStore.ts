@@ -26,7 +26,11 @@ const INITIAL_SERVICES: Service[] = [
     icon: 'bath',
     targetSpecies: 'Dog',
     isActive: true,
-    subServices: ['ตัดเล็บ', 'เช็ดหู', 'เป่าขน'],
+    subServices: [
+      { name: 'ตัดเล็บ', price: 0 },
+      { name: 'เช็ดหู', price: 0 },
+      { name: 'แปรงฟัน (เพิ่ม)', price: 100 }
+    ],
     prices: {
       'Small (<10kg)': { price: 350, duration: 45 },
       'Medium (10-25kg)': { price: 500, duration: 60 },

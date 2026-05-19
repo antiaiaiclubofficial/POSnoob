@@ -22,20 +22,26 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
   const availableSizes = useMemo(() => Object.keys(service.prices), [service.prices]);
 
   useEffect(() => {
-    setSelectedItems(subServices);
+    // โดยเริ่มต้นเลือกทั้งหมด
+    setSelectedItems(subServices.map(s => s.name));
   }, [subServices]);
 
   useEffect(() => {
     if (availableSizes.length > 0) {
       setSelectedSize(availableSizes[0]);
-    } else {
-      setSelectedSize('');
     }
   }, [activePet?.id, service.id, availableSizes]);
 
   if (activePet && activePet.species !== service.targetSpecies) return null;
 
-  const currentPrice = selectedSize ? service.prices[selectedSize].price : 0;
+  // คำนวณราคา: ราคาพื้นฐาน + ราคาส่วนต่างของรายการย่อยที่เลือก
+  const basePrice = selectedSize ? service.prices[selectedSize].price : 0;
+  const extraPrice = selectedItems.reduce((acc, name) => {
+    const sub = subServices.find(s => s.name === name);
+    return acc + (sub?.price || 0);
+  }, 0);
+  
+  const totalPrice = basePrice + extraPrice;
   const isFixedPrice = availableSizes.length <= 1;
 
   const getIconComponent = (iconName: ServiceIcon) => {
@@ -57,9 +63,9 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
 
   const IconComponent = getIconComponent(service.icon);
 
-  const toggleItem = (item: string) => {
+  const toggleItem = (name: string) => {
     setSelectedItems(prev => 
-      prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
+      prev.includes(name) ? prev.filter(i => i !== name) : [...prev, name]
     );
   };
 
@@ -69,21 +75,16 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       return;
     }
 
-    if (selectedItems.length === 0 && subServices.length > 0) {
-      toast.error("Please select at least one service item");
-      return;
-    }
-
     const itemTitle = isFixedPrice ? service.title : `${service.title} (${selectedSize})`;
     const selectedText = (selectedItems.length === subServices.length || subServices.length === 0)
       ? "" 
-      : ` (Excl: ${subServices.filter(s => !selectedItems.includes(s)).join(', ')})`;
+      : ` (Extras: ${selectedItems.join(', ')})`;
 
     addToCart({
       id: service.id,
       icon: service.icon,
       title: itemTitle + selectedText,
-      price: currentPrice,
+      price: totalPrice,
       quantity: 1,
       petId: activePet.id,
       petName: activePet.name,
@@ -102,10 +103,8 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
           <IconComponent className="w-7 h-7" />
         </div>
         <div className="text-right">
-          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">
-            {isFixedPrice ? 'Fixed Price' : 'Starting From'}
-          </p>
-          <p className="text-3xl font-black text-[#1A1F3D]">{currency}{currentPrice.toLocaleString()}</p>
+          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Total Price</p>
+          <p className="text-3xl font-black text-[#1A1F3D]">{currency}{totalPrice.toLocaleString()}</p>
         </div>
       </div>
 
@@ -115,28 +114,33 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
 
       {subServices.length > 0 && (
         <div className="space-y-3 mb-8 flex-1">
-          <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-1">Included Services</p>
-          <div className="flex flex-wrap gap-2">
+          <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest px-1">Options & Add-ons</p>
+          <div className="grid grid-cols-1 gap-2">
             {subServices.map((item) => (
               <div 
-                key={item} 
+                key={item.name} 
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-xl transition-all cursor-pointer border text-[10px] font-bold",
-                  selectedItems.includes(item) 
+                  "flex items-center justify-between px-4 py-3 rounded-xl transition-all cursor-pointer border text-[10px] font-bold",
+                  selectedItems.includes(item.name) 
                     ? "bg-blue-50/50 border-blue-100 text-[#1A1F3D]" 
                     : "bg-white border-gray-50 text-gray-400 opacity-60"
                 )}
-                onClick={() => toggleItem(item)}
+                onClick={() => toggleItem(item.name)}
               >
-                <div className={cn(
-                  "w-3.5 h-3.5 rounded-md border flex items-center justify-center transition-all",
-                  selectedItems.includes(item) 
-                    ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" 
-                    : "border-gray-200"
-                )}>
-                  {selectedItems.includes(item) && <Check size={8} strokeWidth={4} />}
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-4 h-4 rounded-md border flex items-center justify-center transition-all",
+                    selectedItems.includes(item.name) ? "bg-[#1A1F3D] border-[#1A1F3D] text-white" : "border-gray-200"
+                  )}>
+                    {selectedItems.includes(item.name) && <Check size={10} strokeWidth={4} />}
+                  </div>
+                  <span className="capitalize">{item.name}</span>
                 </div>
-                <span className="capitalize">{item}</span>
+                {item.price > 0 && (
+                  <span className={cn("font-black", selectedItems.includes(item.name) ? "text-blue-600" : "text-gray-300")}>
+                    +{currency}{item.price}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -151,9 +155,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
               onClick={() => setSelectedSize(size)}
               className={cn(
                 "flex-1 min-w-[60px] py-2 px-2 text-[9px] font-black uppercase rounded-[18px] transition-all",
-                selectedSize === size 
-                  ? "bg-white text-[#1A1F3D] shadow-sm border border-gray-100" 
-                  : "text-gray-400 hover:text-gray-600"
+                selectedSize === size ? "bg-white text-[#1A1F3D] shadow-sm border border-gray-100" : "text-gray-400"
               )}
             >
               {size.split(' ')[0]}
@@ -164,7 +166,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
 
       <button 
         onClick={handleAdd}
-        className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl shadow-[#1A1F3D]/10 mt-auto"
+        className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl shadow-[#1A1F3D]/10 mt-auto"
       >
         <Plus size={20} /> {activePet ? `Add for ${activePet.name}` : 'Add Service'}
       </button>
