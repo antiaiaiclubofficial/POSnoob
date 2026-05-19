@@ -8,7 +8,11 @@ import CustomerSearch from '@/components/CustomerSearch';
 import CustomerModal from '@/components/CustomerModal';
 import GroomingServiceModal from '@/components/GroomingServiceModal';
 import AddOnModal from '@/components/AddOnModal';
-import { UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star } from 'lucide-react';
+import { 
+  UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
+  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, 
+  Clock, Zap, Star, Smile, Droplets, Eye, Brush 
+} from 'lucide-react';
 import { useStore, QueueItem } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
@@ -19,8 +23,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 
 const QUICK_ADDONS = [
-  { id: 'teeth', name: 'แปรงฟัน', defaultPrice: 100, icon: Zap },
-  { id: 'mud', name: 'สปาโคลน', defaultPrice: 150, icon: Star },
+  { id: 'face', name: 'Face Cleaning', defaultPrice: 150, icon: Smile },
+  { id: 'teeth', name: 'Tooth Brushing', defaultPrice: 100, icon: Zap },
+  { id: 'anal', name: 'Anal Glands', defaultPrice: 100, icon: Droplets },
+  { id: 'nails', name: 'Nail Clippings', defaultPrice: 100, icon: Scissors },
+  { id: 'eyes_ears', name: 'Eye & Ear Cleaning', defaultPrice: 100, icon: Eye },
+  { id: 'detangle', name: 'Detangling', defaultPrice: 100, icon: Brush },
 ];
 
 const Index = () => {
@@ -168,19 +176,19 @@ const Index = () => {
                  <Zap size={14} className="text-amber-500" />
                  <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Quick Add-ons</span>
                </div>
-               <div className="flex gap-3">
+               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {QUICK_ADDONS.map(addon => (
                     <button 
                       key={addon.id}
                       onClick={() => setSelectedAddOn(addon)}
-                      className="bg-white border border-gray-100 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-sm hover:shadow-md transition-all active:scale-95 group"
+                      className="bg-white border border-gray-100 px-6 py-4 rounded-3xl flex items-center gap-4 shadow-sm hover:shadow-md transition-all active:scale-95 group shrink-0"
                     >
-                      <div className="w-8 h-8 bg-[#F5F6FA] rounded-xl flex items-center justify-center text-[#1A1F3D] group-hover:bg-[#1A1F3D] group-hover:text-[#D9ED5F] transition-colors">
-                        <addon.icon size={16} />
+                      <div className="w-10 h-10 bg-[#F5F6FA] rounded-2xl flex items-center justify-center text-[#1A1F3D] group-hover:bg-[#1A1F3D] group-hover:text-[#D9ED5F] transition-colors">
+                        <addon.icon size={20} />
                       </div>
                       <div className="text-left">
-                        <p className="text-[10px] font-black text-[#1A1F3D] uppercase">{addon.name}</p>
-                        <p className="text-[9px] font-bold text-gray-400">{currency}{addon.defaultPrice}</p>
+                        <p className="text-[10px] font-black text-[#1A1F3D] uppercase leading-tight">{addon.name}</p>
+                        <p className="text-[9px] font-bold text-gray-400 mt-0.5">{currency}{addon.defaultPrice}</p>
                       </div>
                     </button>
                   ))}
