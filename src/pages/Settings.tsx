@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout, Eye, MapPin, Globe, Package
+  Store, Save, ShieldCheck, Trash2, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout, Eye, MapPin, Globe, Package, Zap
 } from 'lucide-react';
-import { useStore, TierRule, MembershipLevel, Service, PackageTemplate } from '@/store/useStore';
+import { useStore, TierRule, MembershipLevel, Service, PackageTemplate, AddonItem } from '@/store/useStore';
 import { translations, Language } from '@/utils/translations';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,7 @@ import TimePicker from '@/components/TimePicker';
 import BroadcastModal from '@/components/BroadcastModal';
 import ReceiptPreview from '@/components/ReceiptPreview';
 import PackageModal from '@/components/PackageModal';
+import AddonSettingsModal from '@/components/AddonSettingsModal';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 import { format } from 'date-fns';
@@ -26,6 +27,7 @@ const Settings = () => {
     lineLiffId, lineChannelToken,
     updateBusinessProfile,
     services, deleteService, toggleServiceActive,
+    addons, deleteAddon,
     packageTemplates, deletePackageTemplate,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings,
     language, setLanguage
@@ -62,6 +64,8 @@ const Settings = () => {
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [selectedAddon, setSelectedAddon] = useState<AddonItem | null>(null);
+  const [isAddonModalOpen, setIsAddonModalOpen] = useState(false);
   const [serviceQuery, setServiceQuery] = useState('');
   const [speciesTab, setSpeciesTab] = useState<'Dog' | 'Cat'>('Dog');
 
@@ -90,6 +94,16 @@ const Settings = () => {
   const handleEditService = (service: Service) => {
     setSelectedService(service);
     setIsServiceModalOpen(true);
+  };
+
+  const handleAddAddon = () => {
+    setSelectedAddon(null);
+    setIsAddonModalOpen(true);
+  };
+
+  const handleEditAddon = (addon: AddonItem) => {
+    setSelectedAddon(addon);
+    setIsAddonModalOpen(true);
   };
 
   const handleSaveAll = () => {
@@ -211,9 +225,80 @@ const Settings = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-10">
-             <div className="flex flex-col sm:flex-row justify-between items-center gap-6"><div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm shrink-0"><button onClick={() => setSpeciesTab('Dog')} className={cn("px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all", speciesTab === 'Dog' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400")}><Dog size={14} /> {language === 'th' ? 'สุนัข' : 'DOGS'}</button><button onClick={() => setSpeciesTab('Cat')} className={cn("px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all", speciesTab === 'Cat' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400")}><Cat size={14} /> {language === 'th' ? 'แมว' : 'CATS'}</button></div><div className="flex items-center gap-4 w-full sm:w-auto"><div className="relative flex-1 sm:w-64"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} /><input type="text" className="bg-white border border-gray-100 pl-10 pr-6 py-3 rounded-2xl text-xs font-bold w-full shadow-sm" placeholder={t.searchServices} value={serviceQuery} onChange={e => setServiceQuery(e.target.value)} /></div><button onClick={handleAddService} className="bg-[#D9ED5F] text-[#1A1F3D] p-3 rounded-2xl shadow-lg shadow-[#D9ED5F]/20 hover:scale-105 active:scale-95 transition-all"><Plus size={20} /></button></div></div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{filteredServices.map((service) => (<div key={service.id} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between group transition-all hover:shadow-md"><div className="flex items-center gap-4"><div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0", service.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600")}><Scissors size={20} /></div><div><h4 className="text-sm font-black text-[#1A1F3D]">{service.title}</h4><p className="text-[10px] text-gray-400 font-bold uppercase">{service.category}</p></div></div><div className="flex items-center gap-4"><Switch checked={service.isActive} onCheckedChange={() => toggleServiceActive(service.id)} className="data-[state=checked]:bg-[#1A1F3D]" /><button onClick={() => handleEditService(service)} className="p-2 text-gray-300 hover:text-[#1A1F3D] transition-colors"><Edit3 size={18} /></button><button onClick={() => deleteService(service.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={18} /></button></div></div>))}</div>
+          <TabsContent value="services" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-12">
+             <div className="space-y-6">
+               <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
+                 <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+                   <button onClick={() => setSpeciesTab('Dog')} className={cn("px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all", speciesTab === 'Dog' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400")}><Dog size={14} /> {language === 'th' ? 'สุนัข' : 'DOGS'}</button>
+                   <button onClick={() => setSpeciesTab('Cat')} className={cn("px-6 py-2.5 rounded-xl text-[10px] font-black flex items-center gap-2 transition-all", speciesTab === 'Cat' ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400")}><Cat size={14} /> {language === 'th' ? 'แมว' : 'CATS'}</button>
+                 </div>
+                 <div className="flex items-center gap-4 w-full sm:w-auto">
+                   <div className="relative flex-1 sm:w-64">
+                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                     <input type="text" className="bg-white border border-gray-100 pl-10 pr-6 py-3 rounded-2xl text-xs font-bold w-full shadow-sm" placeholder={t.searchServices} value={serviceQuery} onChange={e => setServiceQuery(e.target.value)} />
+                   </div>
+                   <button onClick={handleAddService} className="bg-[#D9ED5F] text-[#1A1F3D] p-3 rounded-2xl shadow-lg shadow-[#D9ED5F]/20 hover:scale-105 active:scale-95 transition-all"><Plus size={20} /></button>
+                 </div>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {filteredServices.map((service) => (
+                   <div key={service.id} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between group transition-all hover:shadow-md">
+                     <div className="flex items-center gap-4">
+                       <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0", service.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600" : "bg-pink-50 text-pink-600")}>
+                         <Scissors size={20} />
+                       </div>
+                       <div><h4 className="text-sm font-black text-[#1A1F3D]">{service.title}</h4><p className="text-[10px] text-gray-400 font-bold uppercase">{service.category}</p></div>
+                     </div>
+                     <div className="flex items-center gap-4">
+                       <Switch checked={service.isActive} onCheckedChange={() => toggleServiceActive(service.id)} className="data-[state=checked]:bg-[#1A1F3D]" />
+                       <button onClick={() => handleEditService(service)} className="p-2 text-gray-300 hover:text-[#1A1F3D] transition-colors"><Edit3 size={18} /></button>
+                       <button onClick={() => deleteService(service.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             </div>
+
+             {/* Global Add-ons Section */}
+             <div className="pt-12 border-t border-gray-100 space-y-6">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
+                       <Zap size={20} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Global Add-ons</h2>
+                      <p className="text-xs text-gray-400">Quick extra services available in POS</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleAddAddon}
+                    className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg"
+                  >
+                    <Plus size={16} /> Add Add-on
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {addons.map((addon) => (
+                    <div key={addon.id} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center">
+                           <Zap size={18} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-[#1A1F3D]">{addon.name}</h4>
+                          <p className="text-[10px] text-blue-600 font-bold uppercase">{currency}{addon.price.toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button onClick={() => handleEditAddon(addon)} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={16}/></button>
+                         <button onClick={() => deleteAddon(addon.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+             </div>
           </TabsContent>
 
           <TabsContent value="membership" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -223,6 +308,7 @@ const Settings = () => {
       </div>
 
       {isServiceModalOpen && <ServiceModal service={selectedService} defaultSpecies={speciesTab} onClose={() => setIsServiceModalOpen(false)} />}
+      {isAddonModalOpen && <AddonSettingsModal addon={selectedAddon} onClose={() => setIsAddonModalOpen(false)} />}
       {isBroadcastModalOpen && <BroadcastModal onClose={() => setIsBroadcastModalOpen(false)} />}
       {isReceiptPreviewOpen && <ReceiptPreview shopName={localShopName} shopLogo={localShopLogo} shopAddress={localShopAddress} shopPhone={localShopPhone} header={localReceiptHeader} footer={localReceiptFooter} paperSize={localReceiptPaperSize} onClose={() => setIsReceiptPreviewOpen(false)} />}
       {isPackageModalOpen && <PackageModal onClose={() => setIsPackageModalOpen(false)} />}

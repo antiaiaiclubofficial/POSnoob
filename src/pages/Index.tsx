@@ -10,9 +10,9 @@ import GroomingServiceModal from '@/components/GroomingServiceModal';
 import AddOnModal from '@/components/AddOnModal';
 import { 
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
-  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush
+  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath
 } from 'lucide-react';
-import { useStore, QueueItem } from '@/store/useStore';
+import { useStore, QueueItem, ServiceIcon } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -21,12 +21,22 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 
-const QUICK_ADDONS = [
-  { id: 'brushing', name: 'แปรงฟัน', defaultPrice: 100, icon: Brush, color: 'text-blue-500', bg: 'bg-blue-50' },
-  { id: 'mud-spa', name: 'สปาโคลน', defaultPrice: 250, icon: Sparkles, color: 'text-purple-500', bg: 'bg-purple-50' },
-  { id: 'nail-file', name: 'ตะไบเล็บ', defaultPrice: 80, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
-  { id: 'perfume', name: 'ฉีดน้ำหอม', defaultPrice: 50, icon: Heart, color: 'text-pink-500', bg: 'bg-pink-50' },
-];
+const getIcon = (iconName: ServiceIcon) => {
+  switch(iconName) {
+    case 'grooming': return Scissors;
+    case 'bath': return Bath;
+    case 'spa': return Sparkles;
+    case 'nail': return Zap;
+    case 'dry': return Wind;
+    case 'brush': return Brush;
+    case 'health': return Stethoscope;
+    case 'hotel': return Home;
+    case 'love': return Heart;
+    case 'food': return Bone;
+    case 'premium': return Award;
+    default: return Zap;
+  }
+};
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -34,6 +44,7 @@ const Index = () => {
     selectedOwner, 
     activePet, 
     services, 
+    addons,
     inventory,
     selectOwner, 
     setActivePet, 
@@ -235,25 +246,36 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="addons" className="m-0 h-full">
-               <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
-                  {QUICK_ADDONS.map(addon => (
-                    <button
-                      key={addon.id}
-                      onClick={() => setSelectedAddOn(addon)}
-                      className="bg-white rounded-[40px] p-8 border border-transparent hover:border-gray-100 hover:shadow-2xl transition-all duration-300 flex flex-col items-center text-center group"
-                    >
-                      <div className={cn("w-20 h-20 rounded-[28px] flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:scale-110", addon.bg)}>
-                        <addon.icon className={cn("w-10 h-10", addon.color)} />
-                      </div>
-                      <h3 className="text-xl font-black text-[#1A1F3D] mb-1">{addon.name}</h3>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">Service Add-on</p>
-                      <div className="mt-auto w-full pt-6 border-t border-gray-50 flex justify-between items-center">
-                        <span className="text-[10px] font-black text-gray-300 uppercase">Default</span>
-                        <span className="text-lg font-black text-[#1A1F3D]">฿{addon.defaultPrice}</span>
-                      </div>
-                    </button>
-                  ))}
-               </div>
+               {addons.length === 0 ? (
+                 <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+                    <Zap size={48} className="mb-4" />
+                    <h2 className="text-xl font-black">No Add-ons Configured</h2>
+                    <p className="text-xs font-bold uppercase">Go to Settings to add global add-ons</p>
+                 </div>
+               ) : (
+                 <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
+                    {addons.map(addon => {
+                      const Icon = getIcon(addon.icon);
+                      return (
+                        <button
+                          key={addon.id}
+                          onClick={() => setSelectedAddOn({ ...addon, defaultPrice: addon.price, icon: Icon })}
+                          className="bg-white rounded-[40px] p-8 border border-transparent hover:border-gray-100 hover:shadow-2xl transition-all duration-300 flex flex-col items-center text-center group"
+                        >
+                          <div className={cn("w-20 h-20 rounded-[28px] flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:scale-110 bg-blue-50")}>
+                            <Icon className={cn("w-10 h-10 text-blue-600")} />
+                          </div>
+                          <h3 className="text-xl font-black text-[#1A1F3D] mb-1">{addon.name}</h3>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">Service Add-on</p>
+                          <div className="mt-auto w-full pt-6 border-t border-gray-50 flex justify-between items-center">
+                            <span className="text-[10px] font-black text-gray-300 uppercase">Default</span>
+                            <span className="text-lg font-black text-[#1A1F3D]">฿{addon.price}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                 </div>
+               )}
             </TabsContent>
 
             <TabsContent value="products" className="m-0 h-full">

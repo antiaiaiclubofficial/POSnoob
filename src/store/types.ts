@@ -7,6 +7,13 @@ export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package';
 export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
 export type BookingType = 'Appointment' | 'Walk-in';
 
+export interface AddonItem {
+  id: string;
+  name: string;
+  price: number;
+  icon: ServiceIcon;
+}
+
 export interface IntakeRecord {
   id: string;
   date: string;
@@ -320,6 +327,7 @@ export interface AppState {
   lineChannelToken: string;
   
   services: Service[];
+  addons: AddonItem[];
   packageTemplates: PackageTemplate[];
   customers: Customer[];
   setCustomers: (customers: Customer[]) => void;
@@ -376,6 +384,10 @@ export interface AppState {
   updateService: (id: string, service: Partial<Service>) => void;
   deleteService: (id: string) => void;
   toggleServiceActive: (id: string) => void;
+
+  addAddon: (addon: Omit<AddonItem, 'id'>) => void;
+  updateAddon: (id: string, addon: Partial<AddonItem>) => void;
+  deleteAddon: (id: string) => void;
   
   addInventoryItem: (item: Omit<InventoryItem, 'id'>) => void;
   updateInventoryItem: (id: string, item: Partial<InventoryItem>, reason?: string) => void;

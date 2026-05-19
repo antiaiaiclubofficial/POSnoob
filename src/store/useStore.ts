@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage, StockMovement, StockTakeRecord, IntakeRecord } from './types';
+import { AppState, Service, InventoryItem, Vendor, TierRule, Staff, PackageUsage, Transaction, TransactionItem, CustomerPackage, StockMovement, StockTakeRecord, IntakeRecord, AddonItem } from './types';
 import { createAuthSlice } from './slices/authSlice';
 import { createCRMSlice } from './slices/crmSlice';
 
@@ -14,6 +14,13 @@ const INITIAL_TIER_RULES: TierRule[] = [
 
 const INITIAL_STAFF: Staff[] = [
   { id: 's1', name: 'Alex Smith', role: 'Admin', phone: '081-111-2222', status: 'Active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop', username: 'admin', password: 'password', commissionRate: 10 },
+];
+
+const INITIAL_ADDONS: AddonItem[] = [
+  { id: 'addon-1', name: 'แปรงฟัน', price: 100, icon: 'brush' },
+  { id: 'addon-2', name: 'สปาโคลน', price: 250, icon: 'spa' },
+  { id: 'addon-3', name: 'ตะไบเล็บ', price: 80, icon: 'nail' },
+  { id: 'addon-4', name: 'ฉีดน้ำหอม', price: 50, icon: 'love' },
 ];
 
 const INITIAL_SERVICES: Service[] = [
@@ -52,42 +59,6 @@ const INITIAL_SERVICES: Service[] = [
       'LARGE (15.1-25kg)': { price: 1300, duration: 120 },
       'GIANT (25.1-40kg)': { price: 1600, duration: 150 }
     }
-  },
-  {
-    id: 'svc-full-short',
-    title: 'Full Groom',
-    description: 'Basic groom + haircut',
-    category: 'Grooming',
-    icon: 'grooming',
-    targetSpecies: 'Dog',
-    coatType: 'Short',
-    isActive: true,
-    subServices: [],
-    prices: {
-      'TINY (≤ 5kg)': { price: 650, duration: 90 },
-      'SMALL (5.1-10kg)': { price: 850, duration: 105 },
-      'MEDIUM (10.1-15kg)': { price: 1000, duration: 120 },
-      'LARGE (15.1-25kg)': { price: 1200, duration: 150 },
-      'GIANT (25.1-40kg)': { price: 1700, duration: 180 }
-    }
-  },
-  {
-    id: 'svc-full-long',
-    title: 'Full Groom',
-    description: 'Basic groom + haircut',
-    category: 'Grooming',
-    icon: 'grooming',
-    targetSpecies: 'Dog',
-    coatType: 'Long',
-    isActive: true,
-    subServices: [],
-    prices: {
-      'TINY (≤ 5kg)': { price: 900, duration: 120 },
-      'SMALL (5.1-10kg)': { price: 1100, duration: 135 },
-      'MEDIUM (10.1-15kg)': { price: 1300, duration: 150 },
-      'LARGE (15.1-25kg)': { price: 2000, duration: 180 },
-      'GIANT (25.1-40kg)': { price: 2500, duration: 210 }
-    }
   }
 ];
 
@@ -124,6 +95,7 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
 
   // Operations State
   services: INITIAL_SERVICES,
+  addons: INITIAL_ADDONS,
   packageTemplates: [],
   inventory: INITIAL_INVENTORY,
   vendors: INITIAL_VENDORS,
@@ -180,6 +152,10 @@ export const useStore = create<AppState>()((set, get, ...args) => ({
   updateService: (id, serviceData) => set((state) => ({ services: state.services.map(s => s.id === id ? { ...s, ...serviceData } : s) })),
   deleteService: (id) => set((state) => ({ services: state.services.filter(s => s.id !== id) })),
   toggleServiceActive: (id) => set((state) => ({ services: state.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
+
+  addAddon: (addonData) => set((state) => ({ addons: [...state.addons, { ...addonData, id: 'addon-' + Math.random().toString(36).substr(2, 5) }] })),
+  updateAddon: (id, addonData) => set((state) => ({ addons: state.addons.map(a => a.id === id ? { ...a, ...addonData } : a) })),
+  deleteAddon: (id) => set((state) => ({ addons: state.addons.filter(a => a.id !== id) })),
 
   addInventoryItem: (item) => set((state) => ({ inventory: [...state.inventory, { ...item, id: 'prod-' + Math.random().toString(36).substr(2, 5) }] })),
   
