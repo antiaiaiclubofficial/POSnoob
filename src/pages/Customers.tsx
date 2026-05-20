@@ -31,6 +31,7 @@ const Customers = () => {
   const [isLineModalOpen, setIsLineModalOpen] = useState(false);
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
 
+  // แก้ไข Query ให้ดึงข้อมูลจากตารางที่ถูกต้อง
   const { isLoading, refetch } = useQuery({
     queryKey: ['customers-list'],
     queryFn: async () => {
@@ -43,58 +44,53 @@ const Customers = () => {
           display_name,
           phone,
           email,
-          line_user_id,
+          line_id,
+          points,
+          total_spent,
+          credit_balance,
           pets (
             id,
             name,
-            type,
+            species,
             breed,
-            age,
-            weight,
-            image_url,
-            medical_condition,
-            precautions
-          ),
-          store_customers (
-            points,
-            tier,
-            total_spent,
-            credit_balance
+            birthday,
+            weight_history,
+            notes,
+            image
           )
         `);
       
       if (error) {
+        console.error("Supabase error:", error);
         toast.error("Failed to fetch customers");
         throw error;
       }
 
       const transformed: Customer[] = data.map((item: any) => {
-        const storeInfo = item.store_customers?.[0] || {};
-        
         return {
           id: item.id,
-          name: item.first_name ? `${item.first_name} ${item.last_name || ''}`.trim() : (item.display_name || 'Unnamed'),
+          name: item.display_name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Unnamed',
           firstName: item.first_name,
           lastName: item.last_name,
           phone: item.phone || '-',
           email: item.email || '-',
-          lineId: item.line_user_id,
-          membership: (storeInfo.tier?.charAt(0).toUpperCase() + storeInfo.tier?.slice(1)) as MembershipLevel || 'Standard',
-          points: storeInfo.points || 0,
-          totalSpent: storeInfo.total_spent || 0,
-          creditBalance: storeInfo.credit_balance || 0,
-          creditHistory: [], // Initialize as empty array
+          lineId: item.line_id,
+          membership: 'Standard', // จะถูกคำนวณใหม่ใน store หรือเก็บเพิ่มใน DB
+          points: item.points || 0,
+          totalSpent: item.total_spent || 0,
+          creditBalance: item.credit_balance || 0,
+          creditHistory: [],
           packages: [],
           pets: (item.pets || []).map((p: any) => ({
             id: p.id,
             name: p.name,
-            species: p.type === 'cat' ? 'Cat' : 'Dog',
+            species: p.species || 'Dog',
             breed: p.breed || '-',
-            birthday: p.age || '',
-            weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: p.weight }] : [],
+            birthday: p.birthday || '',
+            weightHistory: p.weight_history || [],
             serviceHistory: [],
-            notes: p.medical_condition || p.precautions || '',
-            image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+            notes: p.notes || '',
+            image: p.image || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
           }))
         };
       });
@@ -127,7 +123,7 @@ const Customers = () => {
       <div className="flex-1 flex items-center justify-center bg-[#F8F9FD]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-          <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Loading Database...</p>
+          <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Syncing Data...</p>
         </div>
       </div>
     );
