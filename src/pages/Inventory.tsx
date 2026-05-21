@@ -5,7 +5,7 @@ import {
   Package, Plus, Search, Edit3, Trash2, History, 
   AlertTriangle, Users, DollarSign, Clock, ArrowUpRight, 
   ArrowDownRight, CheckCircle2, FileText, LayoutGrid, 
-  PackagePlus, ClipboardCheck, BarChart3, Receipt, Tag, FileSearch
+  PackagePlus, ClipboardCheck, BarChart3, Receipt, Tag, FileSearch, Download
 } from 'lucide-react';
 import { useStore, InventoryItem, Vendor, StockMovement, StockTakeRecord } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -377,17 +377,27 @@ const Inventory = () => {
            </div>
         )}
 
-        {/* Module 6: PDF History (Simulated) */}
+        {/* Module 6: PDF History (List View) */}
         {activeTab === 'pdf' && (
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1,2,3].map(i => (
-                 <div key={i} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-lg transition-all">
-                    <div className="w-14 h-14 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center shrink-0"><FileText size={24} /></div>
-                    <div>
-                       <p className="font-black text-[#1A1F3D]">Inventory_Report_0{i}_24</p>
-                       <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Generated: 0{i}/04/24</p>
-                       <button className="text-[9px] font-black text-blue-500 uppercase tracking-widest mt-4 hover:underline">Download PDF</button>
+           <div className="flex flex-col gap-4">
+              {[1,2,3,4,5].map(i => (
+                 <div key={i} className="bg-white px-8 py-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:shadow-md transition-all">
+                    <div className="flex items-center gap-6">
+                       <div className="w-12 h-12 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center shrink-0">
+                          <FileText size={22} />
+                       </div>
+                       <div className="min-w-0">
+                          <p className="font-black text-[#1A1F3D] text-base sm:text-lg truncate">Inventory_Report_Monthly_Summary_0{i}_May_2024</p>
+                          <div className="flex items-center gap-3 mt-1">
+                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Generated: 0{i}/05/24</p>
+                             <div className="w-1 h-1 bg-gray-200 rounded-full" />
+                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">1.4 MB</p>
+                          </div>
+                       </div>
                     </div>
+                    <button className="bg-[#1A1F3D] text-[#D9ED5F] px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-[#1A1F3D]/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 self-start sm:self-auto">
+                       <Download size={14} /> Download PDF
+                    </button>
                  </div>
               ))}
            </div>
