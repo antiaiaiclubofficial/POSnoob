@@ -27,6 +27,7 @@ export const translations = {
     salesReport: "Sales Report",
     pdfHistory: "PDF Report History",
     vendorManagement: "Manage Partners",
+    addVendor: "Add Partner", // Added missing key
     
     // Inventory & Consignment
     stockManagement: "Stock Management",
@@ -286,6 +287,7 @@ export const translations = {
     salesReport: "รายงานยอดขาย",
     pdfHistory: "ประวัติรายงาน PDF",
     vendorManagement: "จัดการคู่ค้า",
+    addVendor: "เพิ่มคู่ค้า", // Added missing key
 
     // Inventory & Consignment
     stockManagement: "จัดการสต็อกสินค้า",

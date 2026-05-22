@@ -8,7 +8,7 @@ interface PetProfileRecordProps {
 }
 
 const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
-  const [selectedIntake, setSelectedIntake] = useState<any>(null); // Added state
+  const [selectedIntake, setSelectedIntake] = useState<any>(null);
 
   const mockItem: QueueItem = {
     id: selectedIntake?.queueItemId || '',
@@ -24,7 +24,8 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
     duration: 60,
     totalAmount: 0,
     status: 'Completed',
-    isPaid: true
+    isPaid: true,
+    image: pet.image // Satisfying mandatory image field
   };
 
   return (
