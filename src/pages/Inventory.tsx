@@ -6,7 +6,7 @@ import {
   Search, Edit3, Package, Download, Save, Printer, Trash2, ArrowRight,
   TrendingUp, DollarSign, PieChart as PieIcon, LineChart as LineIcon, BarChart as BarIcon,
   ChevronRight, Camera, CheckCircle2, Plus, Tag, Building2, Filter,
-  AlertCircle, ArrowUpRight, RotateCcw, History, ArrowDown, ArrowUp, Info, Eye, Clock
+  AlertCircle, ArrowUpRight, RotateCcw, History, ArrowDown, ArrowUp, Info, Eye, Clock, X
 } from 'lucide-react';
 import { useStore, InventoryItem, StockLog, Partner, ReportHistory } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -28,26 +28,23 @@ const Inventory = () => {
   
   const [activeTab, setActiveTab] = useState<WmsTab>('master');
   
-  // States for Master Tab
+  // States for Report Tab (Filters)
+  const [repPartnerFilter, setRepPartnerFilter] = useState('All');
+  const [repCategoryFilter, setRepCategoryFilter] = useState('All');
+  const [repStatusFilter, setRepStatusFilter] = useState('All');
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+
+  // Other States
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
-
-  // States for Check Tab
   const [checkSearch, setCheckSearch] = useState('');
   const [checkStatusFilter, setCheckStatusFilter] = useState<'All' | 'Low' | 'Out'>('All');
-
-  // States for Adjust Tab
   const [adjustSearch, setAdjustSearch] = useState('');
   const [selectedAdjustId, setSelectedAdjustId] = useState('');
   const [adjustMode, setAdjustMode] = useState<'Add' | 'Set'>('Add');
   const [adjustQty, setAdjustQty] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
-
-  // States for Report Tab (Filters)
-  const [repPartnerFilter, setRepPartnerFilter] = useState('All');
-  const [repCategoryFilter, setRepCategoryFilter] = useState('All');
-  const [repStatusFilter, setRepStatusFilter] = useState('All');
 
   // Modals
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -93,8 +90,8 @@ const Inventory = () => {
 
   const selectedItemForAdjust = inventory.find(i => i.id === selectedAdjustId);
 
-  // Logic: PDF Generation with Filters
-  const generatePDFReport = () => {
+  // Logic: PDF Generation Core
+  const createReportDoc = () => {
     const doc = new jsPDF();
     const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
 
@@ -107,25 +104,24 @@ const Inventory = () => {
     
     // Header
     doc.setFontSize(20);
-    doc.text("รายงานสต็อกสินค้า (แบบเลือกกรอง)", 105, 15, { align: 'center' });
+    doc.text("Inventory Stock Report", 105, 15, { align: 'center' });
     doc.setFontSize(10);
     doc.text(shopName, 105, 22, { align: 'center' });
-    doc.text(`วันที่ออกรายงาน: ${dateNow}`, 105, 27, { align: 'center' });
+    doc.text(`Date: ${dateNow}`, 105, 27, { align: 'center' });
 
-    // Display Filter Criteria in PDF
-    const partnerName = repPartnerFilter === 'All' ? 'ทั้งหมด' : partners.find(p => p.id === repPartnerFilter)?.companyName;
+    // Display Filter Criteria
+    const partnerName = repPartnerFilter === 'All' ? 'All' : partners.find(p => p.id === repPartnerFilter)?.companyName;
     doc.setFontSize(9);
-    doc.text(`ตัวกรอง: คู่ค้า [${partnerName}], หมวดหมู่ [${repCategoryFilter === 'All' ? 'ทั้งหมด' : repCategoryFilter}], สถานะ [${repStatusFilter === 'All' ? 'ทั้งหมด' : repStatusFilter}]`, 10, 38);
+    doc.text(`Filters: Partner [${partnerName}], Category [${repCategoryFilter}], Status [${repStatusFilter}]`, 10, 38);
     
-    // Summary Stats
     const totalItems = itemsToExport.length;
     const totalValue = itemsToExport.reduce((acc, i) => acc + (i.costPrice * i.stock), 0);
-    doc.text(`รายการที่พบ: ${totalItems} รายการ | มูลค่าต้นทุนรวม: ${currency}${totalValue.toLocaleString()}`, 10, 44);
+    doc.text(`Results: ${totalItems} items | Total Cost Value: ${currency}${totalValue.toLocaleString()}`, 10, 44);
 
     // Table
     autoTable(doc, {
       startY: 50,
-      head: [['รหัส/บาร์โค้ด', 'ชื่อสินค้า', 'ประเภท', 'จำนวน', 'ต้นทุน', 'ราคาขาย']],
+      head: [['Barcode', 'Product Name', 'Category', 'Qty', 'Cost', 'Price']],
       body: itemsToExport.map(i => [
         i.barcode || '-',
         i.name,
@@ -138,6 +134,13 @@ const Inventory = () => {
       headStyles: { fillColor: [26, 31, 61] }
     });
 
+    return doc;
+  };
+
+  const handleDownloadReport = () => {
+    const doc = createReportDoc();
+    const partnerName = repPartnerFilter === 'All' ? 'All' : partners.find(p => p.id === repPartnerFilter)?.companyName;
+
     // Record History
     addReportLog({
       reportName: "Inventory Stock Report",
@@ -146,7 +149,14 @@ const Inventory = () => {
     });
 
     doc.save(`Stock_Report_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
-    toast.success("ดาวน์โหลดรายงาน PDF เรียบร้อยแล้ว");
+    toast.success("PDF Downloaded successfully");
+  };
+
+  const handlePreviewReport = () => {
+    const doc = createReportDoc();
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    setPdfPreviewUrl(url);
   };
 
   const handleAdjustSubmit = (e: React.FormEvent) => {
@@ -320,9 +330,14 @@ const Inventory = () => {
                           </div>
                        </div>
 
-                       <button onClick={generatePDFReport} className="w-full bg-[#1A1F3D] text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-                          <Download size={18} /> Generate PDF
-                       </button>
+                       <div className="space-y-3 pt-2">
+                          <button onClick={handlePreviewReport} className="w-full bg-blue-50 text-blue-600 py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 active:scale-95 transition-all">
+                             <Eye size={18} /> Preview Report
+                          </button>
+                          <button onClick={handleDownloadReport} className="w-full bg-[#1A1F3D] text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
+                             <Download size={18} /> Download PDF
+                          </button>
+                       </div>
                     </div>
                  </div>
 
@@ -390,20 +405,22 @@ const Inventory = () => {
                  {partners.map(partner => (
                     <div key={partner.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all relative overflow-hidden">
                        <div className="absolute top-0 right-0 p-8 opacity-5 text-[#1A1F3D] pointer-events-none select-none z-0"><Building2 size={80} /></div>
-                       <div className="flex justify-between items-start mb-6">
+                       <div className="flex justify-between items-start mb-6 relative z-10">
                           <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[20px] flex items-center justify-center"><Building2 size={28}/></div>
                           <div className="flex gap-1">
-                             <button onClick={() => handleEditPartner(partner)} className="p-2 text-gray-400 hover:text-[#1A1F3D] rounded-xl"><Edit3 size={18}/></button>
-                             <button onClick={() => handleDeletePartner(partner.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-xl"><Trash2 size={18}/></button>
+                             <button onClick={() => handleEditPartner(partner)} className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-xl transition-all"><Edit3 size={18}/></button>
+                             <button onClick={() => handleDeletePartner(partner.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18}/></button>
                           </div>
                        </div>
-                       <h4 className="text-xl font-black text-[#1A1F3D] mb-1">{partner.companyName}</h4>
-                       <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest mb-6">GP: {partner.gpRate}% (ส่วนแบ่งคู่ค้า)</p>
-                       
-                       <div className="pt-6 border-t border-gray-50 flex gap-3">
-                          <button onClick={() => setSelectedVendorForView(partner)} className="flex-1 bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black text-[10px] uppercase py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
-                             <Eye size={14} /> ดูสต็อกที่นี่
-                          </button>
+                       <div className="relative z-10">
+                         <h4 className="text-xl font-black text-[#1A1F3D] mb-1">{partner.companyName}</h4>
+                         <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest mb-6">GP: {partner.gpRate}% (ส่วนแบ่งคู่ค้า)</p>
+                         
+                         <div className="pt-6 border-t border-gray-50 flex gap-3">
+                            <button onClick={() => setSelectedVendorForView(partner)} className="flex-1 bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black text-[10px] uppercase py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
+                               <Eye size={14} /> ดูสต็อกที่นี่
+                            </button>
+                         </div>
                        </div>
                     </div>
                  ))}
@@ -414,6 +431,31 @@ const Inventory = () => {
            </div>
         )}
       </div>
+
+      {/* PDF Preview Modal */}
+      {pdfPreviewUrl && (
+        <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[300] flex items-center justify-center p-6">
+          <div className="bg-white w-full max-w-5xl h-[90vh] rounded-[48px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+               <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[#1A1F3D] text-white rounded-xl shadow-lg"><FileText size={20} /></div>
+                  <div>
+                    <h3 className="text-sm font-black text-[#1A1F3D]">Report Preview</h3>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Document Verification</p>
+                  </div>
+               </div>
+               <button onClick={() => setPdfPreviewUrl(null)} className="p-2 hover:bg-white rounded-xl transition-all"><X size={20} /></button>
+            </div>
+            <div className="flex-1 bg-gray-100 p-4">
+               <iframe src={pdfPreviewUrl} className="w-full h-full rounded-2xl shadow-inner border border-gray-200" title="PDF Preview" />
+            </div>
+            <div className="p-6 border-t border-gray-100 flex gap-4 justify-end bg-white">
+               <button onClick={() => setPdfPreviewUrl(null)} className="px-8 py-3 text-sm font-black text-gray-400">Close</button>
+               <button onClick={handleDownloadReport} className="bg-[#1A1F3D] text-white px-10 py-3 rounded-xl font-black text-sm shadow-xl flex items-center gap-2"><Download size={16} /> Confirm & Download</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isItemModalOpen && <InventoryModal item={editingItem} onClose={() => setIsItemModalOpen(false)} />}
       {isVendorModalOpen && <VendorModal partner={editingPartner} onClose={() => setIsVendorModalOpen(false)} />}
