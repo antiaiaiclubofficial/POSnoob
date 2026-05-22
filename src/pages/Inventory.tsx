@@ -5,7 +5,8 @@ import {
   LayoutGrid, AlertTriangle, PlusCircle, FileText, Users, BarChart3, 
   Search, Edit3, Package, Download, Save, Printer, Trash2, ArrowRight,
   TrendingUp, DollarSign, PieChart as PieIcon, LineChart as LineIcon, BarChart as BarIcon,
-  ChevronRight, Camera, CheckCircle2, Plus, Tag, Building2, Filter
+  ChevronRight, Camera, CheckCircle2, Plus, Tag, Building2, Filter,
+  AlertCircle, ArrowUpRight, RotateCcw
 } from 'lucide-react';
 import { useStore, InventoryItem, StockLog } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,10 @@ const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
+
+  // States for 'Check' tab
+  const [checkSearch, setCheckSearch] = useState('');
+  const [checkStatusFilter, setCheckStatusFilter] = useState<'All' | 'Low' | 'Out'>('All');
 
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -67,6 +72,15 @@ const Inventory = () => {
     });
   }, [inventory, searchQuery, categoryFilter, partnerFilter]);
 
+  const filteredCheckItems = useMemo(() => {
+    return inventory.filter(i => {
+      const matchesSearch = i.name.toLowerCase().includes(checkSearch.toLowerCase()) || i.barcode?.includes(checkSearch);
+      const status = i.stock === 0 ? 'Out' : i.stock <= i.minStock ? 'Low' : 'OK';
+      const matchesStatus = checkStatusFilter === 'All' || status === checkStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [inventory, checkSearch, checkStatusFilter]);
+
   const dashboardStats = useMemo(() => {
     const totalValue = inventory.reduce((acc, i) => acc + (i.costPrice * i.stock), 0);
     const lowStock = inventory.filter(i => i.stock > 0 && i.stock <= i.minStock).length;
@@ -85,6 +99,14 @@ const Inventory = () => {
     toast.success("ปรับยอดสต็อกเรียบร้อย");
     setAdjustQty('');
     setAdjustReason('');
+  };
+
+  const handleQuickAdjust = (id: string) => {
+    const newQty = prompt("ระบุจำนวนสต็อกที่ถูกต้อง:");
+    if (newQty !== null && !isNaN(Number(newQty))) {
+      adjustStock(id, Number(newQty), 'Set', 'Physical Audit Adjustment');
+      toast.success("อัปเดตสต็อกเรียบร้อย");
+    }
   };
 
   const generatePDF = () => {
@@ -241,41 +263,108 @@ const Inventory = () => {
         )}
 
         {activeTab === 'check' && (
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
-             <div className="flex justify-between items-center">
-                <h3 className="text-xl font-black text-[#1A1F3D]">Inventory Status & Alerts</h3>
+          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
+             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
+                <div className="flex-1 w-full relative">
+                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                   <input 
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold"
+                      placeholder="ค้นหาสินค้าเพื่อเช็คสต็อก..."
+                      value={checkSearch}
+                      onChange={e => setCheckSearch(e.target.value)}
+                   />
+                </div>
+                <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1 shrink-0">
+                   {(['All', 'Low', 'Out'] as const).map(status => (
+                     <button
+                        key={status}
+                        onClick={() => setCheckStatusFilter(status)}
+                        className={cn(
+                          "px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all",
+                          checkStatusFilter === status ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400"
+                        )}
+                     >
+                        {status === 'All' ? 'ทั้งหมด' : status === 'Low' ? 'สต็อกต่ำ' : 'สินค้าหมด'}
+                     </button>
+                   ))}
+                </div>
              </div>
-             <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
-                <table className="w-full">
-                   <thead>
-                      <tr className="bg-gray-50/50">
-                         <th className="px-10 py-6 text-left text-[10px] font-black uppercase text-gray-400">ชื่อสินค้า</th>
-                         <th className="px-10 py-6 text-center text-[10px] font-black uppercase text-gray-400">สต็อกปัจจุบัน</th>
-                         <th className="px-10 py-6 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
-                      </tr>
-                   </thead>
-                   <tbody className="divide-y divide-gray-50">
-                      {inventory.map(item => {
-                         const status = item.stock === 0 ? 'Out' : item.stock <= item.minStock ? 'Low' : 'OK';
-                         return (
-                            <tr key={item.id}>
-                               <td className="px-10 py-6 font-black text-sm">{item.name}</td>
-                               <td className="px-10 py-6 text-center font-black text-lg">{item.stock} {item.unit}</td>
-                               <td className="px-10 py-6 text-center">
-                                  {status === 'Out' ? (
-                                    <span className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">สินค้าหมด</span>
-                                  ) : status === 'Low' ? (
-                                    <span className="bg-orange-50 text-orange-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">สินค้าใกล้หมด</span>
-                                  ) : (
-                                    <span className="bg-green-50 text-green-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">ปกติ</span>
-                                  )}
-                               </td>
-                            </tr>
-                         );
-                      })}
-                   </tbody>
-                </table>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredCheckItems.map(item => {
+                  const status = item.stock === 0 ? 'Out' : item.stock <= item.minStock ? 'Low' : 'OK';
+                  const progress = Math.min(100, (item.stock / (item.minStock * 2)) * 100);
+                  
+                  return (
+                    <div key={item.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all relative overflow-hidden">
+                       <div className={cn(
+                         "absolute top-0 left-0 w-2 h-full",
+                         status === 'Out' ? "bg-red-500" : status === 'Low' ? "bg-orange-500" : "bg-green-500"
+                       )} />
+                       
+                       <div className="flex justify-between items-start mb-6">
+                          <div className="w-12 h-12 bg-[#F5F6FA] rounded-2xl flex items-center justify-center text-[#1A1F3D] group-hover:scale-110 transition-transform">
+                             <Package size={24} />
+                          </div>
+                          <div className={cn(
+                            "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter shadow-sm",
+                            status === 'Out' ? "bg-red-50 text-red-600" : status === 'Low' ? "bg-orange-50 text-orange-600" : "bg-green-50 text-green-600"
+                          )}>
+                             {status === 'Out' ? 'Out of Stock' : status === 'Low' ? 'Low Stock' : 'Optimal'}
+                          </div>
+                       </div>
+
+                       <h3 className="text-lg font-black text-[#1A1F3D] mb-1 line-clamp-1">{item.name}</h3>
+                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">{item.category}</p>
+
+                       <div className="space-y-4">
+                          <div className="flex justify-between items-end">
+                             <div>
+                                <p className="text-[9px] font-black text-gray-300 uppercase mb-1">Current Balance</p>
+                                <p className="text-2xl font-black text-[#1A1F3D]">{item.stock} <span className="text-xs text-gray-400">{item.unit}</span></p>
+                             </div>
+                             <div className="text-right">
+                                <p className="text-[9px] font-black text-gray-300 uppercase mb-1">Min. Required</p>
+                                <p className="text-sm font-bold text-gray-400">{item.minStock}</p>
+                             </div>
+                          </div>
+
+                          <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
+                             <div 
+                                className={cn("h-full transition-all duration-1000", status === 'Out' ? "w-0" : status === 'Low' ? "bg-orange-400" : "bg-[#1A1F3D]")}
+                                style={{ width: `${progress}%` }}
+                             />
+                          </div>
+
+                          <div className="pt-4 border-t border-gray-50 flex gap-2">
+                             <button 
+                                onClick={() => handleQuickAdjust(item.id)}
+                                className="flex-1 bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black text-[10px] uppercase py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                             >
+                                <RotateCcw size={14} /> ปรับยอด
+                             </button>
+                             {status !== 'OK' && (
+                               <button 
+                                  onClick={() => { setSelectedAdjustId(item.id); setAdjustMode('Add'); setActiveTab('adjust'); }}
+                                  className="flex-1 bg-[#D9ED5F] text-[#1A1F3D] font-black text-[10px] uppercase py-3 rounded-xl shadow-lg shadow-[#D9ED5F]/20 hover:scale-105 transition-all flex items-center justify-center gap-2"
+                               >
+                                  <Plus size={14} /> เติมของ
+                               </button>
+                             )}
+                          </div>
+                       </div>
+                    </div>
+                  );
+                })}
              </div>
+             
+             {filteredCheckItems.length === 0 && (
+               <div className="py-32 flex flex-col items-center justify-center opacity-20 text-center">
+                  <AlertCircle size={64} className="mb-4" />
+                  <h2 className="text-2xl font-black uppercase">No Alerts Found</h2>
+                  <p className="text-sm font-bold">All inventory items are currently above safety levels</p>
+               </div>
+             )}
           </div>
         )}
       </div>
