@@ -1,40 +1,43 @@
-"use client";
-
 import React, { useState } from 'react';
-// ... other imports
 import { useStore, Pet, QueueItem } from '@/store/useStore';
 import GroomingServiceModal from './GroomingServiceModal';
 
+interface PetProfileRecordProps {
+  pet: Pet;
+  onEdit: (pet: Pet) => void;
+}
+
 const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
-  // ... rest of logic
-  
+  const [selectedIntake, setSelectedIntake] = useState<any>(null); // Added state
+
   const mockItem: QueueItem = {
     id: selectedIntake?.queueItemId || '',
+    customerId: '',
+    customerName: '',
     petId: pet.id,
     petName: pet.name,
-    ownerName: 'Customer',
-    customerId: '',
-    customerName: 'Customer',
     serviceId: '',
     serviceName: 'Past Service',
     date: selectedIntake?.date || '',
     time: 'Recorded',
+    startTime: '',
+    duration: 60,
+    totalAmount: 0,
     status: 'Completed',
-    image: pet.image,
     isPaid: true
   };
 
   return (
     <div>
-      {/* ... previous content ... */}
-      {selectedIntake && (
-        <GroomingServiceModal 
-          item={mockItem} 
-          intakeData={selectedIntake}
-          readOnly={true}
-          onClose={() => setSelectedIntake(null)} 
-        />
-      )}
+       {/* ... existing UI ... */}
+       {selectedIntake && (
+         <GroomingServiceModal 
+           item={mockItem}
+           intakeData={selectedIntake}
+           readOnly={true}
+           onClose={() => setSelectedIntake(null)}
+         />
+       )}
     </div>
   );
 };
