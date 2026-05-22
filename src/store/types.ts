@@ -15,7 +15,7 @@ export interface Pet {
   birthday: string;
   weightHistory: { date: string; value: number }[];
   serviceHistory: any[];
-  intakeHistory?: any[]; // Added for records view
+  intakeHistory?: any[]; // Added for PetProfileRecord
   notes: string;
   image: string;
 }
@@ -106,14 +106,14 @@ export interface InventoryItem {
   image?: string;
   isConsignment: boolean;
   partnerId?: string;
-  vendorId?: string; // Added alias for compatibility
-  consignmentRate?: number;
+  vendorId?: string; // Alias used in VendorInventoryView
+  consignmentRate?: number; // Added for consignment calculations
 }
 
 export interface Partner {
   id: string;
   companyName: string;
-  name?: string;
+  name?: string; // Added for Reports page compatibility
   gpRate: number;
   taxId?: string;
   address?: string;
@@ -124,10 +124,10 @@ export interface Partner {
   bankAccountName?: string;
   bankAccountNumber?: string;
   notes?: string;
-  mainCategory?: string;
+  mainCategory?: string; // Added for Inventory page
 }
 
-export type Vendor = Partner; // Exporting Vendor as an alias
+export type Vendor = Partner; // Exporting Vendor as an alias for Partner
 
 export interface StockLog {
   id: string;
@@ -164,7 +164,6 @@ export interface Staff {
   avatar: string;
   username?: string;
   password?: string;
-  email?: string; // Added for OAuth compatibility
   commissionRate?: number;
 }
 
@@ -220,7 +219,6 @@ export interface AppState {
   isAuthenticated: boolean;
   isAuthLoading: boolean;
   currentUser: Staff | null;
-  storeId: string | null; // Added storeId
   shopName: string;
   shopLogo: string | null;
   shopAddress: string;
@@ -267,7 +265,6 @@ export interface AppState {
   updateTierRules: (rules: TierRule[]) => void;
   selectOwner: (owner: Customer | null) => void;
   setActivePet: (pet: Pet | null) => void;
-  setActiveQueueItemId?: (id: string | null) => void; // Keep original property name
   setActiveQueueItem: (id: string | null) => void;
   addBooking: (booking: any) => void;
   updateQueueStatus: (id: string, status: QueueStatus) => void;
@@ -311,4 +308,7 @@ export interface AppState {
   deleteCreditPackage: (id: string) => void;
   buyCreditPackage: (cid: string, pid: string) => void;
   verifyPassword: (pass: string) => boolean;
+  addVendor: (v: any) => void;
+  updateVendor: (id: string, v: any) => void;
+  deleteVendor: (id: string) => void;
 }

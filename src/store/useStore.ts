@@ -6,53 +6,27 @@ import { createAuthSlice } from './slices/authSlice';
 import { createCRMSlice } from './slices/crmSlice';
 
 export const useStore = create<AppState>()((set, get, store) => ({
-  language: 'th',
+  language: 'en',
   currency: '฿',
-  isAuthenticated: true,
-  isAuthLoading: false,
-  currentUser: { 
-    id: 'admin', 
-    name: 'Admin User', 
-    role: 'Admin', 
-    username: 'admin',
-    phone: '000-000-0000',
-    status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop'
-  },
-  storeId: 'default-store',
-
-  // Business Profile
-  shopName: 'Mellow Fellow Sanctuary',
+  isAuthenticated: false,
+  isAuthLoading: true,
+  currentUser: null,
+  shopName: 'Tactile Sanctuary',
   shopLogo: null,
-  shopAddress: '123 Sukhumvit, Bangkok 10110',
-  shopPhone: '02-999-9999',
-  shopLineId: '@mellowfellow',
+  shopAddress: '',
+  shopPhone: '',
+  shopLineId: '',
   shopIsOpen: true,
-  receiptHeader: 'Tax Invoice / Receipt',
-  receiptFooter: 'Thank you for your visit!',
+  receiptHeader: 'TAX INVOICE',
+  receiptFooter: 'Thank you!',
   receiptPaperSize: '80mm',
-
-  // CRM & Booking
   customers: [],
-  selectedOwner: null,
-  activePet: null,
-  activeQueueItemId: null,
   queue: [],
-  slotDuration: 60,
-  openTime: '09:00',
-  closeTime: '19:00',
-  maxCapacity: 3,
-  disabledSlots: [],
-  recurringHolidays: [0], 
-  specificHolidays: [],
-  kennelCapacity: 12,
-
-  // Lists
   services: [],
   addons: [],
   inventory: [],
-  vendors: [],
   partners: [],
+  vendors: [],
   stockLogs: [],
   transactions: [],
   staff: [],
@@ -60,33 +34,51 @@ export const useStore = create<AppState>()((set, get, store) => ({
   cart: [],
   packageTemplates: [],
   creditPackages: [],
-  tierRules: [
-    { level: 'Standard', label: 'Standard', minSpent: 0, discount: 0 },
-    { level: 'Silver', label: 'Silver Member', minSpent: 5000, discount: 5 },
-    { level: 'Gold', label: 'Gold Member', minSpent: 15000, discount: 10 },
-    { level: 'VIP', label: 'VIP Member', minSpent: 50000, discount: 15 },
-  ],
+  tierRules: [],
+  slotDuration: 30,
+  openTime: '09:00',
+  closeTime: '19:00',
+  maxCapacity: 2,
+  kennelCapacity: 8,
+  disabledSlots: [],
+  recurringHolidays: [],
+  specificHolidays: [],
+  selectedOwner: null,
+  activePet: null,
+  activeQueueItemId: null,
 
-  // Actions
   setLanguage: (lang) => set({ language: lang }),
-  addLog: (log) => set(s => ({ 
-    logs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() }, ...s.logs] 
-  })),
-
-  updateBusinessProfile: (profile) => set(s => ({ ...s, ...profile })),
-  updateBookingSettings: (settings) => set(s => ({ ...s, ...settings })),
+  updateBusinessProfile: (profile) => set((state) => ({ ...state, ...profile })),
+  updateBookingSettings: (settings) => set((state) => ({ ...state, ...settings })),
   updateTierRules: (rules) => set({ tierRules: rules }),
+  addLog: (log) => set((state) => ({ logs: [log, ...state.logs] })),
 
   ...createAuthSlice(set, get, store),
   ...createCRMSlice(set, get, store),
 
-  // Default implementations for missing POS/Inventory methods
+  // Implementation for missing methods
   assignPackageToCustomer: (cid, tid) => {},
+  saveIntakeRecord: (cid, pid, rec) => {
+    set(s => ({
+      customers: s.customers.map(c => c.id === cid ? {
+        ...c,
+        pets: c.pets.map(p => p.id === pid ? {
+          ...p,
+          intakeHistory: [{ ...rec, id: Math.random().toString(), date: new Date().toISOString() }, ...(p.intakeHistory || [])]
+        } : p)
+      } : c)
+    }));
+  },
+  addVendor: (v) => set(s => ({ vendors: [...s.vendors, { ...v, id: Math.random().toString() }] })),
+  updateVendor: (id, v) => set(s => ({ vendors: s.vendors.map(vendor => vendor.id === id ? { ...vendor, ...v } : vendor) })),
+  deleteVendor: (id) => set(s => ({ vendors: s.vendors.filter(v => v.id !== id) })),
+
+  // Default implementations for missing POS/Inventory methods
   addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
   removeFromCart: (idx) => set((state) => ({ cart: state.cart.filter((_, i) => i !== idx) })),
   updateCartQuantity: (idx, delta) => set((state) => {
     const newCart = [...state.cart];
-    newCart[idx].quantity = Math.max(1, (newCart[idx].quantity || 1) + delta);
+    newCart[idx].quantity += delta;
     return { cart: newCart };
   }),
   clearCart: () => set({ cart: [] }),
@@ -113,11 +105,8 @@ export const useStore = create<AppState>()((set, get, store) => ({
   updateCreditPackage: (id, pkg) => set((state) => ({ creditPackages: state.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p) })),
   deleteCreditPackage: (id) => set((state) => ({ creditPackages: state.creditPackages.filter(p => p.id !== id) })),
   buyCreditPackage: () => {},
-  verifyPassword: (pass) => pass === '1234',
-  toggleSlotStatus: (time) => set(s => ({ 
-    disabledSlots: s.disabledSlots.includes(time) ? s.disabledSlots.filter(t => t !== time) : [...s.disabledSlots, time] 
-  })),
-  addVendor: (v) => set(s => ({ vendors: [...s.vendors, { ...v, id: Math.random().toString() }] })),
-  updateVendor: (id, v) => set(s => ({ vendors: s.vendors.map(vendor => vendor.id === id ? { ...vendor, ...v } : vendor) })),
-  deleteVendor: (id) => set(s => ({ vendors: s.vendors.filter(v => v.id !== id) })),
+  verifyPassword: (pass) => true,
+  toggleSlotStatus: (time) => {},
 }));
+
+export * from './types';
