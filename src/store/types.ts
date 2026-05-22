@@ -37,6 +37,16 @@ export interface Customer {
   creditBalance: number;
   lineId?: string;
   packages?: any[];
+  taxId?: string;
+  branchName?: string;
+  houseNo?: string;
+  villageNo?: string;
+  soi?: string;
+  road?: string;
+  subDistrict?: string;
+  district?: string;
+  province?: string;
+  postalCode?: string;
 }
 
 export interface QueueItem {
@@ -50,6 +60,8 @@ export interface QueueItem {
   status: QueueStatus;
   image: string;
   isPaid?: boolean;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface ServicePriceInfo {
@@ -89,6 +101,7 @@ export interface InventoryItem {
   image?: string;
   isConsignment: boolean;
   vendorId?: string;
+  partnerId?: string;
   consignmentRate?: number;
 }
 
@@ -102,6 +115,12 @@ export interface Vendor {
   contactPerson: string;
   notes: string;
   mainCategory?: string;
+}
+
+export interface Partner {
+  id: string;
+  companyName: string;
+  gpRate: number;
 }
 
 export interface StockLog {
@@ -193,6 +212,7 @@ export interface AppState {
   isAuthenticated: boolean;
   currentUser: any;
   isAuthLoading: boolean;
+  storeId: string | null;
   
   // Business Profile
   shopName: string;
@@ -215,6 +235,7 @@ export interface AppState {
   addons: AddonItem[];
   inventory: InventoryItem[];
   vendors: Vendor[];
+  partners: Partner[];
   stockLogs: StockLog[];
   transactions: Transaction[];
   tierRules: TierRule[];
@@ -240,6 +261,7 @@ export interface AppState {
   logout: () => void;
   verifyPassword: (pass: string) => boolean;
   setSession: (user: any) => void;
+  addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
   
   updateBusinessProfile: (profile: any) => void;
   updateBookingSettings: (settings: any) => void;
