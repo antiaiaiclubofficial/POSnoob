@@ -64,10 +64,13 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
     onClose();
   };
 
+  const inputClasses = "w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all h-[58px]";
+  const labelClasses = "text-[10px] font-black uppercase text-gray-400 px-2 flex items-center gap-1.5 mb-2 h-4";
+
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-3xl rounded-[48px] shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
-        <div className="p-10 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+      <div className="bg-white w-full max-w-3xl rounded-[48px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-10 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-[#1A1F3D] rounded-2xl flex items-center justify-center text-white shadow-lg">
               <Package size={24} />
@@ -77,50 +80,50 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Product Specification</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-all">
+          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all">
             <X size={24} className="text-gray-400" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-10 space-y-10 scrollbar-hide">
-           <div className="grid grid-cols-6 gap-x-6 gap-y-8">
-              {/* Row 1 */}
-              <div className="col-span-6 md:col-span-3 space-y-2">
-                 <label className="text-[10px] font-black uppercase text-gray-400 px-2 flex items-center gap-1.5"><Package size={12}/> ชื่อสินค้า</label>
-                 <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-4 focus:ring-[#1A1F3D]/5" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="เช่น แชมพูสูตรอ่อนโยน" />
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-10 space-y-8 scrollbar-hide">
+           {/* Section 1 & 2: Main Info Rows */}
+           <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                 <label className={labelClasses}><Package size={12}/> ชื่อสินค้า</label>
+                 <input className={inputClasses} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="เช่น แชมพูสูตรอ่อนโยน" />
               </div>
-              <div className="col-span-6 md:col-span-3 space-y-2">
-                 <label className="text-[10px] font-black uppercase text-gray-400 px-2">บาร์โค้ด / รหัสสินค้า</label>
-                 <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 font-bold text-sm" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} placeholder="Scan or Type..." />
+              <div className="space-y-2">
+                 <label className={labelClasses}><Layers size={12}/> บาร์โค้ด / รหัสสินค้า</label>
+                 <input className={inputClasses} value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} placeholder="Scan or Type..." />
               </div>
-
-              {/* Row 2 */}
-              <div className="col-span-6 md:col-span-3 space-y-2">
-                 <label className="text-[10px] font-black uppercase text-gray-400 px-2 flex items-center gap-1.5"><Tag size={12}/> หมวดหมู่</label>
-                 <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 font-bold text-sm" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} placeholder="เช่น อาหาร, แชมพู, อุปกรณ์" />
+              <div className="space-y-2">
+                 <label className={labelClasses}><Tag size={12}/> หมวดหมู่</label>
+                 <input className={inputClasses} value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} placeholder="เช่น อาหาร, แชมพู" />
               </div>
-              <div className="col-span-6 md:col-span-3 space-y-2">
-                 <label className="text-[10px] font-black uppercase text-gray-400 px-2 flex items-center gap-1.5"><Layers size={12}/> หน่วยนับ</label>
-                 <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 font-bold text-sm" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} placeholder="ชิ้น, ขวด, กล่อง..." />
-              </div>
-
-              {/* Row 3 */}
-              <div className="col-span-6 md:col-span-2 space-y-2">
-                 <label className="text-[10px] font-black uppercase text-gray-400 px-2">ต้นทุน ({currency})</label>
-                 <input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 font-bold text-sm" value={formData.costPrice} onChange={e => setFormData({...formData, costPrice: Number(e.target.value)})} />
-              </div>
-              <div className="col-span-6 md:col-span-2 space-y-2">
-                 <label className="text-[10px] font-black uppercase text-gray-400 px-2">ราคาขาย ({currency})</label>
-                 <input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 font-black text-xl text-blue-600" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} />
-              </div>
-              <div className="col-span-6 md:col-span-2 space-y-2">
-                 <label className="text-[10px] font-black uppercase text-orange-400 px-2 flex items-center gap-1.5"><Bell size={12}/> แจ้งเตือนเมื่อเหลือต่ำกว่า</label>
-                 <input type="number" className="w-full bg-orange-50/50 border-none rounded-2xl px-6 py-4 font-black text-sm text-orange-600" value={formData.minStock} onChange={e => setFormData({...formData, minStock: Number(e.target.value)})} />
+              <div className="space-y-2">
+                 <label className={labelClasses}><Layers size={12}/> หน่วยนับ</label>
+                 <input className={inputClasses} value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} placeholder="ชิ้น, ขวด..." />
               </div>
            </div>
 
-           {/* Section 3: Consignment */}
-           <div className="bg-indigo-50/30 p-8 rounded-[40px] space-y-6 border border-indigo-100/50">
+           {/* Section 3: Pricing & Stock Row */}
+           <div className="grid grid-cols-3 gap-6">
+              <div className="space-y-2">
+                 <label className={labelClasses}><DollarSign size={12}/> ต้นทุน ({currency})</label>
+                 <input type="number" className={inputClasses} value={formData.costPrice} onChange={e => setFormData({...formData, costPrice: Number(e.target.value)})} />
+              </div>
+              <div className="space-y-2">
+                 <label className={labelClasses}><DollarSign size={12}/> ราคาขาย ({currency})</label>
+                 <input type="number" className={inputClasses} value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} />
+              </div>
+              <div className="space-y-2">
+                 <label className={cn(labelClasses, "text-orange-400")}><Bell size={12}/> แจ้งเตือนขั้นต่ำ</label>
+                 <input type="number" className={cn(inputClasses, "bg-orange-50/50 text-orange-600")} value={formData.minStock} onChange={e => setFormData({...formData, minStock: Number(e.target.value)})} />
+              </div>
+           </div>
+
+           {/* Section 4: Consignment */}
+           <div className="bg-indigo-50/30 p-8 rounded-[40px] space-y-6 border border-indigo-100/50 mt-4">
               <div className="flex items-center justify-between">
                  <div>
                     <span className="text-sm font-black text-indigo-900">สินค้าฝากขาย (Consignment)</span>
@@ -132,7 +135,7 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
                 <div className="space-y-2 animate-in fade-in zoom-in-95">
                    <label className="text-[10px] font-black uppercase text-indigo-600 px-2">เลือกคู่ค้า</label>
                    <select 
-                     className="w-full bg-white border-none rounded-2xl px-6 py-4 font-bold text-sm shadow-sm" 
+                     className="w-full bg-white border-none rounded-2xl px-6 py-4 font-bold text-sm shadow-sm h-[58px] appearance-none" 
                      value={formData.partnerId}
                      onChange={e => setFormData({...formData, partnerId: e.target.value})}
                    >
