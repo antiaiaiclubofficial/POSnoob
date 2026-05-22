@@ -2,12 +2,7 @@ import { StateCreator } from 'zustand';
 import { AppState } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 
-export const createAuthSlice: StateCreator<
-  AppState, 
-  [], 
-  [], 
-  Pick<AppState, 'isAuthenticated' | 'isAuthLoading' | 'currentUser' | 'storeId' | 'login' | 'loginWithGoogle' | 'setSession' | 'verifyPassword' | 'logout'>
-> = (set, get) => ({
+export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isAuthenticated' | 'isAuthLoading' | 'currentUser' | 'storeId' | 'login' | 'loginWithGoogle' | 'setSession' | 'verifyPassword' | 'logout'>> = (set, get) => ({
   isAuthenticated: false,
   isAuthLoading: true,
   currentUser: null,

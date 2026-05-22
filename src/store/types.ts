@@ -1,6 +1,5 @@
 import { Language } from '@/utils/translations';
 
-// Base Types
 export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health' | 'brush' | 'hotel' | 'love' | 'food' | 'premium';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
@@ -8,16 +7,185 @@ export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package' | 'S
 export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
 export type BookingType = 'Appointment' | 'Walk-in';
 
-// Sub-Interfaces
+export interface AddonItem {
+  id: string;
+  name: string;
+  price: number;
+  icon: ServiceIcon;
+}
+
+export interface CreditPackageTemplate {
+  id: string;
+  name: string;
+  price: number;
+  creditValue: number;
+}
+
+export interface CreditTransaction {
+  id: string;
+  date: string;
+  type: 'Top-up' | 'Payment';
+  description: string;
+  previousBalance: number;
+  amount: number;
+  newBalance: number;
+}
+
+export interface IntakeRecord {
+  id: string;
+  date: string;
+  queueItemId: string;
+  staffName: string;
+  details: {
+    sex: string;
+    spayed: string;
+    basicGrooming: string[];
+    addOns: string[];
+    bathProduct: string;
+    hairTrimLength: string;
+    styleFocus: string;
+    shaveShortIfMatted: string;
+    dislikes: string;
+    additionalConcerns: string;
+  };
+  weight?: number;
+  signature?: string; // base4 image
+}
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  barcode?: string;
+  stock: number;
+  minStock: number;
+  price: number;
+  costPrice?: number;
+  unit: string;
+  category: string;
+  image?: string;
+  isConsignment: boolean;
+  vendorId?: string;
+  consignmentRate?: number;
+}
+
+export interface StockMovement {
+  id: string;
+  itemId: string;
+  itemName: string;
+  type: 'In' | 'Out' | 'Adjustment' | 'Damage';
+  quantity: number;
+  previousStock: number;
+  currentStock: number;
+  reason: string;
+  timestamp: string;
+  staffName: string;
+}
+
+export interface StockTakeRecord {
+  id: string;
+  date: string;
+  staffName: string;
+  items: {
+    itemId: string;
+    itemName: string;
+    systemStock: number;
+    actualStock: number;
+    difference: number;
+  }[];
+  notes: string;
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  taxId?: string;
+  address?: string;
+  mainCategory?: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  notes: string;
+}
+
+export interface Staff {
+  id: string;
+  name: string;
+  role: StaffRole;
+  phone: string;
+  status: 'Active' | 'Inactive';
+  avatar: string;
+  username?: string;
+  password?: string;
+  commissionRate: number; 
+}
+
+export interface ActivityLog {
+  id: string;
+  timestamp: string;
+  staffName: string;
+  action: string;
+  details: string;
+  type: 'info' | 'success' | 'warning' | 'danger';
+}
+
+export interface WeightEntry {
+  date: string;
+  value: number;
+}
+
+export interface ServiceHistoryEntry {
+  id: string;
+  date: string;
+  serviceName: string;
+  price: number;
+  size?: string;
+}
+
+export interface PackageUsage {
+  id: string;
+  date: string;
+  serviceName: string;
+  isFreebie: boolean;
+}
+
+export interface CustomerPackage {
+  id: string;
+  templateId: string;
+  name: string;
+  targetServiceId: string;
+  totalSlots: number; 
+  usedSlots: number;
+  remainingSlots: number;
+  recurringFreebie?: string;
+  oneTimeFreebie?: {
+    name: string;
+    isUsed: boolean;
+  };
+  usageHistory: PackageUsage[];
+  purchaseDate: string;
+  expiryDate?: string;
+}
+
+export interface PackageTemplate {
+  id: string;
+  name: string;
+  serviceId: string;
+  paidSlots: number;
+  freeSlots: number;
+  price: number;
+  recurringFreebie?: string;
+  oneTimeFreebie?: string;
+}
+
 export interface Pet {
   id: string;
   name: string;
   species: 'Dog' | 'Cat' | 'Other';
   breed: string;
   birthday: string;
-  weightHistory: { date: string; value: number }[];
-  serviceHistory: any[];
-  intakeHistory?: any[];
+  weightHistory: WeightEntry[];
+  serviceHistory: ServiceHistoryEntry[];
+  intakeHistory?: IntakeRecord[];
   notes: string;
   image: string;
 }
@@ -32,15 +200,17 @@ export interface Customer {
   phone: string;
   email: string;
   membership: MembershipLevel;
-  lineId?: string;
   points: number;
-  totalSpent: number;
-  creditBalance: number;
-  creditHistory: any[];
-  packages: any[];
   pets: Pet[];
+  packages: CustomerPackage[];
+  creditBalance: number;
+  creditHistory: CreditTransaction[];
+  totalSpent: number;
+  lineId?: string;
+  // Tax Info
   taxId?: string;
   branchName?: string;
+  // Address Fields
   houseNo?: string;
   villageNo?: string;
   soi?: string;
@@ -51,19 +221,49 @@ export interface Customer {
   postalCode?: string;
 }
 
-export interface QueueItem {
+export interface TransactionItem {
   id: string;
-  petId: string;
-  petName: string;
-  ownerName: string;
-  serviceName: string;
+  title: string;
+  price: number;
+  quantity: number;
+  type: 'Service' | 'Product' | 'Credit';
+  isConsignment: boolean;
+  vendorId?: string;
+  consignmentRate?: number;
+}
+
+export interface Transaction {
+  id: string;
   date: string;
-  time: string;
-  status: QueueStatus;
-  image: string;
-  isPaid?: boolean;
-  startTime?: string;
-  endTime?: string;
+  amount: number;
+  discountAmount: number;
+  customerId: string;
+  customerName: string;
+  species: ('Dog' | 'Cat' | 'Other')[];
+  paymentMethod: PaymentMethod;
+  bookingType: BookingType;
+  itemsCount: number;
+  items: TransactionItem[];
+  staffId: string; 
+  staffName: string;
+  processedBy: string;
+  actualDuration?: number; 
+  isTaxInvoice?: boolean;
+  paymentDetails?: {
+    cashReceived?: number;
+    change?: number;
+    cardLast4?: string;
+    cardType?: string;
+    referenceNo?: string;
+    packageId?: string;
+  };
+}
+
+export interface TierRule {
+  level: MembershipLevel;
+  label: string;
+  minSpent: number;
+  discount: number;
 }
 
 export interface ServicePriceInfo {
@@ -78,230 +278,188 @@ export interface SubService {
 
 export interface Service {
   id: string;
-  title: string;
-  category: string;
-  description: string;
   icon: ServiceIcon;
-  targetSpecies: 'Dog' | 'Cat';
-  prices: Record<string, ServicePriceInfo>;
+  title: string;
+  description: string;
   subServices: SubService[];
+  category: string;
+  targetSpecies: 'Dog' | 'Cat';
+  coatType?: 'Short' | 'Long';
+  prices: Record<string, ServicePriceInfo>;
   isActive: boolean;
   isPopular?: boolean;
-  coatType?: 'Short' | 'Long';
 }
 
-export interface Staff {
+export interface QueueItem {
   id: string;
-  name: string;
-  role: StaffRole;
-  phone: string;
-  status: 'Active' | 'Inactive';
-  avatar: string;
-  username?: string;
-  password?: string;
-  commissionRate?: number;
-}
-
-export interface Transaction {
-  id: string;
-  customerId: string;
-  customerName: string;
-  amount: number;
-  discountAmount: number;
-  items: any[];
-  paymentMethod: PaymentMethod;
+  petId: string;
+  petName: string;
+  ownerName: string;
+  serviceName: string;
   date: string;
+  time: string;
+  status: QueueStatus;
+  image: string;
+  isPaid?: boolean;
   staffId?: string;
-  species: string[];
-  actualDuration?: number;
-  bookingType: BookingType;
+  startTime?: string; 
+  endTime?: string;   
 }
 
-export interface InventoryItem {
+export interface CartItem {
   id: string;
-  name: string;
-  barcode?: string;
-  stock: number;
-  minStock: number;
+  icon?: ServiceIcon;
+  title: string;
   price: number;
-  costPrice: number;
-  unit: string;
-  category: string;
-  image?: string;
-  isConsignment: boolean;
-  vendorId?: string;
-  consignmentRate?: number;
+  quantity: number;
+  petId?: string;
+  petName?: string;
+  ownerName?: string;
+  size?: string;
+  queueItemId?: string;
+  staffId?: string;
+  staffName?: string;
+  isPackageUsage?: boolean;
+  type: 'Service' | 'Product' | 'Credit';
 }
 
-export interface Vendor {
-  id: string;
-  name: string;
-  taxId: string;
-  address: string;
-  contactPerson: string;
-  phone: string;
-  email: string;
-  consignmentRate: number;
-  notes: string;
-  mainCategory?: string;
-}
-
-export interface Log {
-  id: string;
-  staffName: string;
-  action: string;
-  details: string;
-  type: 'info' | 'success' | 'warning' | 'danger';
-  timestamp: string;
-}
-
-export interface TierRule {
-  level: MembershipLevel;
-  label: string;
-  minSpent: number;
-  discount: number;
-}
-
-export interface PackageTemplate {
-  id: string;
-  name: string;
-  serviceId: string;
-  paidSlots: number;
-  freeSlots: number;
-  price: number;
-  recurringFreebie?: string;
-  oneTimeFreebie?: string;
-}
-
-export interface CreditPackageTemplate {
-  id: string;
-  name: string;
-  price: number;
-  creditValue: number;
-}
-
-export interface AddonItem {
-  id: string;
-  name: string;
-  price: number;
-  icon: ServiceIcon;
-}
-
-// AppState Definition
 export interface AppState {
-  // Auth
-  isAuthenticated: boolean;
-  isAuthLoading: boolean;
-  currentUser: any;
-  storeId: string | null;
-  login: (id: string, pass: string) => boolean;
-  loginWithGoogle: () => Promise<void>;
-  setSession: (user: any) => void;
-  verifyPassword: (pass: string) => boolean;
-  logout: () => Promise<void>;
-
-  // Settings & Business
   language: Language;
   setLanguage: (lang: Language) => void;
+  isAuthenticated: boolean;
+  isAuthLoading: boolean;
+  currentUser: { id: string; name: string; role: string; username?: string; email?: string; avatar?: string } | null;
+  storeId: string | null;
   shopName: string;
   shopLogo: string | null;
   shopAddress: string;
   shopPhone: string;
   shopLineId: string;
-  currency: string;
-  shopIsOpen: boolean;
   receiptHeader: string;
   receiptFooter: string;
   receiptPaperSize: '58mm' | '80mm';
-  kennelCapacity: number;
+  currency: string;
+  shopIsOpen: boolean;
+  recurringHolidays: number[];
+  specificHolidays: string[];
+  
+  lineLiffId: string;
+  lineChannelToken: string;
+  
+  services: Service[];
+  addons: AddonItem[];
+  packageTemplates: PackageTemplate[];
+  creditPackages: CreditPackageTemplate[];
+  customers: Customer[];
+  setCustomers: (customers: Customer[]) => void;
+  staff: Staff[];
+  inventory: InventoryItem[];
+  vendors: Vendor[];
+  stockMovements: StockMovement[];
+  stockTakeHistory: StockTakeRecord[];
+  logs: ActivityLog[];
+  cart: CartItem[];
+  queue: QueueItem[];
+  transactions: Transaction[];
+  tierRules: TierRule[];
+  selectedOwner: Customer | null;
+  activePet: Pet | null;
+  activeQueueItemId: string | null;
+  
   slotDuration: number;
   maxCapacity: number;
   openTime: string;
   closeTime: string;
-  recurringHolidays: number[];
-  specificHolidays: string[];
-  updateBusinessProfile: (profile: any) => void;
-  updateBookingSettings: (settings: any) => void;
-
-  // CRM
-  customers: Customer[];
-  setCustomers: (customers: Customer[]) => void;
-  selectedOwner: Customer | null;
-  activePet: Pet | null;
-  activeQueueItemId: string | null;
-  selectOwner: (owner: Customer | null) => void;
-  setActivePet: (pet: Pet | null) => void;
-  setActiveQueueItemId: (id: string | null) => void;
-  addCustomer: (data: any) => Promise<void>;
-  updateCustomer: (id: string, data: any) => Promise<void>;
-  deleteCustomer: (id: string) => Promise<void>;
-  bindLineToCustomer: (customerId: string, lineId: string) => Promise<void>;
-  addPet: (customerId: string, data: any) => Promise<void>;
-  updatePet: (customerId: string, petId: string, data: any) => Promise<void>;
-  updatePetWeight: (customerId: string, petId: string, weight: number) => Promise<void>;
-  saveIntakeRecord: (customerId: string, petId: string, record: any) => void;
-
-  // Queue
-  queue: QueueItem[];
-  addBooking: (booking: any) => Promise<void>;
-  updateQueueStatus: (id: string, status: QueueStatus) => Promise<void>;
-  removeQueueItem: (id: string) => Promise<void>;
-  markAsPaid: (id: string) => Promise<void>;
-  toggleSlotStatus: (time: string) => void;
   disabledSlots: string[];
-
-  // Inventory & Vendors
-  inventory: InventoryItem[];
-  vendors: Vendor[];
-  stockLogs: any[];
-  addInventoryItem: (item: any) => void;
-  updateInventoryItem: (id: string, item: any) => void;
-  deleteInventoryItem: (id: string) => void;
-  adjustStock: (productId: string, amount: number, mode: 'Add' | 'Adjust', reason: string) => void;
-  addVendor: (vendor: any) => void;
-  updateVendor: (id: string, vendor: any) => void;
-  deleteVendor: (id: string) => void;
-
-  // POS & Transactions
-  cart: any[];
-  addToCart: (item: any) => void;
-  removeFromCart: (index: number) => void;
+  kennelCapacity: number;
+  
+  login: (id: string, pass: string) => boolean;
+  loginWithGoogle: () => Promise<void>;
+  setSession: (user: any) => void;
+  verifyPassword: (pass: string) => boolean;
+  logout: () => Promise<void>;
+  
+  updateBusinessProfile: (profile: { 
+    shopName?: string, 
+    shopLogo?: string | null,
+    shopAddress?: string,
+    shopPhone?: string,
+    shopLineId?: string,
+    receiptHeader?: string,
+    receiptFooter?: string,
+    receiptPaperSize?: '58mm' | '80mm',
+    currency?: string,
+    shopIsOpen?: boolean,
+    recurringHolidays?: number[],
+    specificHolidays?: string[],
+    lineLiffId?: string,
+    lineChannelToken?: string
+  }) => void;
+  addToCart: (item: CartItem) => void;
   updateCartQuantity: (index: number, delta: number) => void;
+  removeFromCart: (index: number) => void;
+  customAddToCart: (item: CartItem) => void;
   clearCart: () => void;
-  processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean) => void;
-  transactions: Transaction[];
-  deleteTransaction: (id: string) => void;
-
-  // Services & Addons
-  services: Service[];
-  addService: (service: any) => void;
-  updateService: (id: string, service: any) => void;
+  
+  addService: (service: Omit<Service, 'id'>) => void;
+  updateService: (id: string, service: Partial<Service>) => void;
   deleteService: (id: string) => void;
   toggleServiceActive: (id: string) => void;
-  addons: AddonItem[];
-  addAddon: (addon: any) => void;
-  updateAddon: (id: string, addon: any) => void;
+
+  addAddon: (addon: Omit<AddonItem, 'id'>) => void;
+  updateAddon: (id: string, addon: Partial<AddonItem>) => void;
   deleteAddon: (id: string) => void;
+  
+  addInventoryItem: (item: Omit<InventoryItem, 'id'>) => void;
+  updateInventoryItem: (id: string, item: Partial<InventoryItem>, reason?: string) => void;
+  deleteInventoryItem: (id: string) => void;
+  adjustStock: (id: string, amount: number, type: StockMovement['type'], reason: string) => void;
+  saveStockTake: (record: Omit<StockTakeRecord, 'id'>) => void;
 
-  // Staff & Logs
-  staff: Staff[];
-  addStaff: (staff: any) => void;
-  updateStaff: (id: string, staff: any) => void;
-  deleteStaff: (id: string) => void;
-  logs: Log[];
-  addLog: (log: Omit<Log, 'id' | 'timestamp'>) => void;
+  addVendor: (vendor: Omit<Vendor, 'id'>) => void;
+  updateVendor: (id: string, vendor: Partial<Vendor>) => void;
+  deleteVendor: (id: string) => void;
 
-  // Loyalty & Packages
-  tierRules: TierRule[];
-  updateTierRules: (rules: TierRule[]) => void;
-  packageTemplates: PackageTemplate[];
-  addPackageTemplate: (pkg: any) => void;
-  updatePackageTemplate: (id: string, pkg: any) => void;
+  addPackageTemplate: (template: Omit<PackageTemplate, 'id'>) => void;
+  updatePackageTemplate: (id: string, template: Partial<PackageTemplate>) => void;
   deletePackageTemplate: (id: string) => void;
   assignPackageToCustomer: (customerId: string, templateId: string) => void;
-  creditPackages: CreditPackageTemplate[];
-  addCreditPackage: (pkg: any) => void;
-  updateCreditPackage: (id: string, pkg: any) => void;
+
+  addCreditPackage: (pkg: Omit<CreditPackageTemplate, 'id'>) => void;
+  updateCreditPackage: (id: string, pkg: Partial<CreditPackageTemplate>) => void;
   deleteCreditPackage: (id: string) => void;
   buyCreditPackage: (customerId: string, packageId: string) => void;
+
+  selectOwner: (owner: Customer | null) => void;
+  setActivePet: (pet: Pet | null) => void;
+  setActiveQueueItem: (id: string | null) => void;
+  
+  addBooking: (booking: Omit<QueueItem, 'id'>) => void;
+  updateQueueStatus: (id: string, status: QueueStatus) => void;
+  removeQueueItem: (id: string) => void;
+  markAsPaid: (queueItemId: string) => void;
+
+  addCustomer: (customer: Omit<Customer, 'id' | 'points' | 'pets' | 'packages' | 'totalSpent' | 'creditBalance' | 'creditHistory'>) => void;
+  updateCustomer: (id: string, customer: Partial<Customer>) => void;
+  deleteCustomer: (id: string) => void;
+  bindLineToCustomer: (customerId, lineId: string) => void;
+  addPet: (customerId: string, pet: Omit<Pet, 'id'>) => void;
+  updatePet: (customerId: string, petId: string, pet: Partial<Pet>) => void;
+  updatePetWeight: (customerId: string, petId: string, weight: number) => void;
+  saveIntakeRecord: (customerId: string, petId: string, record: Omit<IntakeRecord, 'id' | 'date'>) => void;
+  processPayment: (customerId: string, amount: number, discount: number, items: CartItem[], method?: PaymentMethod, details?: Transaction['paymentDetails'], isTaxInvoice?: boolean) => void;
+  
+  updateTransaction: (id: string, data: Partial<Transaction>) => void;
+  deleteTransaction: (id: string) => void;
+  recalculateCustomerStats: (customerId: string) => void;
+
+  updateTierRules: (rules: TierRule[]) => void;
+  
+  addStaff: (staff: Omit<Staff, 'id'>) => void;
+  updateStaff: (id: string, staff: Partial<Staff>) => void;
+  deleteStaff: (id: string) => void;
+  addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
+
+  updateBookingSettings: (settings: { slotDuration?: number, maxCapacity?: number, openTime?: string, closeTime?: string, kennelCapacity?: number }) => void;
+  toggleSlotStatus: (time: string) => void;
 }

@@ -2,12 +2,7 @@ import { StateCreator } from 'zustand';
 import { AppState, Customer, Pet, QueueStatus, MembershipLevel, QueueItem } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 
-export const createCRMSlice: StateCreator<
-  AppState, 
-  [], 
-  [], 
-  Pick<AppState, 'customers' | 'setCustomers' | 'queue' | 'selectedOwner' | 'activePet' | 'activeQueueItemId' | 'selectOwner' | 'setActivePet' | 'setActiveQueueItemId' | 'addBooking' | 'updateQueueStatus' | 'removeQueueItem' | 'markAsPaid' | 'addCustomer' | 'updateCustomer' | 'deleteCustomer' | 'bindLineToCustomer' | 'addPet' | 'updatePet' | 'updatePetWeight' | 'saveIntakeRecord'>
-> = (set, get) => ({
+export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'customers' | 'setCustomers' | 'queue' | 'selectedOwner' | 'activePet' | 'activeQueueItemId' | 'selectOwner' | 'setActivePet' | 'setActiveQueueItem' | 'addBooking' | 'updateQueueStatus' | 'removeQueueItem' | 'markAsPaid' | 'addCustomer' | 'updateCustomer' | 'deleteCustomer' | 'bindLineToCustomer' | 'addPet' | 'updatePet' | 'updatePetWeight'>> = (set, get) => ({
   customers: [],
   setCustomers: (customers) => set({ customers }),
   queue: [],
@@ -17,7 +12,7 @@ export const createCRMSlice: StateCreator<
 
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
   setActivePet: (pet) => set({ activePet: pet }),
-  setActiveQueueItemId: (id) => set({ activeQueueItemId: id }),
+  setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
 
   addBooking: async (booking) => {
     const { data, error } = await supabase
@@ -156,13 +151,4 @@ export const createCRMSlice: StateCreator<
       }));
     }
   },
-
-  saveIntakeRecord: (customerId, petId, record) => {
-    set(state => ({
-      customers: state.customers.map(c => c.id === customerId ? {
-        ...c,
-        pets: c.pets.map(p => p.id === petId ? { ...p, intakeHistory: [...(p.intakeHistory || []), record] } : p)
-      } : c)
-    }));
-  }
 });

@@ -11,7 +11,7 @@ interface VendorModalProps {
 }
 
 const VendorModal = ({ vendor, onClose }: VendorModalProps) => {
-  const { addVendor, updateVendor } = useStore();
+  const { addVendor, updateVendor, language } = useStore();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -21,7 +21,6 @@ const VendorModal = ({ vendor, onClose }: VendorModalProps) => {
     contactPerson: '',
     phone: '',
     email: '',
-    consignmentRate: 20,
     notes: ''
   });
 
@@ -35,7 +34,6 @@ const VendorModal = ({ vendor, onClose }: VendorModalProps) => {
         contactPerson: vendor.contactPerson,
         phone: vendor.phone,
         email: vendor.email,
-        consignmentRate: vendor.consignmentRate,
         notes: vendor.notes
       });
     }
@@ -94,7 +92,7 @@ const VendorModal = ({ vendor, onClose }: VendorModalProps) => {
               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Address</label>
               <div className="relative">
                 <MapPin className="absolute left-4 top-4 text-gray-300" size={18} />
-                <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold h-24 resize-none leading-relaxed" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Full business address..." />
+                <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold h-24 resize-none" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Full business address..." />
               </div>
             </div>
 
@@ -127,11 +125,6 @@ const VendorModal = ({ vendor, onClose }: VendorModalProps) => {
                   <input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="contact@company.com" />
                 </div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">GP Rate (%)</label>
-              <input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={formData.consignmentRate} onChange={e => setFormData({...formData, consignmentRate: Number(e.target.value)})} />
             </div>
 
             <div className="space-y-2">
