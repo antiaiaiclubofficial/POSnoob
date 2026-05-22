@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import { AppState, QueueStatus, TierRule, MembershipLevel, ActivityLog } from './types';
+import { AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, QueueItem, Service, InventoryItem, Vendor, StockLog, Transaction, Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole } from './types';
+
+// Re-exporting all types for components
+export type { AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, QueueItem, Service, InventoryItem, Vendor, StockLog, Transaction, Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole };
 
 export const useStore = create<AppState>()((set, get) => ({
   language: 'th',
@@ -7,8 +10,7 @@ export const useStore = create<AppState>()((set, get) => ({
   currency: '฿',
   isAuthenticated: true,
   isAuthLoading: false,
-  currentUser: { id: 'admin', name: 'Admin User', role: 'Admin', username: 'admin' },
-  storeId: 'default-store',
+  currentUser: { id: 'admin', name: 'Admin User', role: 'Admin' },
 
   // Business Profile
   shopName: 'Mellow Fellow Sanctuary',
@@ -21,29 +23,16 @@ export const useStore = create<AppState>()((set, get) => ({
   receiptFooter: 'Thank you for your visit!',
   receiptPaperSize: '80mm',
 
-  // CRM & Booking
+  // Lists
   customers: [],
   selectedOwner: null,
   activePet: null,
   activeQueueItemId: null,
   queue: [],
-  slotDuration: 60,
-  openTime: '09:00',
-  closeTime: '19:00',
-  maxCapacity: 3,
-  disabledSlots: [],
-  recurringHolidays: [0], // Sunday
-  specificHolidays: [],
-  kennelCapacity: 12,
-
-  // Lists
   services: [],
   addons: [],
   inventory: [],
   vendors: [],
-  partners: [
-    { id: 'p1', companyName: 'บริษัท เพ็ทฟู้ด จำกัด', gpRate: 20 }
-  ],
   stockLogs: [],
   transactions: [],
   staff: [],
@@ -58,20 +47,29 @@ export const useStore = create<AppState>()((set, get) => ({
     { level: 'VIP', label: 'VIP Member', minSpent: 50000, discount: 15 },
   ],
 
-  // Actions
+  // Booking Settings
+  slotDuration: 60,
+  openTime: '09:00',
+  closeTime: '19:00',
+  maxCapacity: 3,
+  disabledSlots: [],
+  recurringHolidays: [0], // Sun
+  specificHolidays: [],
+  kennelCapacity: 12,
+
+  // Auth Actions
   login: (id, pass) => true,
   loginWithGoogle: async () => {},
-  setSession: (user) => {},
-  logout: () => set({ isAuthenticated: false, currentUser: null, storeId: null }),
+  logout: () => set({ isAuthenticated: false }),
   verifyPassword: (pass) => pass === '1234',
-  addLog: (log) => set(s => ({ 
-    logs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() } as ActivityLog, ...s.logs] 
-  })),
+  setSession: (user) => {},
 
+  // Business Actions
   updateBusinessProfile: (profile) => set(s => ({ ...s, ...profile })),
   updateBookingSettings: (settings) => set(s => ({ ...s, ...settings })),
   updateTierRules: (rules) => set({ tierRules: rules }),
 
+  // CRM Actions
   setCustomers: (customers) => set({ customers }),
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
   setActivePet: (pet) => set({ activePet: pet }),
@@ -86,12 +84,14 @@ export const useStore = create<AppState>()((set, get) => ({
   updatePetWeight: (cid, pid, w) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: c.pets.map(p => p.id === pid ? { ...p, weightHistory: [...p.weightHistory, { date: new Date().toISOString(), value: w }] } : p) } : c) })),
   saveIntakeRecord: (cid, pid, rec) => {},
 
+  // Booking Actions
   addBooking: (b) => set(s => ({ queue: [...s.queue, { ...b, id: Math.random().toString() }] })),
   updateQueueStatus: (id, status) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, status } : q) })),
   removeQueueItem: (id) => set(s => ({ queue: s.queue.filter(q => q.id !== id) })),
   toggleSlotStatus: (time) => set(s => ({ disabledSlots: s.disabledSlots.includes(time) ? s.disabledSlots.filter(t => t !== time) : [...s.disabledSlots, time] })),
   markAsPaid: (id) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
 
+  // POS Actions
   addToCart: (item) => set(s => ({ cart: [...s.cart, item] })),
   removeFromCart: (idx) => set(s => ({ cart: s.cart.filter((_, i) => i !== idx) })),
   updateCartQuantity: (idx, delta) => set(s => ({ cart: s.cart.map((item, i) => i === idx ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item) })),
@@ -102,10 +102,11 @@ export const useStore = create<AppState>()((set, get) => ({
   },
   deleteTransaction: (id) => set(s => ({ transactions: s.transactions.filter(t => t.id !== id) })),
 
+  // Services & Inventory Actions
   addService: (ser) => set(s => ({ services: [...s.services, { ...ser, id: Math.random().toString() }] })),
   updateService: (id, ser) => set(s => ({ services: s.services.map(s => s.id === id ? { ...s, ...ser } : s) })),
   deleteService: (id) => set(s => ({ services: s.services.filter(s => s.id !== id) })),
-  toggleServiceActive: (id) => set(s => ({ services: s.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
+  toggleServiceActive: (id) => set(s => ({ services: s.services.map(s => s.id === id ? { ...ser, isActive: !s.isActive } : s) })),
 
   addAddon: (ad) => set(s => ({ addons: [...s.addons, { ...ad, id: Math.random().toString() }] })),
   updateAddon: (id, ad) => set(s => ({ addons: s.addons.map(a => a.id === id ? { ...a, ...ad } : a) })),
@@ -114,13 +115,7 @@ export const useStore = create<AppState>()((set, get) => ({
   addInventoryItem: (i) => set(s => ({ inventory: [...s.inventory, { ...i, id: Math.random().toString() }] })),
   updateInventoryItem: (id, i) => set(s => ({ inventory: s.inventory.map(item => item.id === id ? { ...item, ...i } : item) })),
   deleteInventoryItem: (id) => set(s => ({ inventory: s.inventory.filter(i => i.id !== id) })),
-  adjustStock: (id, qty, mode, reason) => {
-    const item = get().inventory.find(i => i.id === id);
-    if (!item) return;
-    const oldQty = item.stock;
-    const newQty = mode === 'Add' || mode === 'In' ? oldQty + qty : mode === 'Out' ? oldQty - qty : qty;
-    set(s => ({ inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i) }));
-  },
+  adjustStock: (id, qty, mode, reason) => {},
 
   addVendor: (v) => set(s => ({ vendors: [...s.vendors, { ...v, id: Math.random().toString() }] })),
   updateVendor: (id, v) => set(s => ({ vendors: s.vendors.map(vendor => vendor.id === id ? { ...vendor, ...v } : vendor) })),
