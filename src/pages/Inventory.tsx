@@ -6,16 +6,12 @@ import {
   Search, Edit3, Package, Download, Save, Printer, Trash2, ArrowRight,
   TrendingUp, DollarSign, PieChart as PieIcon, LineChart as LineIcon, BarChart as BarIcon,
   ChevronRight, Camera, CheckCircle2, Plus, Tag, Building2, Filter,
-  AlertCircle, ArrowUpRight, RotateCcw, History, ArrowDown, ArrowUp, Info, Eye
+  AlertCircle, ArrowUpRight, RotateCcw, History, ArrowDown, ArrowUp, Info, Eye, Clock
 } from 'lucide-react';
-import { useStore, InventoryItem, StockLog, Partner } from '@/store/useStore';
+import { useStore, InventoryItem, StockLog, Partner, ReportHistory } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { 
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, 
-  Cell, PieChart, Pie, LineChart, Line, CartesianGrid 
-} from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import InventoryModal from '@/components/InventoryModal';
@@ -26,8 +22,8 @@ type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashbo
 
 const Inventory = () => {
   const { 
-    inventory, partners, stockLogs, shopName, shopAddress, shopPhone, shopLogo,
-    adjustStock, deleteInventoryItem, deletePartner, currency, currentUser
+    inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLogo,
+    adjustStock, deleteInventoryItem, deletePartner, currency, currentUser, addReportLog
   } = useStore();
   
   const [activeTab, setActiveTab] = useState<WmsTab>('master');
@@ -47,6 +43,11 @@ const Inventory = () => {
   const [adjustMode, setAdjustMode] = useState<'Add' | 'Set'>('Add');
   const [adjustQty, setAdjustQty] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
+
+  // States for Report Tab (Filters)
+  const [repPartnerFilter, setRepPartnerFilter] = useState('All');
+  const [repCategoryFilter, setRepCategoryFilter] = useState('All');
+  const [repStatusFilter, setRepStatusFilter] = useState('All');
 
   // Modals
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -92,34 +93,44 @@ const Inventory = () => {
 
   const selectedItemForAdjust = inventory.find(i => i.id === selectedAdjustId);
 
-  // Logic: PDF Generation
+  // Logic: PDF Generation with Filters
   const generatePDFReport = () => {
     const doc = new jsPDF();
     const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
+
+    // Apply Report Filters
+    let itemsToExport = [...inventory];
+    if (repPartnerFilter !== 'All') itemsToExport = itemsToExport.filter(i => i.partnerId === repPartnerFilter);
+    if (repCategoryFilter !== 'All') itemsToExport = itemsToExport.filter(i => i.category === repCategoryFilter);
+    if (repStatusFilter === 'Low') itemsToExport = itemsToExport.filter(i => i.stock > 0 && i.stock <= i.minStock);
+    if (repStatusFilter === 'Out') itemsToExport = itemsToExport.filter(i => i.stock === 0);
     
     // Header
     doc.setFontSize(20);
-    doc.text("รายงานสรุปสต็อกสินค้าคงเหลือ", 105, 15, { align: 'center' });
+    doc.text("รายงานสต็อกสินค้า (แบบเลือกกรอง)", 105, 15, { align: 'center' });
     doc.setFontSize(10);
     doc.text(shopName, 105, 22, { align: 'center' });
     doc.text(`วันที่ออกรายงาน: ${dateNow}`, 105, 27, { align: 'center' });
+
+    // Display Filter Criteria in PDF
+    const partnerName = repPartnerFilter === 'All' ? 'ทั้งหมด' : partners.find(p => p.id === repPartnerFilter)?.companyName;
+    doc.setFontSize(9);
+    doc.text(`ตัวกรอง: คู่ค้า [${partnerName}], หมวดหมู่ [${repCategoryFilter === 'All' ? 'ทั้งหมด' : repCategoryFilter}], สถานะ [${repStatusFilter === 'All' ? 'ทั้งหมด' : repStatusFilter}]`, 10, 38);
     
     // Summary Stats
-    const totalItems = inventory.length;
-    const totalValue = inventory.reduce((acc, i) => acc + (i.costPrice * i.stock), 0);
-    doc.text(`จำนวนรายการสินค้าทั้งหมด: ${totalItems} รายการ`, 10, 40);
-    doc.text(`มูลค่าต้นทุนรวม: ${currency}${totalValue.toLocaleString()}`, 10, 45);
+    const totalItems = itemsToExport.length;
+    const totalValue = itemsToExport.reduce((acc, i) => acc + (i.costPrice * i.stock), 0);
+    doc.text(`รายการที่พบ: ${totalItems} รายการ | มูลค่าต้นทุนรวม: ${currency}${totalValue.toLocaleString()}`, 10, 44);
 
     // Table
     autoTable(doc, {
-      startY: 55,
-      head: [['รหัส/บาร์โค้ด', 'ชื่อสินค้า', 'ประเภท', 'จำนวน', 'หน่วย', 'ต้นทุน', 'ราคาขาย']],
-      body: inventory.map(i => [
+      startY: 50,
+      head: [['รหัส/บาร์โค้ด', 'ชื่อสินค้า', 'ประเภท', 'จำนวน', 'ต้นทุน', 'ราคาขาย']],
+      body: itemsToExport.map(i => [
         i.barcode || '-',
         i.name,
         i.category,
-        i.stock,
-        i.unit,
+        `${i.stock} ${i.unit}`,
         i.costPrice.toLocaleString(),
         i.price.toLocaleString()
       ]),
@@ -127,7 +138,14 @@ const Inventory = () => {
       headStyles: { fillColor: [26, 31, 61] }
     });
 
-    doc.save(`Stock_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
+    // Record History
+    addReportLog({
+      reportName: "Inventory Stock Report",
+      filters: `Partner: ${partnerName}, Cat: ${repCategoryFilter}, Status: ${repStatusFilter}`,
+      staffName: currentUser?.name || 'Admin'
+    });
+
+    doc.save(`Stock_Report_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
     toast.success("ดาวน์โหลดรายงาน PDF เรียบร้อยแล้ว");
   };
 
@@ -263,36 +281,93 @@ const Inventory = () => {
            </div>
         )}
 
-        {/* Tab: Report (PDF) */}
+        {/* Tab: Report (PDF) - ENHANCED */}
         {activeTab === 'report' && (
-           <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in duration-500">
-              <div className="bg-white p-12 rounded-[48px] border border-gray-100 shadow-sm text-center space-y-8">
-                 <div className="w-24 h-24 bg-red-50 text-red-500 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/10">
-                    <FileText size={48} />
-                 </div>
-                 <div>
-                    <h2 className="text-3xl font-black text-[#1A1F3D] mb-2">สรุปรายงานสินค้าคงเหลือ (PDF)</h2>
-                    <p className="text-sm text-gray-400 font-medium max-w-md mx-auto leading-relaxed">
-                       สร้างรายงานสรุปสินค้าทั้งหมดในสต็อกปัจจุบัน รวมถึงมูลค่าต้นทุนคงเหลือ เพื่อใช้สำหรับการตรวจสอบสต็อกประจำเดือนหรือส่งฝ่ายบัญชี
-                    </p>
-                 </div>
-                 <div className="flex flex-col sm:flex-row justify-center gap-4 pt-6">
-                    <button onClick={generatePDFReport} className="bg-[#1A1F3D] text-white px-10 py-5 rounded-[24px] font-black text-sm flex items-center justify-center gap-3 shadow-2xl hover:scale-105 active:scale-95 transition-all">
-                       <Download size={20} /> ดาวน์โหลดรายงาน A4
-                    </button>
-                    <button onClick={() => window.print()} className="bg-white border-2 border-gray-100 text-[#1A1F3D] px-10 py-5 rounded-[24px] font-black text-sm flex items-center justify-center gap-3 hover:bg-gray-50 transition-all">
-                       <Printer size={20} /> พิมพ์ผ่านเครื่องพิมพ์
-                    </button>
-                 </div>
-              </div>
+           <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                 {/* Filters Section */}
+                 <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+                       <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                             <Filter size={20} />
+                          </div>
+                          <h3 className="text-lg font-black text-[#1A1F3D]">Report Filters</h3>
+                       </div>
 
-              <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
-                 <h3 className="text-xl font-black text-[#1A1F3D] mb-8">ตัวอย่างหัวข้อรายงาน</h3>
-                 <div className="space-y-4 opacity-50 select-none grayscale">
-                    <div className="h-6 bg-gray-100 rounded-full w-3/4" />
-                    <div className="h-4 bg-gray-50 rounded-full w-full" />
-                    <div className="h-4 bg-gray-50 rounded-full w-5/6" />
-                    <div className="h-20 bg-gray-50 rounded-[24px] w-full" />
+                       <div className="space-y-4">
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase text-gray-400 px-1">Partner / Vendor</label>
+                             <select className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold" value={repPartnerFilter} onChange={e => setRepPartnerFilter(e.target.value)}>
+                                <option value="All">ทั้งหมด (All Partners)</option>
+                                {partners.map(p => <option key={p.id} value={p.id}>{p.companyName}</option>)}
+                             </select>
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase text-gray-400 px-1">Category</label>
+                             <select className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold" value={repCategoryFilter} onChange={e => setRepCategoryFilter(e.target.value)}>
+                                <option value="All">ทั้งหมด (All Categories)</option>
+                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                             </select>
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase text-gray-400 px-1">Stock Status</label>
+                             <select className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold" value={repStatusFilter} onChange={e => setRepStatusFilter(e.target.value)}>
+                                <option value="All">ทั้งหมด (All Items)</option>
+                                <option value="Low">ใกล้หมด (Low Stock Only)</option>
+                                <option value="Out">สินค้าหมด (Out of Stock Only)</option>
+                             </select>
+                          </div>
+                       </div>
+
+                       <button onClick={generatePDFReport} className="w-full bg-[#1A1F3D] text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
+                          <Download size={18} /> Generate PDF
+                       </button>
+                    </div>
+                 </div>
+
+                 {/* History Section */}
+                 <div className="lg:col-span-2">
+                    <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
+                       <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/20">
+                          <div className="flex items-center gap-3">
+                             <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><History size={20} /></div>
+                             <div>
+                                <h3 className="text-xl font-black text-[#1A1F3D]">Report History</h3>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Recent exports</p>
+                             </div>
+                          </div>
+                       </div>
+                       
+                       <div className="flex-1 overflow-y-auto scrollbar-hide max-h-[500px]">
+                          <table className="w-full">
+                             <thead>
+                                <tr className="bg-white border-b border-gray-50">
+                                   <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Timestamp</th>
+                                   <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Filters Applied</th>
+                                   <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Staff</th>
+                                </tr>
+                             </thead>
+                             <tbody className="divide-y divide-gray-50">
+                                {reportHistory.map((rep) => (
+                                   <tr key={rep.id} className="hover:bg-gray-50/50">
+                                      <td className="px-8 py-6">
+                                         <p className="text-xs font-black text-[#1A1F3D]">{format(new Date(rep.timestamp), 'dd MMM yyyy')}</p>
+                                         <p className="text-[9px] text-gray-400 font-bold">{format(new Date(rep.timestamp), 'HH:mm')}</p>
+                                      </td>
+                                      <td className="px-8 py-6">
+                                         <p className="text-[10px] font-medium text-gray-500 line-clamp-1">{rep.filters}</p>
+                                      </td>
+                                      <td className="px-8 py-6 text-right font-black text-[10px] text-[#1A1F3D] uppercase">{rep.staffName}</td>
+                                   </tr>
+                                ))}
+                                {reportHistory.length === 0 && (
+                                   <tr><td colSpan={3} className="py-20 text-center opacity-20 font-black">No export history found</td></tr>
+                                )}
+                             </tbody>
+                          </table>
+                       </div>
+                    </div>
                  </div>
               </div>
            </div>
@@ -315,22 +390,20 @@ const Inventory = () => {
                  {partners.map(partner => (
                     <div key={partner.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all relative overflow-hidden">
                        <div className="absolute top-0 right-0 p-8 opacity-5 text-[#1A1F3D] pointer-events-none select-none z-0"><Building2 size={80} /></div>
-                       <div className="flex justify-between items-start mb-6 relative z-10">
+                       <div className="flex justify-between items-start mb-6">
                           <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[20px] flex items-center justify-center"><Building2 size={28}/></div>
                           <div className="flex gap-1">
-                             <button onClick={() => handleEditPartner(partner)} className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-xl transition-all"><Edit3 size={18}/></button>
-                             <button onClick={() => handleDeletePartner(partner.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18}/></button>
+                             <button onClick={() => handleEditPartner(partner)} className="p-2 text-gray-400 hover:text-[#1A1F3D] rounded-xl"><Edit3 size={18}/></button>
+                             <button onClick={() => handleDeletePartner(partner.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-xl"><Trash2 size={18}/></button>
                           </div>
                        </div>
-                       <div className="relative z-10">
-                         <h4 className="text-xl font-black text-[#1A1F3D] mb-1">{partner.companyName}</h4>
-                         <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest mb-6">GP: {partner.gpRate}% (ส่วนแบ่งคู่ค้า)</p>
-                         
-                         <div className="pt-6 border-t border-gray-50 flex gap-3">
-                            <button onClick={() => setSelectedVendorForView(partner)} className="flex-1 bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black text-[10px] uppercase py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
-                               <Eye size={14} /> ดูสต็อกที่นี่
-                            </button>
-                         </div>
+                       <h4 className="text-xl font-black text-[#1A1F3D] mb-1">{partner.companyName}</h4>
+                       <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest mb-6">GP: {partner.gpRate}% (ส่วนแบ่งคู่ค้า)</p>
+                       
+                       <div className="pt-6 border-t border-gray-50 flex gap-3">
+                          <button onClick={() => setSelectedVendorForView(partner)} className="flex-1 bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black text-[10px] uppercase py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
+                             <Eye size={14} /> ดูสต็อกที่นี่
+                          </button>
                        </div>
                     </div>
                  ))}

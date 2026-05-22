@@ -3,14 +3,14 @@ import {
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
   QueueItem, Service, InventoryItem, Partner, StockLog, Transaction, 
   Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, 
-  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole 
+  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory 
 } from './types';
 
 export type { 
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
   QueueItem, Service, InventoryItem, Partner, StockLog, Transaction, 
   Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, 
-  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole 
+  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory 
 };
 
 export const useStore = create<AppState>()((set, get) => ({
@@ -62,6 +62,7 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   ],
   stockLogs: [],
+  reportHistory: [],
   transactions: [],
   staff: [],
   logs: [],
@@ -82,6 +83,9 @@ export const useStore = create<AppState>()((set, get) => ({
   verifyPassword: (pass) => pass === '1234',
   addLog: (log) => set(s => ({ 
     logs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() } as ActivityLog, ...s.logs] 
+  })),
+  addReportLog: (log) => set(s => ({
+    reportHistory: [{ ...log, id: `REP-${Math.random().toString(36).substr(2, 5).toUpperCase()}`, timestamp: new Date().toISOString() }, ...s.reportHistory]
   })),
 
   updateBusinessProfile: (profile) => set(s => ({ ...s, ...profile })),

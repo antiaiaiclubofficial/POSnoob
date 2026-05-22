@@ -129,6 +129,14 @@ export interface StockLog {
   timestamp: string;
 }
 
+export interface ReportHistory {
+  id: string;
+  reportName: string;
+  filters: string;
+  staffName: string;
+  timestamp: string;
+}
+
 export interface Transaction {
   id: string;
   date: string;
@@ -230,6 +238,7 @@ export interface AppState {
   inventory: InventoryItem[];
   partners: Partner[];
   stockLogs: StockLog[];
+  reportHistory: ReportHistory[];
   transactions: Transaction[];
   tierRules: TierRule[];
   packageTemplates: PackageTemplate[];
@@ -255,6 +264,7 @@ export interface AppState {
   verifyPassword: (pass: string) => boolean;
   setSession: (user: any) => void;
   addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
+  addReportLog: (log: Omit<ReportHistory, 'id' | 'timestamp'>) => void;
   
   updateBusinessProfile: (profile: any) => void;
   updateBookingSettings: (settings: any) => void;
