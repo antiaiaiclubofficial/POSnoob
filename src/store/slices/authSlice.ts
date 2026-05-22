@@ -1,7 +1,5 @@
-"use client";
-
 import { StateCreator } from 'zustand';
-import { AppState, Staff } from '../types';
+import { AppState } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 
 export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isAuthenticated' | 'isAuthLoading' | 'currentUser' | 'storeId' | 'login' | 'loginWithGoogle' | 'setSession' | 'verifyPassword' | 'logout'>> = (set, get) => ({
@@ -12,22 +10,15 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
 
   login: (id, pass) => {
     if (id === 'admin' && pass === '1234') {
-      const user: Staff = { 
-        id: 'admin', 
-        name: 'Admin', 
-        role: 'Admin', 
-        username: 'admin',
-        phone: '000-000-0000',
-        status: 'Active',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop'
-      };
+      const user = { id: 'admin', name: 'Admin', role: 'Admin', username: 'admin' };
       set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
       get().addLog({ staffName: 'System', action: 'Login Success', details: 'Super Admin logged into the system', type: 'success' });
       return true;
     }
     const member = get().staff.find(s => s.username === id && s.password === pass && s.status === 'Active');
     if (member) {
-      set({ isAuthenticated: true, currentUser: member, storeId: 'default-store', isAuthLoading: false });
+      const user = { id: member.id, name: member.name, role: member.role, username: member.username };
+      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
       get().addLog({ staffName: 'System', action: 'Login Success', details: `Staff member ${member.name} logged in`, type: 'success' });
       return true;
     }
@@ -37,7 +28,9 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
   loginWithGoogle: async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: {
+        redirectTo: window.location.origin
+      }
     });
     if (error) throw error;
   },
@@ -45,19 +38,16 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
   setSession: (user) => {
     if (user) {
       const storeIdFromMetadata = user.user_metadata?.store_id || 'default-store';
-      const currentUser: Staff = {
-        id: user.id,
-        name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-        role: 'Admin', 
-        email: user.email,
-        avatar: user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-        status: 'Active',
-        phone: 'N/A'
-      };
       set({ 
         isAuthenticated: true, 
         isAuthLoading: false,
-        currentUser: currentUser,
+        currentUser: {
+          id: user.id,
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          role: 'Admin', 
+          email: user.email,
+          avatar: user.user_metadata?.avatar_url || undefined 
+        },
         storeId: storeIdFromMetadata
       });
     } else {
