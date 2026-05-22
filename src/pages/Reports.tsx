@@ -17,7 +17,7 @@ import {
 import { toast } from 'sonner';
 
 const Reports = () => {
-  const { transactions, currency, verifyPassword, deleteTransaction, language, vendors } = useStore();
+  const { transactions, currency, verifyPassword, deleteTransaction, language, partners } = useStore();
   const t = translations[language];
   
   const [dateRange, setDateRange] = useState<'today' | '7days' | 'month' | 'all'>('all');
@@ -43,28 +43,28 @@ const Reports = () => {
     
     filteredData.forEach(tx => {
       tx.items.forEach(item => {
-        if (item.isConsignment && item.vendorId) {
-          if (!report[item.vendorId]) {
-            report[item.vendorId] = { total: 0, payout: 0, profit: 0, items: 0 };
+        if (item.isConsignment && item.partnerId) {
+          if (!report[item.partnerId]) {
+            report[item.partnerId] = { total: 0, payout: 0, profit: 0, items: 0 };
           }
           const rate = item.consignmentRate || 0;
           const payout = (item.price * rate) / 100;
           const profit = item.price - payout;
           
-          report[item.vendorId].total += item.price;
-          report[item.vendorId].payout += payout;
-          report[item.vendorId].profit += profit;
-          report[item.vendorId].items += 1;
+          report[item.partnerId].total += item.price;
+          report[item.partnerId].payout += payout;
+          report[item.partnerId].profit += profit;
+          report[item.partnerId].items += 1;
         }
       });
     });
 
-    return Object.entries(report).map(([vendorId, data]) => ({
-      vendorId,
-      vendorName: vendors.find(v => v.id === vendorId)?.name || 'Unknown Vendor',
+    return Object.entries(report).map(([partnerId, data]) => ({
+      vendorId: partnerId,
+      vendorName: partners.find(p => p.id === partnerId)?.companyName || 'Unknown Vendor',
       ...data
     }));
-  }, [filteredData, vendors]);
+  }, [filteredData, partners]);
 
   const stats = useMemo(() => {
     const totalRevenue = filteredData.reduce((acc, t) => acc + t.amount, 0);

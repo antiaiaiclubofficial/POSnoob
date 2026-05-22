@@ -2,18 +2,18 @@
 
 import React from 'react';
 import { X, Package, DollarSign, TrendingUp, BarChart3, AlertCircle } from 'lucide-react';
-import { useStore, Vendor } from '@/store/useStore';
+import { useStore, Partner } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 
 interface VendorInventoryViewProps {
-  vendor: Vendor;
+  vendor: Partner;
   onClose: () => void;
 }
 
 const VendorInventoryView = ({ vendor, onClose }: VendorInventoryViewProps) => {
   const { inventory, currency } = useStore();
   
-  const vendorItems = inventory.filter(i => i.vendorId === vendor.id);
+  const vendorItems = inventory.filter(i => i.partnerId === vendor.id);
 
   const stats = vendorItems.reduce((acc, item) => {
     const totalItemRetailValue = item.price * item.stock;
@@ -40,7 +40,7 @@ const VendorInventoryView = ({ vendor, onClose }: VendorInventoryViewProps) => {
                 <BarChart3 size={32} />
              </div>
              <div>
-                <h3 className="text-3xl font-black text-[#1A1F3D] mb-1">{vendor.name}</h3>
+                <h3 className="text-3xl font-black text-[#1A1F3D] mb-1">{vendor.companyName}</h3>
                 <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Inventory Performance & Value</p>
                 <div className="flex items-center gap-4 mt-4">
                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-blue-500">

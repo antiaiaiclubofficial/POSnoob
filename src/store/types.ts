@@ -100,14 +100,13 @@ export interface InventoryItem {
   category: string;
   image?: string;
   isConsignment: boolean;
-  vendorId?: string;
   partnerId?: string;
   consignmentRate?: number;
 }
 
-export interface Vendor {
+export interface Partner {
   id: string;
-  name: string;
+  companyName: string;
   taxId?: string;
   address?: string;
   phone: string;
@@ -115,11 +114,6 @@ export interface Vendor {
   contactPerson: string;
   notes: string;
   mainCategory?: string;
-}
-
-export interface Partner {
-  id: string;
-  companyName: string;
   gpRate: number;
 }
 
@@ -234,7 +228,6 @@ export interface AppState {
   services: Service[];
   addons: AddonItem[];
   inventory: InventoryItem[];
-  vendors: Vendor[];
   partners: Partner[];
   stockLogs: StockLog[];
   transactions: Transaction[];
@@ -285,6 +278,7 @@ export interface AppState {
   updateQueueStatus: (id: string, status: QueueStatus) => void;
   removeQueueItem: (id: string) => void;
   toggleSlotStatus: (time: string) => void;
+  maxCapacitySlot?: number; // Added to match translations key if needed, though maxCapacity is used
   markAsPaid: (id: string) => void;
 
   addToCart: (item: any) => void;
@@ -308,9 +302,9 @@ export interface AppState {
   deleteInventoryItem: (id: string) => void;
   adjustStock: (id: string, qty: number, mode: 'Add' | 'Set' | 'In' | 'Out', reason: string) => void;
   
-  addVendor: (vendor: any) => void;
-  updateVendor: (id: string, vendor: any) => void;
-  deleteVendor: (id: string) => void;
+  addPartner: (partner: any) => void;
+  updatePartner: (id: string, partner: any) => void;
+  deletePartner: (id: string) => void;
   
   addStaff: (staff: any) => void;
   updateStaff: (id: string, staff: any) => void;

@@ -27,7 +27,7 @@ type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashbo
 const Inventory = () => {
   const { 
     inventory, partners, stockLogs, shopName, shopAddress, shopPhone, shopLogo,
-    adjustStock, deleteInventoryItem, deleteVendor, currency, currentUser
+    adjustStock, deleteInventoryItem, deletePartner, currency, currentUser
   } = useStore();
   
   const [activeTab, setActiveTab] = useState<WmsTab>('master');
@@ -52,8 +52,8 @@ const Inventory = () => {
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
-  const [editingPartner, setEditingPartner] = useState<any>(null);
-  const [selectedVendorForView, setSelectedVendorForView] = useState<any>(null);
+  const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
+  const [selectedVendorForView, setSelectedVendorForView] = useState<Partner | null>(null);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -150,6 +150,18 @@ const Inventory = () => {
     if (newQty !== null && !isNaN(Number(newQty))) {
       adjustStock(id, Number(newQty), 'Set', 'Physical Audit');
       toast.success("อัปเดตสต็อกเรียบร้อย");
+    }
+  };
+
+  const handleEditPartner = (p: Partner) => {
+    setEditingPartner(p);
+    setIsVendorModalOpen(true);
+  };
+
+  const handleDeletePartner = (id: string) => {
+    if (window.confirm('ยืนยันการลบคู่ค้า? ข้อมูลสินค้าที่เกี่ยวข้องจะไม่ถูกลบแต่จะไม่มีผู้จัดจำหน่ายระบุไว้')) {
+      deletePartner(id);
+      toast.success('ลบข้อมูลคู่ค้าเรียบร้อย');
     }
   };
 
@@ -306,8 +318,8 @@ const Inventory = () => {
                        <div className="flex justify-between items-start mb-6">
                           <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[20px] flex items-center justify-center"><Building2 size={28}/></div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button onClick={() => { setEditingPartner(partner); setIsVendorModalOpen(true); }} className="p-2 text-gray-400 hover:text-[#1A1F3D] rounded-xl"><Edit3 size={18}/></button>
-                             <button onClick={() => { if(confirm('ยืนยันการลบคู่ค้า?')) deleteVendor(partner.id); }} className="p-2 text-gray-400 hover:text-red-500 rounded-xl"><Trash2 size={18}/></button>
+                             <button onClick={() => handleEditPartner(partner)} className="p-2 text-gray-400 hover:text-[#1A1F3D] rounded-xl"><Edit3 size={18}/></button>
+                             <button onClick={() => handleDeletePartner(partner.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-xl"><Trash2 size={18}/></button>
                           </div>
                        </div>
                        <h4 className="text-xl font-black text-[#1A1F3D] mb-1">{partner.companyName}</h4>
@@ -329,7 +341,7 @@ const Inventory = () => {
       </div>
 
       {isItemModalOpen && <InventoryModal item={editingItem} onClose={() => setIsItemModalOpen(false)} />}
-      {isVendorModalOpen && <VendorModal vendor={editingPartner} onClose={() => setIsVendorModalOpen(false)} />}
+      {isVendorModalOpen && <VendorModal partner={editingPartner} onClose={() => setIsVendorModalOpen(false)} />}
       {selectedVendorForView && <VendorInventoryView vendor={selectedVendorForView} onClose={() => setSelectedVendorForView(null)} />}
     </div>
   );

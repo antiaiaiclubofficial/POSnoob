@@ -1,15 +1,14 @@
 import { create } from 'zustand';
 import { 
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
-  QueueItem, Service, InventoryItem, Vendor, Partner, StockLog, Transaction, 
+  QueueItem, Service, InventoryItem, Partner, StockLog, Transaction, 
   Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, 
   PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole 
 } from './types';
 
-// Re-export all types so components can import them from '@/store/useStore'
 export type { 
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
-  QueueItem, Service, InventoryItem, Vendor, Partner, StockLog, Transaction, 
+  QueueItem, Service, InventoryItem, Partner, StockLog, Transaction, 
   Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, 
   PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole 
 };
@@ -23,7 +22,6 @@ export const useStore = create<AppState>()((set, get) => ({
   currentUser: { id: 'admin', name: 'Admin User', role: 'Admin', username: 'admin' },
   storeId: 'default-store',
 
-  // Business Profile
   shopName: 'Mellow Fellow Sanctuary',
   shopLogo: null,
   shopAddress: '123 Sukhumvit, Bangkok 10110',
@@ -34,7 +32,6 @@ export const useStore = create<AppState>()((set, get) => ({
   receiptFooter: 'Thank you for your visit!',
   receiptPaperSize: '80mm',
 
-  // CRM & Booking
   customers: [],
   selectedOwner: null,
   activePet: null,
@@ -49,13 +46,20 @@ export const useStore = create<AppState>()((set, get) => ({
   specificHolidays: [],
   kennelCapacity: 12,
 
-  // Lists
   services: [],
   addons: [],
   inventory: [],
-  vendors: [],
   partners: [
-    { id: 'p1', companyName: 'บริษัท เพ็ทฟู้ด จำกัด', gpRate: 20 }
+    { 
+      id: 'p1', 
+      companyName: 'บริษัท เพ็ทฟู้ด จำกัด', 
+      gpRate: 20,
+      contactPerson: 'คุณสมชาย',
+      phone: '081-234-5678',
+      email: 'contact@petfood.com',
+      notes: 'ส่งสินค้าทุกวันจันทร์',
+      mainCategory: 'อาหารสัตว์'
+    }
   ],
   stockLogs: [],
   transactions: [],
@@ -71,7 +75,6 @@ export const useStore = create<AppState>()((set, get) => ({
     { level: 'VIP', label: 'VIP Member', minSpent: 50000, discount: 15 },
   ],
 
-  // Actions
   login: (id, pass) => true,
   loginWithGoogle: async () => {},
   setSession: (user) => {},
@@ -135,9 +138,9 @@ export const useStore = create<AppState>()((set, get) => ({
     set(s => ({ inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i) }));
   },
 
-  addVendor: (v) => set(s => ({ vendors: [...s.vendors, { ...v, id: Math.random().toString() }] })),
-  updateVendor: (id, v) => set(s => ({ vendors: s.vendors.map(vendor => vendor.id === id ? { ...vendor, ...v } : vendor) })),
-  deleteVendor: (id) => set(s => ({ vendors: s.vendors.filter(v => v.id !== id) })),
+  addPartner: (v) => set(s => ({ partners: [...s.partners, { ...v, id: Math.random().toString() }] })),
+  updatePartner: (id, v) => set(s => ({ partners: s.partners.map(p => p.id === id ? { ...p, ...v } : p) })),
+  deletePartner: (id) => set(s => ({ partners: s.partners.filter(p => p.id !== id) })),
 
   addStaff: (st) => set(s => ({ staff: [...s.staff, { ...st, id: Math.random().toString() }] })),
   updateStaff: (id, st) => set(s => ({ staff: s.staff.map(mem => mem.id === id ? { ...mem, ...st } : mem) })),
