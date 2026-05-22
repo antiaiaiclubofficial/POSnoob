@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { 
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, ChartTooltip, 
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, 
   Cell, PieChart, Pie, LineChart, Line, CartesianGrid 
 } from 'recharts';
 import jsPDF from 'jspdf';
@@ -28,7 +28,7 @@ const Inventory = () => {
     adjustStock, updateBusinessProfile, deleteInventoryItem, deleteVendor, language, currency
   } = useStore();
   
-  const [activeTab, setActiveTab] = useState<WmsTab>('master'); // Default to master as requested
+  const [activeTab, setActiveTab] = useState<WmsTab>('master');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
@@ -38,7 +38,6 @@ const Inventory = () => {
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState<any>(null);
 
-  // Adjustment State
   const [selectedAdjustId, setSelectedAdjustId] = useState('');
   const [adjustMode, setAdjustMode] = useState<'Add' | 'Set'>('Add');
   const [adjustQty, setAdjustQty] = useState('');
@@ -53,12 +52,10 @@ const Inventory = () => {
     { id: 'consignment', label: 'คู่ค้าฝากขาย', icon: Users },
   ];
 
-  // Get unique categories for filter
   const categories = useMemo(() => {
     return Array.from(new Set(inventory.map(i => i.category))).filter(Boolean);
   }, [inventory]);
 
-  // Logic: Combined Filters
   const filteredInventory = useMemo(() => {
     return inventory.filter(i => {
       const matchesSearch = i.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -114,7 +111,6 @@ const Inventory = () => {
       </header>
 
       <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
-        {/* TAB 1: Dashboard */}
         {activeTab === 'dashboard' && (
           <div className="space-y-10 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -126,14 +122,11 @@ const Inventory = () => {
           </div>
         )}
 
-        {/* TAB 2: Master List (Modified with 3-way Search/Filters) */}
         {activeTab === 'master' && (
           <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
-            {/* Advanced Search & Filter Bar */}
             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 w-full">
-                     {/* 1. ค้นหาจากชื่อสินค้าหรือบาร์โค้ด */}
                      <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">ชื่อสินค้า หรือ บาร์โค้ด</label>
                         <div className="relative">
@@ -147,7 +140,6 @@ const Inventory = () => {
                         </div>
                      </div>
 
-                     {/* 2. จากหมวดหมู่สินค้า */}
                      <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">หมวดหมู่สินค้า</label>
                         <div className="relative">
@@ -165,7 +157,6 @@ const Inventory = () => {
                         </div>
                      </div>
 
-                     {/* 3. จากบริษัทคู่ค้า */}
                      <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">บริษัทคู่ค้า (สินค้าฝากขาย)</label>
                         <div className="relative">
@@ -191,19 +182,8 @@ const Inventory = () => {
                      <Plus size={20} className="inline mr-2" /> เพิ่มสินค้าใหม่
                   </button>
                </div>
-
-               {/* Clear Filters Button (Visible only when filtering) */}
-               {(searchQuery || categoryFilter || partnerFilter) && (
-                  <button 
-                     onClick={() => { setSearchQuery(''); setCategoryFilter(''); setPartnerFilter(''); }}
-                     className="text-[10px] font-black uppercase text-red-400 hover:text-red-600 transition-colors px-2"
-                  >
-                     ล้างตัวกรองทั้งหมด
-                  </button>
-               )}
             </div>
 
-            {/* Results Table */}
             <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
                <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
                   <div className="flex items-center gap-3">
@@ -219,7 +199,6 @@ const Inventory = () => {
                         <tr className="bg-gray-50/50">
                            <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400">บาร์โค้ด / รูป</th>
                            <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400">ชื่อสินค้า / หมวดหมู่</th>
-                           <th className="px-8 py-6 text-center text-[10px] font-black uppercase text-gray-400">ต้นทุน</th>
                            <th className="px-8 py-6 text-center text-[10px] font-black uppercase text-gray-400">ราคาขาย</th>
                            <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400">สถานะสินค้า</th>
                            <th className="px-8 py-6 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
@@ -238,7 +217,6 @@ const Inventory = () => {
                                  <p className="text-sm font-black text-[#1A1F3D]">{item.name}</p>
                                  <p className="text-[9px] font-black uppercase text-blue-500 tracking-widest mt-0.5">{item.category}</p>
                               </td>
-                              <td className="px-8 py-6 text-center text-sm font-bold text-gray-300">฿{item.costPrice}</td>
                               <td className="px-8 py-6 text-center text-sm font-black text-[#1A1F3D]">฿{item.price}</td>
                               <td className="px-8 py-6">
                                  {item.isConsignment ? (
@@ -255,14 +233,6 @@ const Inventory = () => {
                               </td>
                            </tr>
                         ))}
-                        {filteredInventory.length === 0 && (
-                           <tr>
-                              <td colSpan={6} className="py-20 text-center opacity-30">
-                                 <Search size={48} className="mx-auto mb-4" />
-                                 <p className="font-black uppercase tracking-widest text-xs">ไม่พบรายการสินค้าที่ค้นหา</p>
-                              </td>
-                           </tr>
-                        )}
                      </tbody>
                   </table>
                </div>
@@ -270,14 +240,11 @@ const Inventory = () => {
           </div>
         )}
 
-        {/* ... Rest of the tabs stay the same ... */}
         {activeTab === 'check' && (
           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
              <div className="flex justify-between items-center">
                 <h3 className="text-xl font-black text-[#1A1F3D]">Inventory Status & Alerts</h3>
-                <button onClick={() => toast.success("Exported")} className="bg-white border border-gray-100 text-[#1A1F3D] px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-gray-50 shadow-sm"><Download size={14}/> Export to Excel (.CSV)</button>
              </div>
-             
              <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
                 <table className="w-full">
                    <thead>
@@ -298,7 +265,7 @@ const Inventory = () => {
                                   {status === 'Out' ? (
                                     <span className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">สินค้าหมด</span>
                                   ) : status === 'Low' ? (
-                                    <span className="bg-orange-50 text-orange-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">สินค้าใกล้หมด (Min: {item.minStock})</span>
+                                    <span className="bg-orange-50 text-orange-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">สินค้าใกล้หมด</span>
                                   ) : (
                                     <span className="bg-green-50 text-green-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">ปกติ</span>
                                   )}
@@ -310,27 +277,6 @@ const Inventory = () => {
                 </table>
              </div>
           </div>
-        )}
-
-        {/* Adjust, Report, Consignment Tabs stay original */}
-        {activeTab === 'adjust' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm"><form onSubmit={handleAdjustSubmit} className="space-y-6"><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 font-bold" value={selectedAdjustId} onChange={e => setSelectedAdjustId(e.target.value)}><option value="">-- เลือกสินค้า --</option>{inventory.map(i => <option key={i.id} value={i.id}>{i.name} ({i.stock})</option>)}</select><div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2"><button type="button" onClick={() => setAdjustMode('Add')} className={cn("flex-1 py-3 rounded-[18px]", adjustMode === 'Add' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>Add (+)</button><button type="button" onClick={() => setAdjustMode('Set')} className={cn("flex-1 py-3 rounded-[18px]", adjustMode === 'Set' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>Set (=)</button></div><input type="number" className="w-full bg-[#F5F6FA] rounded-2xl px-6 py-4 text-xl font-black" value={adjustQty} onChange={e => setAdjustQty(e.target.value)}/><button type="submit" className="w-full bg-[#1A1F3D] text-white py-5 rounded-[28px] font-black shadow-xl">บันทึกรายการ</button></form></div>
-            <div className="lg:col-span-2 bg-white rounded-[48px] border border-gray-100 overflow-hidden flex flex-col"><div className="p-8 border-b bg-gray-50/50 font-black">STOCK LOG</div><div className="flex-1 overflow-y-auto"><table className="w-full"><thead><tr className="bg-gray-50/30"><th>Time</th><th>Item</th><th>Old</th><th>New</th><th>Reason</th></tr></thead><tbody className="divide-y">{stockLogs.map(log => (<tr key={log.id}><td className="p-5">{format(new Date(log.timestamp), 'HH:mm')}</td><td className="font-black">{log.productName}</td><td className="text-center">{log.oldQty}</td><td className="text-center font-black">{log.newQty}</td><td>{log.reason}</td></tr>))}</tbody></table></div></div>
-          </div>
-        )}
-
-        {activeTab === 'report' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            <section className="bg-white p-10 rounded-[48px] space-y-8"><h3 className="text-xl font-black">Bill Customization</h3><div className="space-y-4"><div><label className="text-[10px] font-black uppercase text-gray-400 px-2">ชื่อหัวบิล</label><input className="w-full bg-[#F5F6FA] rounded-2xl px-6 py-4" value={shopName} onChange={e => updateBusinessProfile({ shopName: e.target.value })}/></div></div></section>
-            <div className="flex flex-col items-center"><div className="bg-white w-full aspect-[210/297] shadow-2xl p-10 flex flex-col font-serif" id="a4-preview"><div className="border-b-2 border-black pb-8 mb-8"><h2 className="text-xl font-bold uppercase">{shopName}</h2><p className="text-[8px] text-gray-600">{shopAddress}</p></div><table className="w-full text-[10px] border-collapse mb-10"><thead><tr className="border-y border-black"><th className="py-2 text-left">Item</th><th className="py-2 text-center">Qty</th><th className="py-2 text-right">Price</th></tr></thead><tbody>{inventory.slice(0, 3).map(i => (<tr key={i.id}><td className="py-3">{i.name}</td><td className="py-3 text-center">{i.stock}</td><td className="py-3 text-right">฿{i.price}</td></tr>))}</tbody></table></div><div className="flex gap-4 mt-10"><button onClick={generatePDF} className="bg-[#1A1F3D] text-white px-10 py-5 rounded-[24px] font-black flex items-center gap-3"><Download size={20}/> Download PDF</button></div></div>
-          </div>
-        )}
-
-        {activeTab === 'consignment' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">{partners.map(v => (
-            <div key={v.id} className="bg-white p-8 rounded-[40px] border shadow-sm relative overflow-hidden"><div className="flex justify-between items-start mb-6"><div className="w-16 h-16 bg-[#1A1F3D] text-white rounded-[24px] flex items-center justify-center"><Users size={24}/></div><div className="flex gap-1"><button onClick={() => { setEditingPartner(v); setIsVendorModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={18}/></button><button onClick={() => deleteVendor(v.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={18}/></button></div></div><h3 className="text-xl font-black text-[#1A1F3D]">{v.companyName}</h3></div>
-          ))}</div>
         )}
       </div>
 

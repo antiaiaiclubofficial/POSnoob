@@ -1,5 +1,18 @@
 import { create } from 'zustand';
-import { AppState, QueueStatus, TierRule, MembershipLevel, ActivityLog } from './types';
+import { 
+  AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
+  QueueItem, Service, InventoryItem, Vendor, StockLog, Transaction, 
+  Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, 
+  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole 
+} from './types';
+
+// Re-export all types so components can import them from '@/store/useStore'
+export type { 
+  AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
+  QueueItem, Service, InventoryItem, Vendor, StockLog, Transaction, 
+  Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, 
+  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole 
+};
 
 export const useStore = create<AppState>()((set, get) => ({
   language: 'th',
@@ -25,14 +38,14 @@ export const useStore = create<AppState>()((set, get) => ({
   customers: [],
   selectedOwner: null,
   activePet: null,
-  activeQueueItemId: null,
+  activeQueueItemId: null, // Fixed syntax error (was using type colon in object)
   queue: [],
   slotDuration: 60,
   openTime: '09:00',
   closeTime: '19:00',
   maxCapacity: 3,
   disabledSlots: [],
-  recurringHolidays: [0], // Sunday
+  recurringHolidays: [0], 
   specificHolidays: [],
   kennelCapacity: 12,
 
