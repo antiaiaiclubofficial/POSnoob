@@ -314,21 +314,23 @@ const Inventory = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                  {partners.map(partner => (
                     <div key={partner.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all relative overflow-hidden">
-                       <div className="absolute top-0 right-0 p-8 opacity-5 text-[#1A1F3D]"><Building2 size={80} /></div>
-                       <div className="flex justify-between items-start mb-6">
+                       <div className="absolute top-0 right-0 p-8 opacity-5 text-[#1A1F3D] pointer-events-none select-none z-0"><Building2 size={80} /></div>
+                       <div className="flex justify-between items-start mb-6 relative z-10">
                           <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[20px] flex items-center justify-center"><Building2 size={28}/></div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button onClick={() => handleEditPartner(partner)} className="p-2 text-gray-400 hover:text-[#1A1F3D] rounded-xl"><Edit3 size={18}/></button>
-                             <button onClick={() => handleDeletePartner(partner.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-xl"><Trash2 size={18}/></button>
+                          <div className="flex gap-1">
+                             <button onClick={() => handleEditPartner(partner)} className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-xl transition-all"><Edit3 size={18}/></button>
+                             <button onClick={() => handleDeletePartner(partner.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18}/></button>
                           </div>
                        </div>
-                       <h4 className="text-xl font-black text-[#1A1F3D] mb-1">{partner.companyName}</h4>
-                       <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest mb-6">GP: {partner.gpRate}% (ส่วนแบ่งคู่ค้า)</p>
-                       
-                       <div className="pt-6 border-t border-gray-50 flex gap-3">
-                          <button onClick={() => setSelectedVendorForView(partner)} className="flex-1 bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black text-[10px] uppercase py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
-                             <Eye size={14} /> ดูสต็อกที่นี่
-                          </button>
+                       <div className="relative z-10">
+                         <h4 className="text-xl font-black text-[#1A1F3D] mb-1">{partner.companyName}</h4>
+                         <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest mb-6">GP: {partner.gpRate}% (ส่วนแบ่งคู่ค้า)</p>
+                         
+                         <div className="pt-6 border-t border-gray-50 flex gap-3">
+                            <button onClick={() => setSelectedVendorForView(partner)} className="flex-1 bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black text-[10px] uppercase py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
+                               <Eye size={14} /> ดูสต็อกที่นี่
+                            </button>
+                         </div>
                        </div>
                     </div>
                  ))}
