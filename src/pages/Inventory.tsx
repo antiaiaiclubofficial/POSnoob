@@ -212,13 +212,24 @@ const Inventory = () => {
 
     const tableEndY = (doc as any).lastAutoTable.finalY;
     
-    // หากตารางยาวจนเกือบเต็มหน้าแรก (เกิน 190 มม.) ให้ขึ้นหน้าใหม่เพื่อความสวยงามและป้องกันการทับซ้อน
-    if (tableEndY > 190) {
+    // หากตารางยาวจนเกือบเต็มหน้าแรก (เกิน 180 มม.) ให้ขึ้นหน้าใหม่เพื่อความสวยงามและป้องกันการทับซ้อน
+    if (tableEndY > 180) {
       doc.addPage();
     }
 
-    // ตรึงตำแหน่งเริ่มต้นของ Footer ไว้ที่ด้านล่างของหน้ากระดาษเสมอ (A4 สูง 297 มม.)
-    const footerStartY = 205;
+    // 1. ตรึงช่องลายเซ็นไว้ที่ด้านบนของส่วนท้ายกระดาษ (y = 205 มม.)
+    const sigY = 205;
+    doc.setDrawColor(200);
+    doc.line(20, sigY, 80, sigY);
+    doc.setFontSize(9);
+    doc.setTextColor(80);
+    doc.text(shapeThai("ผู้จัดทำ (Prepared By)", usePUA), 50, sigY + 5, { align: 'center' });
+    
+    doc.line(130, sigY, 190, sigY);
+    doc.text(shapeThai("ผู้อนุมัติ (Authorized By)", usePUA), 160, sigY + 5, { align: 'center' });
+
+    // 2. เงื่อนไขการวางบิล (y = 225 มม.)
+    const footerStartY = sigY + 20;
 
     // *เงื่อนไขการวางบิล :
     doc.setFontSize(10);
@@ -231,7 +242,8 @@ const Inventory = () => {
     const splitCondition = doc.splitTextToSize(shapeThai(conditionText, usePUA), 180);
     doc.text(splitCondition, 15, footerStartY + 6);
 
-    const nextY = footerStartY + 22;
+    // 3. ที่อยู่สำหรับจัดส่งเอกสาร (y = 247 มม.)
+    const nextY = footerStartY + 6 + (splitCondition.length * 5) + 6;
 
     // วางบิลและส่งเอกสารมาที่
     doc.setFontSize(10);
@@ -247,14 +259,6 @@ const Inventory = () => {
     
     const contactY = nextY + 11 + (splitAddress.length * 5);
     doc.text(shapeThai(`ติดต่อ: ${shopPhone} ${shopLineId ? `| LINE: ${shopLineId}` : ''}`, usePUA), 15, contactY);
-
-    // ตรึงช่องลายเซ็นไว้ที่ด้านล่างสุดของหน้ากระดาษ (y = 270 มม.)
-    const sigY = 270;
-    doc.line(20, sigY, 80, sigY);
-    doc.text(shapeThai("ผู้จัดทำ (Prepared By)", usePUA), 50, sigY + 5, { align: 'center' });
-    
-    doc.line(130, sigY, 190, sigY);
-    doc.text(shapeThai("ผู้อนุมัติ (Authorized By)", usePUA), 160, sigY + 5, { align: 'center' });
 
     return doc;
   };
@@ -328,7 +332,7 @@ const Inventory = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"><Package size={24} className="text-blue-500 mb-6"/><p className="text-[10px] font-black uppercase text-gray-400 mb-1">Total SKUs</p><h2 className="text-4xl font-black">{inventory.length}</h2></div>
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"><DollarSign size={24} className="text-green-500 mb-6"/><p className="text-[10px] font-black uppercase text-gray-400 mb-1">Inventory Value</p><h2 className="text-4xl font-black">{currency}{inventory.reduce((a,b) => a+(b.costPrice*b.stock), 0).toLocaleString()}</h2></div>
-              <div className="bg-white p-8 rounded-[40px] border border-orange-100 shadow-sm"><AlertTriangle size={24} className="text-orange-500 mb-6"/><p className="text-[10px] font-black uppercase text-orange-400 mb-1">Low Stock</p><h2 className="text-4xl font-black">{inventory.filter(i => i.stock > 0 && i.stock <= i.minStock).length}</h2></div>
+              <div className="bg-white p-8 rounded-[40px] border border-orange-100 shadow-sm"><AlertTriangle size={24} className="text-orange-500 mb-6"/><p className="text-[10px] font-black uppercase text-gray-400 mb-1">Low Stock</p><h2 className="text-4xl font-black">{inventory.filter(i => i.stock > 0 && i.stock <= i.minStock).length}</h2></div>
               <div className="bg-white p-8 rounded-[40px] border border-red-100 shadow-sm"><Trash2 size={24} className="text-red-500 mb-6"/><p className="text-[10px] font-black uppercase text-red-400 mb-1">Out of Stock</p><h2 className="text-4xl font-black">{inventory.filter(i => i.stock === 0).length}</h2></div>
             </div>
           </div>
