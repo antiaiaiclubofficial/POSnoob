@@ -111,6 +111,7 @@ const Inventory = () => {
 
     if (thaiFont) {
       doc.addFileToVFS("ThaiFont.ttf", thaiFont);
+      // ลงทะเบียนฟอนต์เดียวกันทั้งสไตล์ normal และ bold เพื่อป้องกันไม่ให้หัวตารางย้อนกลับไปใช้ฟอนต์ภาษาอังกฤษเริ่มต้น
       doc.addFont("ThaiFont.ttf", "ThaiFont", "normal");
       doc.addFont("ThaiFont.ttf", "ThaiFont", "bold");
       doc.setFont("ThaiFont", "normal");
