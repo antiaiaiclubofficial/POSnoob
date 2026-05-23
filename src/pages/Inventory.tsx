@@ -140,10 +140,11 @@ const Inventory = () => {
     doc.text(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 15, 31);
     doc.text(shapeThai(`โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`, usePUA), 15, 36);
 
-    // Header Right: Logo & Title
+    // Header Right: Logo & Title (Dynamic Format Detection to prevent auto-rotation)
     if (shopLogo) {
       try {
-        doc.addImage(shopLogo, 'PNG', 160, 10, 35, 35);
+        const imgFormat = shopLogo.toLowerCase().includes('png') ? 'PNG' : 'JPEG';
+        doc.addImage(shopLogo, imgFormat, 160, 10, 35, 35);
       } catch (e) { console.error(e); }
     }
 
