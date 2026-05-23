@@ -217,8 +217,8 @@ const Inventory = () => {
       doc.addPage();
     }
 
-    // 1. ตรึงช่องลายเซ็นไว้ที่ด้านบนของส่วนท้ายกระดาษ (y = 205 มม.)
-    const sigY = 205;
+    // 1. ตรึงช่องลายเซ็นไว้ที่ด้านบนของส่วนท้ายกระดาษ (y = 210 มม.)
+    const sigY = 210;
     doc.setDrawColor(200);
     doc.line(20, sigY, 80, sigY);
     doc.setFontSize(9);
@@ -228,8 +228,8 @@ const Inventory = () => {
     doc.line(130, sigY, 190, sigY);
     doc.text(shapeThai("ผู้อนุมัติ (Authorized By)", usePUA), 160, sigY + 5, { align: 'center' });
 
-    // 2. เงื่อนไขการวางบิล (y = 225 มม.)
-    const footerStartY = sigY + 20;
+    // 2. เงื่อนไขการวางบิล (ขยับลงมาเกือบติดขอบล่างที่ y = 240 มม.)
+    const footerStartY = 240;
 
     // *เงื่อนไขการวางบิล :
     doc.setFontSize(10);
@@ -240,10 +240,10 @@ const Inventory = () => {
     doc.setTextColor(80);
     const conditionText = "ผู้ขายสามารถวางบิลได้ตั้งแต่วันที่ได้รับรายงานยอดขาย จนถึงภายในวันที่ 20 ของเดือน ในกรณีที่วางบิลไม่ตรงรอบหรือเอกสารไม่ครบ จะมีการดำเนินการชำระค่าสินค้าให้ในรอบถัดไป";
     const splitCondition = doc.splitTextToSize(shapeThai(conditionText, usePUA), 180);
-    doc.text(splitCondition, 15, footerStartY + 6);
+    doc.text(splitCondition, 15, footerStartY + 5);
 
-    // 3. ที่อยู่สำหรับจัดส่งเอกสาร (y = 247 มม.)
-    const nextY = footerStartY + 6 + (splitCondition.length * 5) + 6;
+    // 3. ที่อยู่สำหรับจัดส่งเอกสาร (ขยับลงมาเกือบติดขอบล่างสุดที่ y = 260 มม.)
+    const nextY = 260;
 
     // วางบิลและส่งเอกสารมาที่
     doc.setFontSize(10);
@@ -252,12 +252,12 @@ const Inventory = () => {
 
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(shapeThai(`${shopName}`, usePUA), 15, nextY + 6);
+    doc.text(shapeThai(`${shopName}`, usePUA), 15, nextY + 5);
     
     const splitAddress = doc.splitTextToSize(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 180);
-    doc.text(splitAddress, 15, nextY + 11);
+    doc.text(splitAddress, 15, nextY + 10);
     
-    const contactY = nextY + 11 + (splitAddress.length * 5);
+    const contactY = nextY + 10 + (splitAddress.length * 5);
     doc.text(shapeThai(`ติดต่อ: ${shopPhone} ${shopLineId ? `| LINE: ${shopLineId}` : ''}`, usePUA), 15, contactY);
 
     return doc;
