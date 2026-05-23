@@ -210,20 +210,28 @@ const Inventory = () => {
       }
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    const tableEndY = (doc as any).lastAutoTable.finalY;
+    
+    // หากตารางยาวจนเกือบเต็มหน้าแรก (เกิน 190 มม.) ให้ขึ้นหน้าใหม่เพื่อความสวยงามและป้องกันการทับซ้อน
+    if (tableEndY > 190) {
+      doc.addPage();
+    }
+
+    // ตรึงตำแหน่งเริ่มต้นของ Footer ไว้ที่ด้านล่างของหน้ากระดาษเสมอ (A4 สูง 297 มม.)
+    const footerStartY = 205;
 
     // *เงื่อนไขการวางบิล :
     doc.setFontSize(10);
     doc.setTextColor(26, 31, 61);
-    doc.text(shapeThai("*เงื่อนไขการวางบิล :", usePUA), 15, finalY);
+    doc.text(shapeThai("*เงื่อนไขการวางบิล :", usePUA), 15, footerStartY);
     
     doc.setFontSize(9);
     doc.setTextColor(80);
     const conditionText = "ผู้ขายสามารถวางบิลได้ตั้งแต่วันที่ได้รับรายงานยอดขาย จนถึงภายในวันที่ 20 ของเดือน ในกรณีที่วางบิลไม่ตรงรอบหรือเอกสารไม่ครบ จะมีการดำเนินการชำระค่าสินค้าให้ในรอบถัดไป";
     const splitCondition = doc.splitTextToSize(shapeThai(conditionText, usePUA), 180);
-    doc.text(splitCondition, 15, finalY + 6);
+    doc.text(splitCondition, 15, footerStartY + 6);
 
-    const nextY = finalY + 6 + (splitCondition.length * 5) + 5;
+    const nextY = footerStartY + 22;
 
     // วางบิลและส่งเอกสารมาที่
     doc.setFontSize(10);
@@ -240,15 +248,13 @@ const Inventory = () => {
     const contactY = nextY + 11 + (splitAddress.length * 5);
     doc.text(shapeThai(`ติดต่อ: ${shopPhone} ${shopLineId ? `| LINE: ${shopLineId}` : ''}`, usePUA), 15, contactY);
 
-    // Signatures
-    const sigY = contactY + 25;
-    if (sigY < 280) {
-      doc.line(20, sigY, 80, sigY);
-      doc.text(shapeThai("ผู้จัดทำ (Prepared By)", usePUA), 50, sigY + 5, { align: 'center' });
-      
-      doc.line(130, sigY, 190, sigY);
-      doc.text(shapeThai("ผู้อนุมัติ (Authorized By)", usePUA), 160, sigY + 5, { align: 'center' });
-    }
+    // ตรึงช่องลายเซ็นไว้ที่ด้านล่างสุดของหน้ากระดาษ (y = 270 มม.)
+    const sigY = 270;
+    doc.line(20, sigY, 80, sigY);
+    doc.text(shapeThai("ผู้จัดทำ (Prepared By)", usePUA), 50, sigY + 5, { align: 'center' });
+    
+    doc.line(130, sigY, 190, sigY);
+    doc.text(shapeThai("ผู้อนุมัติ (Authorized By)", usePUA), 160, sigY + 5, { align: 'center' });
 
     return doc;
   };
