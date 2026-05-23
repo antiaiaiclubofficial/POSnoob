@@ -112,7 +112,8 @@ const Inventory = () => {
     if (thaiFont) {
       doc.addFileToVFS("ThaiFont.ttf", thaiFont);
       doc.addFont("ThaiFont.ttf", "ThaiFont", "normal");
-      doc.setFont("ThaiFont");
+      doc.addFont("ThaiFont.ttf", "ThaiFont", "bold");
+      doc.setFont("ThaiFont", "normal");
     }
 
     const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
@@ -178,14 +179,15 @@ const Inventory = () => {
       }),
       styles: { 
         font: fontName, 
-        fontSize: 9, 
-        cellPadding: 3 
+        fontSize: 10, 
+        cellPadding: { top: 6, bottom: 6, left: 4, right: 4 } // ใช้ padding แยกทิศทางเพื่อเพิ่มพื้นที่แนวตั้งให้วรรณยุกต์ภาษาไทย
       },
       headStyles: { 
         fillColor: [26, 31, 61], 
         textColor: [255, 255, 255], 
         halign: 'center',
-        font: fontName
+        font: fontName,
+        fontStyle: 'bold'
       },
       columnStyles: {
         0: { halign: 'center', cellWidth: 15 },

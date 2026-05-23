@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * ดึงข้อมูลฟอนต์ภาษาไทย (Sarabun) จาก CDN และแปลงเป็น Base64 สำหรับใช้ใน jsPDF
+ * ดึงข้อมูลฟอนต์ภาษาไทยมาตรฐาน (TH Sarabun New) จาก CDN และแปลงเป็น Base64 สำหรับใช้ใน jsPDF
+ * ฟอนต์นี้รองรับการแสดงผลสระและวรรณยุกต์ภาษาไทยใน PDF ได้สมบูรณ์ที่สุด
  */
 export const fetchThaiFontBase64 = async (): Promise<string> => {
   const urls = [
-    'https://fonts.gstatic.com/s/sarabun/v12/DT80R2OfY09M_Yg_zD3m69v_9A.ttf', // Google Fonts gstatic (Sarabun Regular)
-    'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Regular.ttf' // jsDelivr fallback
+    'https://cdn.jsdelivr.net/gh/Chun-Chun/TH-Sarabun-New/THSarabunNew.ttf', // TH Sarabun New (แนะนำสำหรับ PDF ภาษาไทย)
+    'https://fonts.gstatic.com/s/sarabun/v12/DT80R2OfY09M_Yg_zD3m69v_9A.ttf' // Google Fonts Sarabun Fallback
   ];
 
   for (const url of urls) {
