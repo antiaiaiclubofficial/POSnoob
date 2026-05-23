@@ -22,6 +22,28 @@ import VendorInventoryView from '@/components/VendorInventoryView';
 
 type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashboard';
 
+// Helper function to normalize image orientation using HTML5 Canvas
+const normalizeImageOrientation = (src: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.95));
+      } else {
+        resolve(src);
+      }
+    };
+    img.onerror = () => resolve(src);
+    img.src = src;
+  });
+};
+
 const Inventory = () => {
   const { 
     inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLogo, shopLineId,
@@ -143,8 +165,10 @@ const Inventory = () => {
     // Header Right: Logo & Title (Dynamic Format Detection to prevent auto-rotation)
     if (shopLogo) {
       try {
-        const imgFormat = shopLogo.toLowerCase().includes('png') ? 'PNG' : 'JPEG';
-        doc.addImage(shopLogo, imgFormat, 160, 10, 35, 35);
+        // Normalize image orientation using canvas before adding to PDF
+        const normalizedLogo = await normalizeImageOrientation(shopLogo);
+        const imgFormat = normalizedLogo.toLowerCase().includes('png') ? 'PNG' : 'JPEG';
+        doc.addImage(normalizedLogo, imgFormat, 160, 10, 35, 35);
       } catch (e) { console.error(e); }
     }
 
