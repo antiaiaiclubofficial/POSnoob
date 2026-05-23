@@ -8,12 +8,13 @@ import {
   ChevronRight, Camera, CheckCircle2, Plus, Tag, Building2, Filter,
   AlertCircle, ArrowUpRight, RotateCcw, History, ArrowDown, ArrowUp, Info, Eye, Clock, X
 } from 'lucide-react';
-import { useStore, InventoryItem, StockLog, Partner, ReportHistory } from '@/store/useStore';
+import { useStore, InventoryItem, Partner } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { fetchThaiFontBase64 } from '@/utils/pdfThaiFont';
 import InventoryModal from '@/components/InventoryModal';
 import VendorModal from '@/components/VendorModal';
 import VendorInventoryView from '@/components/VendorInventoryView';
@@ -23,18 +24,16 @@ type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashbo
 const Inventory = () => {
   const { 
     inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLogo, shopLineId,
-    adjustStock, deleteInventoryItem, deletePartner, currency, currentUser, addReportLog
+    adjustStock, deletePartner, currency, currentUser, addReportLog
   } = useStore();
   
   const [activeTab, setActiveTab] = useState<WmsTab>('master');
-  
-  // States for Report Tab (Filters)
   const [repPartnerFilter, setRepPartnerFilter] = useState('All');
   const [repCategoryFilter, setRepCategoryFilter] = useState('All');
   const [repStatusFilter, setRepStatusFilter] = useState('All');
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
-  // Other States
+  // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
@@ -62,7 +61,6 @@ const Inventory = () => {
     { id: 'consignment', label: 'คู่ค้าฝากขาย', icon: Users },
   ];
 
-  // Logic: Filters
   const categories = useMemo(() => Array.from(new Set(inventory.map(i => i.category))).filter(Boolean), [inventory]);
 
   const filteredInventory = useMemo(() => {
@@ -90,12 +88,35 @@ const Inventory = () => {
 
   const selectedItemForAdjust = inventory.find(i => i.id === selectedAdjustId);
 
-  // Logic: PDF Generation CORE - Tailored to match Sales Report.pdf layout
-  const createReportDoc = () => {
-    const doc = new jsPDF();
-    const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
+  // Partner Actions
+  const handleEditPartner = (partner: Partner) => {
+    setEditingPartner(partner);
+    setIsVendorModalOpen(true);
+  };
 
-    // Apply Report Filters
+  const handleDeletePartner = (id: string) => {
+    if (window.confirm("ต้องการลบข้อมูลคู่ค้านี้หรือไม่?")) {
+      deletePartner(id);
+      toast.success("ลบข้อมูลคู่ค้าเรียบร้อยแล้ว");
+    }
+  };
+
+  // Logic: PDF Generation - Sales Report Format (Supports Thai)
+  const createReportDoc = async () => {
+    const doc = new jsPDF();
+    
+    // Load Thai Font dynamically
+    const thaiFont = await fetchThaiFontBase64();
+    if (thaiFont) {
+      doc.addFileToVFS("ThaiFont.ttf", thaiFont);
+      doc.addFont("ThaiFont.ttf", "ThaiFont", "normal");
+      doc.setFont("ThaiFont");
+    }
+
+    const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
+    const mockTaxId = "0-1055-64000-12-3";
+
+    // Apply Filters
     let itemsToExport = [...inventory];
     if (repPartnerFilter !== 'All') itemsToExport = itemsToExport.filter(i => i.partnerId === repPartnerFilter);
     if (repCategoryFilter !== 'All') itemsToExport = itemsToExport.filter(i => i.category === repCategoryFilter);
@@ -104,191 +125,129 @@ const Inventory = () => {
 
     const selectedPartner = partners.find(p => p.id === repPartnerFilter);
 
-    // 1. Header Left: Company Details
+    // Header Left: Company Info
     doc.setFontSize(14);
     doc.setTextColor(26, 31, 61);
-    doc.setFont("helvetica", "bold");
-    doc.text(shopName.toUpperCase(), 15, 20);
+    doc.text(shopName, 15, 20);
     
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(`Address: ${shopAddress}`, 15, 26);
-    doc.text(`Tel: ${shopPhone} | LINE: ${shopLineId || '-'}`, 15, 31);
-    doc.text(`Tax ID: 0105564000123 (Head Office)`, 15, 36); // Mock Tax ID as requested
+    doc.text(`เลขประจำตัวผู้เสียภาษี (Tax ID): ${mockTaxId}`, 15, 26);
+    doc.text(`ที่อยู่: ${shopAddress}`, 15, 31);
+    doc.text(`โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`, 15, 36);
 
-    // 2. Header Right: Logo & Document Title
+    // Header Right: Logo & Title
     if (shopLogo) {
       try {
-        doc.addImage(shopLogo, 'PNG', 165, 12, 30, 30);
-      } catch (e) {
-        console.error("Failed to render logo in PDF", e);
-      }
+        doc.addImage(shopLogo, 'PNG', 160, 10, 35, 35);
+      } catch (e) { console.error(e); }
     }
 
-    // Document Title (Right Aligned, below logo area)
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
     doc.setTextColor(26, 31, 61);
-    doc.text("SALES REPORT", 195, 52, { align: 'right' });
-    
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    doc.text("Consignment Sales Statement", 195, 57, { align: 'right' });
+    doc.text("Sales Report", 195, 52, { align: 'right' });
+    doc.setFontSize(11);
+    doc.text("เอกสารแจ้งยอดฝากขาย", 195, 58, { align: 'right' });
 
-    // Divider Line
-    doc.setDrawColor(220);
-    doc.setLineWidth(0.5);
-    doc.line(15, 63, 195, 63);
+    // Customer / Partner Box
+    doc.setDrawColor(230);
+    doc.line(15, 65, 195, 65);
 
-    // 3. Customer / Partner Info Section
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(26, 31, 61);
-    doc.text("CUSTOMER / PARTNER:", 15, 72);
-    
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80);
-    doc.text(`Name: ${selectedPartner ? selectedPartner.companyName : 'All Partners / Vendors'}`, 15, 77);
-    doc.text(`Contact Person: ${selectedPartner ? selectedPartner.contactPerson : '-'}`, 15, 82);
-    doc.text(`Tel: ${selectedPartner ? selectedPartner.phone : '-'} | Email: ${selectedPartner ? selectedPartner.email : '-'}`, 15, 87);
+    doc.setFontSize(10);
+    doc.text(`Customer / Partner : ${selectedPartner ? selectedPartner.companyName : 'คู่ค้าทั้งหมด'}`, 15, 75);
+    doc.text(`วันที่ออกเอกสาร (Date): ${dateNow}`, 130, 75);
 
-    // Report Meta Info (Right side)
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(26, 31, 61);
-    doc.text("REPORT DETAILS:", 130, 72);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80);
-    doc.text(`Report Date: ${dateNow}`, 130, 77);
-    doc.text(`Category: ${repCategoryFilter}`, 130, 82);
-    doc.text(`Status Filter: ${repStatusFilter}`, 130, 87);
-
-    // 4. Table of Products
-    const totalQty = itemsToExport.reduce((acc, i) => acc + i.stock, 0);
-    const totalCostValue = itemsToExport.reduce((acc, i) => acc + (i.costPrice * i.stock), 0);
-    const totalRetailValue = itemsToExport.reduce((acc, i) => acc + (i.price * i.stock), 0);
-
+    // Table
     autoTable(doc, {
-      startY: 95,
-      head: [['No.', 'Barcode', 'Product Name', 'Category', 'Stock Qty', 'Unit', 'Cost Price', 'Retail Price', 'Total Cost']],
-      body: itemsToExport.map((i, index) => [
-        index + 1,
-        i.barcode || '-',
-        i.name,
-        i.category,
-        i.stock.toLocaleString(),
-        i.unit,
-        `${currency}${i.costPrice.toLocaleString()}`,
-        `${currency}${i.price.toLocaleString()}`,
-        `${currency}${(i.costPrice * i.stock).toLocaleString()}`
-      ]),
-      styles: { font: 'helvetica', fontSize: 8, cellPadding: 3 },
-      headStyles: { 
-        fillColor: [26, 31, 61], 
-        textColor: [255, 255, 255],
-        fontStyle: 'bold'
-      },
-      alternateRowStyles: { fillColor: [250, 251, 255] },
+      startY: 85,
+      head: [['ลำดับ\nNo.', 'รายการสินค้า\nProduct Name', 'บาร์โค้ด\nBarcode', 'จำนวน\nQty', 'ราคาขาย\nPrice', 'GP %', 'ยอดที่ต้องจ่าย\nPayout']],
+      body: itemsToExport.map((i, idx) => {
+        const gp = selectedPartner?.gpRate || 0;
+        const payout = (i.price * i.stock) * (1 - gp / 100);
+        return [
+          idx + 1,
+          i.name,
+          i.barcode || '-',
+          i.stock.toLocaleString(),
+          i.price.toLocaleString(),
+          `${gp}%`,
+          payout.toLocaleString()
+        ];
+      }),
+      styles: { font: thaiFont ? 'ThaiFont' : 'helvetica', fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [26, 31, 61], textColor: [255, 255, 255], halign: 'center' },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },
-        4: { halign: 'center' },
-        6: { halign: 'right' },
-        7: { halign: 'right' },
-        8: { halign: 'right', fontStyle: 'bold' }
+        0: { halign: 'center', cellWidth: 15 },
+        3: { halign: 'center' },
+        4: { halign: 'right' },
+        5: { halign: 'center' },
+        6: { halign: 'right' }
       }
     });
 
-    // Summary Box
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
-    doc.setDrawColor(240);
-    doc.setFillColor(250, 251, 255);
-    doc.rect(120, finalY, 75, 25, 'F');
-    
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    doc.text(`Total Items:`, 125, finalY + 7);
-    doc.text(`${itemsToExport.length} SKUs`, 190, finalY + 7, { align: 'right' });
-    
-    doc.text(`Total Quantity:`, 125, finalY + 13);
-    doc.text(`${totalQty.toLocaleString()} Units`, 190, finalY + 13, { align: 'right' });
+    const finalY = (doc as any).lastAutoTable.finalY + 15;
 
-    doc.setFont("helvetica", "bold");
+    // Conditions & Billing
+    doc.setFontSize(10);
     doc.setTextColor(26, 31, 61);
-    doc.text(`Total Cost Value:`, 125, finalY + 20);
-    doc.text(`${currency}${totalCostValue.toLocaleString()}`, 190, finalY + 20, { align: 'right' });
-
-    // 5. Conditions & Billing Instructions (Using same company details as header)
-    const termsY = finalY + 35;
+    doc.text("เงื่อนไขการวางบิลและส่งเอกสาร:", 15, finalY);
+    
     doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(26, 31, 61);
-    doc.text("CONDITIONS & BILLING INSTRUCTIONS / เงื่อนไขการวางบิล:", 15, termsY);
-    
-    doc.setFont("helvetica", "normal");
     doc.setTextColor(100);
-    doc.setFontSize(8);
-    doc.text(`1. Please send all billing documents and invoices directly to:`, 15, termsY + 6);
-    doc.text(`   Company: ${shopName}`, 15, termsY + 11);
-    doc.text(`   Address: ${shopAddress}`, 15, termsY + 16);
-    doc.text(`   Contact Phone: ${shopPhone}`, 15, termsY + 21);
-    doc.text(`2. Payments will be processed within 30 days of document verification.`, 15, termsY + 26);
+    doc.text(`กรุณาวางบิลและส่งเอกสารมาที่: ${shopName}`, 15, finalY + 7);
+    doc.text(`ที่อยู่: ${shopAddress}`, 15, finalY + 12);
+    doc.text(`ติดต่อ: ${shopPhone}`, 15, finalY + 17);
 
-    // 6. Signatures Section
-    const sigY = termsY + 45;
-    if (sigY < 270) {
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
+    // Signatures
+    const sigY = finalY + 40;
+    if (sigY < 280) {
+      doc.line(20, sigY, 80, sigY);
+      doc.text("ผู้จัดทำ (Prepared By)", 50, sigY + 5, { align: 'center' });
       
-      // Left Signature
-      doc.line(15, sigY, 85, sigY);
-      doc.text("Prepared By / ผู้จัดทำ", 50, sigY + 5, { align: 'center' });
-      doc.text("Date: ____/____/____", 50, sigY + 10, { align: 'center' });
-      
-      // Right Signature
-      doc.line(125, sigY, 195, sigY);
-      doc.text("Authorized Signature / ผู้รับวางบิล", 160, sigY + 5, { align: 'center' });
-      doc.text("Date: ____/____/____", 160, sigY + 10, { align: 'center' });
+      doc.line(130, sigY, 190, sigY);
+      doc.text("ผู้อนุมัติ (Authorized By)", 160, sigY + 5, { align: 'center' });
     }
 
     return doc;
   };
 
-  const handleDownloadReport = () => {
-    const doc = createReportDoc();
-    const partnerName = repPartnerFilter === 'All' ? 'All' : partners.find(p => p.id === repPartnerFilter)?.companyName;
-
-    // Record History
-    addReportLog({
-      reportName: "Inventory Stock Report",
-      filters: `Partner: ${partnerName}, Cat: ${repCategoryFilter}, Status: ${repStatusFilter}`,
-      staffName: currentUser?.name || 'Admin'
-    });
-
-    doc.save(`Sales_Report_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
-    toast.success("PDF Downloaded successfully");
+  const handleDownloadReport = async () => {
+    const toastId = toast.loading("กำลังเตรียมเอกสาร PDF ภาษาไทย...");
+    try {
+      const doc = await createReportDoc();
+      const partnerName = repPartnerFilter === 'All' ? 'All' : partners.find(p => p.id === repPartnerFilter)?.companyName;
+      addReportLog({
+        reportName: "Sales Report (Consignment)",
+        filters: `Partner: ${partnerName}, Cat: ${repCategoryFilter}`,
+        staffName: currentUser?.name || 'Admin'
+      });
+      doc.save(`Sales_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
+      toast.success("ดาวน์โหลดรายงานเรียบร้อยแล้ว", { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error("เกิดข้อผิดพลาดในการสร้าง PDF", { id: toastId });
+    }
   };
 
-  const handlePreviewReport = () => {
-    const doc = createReportDoc();
-    const blob = doc.output('blob');
-    const url = URL.createObjectURL(blob);
-    setPdfPreviewUrl(url);
+  const handlePreviewReport = async () => {
+    const toastId = toast.loading("กำลังเตรียมตัวอย่างเอกสาร...");
+    try {
+      const doc = await createReportDoc();
+      const blob = doc.output('blob');
+      setPdfPreviewUrl(URL.createObjectURL(blob));
+      toast.success("โหลดตัวอย่างเรียบร้อย", { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error("เกิดข้อผิดพลาดในการโหลดตัวอย่าง", { id: toastId });
+    }
   };
 
   const handleAdjustSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedAdjustId || !adjustQty) {
-      toast.error("กรุณาเลือกสินค้าและระบุจำนวน");
-      return;
-    }
+    if (!selectedAdjustId || !adjustQty) return toast.error("กรุณาเลือกสินค้าและระบุจำนวน");
     adjustStock(selectedAdjustId, Number(adjustQty), adjustMode, adjustReason || 'Manual Adjustment');
     toast.success("บันทึกการปรับยอดเรียบร้อย");
-    setAdjustQty('');
-    setAdjustReason('');
-    setAdjustSearch('');
-    setSelectedAdjustId('');
+    setAdjustQty(''); setAdjustReason(''); setAdjustSearch(''); setSelectedAdjustId('');
   };
 
   const handleQuickAdjust = (id: string) => {
@@ -296,18 +255,6 @@ const Inventory = () => {
     if (newQty !== null && !isNaN(Number(newQty))) {
       adjustStock(id, Number(newQty), 'Set', 'Physical Audit');
       toast.success("อัปเดตสต็อกเรียบร้อย");
-    }
-  };
-
-  const handleEditPartner = (p: Partner) => {
-    setEditingPartner(p);
-    setIsVendorModalOpen(true);
-  };
-
-  const handleDeletePartner = (id: string) => {
-    if (window.confirm('ยืนยันการลบคู่ค้า? ข้อมูลสินค้าที่เกี่ยวข้องจะไม่ถูกลบแต่จะไม่มีผู้จัดจำหน่ายระบุไว้')) {
-      deletePartner(id);
-      toast.success('ลบข้อมูลคู่ค้าเรียบร้อย');
     }
   };
 
@@ -328,7 +275,6 @@ const Inventory = () => {
       </header>
 
       <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
-        {/* Tab: Dashboard */}
         {activeTab === 'dashboard' && (
           <div className="space-y-10 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -340,7 +286,6 @@ const Inventory = () => {
           </div>
         )}
 
-        {/* Tab: Master List */}
         {activeTab === 'master' && (
           <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
@@ -374,7 +319,6 @@ const Inventory = () => {
           </div>
         )}
 
-        {/* Tab: Check & Alerts */}
         {activeTab === 'check' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
@@ -401,7 +345,6 @@ const Inventory = () => {
           </div>
         )}
 
-        {/* Tab: Adjust/Restock */}
         {activeTab === 'adjust' && (
            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10 animate-in slide-in-from-bottom-4 duration-300">
               <div className="lg:col-span-1"><div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm space-y-8"><div><h3 className="text-xl font-black text-[#1A1F3D] mb-1">Update Balance</h3><p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Add stock or set quantity</p></div><form onSubmit={handleAdjustSubmit} className="space-y-6"><div className="space-y-2 relative"><label className="text-[10px] font-black uppercase text-gray-400 px-2">1. ค้นหาสินค้า</label><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold shadow-inner" placeholder="พิมพ์ชื่อหรือบาร์โค้ด..." value={adjustSearch} onChange={e => setAdjustSearch(e.target.value)} /></div>{adjustSearchItems.length > 0 && !selectedAdjustId && (<div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">{adjustSearchItems.map(item => (<button key={item.id} type="button" onClick={() => { setSelectedAdjustId(item.id); setAdjustSearch(item.name); }} className="w-full px-5 py-4 text-left hover:bg-gray-50 border-b border-gray-50 last:border-0 flex justify-between items-center transition-colors"><div><p className="text-sm font-black text-[#1A1F3D]">{item.name}</p><p className="text-[10px] text-gray-400 font-bold uppercase">{item.barcode || 'No Barcode'}</p></div><p className="text-xs font-black text-blue-500">Stock: {item.stock}</p></button>))}</div>)}</div>{selectedItemForAdjust && (<div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100 flex items-center gap-4 animate-in zoom-in-95"><div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-500 shadow-sm shrink-0"><Package size={24} /></div><div><p className="text-xs font-black text-[#1A1F3D]">{selectedItemForAdjust.name}</p><p className="text-[10px] text-blue-600 font-black uppercase">Current: {selectedItemForAdjust.stock}</p></div><button type="button" onClick={() => setSelectedAdjustId('')} className="ml-auto p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button></div>)}<div className="space-y-3"><label className="text-[10px] font-black uppercase text-gray-400 px-2">2. ประเภทการทำงาน</label><div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2"><button type="button" onClick={() => setAdjustMode('Add')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2", adjustMode === 'Add' ? "bg-white text-green-600 shadow-sm" : "text-gray-400")}><ArrowUp size={12} /> เติมเพิ่ม</button><button type="button" onClick={() => setAdjustMode('Set')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2", adjustMode === 'Set' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400")}><RotateCcw size={12} /> ปรับตามจริง</button></div></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">3. จำนวน</label><input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xl font-black text-center" placeholder="0" value={adjustQty} onChange={e => setAdjustQty(e.target.value)} /></div><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">4. หมายเหตุ</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" placeholder="..." value={adjustReason} onChange={e => setAdjustReason(e.target.value)} /></div></div><button type="submit" disabled={!selectedAdjustId || !adjustQty} className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[28px] shadow-xl shadow-[#1A1F3D]/20 flex items-center justify-center gap-3 transition-all active:scale-95"><Save size={20} /> บันทึกการปรับสต็อก</button></form></div></div>
@@ -409,11 +352,9 @@ const Inventory = () => {
            </div>
         )}
 
-        {/* Tab: Report (PDF) - ENHANCED */}
         {activeTab === 'report' && (
            <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                 {/* Filters Section */}
                  <div className="lg:col-span-1 space-y-6">
                     <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
                        <div className="flex items-center gap-3">
@@ -459,7 +400,6 @@ const Inventory = () => {
                     </div>
                  </div>
 
-                 {/* History Section */}
                  <div className="lg:col-span-2">
                     <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
                        <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/20">
@@ -506,7 +446,6 @@ const Inventory = () => {
            </div>
         )}
 
-        {/* Tab: Consignment/Partners */}
         {activeTab === 'consignment' && (
            <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
               <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
@@ -553,24 +492,13 @@ const Inventory = () => {
       {/* PDF Preview Modal */}
       {pdfPreviewUrl && (
         <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[300] flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-5xl h-[90vh] rounded-[48px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-               <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[#1A1F3D] text-white rounded-xl shadow-lg"><FileText size={20} /></div>
-                  <div>
-                    <h3 className="text-sm font-black text-[#1A1F3D]">Report Preview</h3>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Document Verification</p>
-                  </div>
-               </div>
-               <button onClick={() => setPdfPreviewUrl(null)} className="p-2 hover:bg-white rounded-xl transition-all"><X size={20} /></button>
+          <div className="bg-white w-full max-w-5xl h-[90vh] rounded-[48px] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+               <h3 className="text-sm font-black text-[#1A1F3D]">Sales Report Preview (รองรับภาษาไทย)</h3>
+               <button onClick={() => setPdfPreviewUrl(null)}><X size={20} /></button>
             </div>
-            <div className="flex-1 bg-gray-100 p-4">
-               <iframe src={pdfPreviewUrl} className="w-full h-full rounded-2xl shadow-inner border border-gray-200" title="PDF Preview" />
-            </div>
-            <div className="p-6 border-t border-gray-100 flex gap-4 justify-end bg-white">
-               <button onClick={() => setPdfPreviewUrl(null)} className="px-8 py-3 text-sm font-black text-gray-400">Close</button>
-               <button onClick={handleDownloadReport} className="bg-[#1A1F3D] text-white px-10 py-3 rounded-xl font-black text-sm shadow-xl flex items-center gap-2"><Download size={16} /> Confirm & Download</button>
-            </div>
+            <iframe src={pdfPreviewUrl} className="flex-1 w-full" title="PDF Preview" />
+            <div className="p-6 flex justify-end gap-4"><button onClick={handleDownloadReport} className="bg-[#1A1F3D] text-white px-10 py-3 rounded-xl font-black text-sm">Download PDF</button></div>
           </div>
         </div>
       )}
