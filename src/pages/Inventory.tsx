@@ -212,19 +212,36 @@ const Inventory = () => {
 
     const finalY = (doc as any).lastAutoTable.finalY + 15;
 
-    // Conditions & Billing
+    // *เงื่อนไขการวางบิล :
     doc.setFontSize(10);
     doc.setTextColor(26, 31, 61);
-    doc.text(shapeThai("เงื่อนไขการวางบิลและส่งเอกสาร:", usePUA), 15, finalY);
+    doc.text(shapeThai("*เงื่อนไขการวางบิล :", usePUA), 15, finalY);
     
     doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text(shapeThai(`กรุณาวางบิลและส่งเอกสารมาที่: ${shopName}`, usePUA), 15, finalY + 7);
-    doc.text(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 15, finalY + 12);
-    doc.text(shapeThai(`ติดต่อ: ${shopPhone}`, usePUA), 15, finalY + 17);
+    doc.setTextColor(80);
+    const conditionText = "ผู้ขายสามารถวางบิลได้ตั้งแต่วันที่ได้รับรายงานยอดขาย จนถึงภายในวันที่ 20 ของเดือน ในกรณีที่วางบิลไม่ตรงรอบหรือเอกสารไม่ครบ จะมีการดำเนินการชำระค่าสินค้าให้ในรอบถัดไป";
+    const splitCondition = doc.splitTextToSize(shapeThai(conditionText, usePUA), 180);
+    doc.text(splitCondition, 15, finalY + 6);
+
+    const nextY = finalY + 6 + (splitCondition.length * 5) + 5;
+
+    // วางบิลและส่งเอกสารมาที่
+    doc.setFontSize(10);
+    doc.setTextColor(26, 31, 61);
+    doc.text(shapeThai("วางบิลและส่งเอกสารมาที่ :", usePUA), 15, nextY);
+
+    doc.setFontSize(9);
+    doc.setTextColor(80);
+    doc.text(shapeThai(`${shopName}`, usePUA), 15, nextY + 6);
+    
+    const splitAddress = doc.splitTextToSize(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 180);
+    doc.text(splitAddress, 15, nextY + 11);
+    
+    const contactY = nextY + 11 + (splitAddress.length * 5);
+    doc.text(shapeThai(`ติดต่อ: ${shopPhone} ${shopLineId ? `| LINE: ${shopLineId}` : ''}`, usePUA), 15, contactY);
 
     // Signatures
-    const sigY = finalY + 40;
+    const sigY = contactY + 25;
     if (sigY < 280) {
       doc.line(20, sigY, 80, sigY);
       doc.text(shapeThai("ผู้จัดทำ (Prepared By)", usePUA), 50, sigY + 5, { align: 'center' });
