@@ -109,12 +109,11 @@ const Inventory = () => {
     // Load Thai Font dynamically
     const thaiFont = await fetchThaiFontBase64();
     const fontName = thaiFont ? "ThaiFont" : "helvetica";
-    const usePUA = !!thaiFont; // เปิดใช้งาน PUA เฉพาะเมื่อโหลดฟอนต์ THSarabunNew สำเร็จเท่านั้น
+    const usePUA = false; // Disable PUA since we use standard Sarabun
 
     if (thaiFont) {
       doc.addFileToVFS("ThaiFont.ttf", thaiFont);
       doc.addFont("ThaiFont.ttf", "ThaiFont", "normal");
-      doc.addFont("ThaiFont.ttf", "ThaiFont", "bold");
       doc.setFont("ThaiFont", "normal");
     }
 
@@ -198,7 +197,7 @@ const Inventory = () => {
         textColor: [255, 255, 255], 
         halign: 'center',
         font: fontName,
-        fontStyle: 'bold',
+        fontStyle: fontName === 'ThaiFont' ? 'normal' : 'bold', // Prevent fallback to Helvetica-Bold
         fontSize: 9,
         cellPadding: { top: 10, bottom: 6, left: 4, right: 4 }
       },

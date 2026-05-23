@@ -1,12 +1,14 @@
 "use client";
 
 /**
- * ดึงข้อมูลฟอนต์ภาษาไทย (THSarabunNew) และแปลงเป็น Base64 อย่างปลอดภัยด้วย FileReader
+ * ดึงข้อมูลฟอนต์ภาษาไทย Sarabun-Regular จาก Google Fonts CDN (gstatic)
+ * ซึ่งมีความเสถียรสูงสุดและเปิด CORS 100% ป้องกันปัญหาโหลดฟอนต์ล้มเหลวใน Sandbox
  */
 export const fetchThaiFontBase64 = async (): Promise<string> => {
   const urls = [
-    'https://cdn.jsdelivr.net/gh/ChampS/TH-Sarabun-New-TrueType-Font@master/THSarabunNew.ttf', // THSarabunNew แท้ที่มี PUA Glyphs
-    'https://cdn.jsdelivr.net/gh/fontuni/thai-font/THSarabunNew.ttf' // Fallback
+    'https://fonts.gstatic.com/s/sarabun/v13/Dt8z6Kcx07Wv6ALQ65R-gOcg.ttf', // Google Fonts Official CDN (Sarabun Regular)
+    'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Regular.ttf', // jsDelivr Fallback
+    'https://cdn.jsdelivr.net/gh/ChampS/TH-Sarabun-New-TrueType-Font@master/THSarabunNew.ttf' // THSarabunNew Fallback
   ];
 
   for (const url of urls) {
@@ -16,7 +18,6 @@ export const fetchThaiFontBase64 = async (): Promise<string> => {
         const arrayBuffer = await response.arrayBuffer();
         const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
         
-        // ใช้ FileReader แปลงเป็น Base64 อย่างปลอดภัยและรวดเร็ว ป้องกันปัญหา Call Stack Exceeded
         return new Promise((resolve) => {
           const reader = new FileReader();
           reader.onloadend = () => {
