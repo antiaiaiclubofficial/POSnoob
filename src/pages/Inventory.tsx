@@ -175,7 +175,12 @@ const Inventory = () => {
         ];
       }),
       styles: { font: thaiFont ? 'ThaiFont' : 'helvetica', fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [26, 31, 61], textColor: [255, 255, 255], halign: 'center' },
+      headStyles: { 
+        fillColor: [26, 31, 61], 
+        textColor: [255, 255, 255], 
+        halign: 'center',
+        font: thaiFont ? 'ThaiFont' : 'helvetica' // บังคับใช้ฟอนต์ภาษาไทยที่หัวตารางด้วย
+      },
       columnStyles: {
         0: { halign: 'center', cellWidth: 15 },
         3: { halign: 'center' },
