@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { fetchThaiFontBase64 } from '@/utils/pdfThaiFont';
+import { shapeThai } from '@/utils/thaiShaper';
 import InventoryModal from '@/components/InventoryModal';
 import VendorModal from '@/components/VendorModal';
 import VendorInventoryView from '@/components/VendorInventoryView';
@@ -131,13 +132,13 @@ const Inventory = () => {
     // Header Left: Company Info
     doc.setFontSize(14);
     doc.setTextColor(26, 31, 61);
-    doc.text(shopName, 15, 20);
+    doc.text(shapeThai(shopName), 15, 20);
     
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(`เลขประจำตัวผู้เสียภาษี (Tax ID): ${mockTaxId}`, 15, 26);
-    doc.text(`ที่อยู่: ${shopAddress}`, 15, 31);
-    doc.text(`โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`, 15, 36);
+    doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี (Tax ID): ${mockTaxId}`), 15, 26);
+    doc.text(shapeThai(`ที่อยู่: ${shopAddress}`), 15, 31);
+    doc.text(shapeThai(`โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`), 15, 36);
 
     // Header Right: Logo & Title
     if (shopLogo) {
@@ -150,27 +151,35 @@ const Inventory = () => {
     doc.setTextColor(26, 31, 61);
     doc.text("Sales Report", 195, 52, { align: 'right' });
     doc.setFontSize(11);
-    doc.text("เอกสารแจ้งยอดฝากขาย", 195, 58, { align: 'right' });
+    doc.text(shapeThai("เอกสารแจ้งยอดฝากขาย"), 195, 58, { align: 'right' });
 
     // Customer / Partner Box
     doc.setDrawColor(230);
     doc.line(15, 65, 195, 65);
 
     doc.setFontSize(10);
-    doc.text(`Customer / Partner : ${selectedPartner ? selectedPartner.companyName : 'คู่ค้าทั้งหมด'}`, 15, 75);
-    doc.text(`วันที่ออกเอกสาร (Date): ${dateNow}`, 130, 75);
+    doc.text(shapeThai(`Customer / Partner : ${selectedPartner ? selectedPartner.companyName : 'คู่ค้าทั้งหมด'}`), 15, 75);
+    doc.text(shapeThai(`วันที่ออกเอกสาร (Date): ${dateNow}`), 130, 75);
 
     // Table
     autoTable(doc, {
       startY: 85,
-      head: [['ลำดับ\nNo.', 'รายการสินค้า\nProduct Name', 'บาร์โค้ด\nBarcode', 'จำนวน\nQty', 'ราคาขาย\nPrice', 'GP %', 'ยอดที่ต้องจ่าย\nPayout']],
+      head: [[
+        shapeThai('ลำดับ\nNo.'), 
+        shapeThai('รายการสินค้า\nProduct Name'), 
+        shapeThai('บาร์โค้ด\nBarcode'), 
+        shapeThai('จำนวน\nQty'), 
+        shapeThai('ราคาขาย\nPrice'), 
+        shapeThai('GP %'), 
+        shapeThai('ยอดที่ต้องจ่าย\nPayout')
+      ]],
       body: itemsToExport.map((i, idx) => {
         const gp = selectedPartner?.gpRate || 0;
         const payout = (i.price * i.stock) * (1 - gp / 100);
         return [
           idx + 1,
-          i.name,
-          i.barcode || '-',
+          shapeThai(i.name),
+          shapeThai(i.barcode || '-'),
           i.stock.toLocaleString(),
           i.price.toLocaleString(),
           `${gp}%`,
@@ -206,22 +215,22 @@ const Inventory = () => {
     // Conditions & Billing
     doc.setFontSize(10);
     doc.setTextColor(26, 31, 61);
-    doc.text("เงื่อนไขการวางบิลและส่งเอกสาร:", 15, finalY);
+    doc.text(shapeThai("เงื่อนไขการวางบิลและส่งเอกสาร:"), 15, finalY);
     
     doc.setFontSize(9);
     doc.setTextColor(100);
-    doc.text(`กรุณาวางบิลและส่งเอกสารมาที่: ${shopName}`, 15, finalY + 7);
-    doc.text(`ที่อยู่: ${shopAddress}`, 15, finalY + 12);
-    doc.text(`ติดต่อ: ${shopPhone}`, 15, finalY + 17);
+    doc.text(shapeThai(`กรุณาวางบิลและส่งเอกสารมาที่: ${shopName}`), 15, finalY + 7);
+    doc.text(shapeThai(`ที่อยู่: ${shopAddress}`), 15, finalY + 12);
+    doc.text(shapeThai(`ติดต่อ: ${shopPhone}`), 15, finalY + 17);
 
     // Signatures
     const sigY = finalY + 40;
     if (sigY < 280) {
       doc.line(20, sigY, 80, sigY);
-      doc.text("ผู้จัดทำ (Prepared By)", 50, sigY + 5, { align: 'center' });
+      doc.text(shapeThai("ผู้จัดทำ (Prepared By)"), 50, sigY + 5, { align: 'center' });
       
       doc.line(130, sigY, 190, sigY);
-      doc.text("ผู้อนุมัติ (Authorized By)", 160, sigY + 5, { align: 'center' });
+      doc.text(shapeThai("ผู้อนุมัติ (Authorized By)"), 160, sigY + 5, { align: 'center' });
     }
 
     return doc;
