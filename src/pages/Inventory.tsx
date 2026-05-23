@@ -111,7 +111,6 @@ const Inventory = () => {
 
     if (thaiFont) {
       doc.addFileToVFS("ThaiFont.ttf", thaiFont);
-      // ลงทะเบียนฟอนต์เดียวกันทั้งสไตล์ normal และ bold เพื่อป้องกันไม่ให้หัวตารางย้อนกลับไปใช้ฟอนต์ภาษาอังกฤษเริ่มต้น
       doc.addFont("ThaiFont.ttf", "ThaiFont", "normal");
       doc.addFont("ThaiFont.ttf", "ThaiFont", "bold");
       doc.setFont("ThaiFont", "normal");
@@ -180,15 +179,18 @@ const Inventory = () => {
       }),
       styles: { 
         font: fontName, 
-        fontSize: 10, 
-        cellPadding: { top: 6, bottom: 6, left: 4, right: 4 } // ใช้ padding แยกทิศทางเพื่อเพิ่มพื้นที่แนวตั้งให้วรรณยุกต์ภาษาไทย
+        fontSize: 9, 
+        cellPadding: { top: 10, bottom: 6, left: 4, right: 4 }, // เพิ่มระยะขอบด้านบนเป็นพิเศษเพื่อป้องกันวรรณยุกต์โดนตัดขอบ
+        valign: 'middle'
       },
       headStyles: { 
         fillColor: [26, 31, 61], 
         textColor: [255, 255, 255], 
         halign: 'center',
         font: fontName,
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        fontSize: 9,
+        cellPadding: { top: 10, bottom: 6, left: 4, right: 4 }
       },
       columnStyles: {
         0: { halign: 'center', cellWidth: 15 },
