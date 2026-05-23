@@ -3,8 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { 
   LayoutGrid, AlertTriangle, PlusCircle, FileText, Users, BarChart3, 
-  Search, Edit3, Package, Download, Save, Trash2,
-  DollarSign, PieChart as PieIcon, LineChart as LineIcon, BarChart as BarIcon,
+  Search, Edit3, Package, Download, Save, Printer, Trash2, ArrowRight,
+  TrendingUp, DollarSign, PieChart as PieIcon, LineChart as LineIcon, BarChart as BarIcon,
   ChevronRight, Camera, CheckCircle2, Plus, Tag, Building2, Filter,
   AlertCircle, ArrowUpRight, RotateCcw, History, ArrowDown, ArrowUp, Info, Eye, Clock, X
 } from 'lucide-react';
@@ -90,7 +90,7 @@ const Inventory = () => {
 
   const selectedItemForAdjust = inventory.find(i => i.id === selectedAdjustId);
 
-  // Logic: PDF Generation CORE - Updated to match reportEN.md requirements
+  // Logic: PDF Generation Core
   const createReportDoc = () => {
     const doc = new jsPDF();
     const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
@@ -102,89 +102,37 @@ const Inventory = () => {
     if (repStatusFilter === 'Low') itemsToExport = itemsToExport.filter(i => i.stock > 0 && i.stock <= i.minStock);
     if (repStatusFilter === 'Out') itemsToExport = itemsToExport.filter(i => i.stock === 0);
     
-    // Header - Shop Info
-    doc.setFontSize(18);
-    doc.setTextColor(26, 31, 61);
-    doc.text(shopName.toUpperCase(), 105, 20, { align: 'center' });
-    
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text(shopAddress, 105, 26, { align: 'center' });
-    doc.text(`Tel: ${shopPhone}`, 105, 31, { align: 'center' });
+    // Header
+    doc.setFontSize(20);
+    doc.text("Inventory Stock Report", 105, 15, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(shopName, 105, 22, { align: 'center' });
+    doc.text(`Date: ${dateNow}`, 105, 27, { align: 'center' });
 
-    // Report Title & Date
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("INVENTORY SUMMARY REPORT", 105, 45, { align: 'center' });
-    
+    // Display Filter Criteria
+    const partnerName = repPartnerFilter === 'All' ? 'All' : partners.find(p => p.id === repPartnerFilter)?.companyName;
     doc.setFontSize(9);
-    doc.text(`Export Date: ${dateNow}`, 200, 45, { align: 'right' });
-
-    // Criteria Info
-    const partnerName = repPartnerFilter === 'All' ? 'All Partners' : partners.find(p => p.id === repPartnerFilter)?.companyName;
-    doc.setFontSize(9);
-    doc.setDrawColor(240);
-    doc.line(10, 50, 200, 50);
+    doc.text(`Filters: Partner [${partnerName}], Category [${repCategoryFilter}], Status [${repStatusFilter}]`, 10, 38);
     
-    doc.text(`Filter Criteria:`, 10, 58);
-    doc.text(`• Vendor: ${partnerName}`, 15, 63);
-    doc.text(`• Category: ${repCategoryFilter}`, 15, 68);
-    doc.text(`• Stock Status: ${repStatusFilter}`, 15, 73);
-
-    const totalQty = itemsToExport.reduce((acc, i) => acc + i.stock, 0);
-    const totalCostValue = itemsToExport.reduce((acc, i) => acc + (i.costPrice * i.stock), 0);
-    
-    doc.text(`Summary:`, 140, 58);
-    doc.text(`• Total SKUs: ${itemsToExport.length}`, 145, 63);
-    doc.text(`• Total Units: ${totalQty.toLocaleString()}`, 145, 68);
-    doc.text(`• Inventory Value: ${currency}${totalCostValue.toLocaleString()}`, 145, 73);
+    const totalItems = itemsToExport.length;
+    const totalValue = itemsToExport.reduce((acc, i) => acc + (i.costPrice * i.stock), 0);
+    doc.text(`Results: ${totalItems} items | Total Cost Value: ${currency}${totalValue.toLocaleString()}`, 10, 44);
 
     // Table
     autoTable(doc, {
-      startY: 80,
-      head: [['No.', 'Barcode', 'Product Name', 'Category', 'Stock', 'Unit', 'Cost', 'Price', 'Total Cost']],
-      body: itemsToExport.map((i, index) => [
-        index + 1,
+      startY: 50,
+      head: [['Barcode', 'Product Name', 'Category', 'Qty', 'Cost', 'Price']],
+      body: itemsToExport.map(i => [
         i.barcode || '-',
         i.name,
         i.category,
-        i.stock.toLocaleString(),
-        i.unit,
+        `${i.stock} ${i.unit}`,
         i.costPrice.toLocaleString(),
-        i.price.toLocaleString(),
-        (i.costPrice * i.stock).toLocaleString()
+        i.price.toLocaleString()
       ]),
-      styles: { font: 'helvetica', fontSize: 8, cellPadding: 3 },
-      headStyles: { 
-        fillColor: [26, 31, 61], 
-        textColor: [255, 255, 255],
-        fontStyle: 'bold'
-      },
-      alternateRowStyles: { fillColor: [250, 251, 255] },
-      columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },
-        4: { halign: 'right' },
-        6: { halign: 'right' },
-        7: { halign: 'right' },
-        8: { halign: 'right', fontStyle: 'bold' }
-      }
+      styles: { font: 'helvetica', fontSize: 8 },
+      headStyles: { fillColor: [26, 31, 61] }
     });
-
-    // Signature Section
-    const finalY = (doc as any).lastAutoTable.finalY + 30;
-    
-    if (finalY < 250) {
-      doc.setFontSize(9);
-      // Left side
-      doc.line(20, finalY, 80, finalY);
-      doc.text("Checked by", 50, finalY + 5, { align: 'center' });
-      doc.text("(..................................................)", 50, finalY + 12, { align: 'center' });
-      
-      // Right side
-      doc.line(130, finalY, 190, finalY);
-      doc.text("Approved by", 160, finalY + 5, { align: 'center' });
-      doc.text("(..................................................)", 160, finalY + 12, { align: 'center' });
-    }
 
     return doc;
   };
