@@ -51,8 +51,10 @@ const TONE_SHIFT_UP_LEFT: Record<string, string> = {
  * จัดตำแหน่งวรรณยุกต์และสระภาษาไทย (Thai Glyph Shaping) สำหรับใช้ใน PDF
  * ป้องกันปัญหาวรรณยุกต์ลอย ซ้อนทับกัน หรือโดนตัดขาดได้อย่างสมบูรณ์แบบ
  */
-export const shapeThai = (text: string): string => {
+export const shapeThai = (text: string, usePUA: boolean = true): string => {
   if (!text) return "";
+  if (!usePUA) return text; // หากไม่ได้ใช้ฟอนต์ THSarabunNew ให้ส่งคืนข้อความปกติเพื่อป้องกันภาษาเพี้ยน
+  
   const chars = Array.from(text);
   const result: string[] = [];
 

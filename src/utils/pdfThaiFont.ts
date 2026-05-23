@@ -1,8 +1,7 @@
 "use client";
 
 /**
- * ดึงข้อมูลฟอนต์ภาษาไทย (THSarabunNew) ซึ่งมีตาราง PUA ครบถ้วนสมบูรณ์
- * รองรับการหลบวรรณยุกต์และสระซ้อนใน jsPDF ได้ 100%
+ * ดึงข้อมูลฟอนต์ภาษาไทย (THSarabunNew) และแปลงเป็น Base64 อย่างปลอดภัยด้วย FileReader
  */
 export const fetchThaiFontBase64 = async (): Promise<string> => {
   const urls = [
@@ -15,16 +14,17 @@ export const fetchThaiFontBase64 = async (): Promise<string> => {
       const response = await fetch(url);
       if (response.ok) {
         const arrayBuffer = await response.arrayBuffer();
-        const bytes = new Uint8Array(arrayBuffer);
+        const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
         
-        // แปลง ArrayBuffer เป็น Binary String อย่างปลอดภัย
-        let binary = '';
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-          binary += String.fromCharCode(bytes[i]);
-        }
-        
-        return window.btoa(binary);
+        // ใช้ FileReader แปลงเป็น Base64 อย่างปลอดภัยและรวดเร็ว ป้องกันปัญหา Call Stack Exceeded
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64data = reader.result as string;
+            resolve(base64data.split(',')[1]);
+          };
+          reader.readAsDataURL(blob);
+        });
       }
     } catch (error) {
       console.error(`Failed to fetch Thai font from ${url}:`, error);

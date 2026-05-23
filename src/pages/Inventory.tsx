@@ -109,6 +109,7 @@ const Inventory = () => {
     // Load Thai Font dynamically
     const thaiFont = await fetchThaiFontBase64();
     const fontName = thaiFont ? "ThaiFont" : "helvetica";
+    const usePUA = !!thaiFont; // เปิดใช้งาน PUA เฉพาะเมื่อโหลดฟอนต์ THSarabunNew สำเร็จเท่านั้น
 
     if (thaiFont) {
       doc.addFileToVFS("ThaiFont.ttf", thaiFont);
@@ -132,13 +133,13 @@ const Inventory = () => {
     // Header Left: Company Info
     doc.setFontSize(14);
     doc.setTextColor(26, 31, 61);
-    doc.text(shapeThai(shopName), 15, 20);
+    doc.text(shapeThai(shopName, usePUA), 15, 20);
     
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี (Tax ID): ${mockTaxId}`), 15, 26);
-    doc.text(shapeThai(`ที่อยู่: ${shopAddress}`), 15, 31);
-    doc.text(shapeThai(`โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`), 15, 36);
+    doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี (Tax ID): ${mockTaxId}`, usePUA), 15, 26);
+    doc.text(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 15, 31);
+    doc.text(shapeThai(`โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`, usePUA), 15, 36);
 
     // Header Right: Logo & Title
     if (shopLogo) {
@@ -151,35 +152,35 @@ const Inventory = () => {
     doc.setTextColor(26, 31, 61);
     doc.text("Sales Report", 195, 52, { align: 'right' });
     doc.setFontSize(11);
-    doc.text(shapeThai("เอกสารแจ้งยอดฝากขาย"), 195, 58, { align: 'right' });
+    doc.text(shapeThai("เอกสารแจ้งยอดฝากขาย", usePUA), 195, 58, { align: 'right' });
 
     // Customer / Partner Box
     doc.setDrawColor(230);
     doc.line(15, 65, 195, 65);
 
     doc.setFontSize(10);
-    doc.text(shapeThai(`Customer / Partner : ${selectedPartner ? selectedPartner.companyName : 'คู่ค้าทั้งหมด'}`), 15, 75);
-    doc.text(shapeThai(`วันที่ออกเอกสาร (Date): ${dateNow}`), 130, 75);
+    doc.text(shapeThai(`Customer / Partner : ${selectedPartner ? selectedPartner.companyName : 'คู่ค้าทั้งหมด'}`, usePUA), 15, 75);
+    doc.text(shapeThai(`วันที่ออกเอกสาร (Date): ${dateNow}`, usePUA), 130, 75);
 
     // Table
     autoTable(doc, {
       startY: 85,
       head: [[
-        shapeThai('ลำดับ\nNo.'), 
-        shapeThai('รายการสินค้า\nProduct Name'), 
-        shapeThai('บาร์โค้ด\nBarcode'), 
-        shapeThai('จำนวน\nQty'), 
-        shapeThai('ราคาขาย\nPrice'), 
-        shapeThai('GP %'), 
-        shapeThai('ยอดที่ต้องจ่าย\nPayout')
+        shapeThai('ลำดับ\nNo.', usePUA), 
+        shapeThai('รายการสินค้า\nProduct Name', usePUA), 
+        shapeThai('บาร์โค้ด\nBarcode', usePUA), 
+        shapeThai('จำนวน\nQty', usePUA), 
+        shapeThai('ราคาขาย\nPrice', usePUA), 
+        shapeThai('GP %', usePUA), 
+        shapeThai('ยอดที่ต้องจ่าย\nPayout', usePUA)
       ]],
       body: itemsToExport.map((i, idx) => {
         const gp = selectedPartner?.gpRate || 0;
         const payout = (i.price * i.stock) * (1 - gp / 100);
         return [
           idx + 1,
-          shapeThai(i.name),
-          shapeThai(i.barcode || '-'),
+          shapeThai(i.name, usePUA),
+          shapeThai(i.barcode || '-', usePUA),
           i.stock.toLocaleString(),
           i.price.toLocaleString(),
           `${gp}%`,
@@ -189,7 +190,7 @@ const Inventory = () => {
       styles: { 
         font: fontName, 
         fontSize: 9, 
-        cellPadding: { top: 10, bottom: 6, left: 4, right: 4 }, // เพิ่มระยะขอบด้านบนเป็นพิเศษเพื่อป้องกันวรรณยุกต์โดนตัดขอบ
+        cellPadding: { top: 10, bottom: 6, left: 4, right: 4 },
         valign: 'middle'
       },
       headStyles: { 
@@ -215,22 +216,22 @@ const Inventory = () => {
     // Conditions & Billing
     doc.setFontSize(10);
     doc.setTextColor(26, 31, 61);
-    doc.text(shapeThai("เงื่อนไขการวางบิลและส่งเอกสาร:"), 15, finalY);
+    doc.text(shapeThai("เงื่อนไขการวางบิลและส่งเอกสาร:", usePUA), 15, finalY);
     
     doc.setFontSize(9);
     doc.setTextColor(100);
-    doc.text(shapeThai(`กรุณาวางบิลและส่งเอกสารมาที่: ${shopName}`), 15, finalY + 7);
-    doc.text(shapeThai(`ที่อยู่: ${shopAddress}`), 15, finalY + 12);
-    doc.text(shapeThai(`ติดต่อ: ${shopPhone}`), 15, finalY + 17);
+    doc.text(shapeThai(`กรุณาวางบิลและส่งเอกสารมาที่: ${shopName}`, usePUA), 15, finalY + 7);
+    doc.text(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 15, finalY + 12);
+    doc.text(shapeThai(`ติดต่อ: ${shopPhone}`, usePUA), 15, finalY + 17);
 
     // Signatures
     const sigY = finalY + 40;
     if (sigY < 280) {
       doc.line(20, sigY, 80, sigY);
-      doc.text(shapeThai("ผู้จัดทำ (Prepared By)"), 50, sigY + 5, { align: 'center' });
+      doc.text(shapeThai("ผู้จัดทำ (Prepared By)", usePUA), 50, sigY + 5, { align: 'center' });
       
       doc.line(130, sigY, 190, sigY);
-      doc.text(shapeThai("ผู้อนุมัติ (Authorized By)"), 160, sigY + 5, { align: 'center' });
+      doc.text(shapeThai("ผู้อนุมัติ (Authorized By)", usePUA), 160, sigY + 5, { align: 'center' });
     }
 
     return doc;
@@ -318,7 +319,7 @@ const Inventory = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 w-full">
                      <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">ค้นหาสินค้า</label><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold shadow-inner" placeholder="ค้นหา..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>
                      <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">หมวดหมู่</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold shadow-inner appearance-none" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}><option value="">ทั้งหมด</option>{categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}</select></div>
-                     <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">คู่ค้า</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold shadow-inner appearance-none" value={partnerFilter} onChange={e => setPartnerFilter(e.target.value)}><option value="">ทั้งหมด</option>{partners.map(p => (<option key={p.id} value={p.id}>{p.companyName}</option>))}</select></div>
+                     <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">คู่ค้า</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold shadow-inner appearance-none" value={partnerFilter} onChange={e => setPartnerFilter(e.target.value)}><option value="">ทั้งหมด</option>{partners.map(p => <option key={p.id} value={p.id}>{p.companyName}</option>)}</select></div>
                   </div>
                   <button onClick={() => { setEditingItem(null); setIsItemModalOpen(true); }} className="bg-[#1A1F3D] text-white px-10 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all"><Plus size={20} className="inline mr-2" /> เพิ่มสินค้าใหม่</button>
                </div>
@@ -472,7 +473,7 @@ const Inventory = () => {
         )}
 
         {activeTab === 'consignment' && (
-           <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+           <div className="max-w-6xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-300">
               <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                  <div>
                     <h3 className="text-2xl font-black text-[#1A1F3D]">บริษัทคู่ค้า (Partners)</h3>
