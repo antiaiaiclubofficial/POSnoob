@@ -3,8 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { 
   LayoutGrid, AlertTriangle, PlusCircle, FileText, Users, BarChart3, 
-  Search, Edit3, Package, Download, Save, Printer, Trash2, ArrowRight,
-  TrendingUp, DollarSign, PieChart as PieIcon, LineChart as LineIcon, BarChart as BarIcon,
+  Search, Edit3, Package, Download, Save, Trash2,
+  DollarSign, PieChart as PieIcon, LineChart as LineIcon, BarChart as BarIcon,
   ChevronRight, Camera, CheckCircle2, Plus, Tag, Building2, Filter,
   AlertCircle, ArrowUpRight, RotateCcw, History, ArrowDown, ArrowUp, Info, Eye, Clock, X
 } from 'lucide-react';
@@ -22,7 +22,7 @@ type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashbo
 
 const Inventory = () => {
   const { 
-    inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLogo,
+    inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLogo, shopLineId,
     adjustStock, deleteInventoryItem, deletePartner, currency, currentUser, addReportLog
   } = useStore();
   
@@ -90,7 +90,7 @@ const Inventory = () => {
 
   const selectedItemForAdjust = inventory.find(i => i.id === selectedAdjustId);
 
-  // Logic: PDF Generation Core
+  // Logic: PDF Generation CORE - Tailored to match Sales Report.pdf layout
   const createReportDoc = () => {
     const doc = new jsPDF();
     const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
@@ -101,38 +101,156 @@ const Inventory = () => {
     if (repCategoryFilter !== 'All') itemsToExport = itemsToExport.filter(i => i.category === repCategoryFilter);
     if (repStatusFilter === 'Low') itemsToExport = itemsToExport.filter(i => i.stock > 0 && i.stock <= i.minStock);
     if (repStatusFilter === 'Out') itemsToExport = itemsToExport.filter(i => i.stock === 0);
-    
-    // Header
-    doc.setFontSize(20);
-    doc.text("Inventory Stock Report", 105, 15, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text(shopName, 105, 22, { align: 'center' });
-    doc.text(`Date: ${dateNow}`, 105, 27, { align: 'center' });
 
-    // Display Filter Criteria
-    const partnerName = repPartnerFilter === 'All' ? 'All' : partners.find(p => p.id === repPartnerFilter)?.companyName;
+    const selectedPartner = partners.find(p => p.id === repPartnerFilter);
+
+    // 1. Header Left: Company Details
+    doc.setFontSize(14);
+    doc.setTextColor(26, 31, 61);
+    doc.setFont("helvetica", "bold");
+    doc.text(shopName.toUpperCase(), 15, 20);
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
+    doc.text(`Address: ${shopAddress}`, 15, 26);
+    doc.text(`Tel: ${shopPhone} | LINE: ${shopLineId || '-'}`, 15, 31);
+    doc.text(`Tax ID: 0105564000123 (Head Office)`, 15, 36); // Mock Tax ID as requested
+
+    // 2. Header Right: Logo & Document Title
+    if (shopLogo) {
+      try {
+        doc.addImage(shopLogo, 'PNG', 165, 12, 30, 30);
+      } catch (e) {
+        console.error("Failed to render logo in PDF", e);
+      }
+    }
+
+    // Document Title (Right Aligned, below logo area)
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 31, 61);
+    doc.text("SALES REPORT", 195, 52, { align: 'right' });
+    
     doc.setFontSize(9);
-    doc.text(`Filters: Partner [${partnerName}], Category [${repCategoryFilter}], Status [${repStatusFilter}]`, 10, 38);
-    
-    const totalItems = itemsToExport.length;
-    const totalValue = itemsToExport.reduce((acc, i) => acc + (i.costPrice * i.stock), 0);
-    doc.text(`Results: ${totalItems} items | Total Cost Value: ${currency}${totalValue.toLocaleString()}`, 10, 44);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text("Consignment Sales Statement", 195, 57, { align: 'right' });
 
-    // Table
+    // Divider Line
+    doc.setDrawColor(220);
+    doc.setLineWidth(0.5);
+    doc.line(15, 63, 195, 63);
+
+    // 3. Customer / Partner Info Section
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 31, 61);
+    doc.text("CUSTOMER / PARTNER:", 15, 72);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
+    doc.text(`Name: ${selectedPartner ? selectedPartner.companyName : 'All Partners / Vendors'}`, 15, 77);
+    doc.text(`Contact Person: ${selectedPartner ? selectedPartner.contactPerson : '-'}`, 15, 82);
+    doc.text(`Tel: ${selectedPartner ? selectedPartner.phone : '-'} | Email: ${selectedPartner ? selectedPartner.email : '-'}`, 15, 87);
+
+    // Report Meta Info (Right side)
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 31, 61);
+    doc.text("REPORT DETAILS:", 130, 72);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
+    doc.text(`Report Date: ${dateNow}`, 130, 77);
+    doc.text(`Category: ${repCategoryFilter}`, 130, 82);
+    doc.text(`Status Filter: ${repStatusFilter}`, 130, 87);
+
+    // 4. Table of Products
+    const totalQty = itemsToExport.reduce((acc, i) => acc + i.stock, 0);
+    const totalCostValue = itemsToExport.reduce((acc, i) => acc + (i.costPrice * i.stock), 0);
+    const totalRetailValue = itemsToExport.reduce((acc, i) => acc + (i.price * i.stock), 0);
+
     autoTable(doc, {
-      startY: 50,
-      head: [['Barcode', 'Product Name', 'Category', 'Qty', 'Cost', 'Price']],
-      body: itemsToExport.map(i => [
+      startY: 95,
+      head: [['No.', 'Barcode', 'Product Name', 'Category', 'Stock Qty', 'Unit', 'Cost Price', 'Retail Price', 'Total Cost']],
+      body: itemsToExport.map((i, index) => [
+        index + 1,
         i.barcode || '-',
         i.name,
         i.category,
-        `${i.stock} ${i.unit}`,
-        i.costPrice.toLocaleString(),
-        i.price.toLocaleString()
+        i.stock.toLocaleString(),
+        i.unit,
+        `${currency}${i.costPrice.toLocaleString()}`,
+        `${currency}${i.price.toLocaleString()}`,
+        `${currency}${(i.costPrice * i.stock).toLocaleString()}`
       ]),
-      styles: { font: 'helvetica', fontSize: 8 },
-      headStyles: { fillColor: [26, 31, 61] }
+      styles: { font: 'helvetica', fontSize: 8, cellPadding: 3 },
+      headStyles: { 
+        fillColor: [26, 31, 61], 
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: { fillColor: [250, 251, 255] },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        4: { halign: 'center' },
+        6: { halign: 'right' },
+        7: { halign: 'right' },
+        8: { halign: 'right', fontStyle: 'bold' }
+      }
     });
+
+    // Summary Box
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setDrawColor(240);
+    doc.setFillColor(250, 251, 255);
+    doc.rect(120, finalY, 75, 25, 'F');
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(`Total Items:`, 125, finalY + 7);
+    doc.text(`${itemsToExport.length} SKUs`, 190, finalY + 7, { align: 'right' });
+    
+    doc.text(`Total Quantity:`, 125, finalY + 13);
+    doc.text(`${totalQty.toLocaleString()} Units`, 190, finalY + 13, { align: 'right' });
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 31, 61);
+    doc.text(`Total Cost Value:`, 125, finalY + 20);
+    doc.text(`${currency}${totalCostValue.toLocaleString()}`, 190, finalY + 20, { align: 'right' });
+
+    // 5. Conditions & Billing Instructions (Using same company details as header)
+    const termsY = finalY + 35;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 31, 61);
+    doc.text("CONDITIONS & BILLING INSTRUCTIONS / เงื่อนไขการวางบิล:", 15, termsY);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.setFontSize(8);
+    doc.text(`1. Please send all billing documents and invoices directly to:`, 15, termsY + 6);
+    doc.text(`   Company: ${shopName}`, 15, termsY + 11);
+    doc.text(`   Address: ${shopAddress}`, 15, termsY + 16);
+    doc.text(`   Contact Phone: ${shopPhone}`, 15, termsY + 21);
+    doc.text(`2. Payments will be processed within 30 days of document verification.`, 15, termsY + 26);
+
+    // 6. Signatures Section
+    const sigY = termsY + 45;
+    if (sigY < 270) {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      
+      // Left Signature
+      doc.line(15, sigY, 85, sigY);
+      doc.text("Prepared By / ผู้จัดทำ", 50, sigY + 5, { align: 'center' });
+      doc.text("Date: ____/____/____", 50, sigY + 10, { align: 'center' });
+      
+      // Right Signature
+      doc.line(125, sigY, 195, sigY);
+      doc.text("Authorized Signature / ผู้รับวางบิล", 160, sigY + 5, { align: 'center' });
+      doc.text("Date: ____/____/____", 160, sigY + 10, { align: 'center' });
+    }
 
     return doc;
   };
@@ -148,7 +266,7 @@ const Inventory = () => {
       staffName: currentUser?.name || 'Admin'
     });
 
-    doc.save(`Stock_Report_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
+    doc.save(`Sales_Report_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
     toast.success("PDF Downloaded successfully");
   };
 
