@@ -21,6 +21,7 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
     icon: 'grooming' as ServiceIcon,
     targetSpecies: defaultSpecies,
     isActive: true,
+    coatType: undefined as 'Short' | 'Long' | undefined,
     prices: {
       'Small': { price: 0, duration: 60 }
     } as Record<string, ServicePriceInfo>
@@ -37,10 +38,11 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
         icon: service.icon,
         targetSpecies: service.targetSpecies,
         isActive: service.isActive,
+        coatType: service.coatType,
         prices: { ...service.prices }
       });
     } else {
-      setFormData(prev => ({ ...prev, targetSpecies: defaultSpecies }));
+      setFormData(prev => ({ ...prev, targetSpecies: defaultSpecies, coatType: undefined }));
     }
   }, [service, defaultSpecies]);
 
@@ -113,7 +115,7 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-3xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
         <div className="p-8 border-b border-gray-100 flex justify-between items-center">
           <h2 className="text-2xl font-black text-[#1A1F3D]">{service ? 'แก้ไขบริการ' : 'เพิ่มบริการใหม่'}</h2>
           <button onClick={onClose} className="p-3 bg-gray-50 text-gray-400 hover:text-red-500 rounded-2xl transition-colors">
@@ -122,7 +124,7 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 overflow-y-auto space-y-8 scrollbar-hide flex-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
              <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-gray-400 ml-2">ชื่อบริการ (Service Title)</label>
                 <input 
@@ -142,6 +144,18 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
                 >
                   <option value="Dog">สุนัข (Dog)</option>
                   <option value="Cat">แมว (Cat)</option>
+                </select>
+             </div>
+             <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">ประเภทเส้นขน (Coat Type)</label>
+                <select 
+                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold focus:ring-2 focus:ring-[#1A1F3D]/10"
+                  value={formData.coatType || ''}
+                  onChange={e => setFormData({...formData, coatType: (e.target.value || undefined) as any})}
+                >
+                  <option value="">ทั้งหมด / ไม่ระบุ (All)</option>
+                  <option value="Short">ขนสั้น (Short Coat)</option>
+                  <option value="Long">ขนยาว (Long Coat)</option>
                 </select>
              </div>
           </div>
