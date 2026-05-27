@@ -70,9 +70,11 @@ const Settings = () => {
   const [isAddonModalOpen, setIsAddonModalOpen] = useState(false);
   const [serviceQuery, setServiceQuery] = useState('');
   const [speciesTab, setSpeciesTab] = useState<'Dog' | 'Cat'>('Dog');
+  const [coatFilter, setCoatFilter] = useState<'All' | 'Short' | 'Long'>('All');
 
   const filteredServices = services.filter(s => 
     s.targetSpecies === speciesTab && 
+    (coatFilter === 'All' || s.coatType === coatFilter) &&
     s.title.toLowerCase().includes(serviceQuery.toLowerCase())
   );
 
@@ -325,10 +327,24 @@ const Settings = () => {
                           <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Service Catalog</h3>
                           <p className="text-xs text-gray-400 font-medium">Define your specialized grooming treatments.</p>
                        </div>
-                       <div className="flex gap-3">
+                       <div className="flex flex-wrap gap-3">
                           <div className="bg-[#F5F6FA] p-1 rounded-2xl flex gap-1">
                              <button onClick={() => setSpeciesTab('Dog')} className={cn("px-4 py-2 rounded-xl text-[10px] font-black transition-all", speciesTab === 'Dog' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>DOG</button>
                              <button onClick={() => setSpeciesTab('Cat')} className={cn("px-4 py-2 rounded-xl text-[10px] font-black transition-all", speciesTab === 'Cat' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>CAT</button>
+                          </div>
+                          <div className="bg-[#F5F6FA] p-1 rounded-2xl flex gap-1">
+                             {(['All', 'Short', 'Long'] as const).map(type => (
+                               <button
+                                 key={type}
+                                 onClick={() => setCoatFilter(type)}
+                                 className={cn(
+                                   "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
+                                   coatFilter === type ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400"
+                                 )}
+                               >
+                                 {type === 'All' ? 'ALL' : type === 'Short' ? 'SHORT' : 'LONG'}
+                               </button>
+                             ))}
                           </div>
                           <button onClick={handleAddService} className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2"><Plus size={16} /> {t.add}</button>
                        </div>
@@ -341,7 +357,20 @@ const Settings = () => {
                           <div key={s.id} className="p-5 bg-white border border-gray-100 rounded-[32px] flex items-center justify-between group hover:shadow-lg transition-all">
                              <div className="flex items-center gap-4">
                                 <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm", s.targetSpecies === 'Dog' ? "bg-blue-500" : "bg-pink-500")}><Scissors size={20}/></div>
-                                <div><h4 className="font-black text-[#1A1F3D] text-sm">{s.title}</h4><p className="text-[10px] text-gray-400 font-bold uppercase">{s.category}</p></div>
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <h4 className="font-black text-[#1A1F3D] text-sm">{s.title}</h4>
+                                    {s.coatType && (
+                                      <span className={cn(
+                                        "text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase",
+                                        s.coatType === 'Short' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
+                                      )}>
+                                        {s.coatType === 'Short' ? 'Short' : 'Long'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase">{s.category}</p>
+                                </div>
                              </div>
                              <div className="flex items-center gap-3">
                                 <Switch checked={s.isActive} onCheckedChange={() => toggleServiceActive(s.id)} className="data-[state=checked]:bg-[#1A1F3D]" />
