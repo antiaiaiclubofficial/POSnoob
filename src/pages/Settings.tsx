@@ -2,9 +2,9 @@
 
 import React, { useState, useRef } from 'react';
 import { 
-  Store, Save, ShieldCheck, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout, Eye, MapPin, Globe, Package, Zap, Wallet, Trash2, ChevronRight
+  Store, Save, Scissors, Plus, Search, Edit3, Dog, Cat, Clock, Star, Crown, Gem, Award, Percent, Phone, MessageSquare, Calendar, AlertCircle, Share2, Send, Camera, FileText, AlignLeft, Layout, Eye, MapPin, Globe, Package, Zap, Wallet, Trash2, ChevronRight
 } from 'lucide-react';
-import { useStore, TierRule, Service, AddonItem } from '@/store/useStore';
+import { useStore, Service, AddonItem } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
 import ServiceModal from '@/components/ServiceModal';
@@ -17,11 +17,10 @@ import StoreHolidaysConfig from '@/components/StoreHolidaysConfig';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 
-type SettingTab = 'profile' | 'operations' | 'services' | 'bundles' | 'loyalty' | 'system';
+type SettingTab = 'profile' | 'operations' | 'services' | 'bundles' | 'system';
 
 const Settings = () => {
   const { 
-    tierRules, updateTierRules, 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
     receiptHeader, receiptFooter, receiptPaperSize,
     updateBusinessProfile,
@@ -39,7 +38,6 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState<SettingTab>('profile');
   
   // Local States for draft changes
-  const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
   const [localShopName, setLocalShopName] = useState(shopName);
   const [localShopLogo, setLocalShopLogo] = useState(shopLogo);
   const [localShopAddress, setLocalShopAddress] = useState(shopAddress);
@@ -76,7 +74,6 @@ const Settings = () => {
   );
 
   const handleSaveAll = () => {
-    updateTierRules(localTierRules);
     updateBusinessProfile({ 
       shopName: localShopName, 
       shopLogo: localShopLogo,
@@ -115,7 +112,6 @@ const Settings = () => {
     { id: 'operations', label: 'Operations', icon: Clock, desc: 'Hours & Booking Rules' },
     { id: 'services', label: 'Services & Add-ons', icon: Scissors, desc: 'Manage your Catalog' },
     { id: 'bundles', label: 'Service Bundles', icon: Package, desc: 'Packages & Multi-sessions' },
-    { id: 'loyalty', label: 'Loyalty Tiers', icon: ShieldCheck, desc: 'Membership benefits' },
     { id: 'system', label: 'System', icon: Globe, desc: 'Language & Preferences' },
   ];
 
@@ -430,43 +426,6 @@ const Settings = () => {
                     {packageTemplates.length === 0 && (
                       <div className="col-span-full py-20 text-center opacity-20"><Package size={48} className="mx-auto mb-4"/><p className="font-black">No bundles created yet</p></div>
                     )}
-                 </div>
-              </section>
-            )}
-
-            {/* Tab: Loyalty & Membership */}
-            {activeTab === 'loyalty' && (
-              <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-12">
-                 <div>
-                    <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Membership Tier Logic</h3>
-                    <p className="text-xs text-gray-400 font-medium">Define spending thresholds and automated discounts.</p>
-                 </div>
-                 <div className="space-y-6">
-                    {localTierRules.map((rule, idx) => (
-                      <div key={rule.level} className="flex flex-col lg:flex-row items-center gap-8 p-8 bg-[#F5F6FA] rounded-[40px] relative overflow-hidden transition-all hover:shadow-md border border-transparent hover:border-gray-200">
-                         <div className="absolute top-0 left-0 w-2 h-full bg-[#1A1F3D]" />
-                         <div className="w-16 h-16 bg-white rounded-[24px] flex items-center justify-center shadow-sm shrink-0">
-                            {rule.level === 'VIP' ? <Gem className="text-purple-500" size={32} /> : rule.level === 'Gold' ? <Crown className="text-amber-500" size={32} /> : rule.level === 'Silver' ? <Star className="text-blue-500" size={32} /> : <Award className="text-gray-400" size={32} />}
-                         </div>
-                         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-                            <div className="space-y-2">
-                               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Label</label>
-                               <input className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" value={rule.label} onChange={e => { const r = [...localTierRules]; r[idx].label = e.target.value; setLocalTierRules(r); }} />
-                            </div>
-                            <div className="space-y-2">
-                               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Min. Spent ({currency})</label>
-                               <input type="number" className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" value={rule.minSpent} onChange={e => { const r = [...localTierRules]; r[idx].minSpent = Number(e.target.value); setLocalTierRules(r); }} />
-                            </div>
-                            <div className="space-y-2">
-                               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Discount (%)</label>
-                               <div className="relative">
-                                  <Percent className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-                                  <input type="number" className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" value={rule.discount} onChange={e => { const r = [...localTierRules]; r[idx].discount = Number(e.target.value); setLocalTierRules(r); }} />
-                               </div>
-                            </div>
-                         </div>
-                      </div>
-                    ))}
                  </div>
               </section>
             )}

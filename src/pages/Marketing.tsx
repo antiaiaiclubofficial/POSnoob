@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet } from 'lucide-react';
+import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet, Crown, Gem, Percent, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useStore } from '@/store/useStore';
+import { useStore, TierRule } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ import CreditPackageModal from '@/components/CreditPackageModal';
 
 const Marketing = () => {
   const queryClient = useQueryClient();
-  const { language, creditPackages, deleteCreditPackage, currency } = useStore();
+  const { language, creditPackages, deleteCreditPackage, currency, tierRules, updateTierRules } = useStore();
   const t = translations[language];
   
   const [activeTab, setActiveTab] = useState('promotions');
@@ -26,6 +26,9 @@ const Marketing = () => {
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+
+  // Local state for editing tier rules
+  const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
 
   // Fetch Promotions
   const { data: promotions, isLoading: promosLoading } = useQuery({
@@ -111,6 +114,11 @@ const Marketing = () => {
     else if (activeTab === 'credits') setIsCreditModalOpen(true);
   };
 
+  const handleSaveTiers = () => {
+    updateTierRules(localTierRules);
+    toast.success(language === 'th' ? "บันทึกเกณฑ์ระดับสมาชิกเรียบร้อย" : "Membership tiers updated successfully");
+  };
+
   const filteredPromos = promotions?.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredCoupons = coupons?.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredCredits = creditPackages.filter(pkg => pkg.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -125,38 +133,45 @@ const Marketing = () => {
           </div>
           <h1 className="text-4xl font-black text-[#1A1F3D]">{t.marketing}</h1>
         </div>
-        <button 
-          onClick={handleAdd}
-          className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all"
-        >
-          <Plus size={20} /> {activeTab === 'promotions' ? t.createPromo : activeTab === 'coupons' ? t.createCoupon : 'สร้างแพ็กเกจเครดิต'}
-        </button>
+        {activeTab !== 'tiers' && (
+          <button 
+            onClick={handleAdd}
+            className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all"
+          >
+            <Plus size={20} /> {activeTab === 'promotions' ? t.createPromo : activeTab === 'coupons' ? t.createCoupon : 'สร้างแพ็กเกจเครดิต'}
+          </button>
+        )}
       </header>
 
       <div className="px-6 lg:px-12 mb-8 flex flex-col lg:flex-row justify-between items-center gap-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full lg:w-auto">
-          <TabsList className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm flex gap-1 h-auto">
-            <TabsTrigger value="promotions" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+          <TabsList className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm flex gap-1 h-auto overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="promotions" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Tag size={16} className="mr-2" /> {t.promotions}
             </TabsTrigger>
-            <TabsTrigger value="coupons" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+            <TabsTrigger value="coupons" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Ticket size={16} className="mr-2" /> {t.coupons}
             </TabsTrigger>
-            <TabsTrigger value="credits" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+            <TabsTrigger value="credits" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Wallet size={16} className="mr-2" /> แพ็กเกจเครดิต
+            </TabsTrigger>
+            <TabsTrigger value="tiers" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
+              <Crown size={16} className="mr-2" /> {t.membershipTierLogic}
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <div className="relative w-full lg:w-80">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-          <input 
-            className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-6 py-3.5 text-sm font-bold shadow-sm"
-            placeholder={t.search}
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-        </div>
+        {activeTab !== 'tiers' && (
+          <div className="relative w-full lg:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+            <input 
+              className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-6 py-3.5 text-sm font-bold shadow-sm"
+              placeholder={t.search}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 lg:px-12 pb-10 scrollbar-hide">
@@ -312,6 +327,50 @@ const Marketing = () => {
                   <p className="font-black">ไม่พบแพ็กเกจเครดิต</p>
                 </div>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="tiers" className="m-0">
+            <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-12">
+               <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-xl font-black text-[#1A1F3D] mb-1">{t.membershipTierLogic}</h3>
+                    <p className="text-xs text-gray-400 font-medium">{t.membershipDesc}</p>
+                  </div>
+                  <button 
+                    onClick={handleSaveTiers} 
+                    className="bg-[#1A1F3D] text-white px-8 py-3 rounded-xl font-black text-xs flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <Save size={16} /> {t.saveChanges}
+                  </button>
+               </div>
+               <div className="space-y-6">
+                  {localTierRules.map((rule, idx) => (
+                    <div key={rule.level} className="flex flex-col lg:flex-row items-center gap-8 p-8 bg-[#F5F6FA] rounded-[40px] relative overflow-hidden transition-all hover:shadow-md border border-transparent hover:border-gray-200">
+                       <div className="absolute top-0 left-0 w-2 h-full bg-[#1A1F3D]" />
+                       <div className="w-16 h-16 bg-white rounded-[24px] flex items-center justify-center shadow-sm shrink-0">
+                          {rule.level === 'VIP' ? <Gem className="text-purple-500" size={32} /> : rule.level === 'Gold' ? <Crown className="text-amber-500" size={32} /> : rule.level === 'Silver' ? <Star className="text-blue-500" size={32} /> : <Award className="text-gray-400" size={32} />}
+                       </div>
+                       <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Label</label>
+                             <input className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" value={rule.label} onChange={e => { const r = [...localTierRules]; r[idx].label = e.target.value; setLocalTierRules(r); }} />
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Min. Spent ({currency})</label>
+                             <input type="number" className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" value={rule.minSpent} onChange={e => { const r = [...localTierRules]; r[idx].minSpent = Number(e.target.value); setLocalTierRules(r); }} />
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Discount (%)</label>
+                             <div className="relative">
+                                <Percent className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                                <input type="number" className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" value={rule.discount} onChange={e => { const r = [...localTierRules]; r[idx].discount = Number(e.target.value); setLocalTierRules(r); }} />
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+                  ))}
+               </div>
             </div>
           </TabsContent>
         </Tabs>
