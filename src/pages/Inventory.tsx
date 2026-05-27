@@ -188,17 +188,18 @@ const Inventory = () => {
 
     if (selectedPartner) {
       doc.setFont(fontName, "normal");
-      doc.text(shapeThai(`ข้อมูลคู่ค้า:`, usePUA), 15, currentY);
+      doc.text(shapeThai(`ข้อมูลคู่ค้า: ${selectedPartner.companyName}`, usePUA), 15, currentY);
       doc.setFontSize(9);
       doc.setTextColor(80);
       
       currentY += 5;
-      doc.text(shapeThai(`ชื่อบริษัท: ${selectedPartner.companyName}`, usePUA), 15, currentY);
-      doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี: ${selectedPartner.taxId || '-'}`, usePUA), 110, currentY);
+      doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี: ${selectedPartner.taxId || '-'}`, usePUA), 15, currentY);
       
       currentY += 5;
       doc.text(shapeThai(`เบอร์โทร: ${selectedPartner.phone || '-'}`, usePUA), 15, currentY);
-      doc.text(shapeThai(`อีเมล: ${selectedPartner.email || '-'}`, usePUA), 110, currentY);
+      
+      currentY += 5;
+      doc.text(shapeThai(`อีเมล: ${selectedPartner.email || '-'}`, usePUA), 15, currentY);
       
       currentY += 5;
       const partnerAddress = selectedPartner.address || '-';
