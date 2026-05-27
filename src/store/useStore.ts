@@ -17,9 +17,9 @@ export const useStore = create<AppState>()((set, get) => ({
   language: 'th',
   setLanguage: (lang) => set({ language: lang }),
   currency: '฿',
-  isAuthenticated: true,
-  isAuthLoading: false,
-  currentUser: { id: 'admin', name: 'Admin User', role: 'Admin', username: 'admin' },
+  isAuthenticated: false,
+  isAuthLoading: true,
+  currentUser: null,
   storeId: 'default-store',
 
   shopName: 'Mellow Fellow Sanctuary',
