@@ -13,12 +13,11 @@ import BroadcastModal from '@/components/BroadcastModal';
 import ReceiptPreview from '@/components/ReceiptPreview';
 import PackageModal from '@/components/PackageModal';
 import AddonSettingsModal from '@/components/AddonSettingsModal';
-import CreditPackageModal from '@/components/CreditPackageModal';
 import StoreHolidaysConfig from '@/components/StoreHolidaysConfig';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 
-type SettingTab = 'profile' | 'operations' | 'services' | 'bundles' | 'credits' | 'loyalty' | 'system';
+type SettingTab = 'profile' | 'operations' | 'services' | 'bundles' | 'loyalty' | 'system';
 
 const Settings = () => {
   const { 
@@ -29,7 +28,6 @@ const Settings = () => {
     services, toggleServiceActive, deleteService,
     addons, deleteAddon,
     packageTemplates, deletePackageTemplate,
-    creditPackages, deleteCreditPackage,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings,
     recurringHolidays, specificHolidays,
     language, setLanguage
@@ -63,7 +61,6 @@ const Settings = () => {
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [isReceiptPreviewOpen, setIsReceiptPreviewOpen] = useState(false);
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
-  const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [selectedAddon, setSelectedAddon] = useState<AddonItem | null>(null);
@@ -118,7 +115,6 @@ const Settings = () => {
     { id: 'operations', label: 'Operations', icon: Clock, desc: 'Hours & Booking Rules' },
     { id: 'services', label: 'Services & Add-ons', icon: Scissors, desc: 'Manage your Catalog' },
     { id: 'bundles', label: 'Service Bundles', icon: Package, desc: 'Packages & Multi-sessions' },
-    { id: 'credits', label: 'Credit Packs', icon: Wallet, desc: 'Wallet & Top-up deals' },
     { id: 'loyalty', label: 'Loyalty Tiers', icon: ShieldCheck, desc: 'Membership benefits' },
     { id: 'system', label: 'System', icon: Globe, desc: 'Language & Preferences' },
   ];
@@ -438,31 +434,6 @@ const Settings = () => {
               </section>
             )}
 
-            {/* Tab: Credit Packs */}
-            {activeTab === 'credits' && (
-              <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-8">
-                 <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Prepaid Credit Packages</h3>
-                      <p className="text-xs text-gray-400 font-medium">Configure Wallet top-up deals with bonus credits.</p>
-                    </div>
-                    <button onClick={() => setIsCreditModalOpen(true)} className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-xl"><Plus size={16} /> New Credit Pack</button>
-                 </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {creditPackages.map(pkg => (
-                       <div key={pkg.id} className="p-8 bg-[#F5F6FA] rounded-[40px] flex justify-between items-center group relative overflow-hidden">
-                          <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
-                          <div>
-                            <h4 className="font-black text-[#1A1F3D] text-lg">{pkg.name}</h4>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Pay {currency}{pkg.price.toLocaleString()} → Get {currency}{pkg.creditValue.toLocaleString()}</p>
-                          </div>
-                          <button onClick={() => deleteCreditPackage(pkg.id)} className="p-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-xl shadow-sm"><Trash2 size={18} /></button>
-                       </div>
-                    ))}
-                 </div>
-              </section>
-            )}
-
             {/* Tab: Loyalty & Membership */}
             {activeTab === 'loyalty' && (
               <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-12">
@@ -533,7 +504,6 @@ const Settings = () => {
       {isBroadcastModalOpen && <BroadcastModal onClose={() => setIsBroadcastModalOpen(false)} />}
       {isReceiptPreviewOpen && <ReceiptPreview shopName={localShopName} shopLogo={localShopLogo} shopAddress={localShopAddress} shopPhone={localShopPhone} header={localReceiptHeader} footer={localReceiptFooter} paperSize={localReceiptPaperSize} onClose={() => setIsReceiptPreviewOpen(false)} />}
       {isPackageModalOpen && <PackageModal onClose={() => setIsPackageModalOpen(false)} />}
-      {isCreditModalOpen && <CreditPackageModal onClose={() => setIsCreditModalOpen(false)} />}
     </main>
   );
 };

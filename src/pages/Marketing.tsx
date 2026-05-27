@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone } from 'lucide-react';
+import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '@/store/useStore';
@@ -12,10 +12,11 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CouponModal from '@/components/CouponModal';
 import PromotionModal from '@/components/PromotionModal';
+import CreditPackageModal from '@/components/CreditPackageModal';
 
 const Marketing = () => {
   const queryClient = useQueryClient();
-  const { language } = useStore();
+  const { language, creditPackages, deleteCreditPackage, currency } = useStore();
   const t = translations[language];
   
   const [activeTab, setActiveTab] = useState('promotions');
@@ -23,9 +24,10 @@ const Marketing = () => {
   
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+  const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
-  // Fetch Promotions - เรียงตามวันที่สร้าง (ใหม่ไปเก่า) และตาม ID เพื่อให้ตำแหน่งคงที่ 100%
+  // Fetch Promotions
   const { data: promotions, isLoading: promosLoading } = useQuery({
     queryKey: ['deal_templates'],
     queryFn: async () => {
@@ -33,13 +35,13 @@ const Marketing = () => {
         .from('deal_templates')
         .select('*')
         .order('created_at', { ascending: false })
-        .order('id', { ascending: true }); // เพิ่มการเรียงลำดับลำดับที่สองเพื่อความแม่นยำ
+        .order('id', { ascending: true });
       if (error) throw error;
       return data;
     }
   });
 
-  // Fetch Coupons - เรียงตามวันที่สร้าง (ใหม่ไปเก่า) และตาม ID เพื่อให้ตำแหน่งคงที่ 100%
+  // Fetch Coupons
   const { data: coupons, isLoading: couponsLoading } = useQuery({
     queryKey: ['coupon_templates'],
     queryFn: async () => {
@@ -99,17 +101,19 @@ const Marketing = () => {
   const handleEdit = (item: any) => {
     setSelectedItem(item);
     if (activeTab === 'promotions') setIsPromoModalOpen(true);
-    else setIsCouponModalOpen(true);
+    else if (activeTab === 'coupons') setIsCouponModalOpen(true);
   };
 
   const handleAdd = () => {
     setSelectedItem(null);
     if (activeTab === 'promotions') setIsPromoModalOpen(true);
-    else setIsCouponModalOpen(true);
+    else if (activeTab === 'coupons') setIsCouponModalOpen(true);
+    else if (activeTab === 'credits') setIsCreditModalOpen(true);
   };
 
   const filteredPromos = promotions?.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredCoupons = coupons?.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredCredits = creditPackages.filter(pkg => pkg.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
@@ -125,7 +129,7 @@ const Marketing = () => {
           onClick={handleAdd}
           className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all"
         >
-          <Plus size={20} /> {activeTab === 'promotions' ? t.createPromo : t.createCoupon}
+          <Plus size={20} /> {activeTab === 'promotions' ? t.createPromo : activeTab === 'coupons' ? t.createCoupon : 'สร้างแพ็กเกจเครดิต'}
         </button>
       </header>
 
@@ -137,6 +141,9 @@ const Marketing = () => {
             </TabsTrigger>
             <TabsTrigger value="coupons" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
               <Ticket size={16} className="mr-2" /> {t.coupons}
+            </TabsTrigger>
+            <TabsTrigger value="credits" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all">
+              <Wallet size={16} className="mr-2" /> แพ็กเกจเครดิต
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -256,11 +263,63 @@ const Marketing = () => {
               {(!couponsLoading && filteredCoupons?.length === 0) && <div className="col-span-full py-20 text-center opacity-20 font-black">No Coupons Found</div>}
             </div>
           </TabsContent>
+
+          <TabsContent value="credits" className="m-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredCredits.map((pkg) => (
+                <div key={pkg.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm transition-all hover:shadow-xl relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="w-14 h-14 rounded-3xl flex items-center justify-center bg-amber-50">
+                      <Wallet className="text-amber-600" size={24} />
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => {
+                          setSelectedItem(pkg);
+                          setIsCreditModalOpen(true);
+                        }} 
+                        className="p-2 text-gray-400 hover:text-[#1A1F3D] rounded-xl"
+                      >
+                        <Edit3 size={16}/>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if(window.confirm(language === 'th' ? "ยืนยันการลบแพ็กเกจเครดิต?" : "Confirm deletion?")) {
+                            deleteCreditPackage(pkg.id);
+                            toast.success(language === 'th' ? "ลบแพ็กเกจเครดิตเรียบร้อย" : "Credit package deleted");
+                          }
+                        }} 
+                        className="p-2 text-gray-400 hover:text-red-500 rounded-xl"
+                      >
+                        <Trash2 size={16}/>
+                      </button>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-black mb-2">{pkg.name}</h3>
+                  <p className="text-xs text-gray-400 mb-6 leading-relaxed">
+                    จ่ายเพียง {currency}{pkg.price.toLocaleString()} ได้รับเครดิตมูลค่า {currency}{pkg.creditValue.toLocaleString()}
+                  </p>
+                  <div className="pt-6 border-t border-gray-50 flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-gray-400">ราคาขาย</span>
+                    <span className="text-lg font-black text-[#1A1F3D]">{currency}{pkg.price.toLocaleString()}</span>
+                  </div>
+                </div>
+              ))}
+              {filteredCredits.length === 0 && (
+                <div className="col-span-full py-20 text-center opacity-20 border-2 border-dashed border-gray-200 rounded-[40px]">
+                  <Wallet size={48} className="mx-auto mb-4" />
+                  <p className="font-black">ไม่พบแพ็กเกจเครดิต</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
 
       {isCouponModalOpen && <CouponModal coupon={selectedItem} onClose={() => setIsCouponModalOpen(false)} />}
       {isPromoModalOpen && <PromotionModal promotion={selectedItem} onClose={() => setIsPromoModalOpen(false)} />}
+      {isCreditModalOpen && <CreditPackageModal onClose={() => setIsCreditModalOpen(false)} />}
     </div>
   );
 };
