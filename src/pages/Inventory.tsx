@@ -158,7 +158,7 @@ const Inventory = () => {
     
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี (Tax ID): ${mockTaxId}`, usePUA), 15, 26);
+    doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี: ${mockTaxId}`, usePUA), 15, 26);
     doc.text(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 15, 31);
     doc.text(shapeThai(`โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`, usePUA), 15, 36);
 
@@ -188,25 +188,21 @@ const Inventory = () => {
 
     if (selectedPartner) {
       doc.setFont(fontName, "normal");
-      doc.text(shapeThai(`ข้อมูลคู่ค้า (Partner Details):`, usePUA), 15, currentY);
+      doc.text(shapeThai(`ข้อมูลคู่ค้า:`, usePUA), 15, currentY);
       doc.setFontSize(9);
       doc.setTextColor(80);
       
       currentY += 5;
-      doc.text(shapeThai(`ชื่อบริษัท (Company): ${selectedPartner.companyName}`, usePUA), 15, currentY);
-      doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี (Tax ID): ${selectedPartner.taxId || '-'}`, usePUA), 110, currentY);
+      doc.text(shapeThai(`ชื่อบริษัท: ${selectedPartner.companyName}`, usePUA), 15, currentY);
+      doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี: ${selectedPartner.taxId || '-'}`, usePUA), 110, currentY);
       
       currentY += 5;
-      doc.text(shapeThai(`ผู้ติดต่อ (Contact): ${selectedPartner.contactPerson || '-'}`, usePUA), 15, currentY);
-      doc.text(shapeThai(`เบอร์โทร (Phone): ${selectedPartner.phone || '-'}`, usePUA), 110, currentY);
-      
-      currentY += 5;
-      doc.text(shapeThai(`อีเมล (Email): ${selectedPartner.email || '-'}`, usePUA), 15, currentY);
-      doc.text(shapeThai(`ส่วนแบ่ง GP (GP Rate): ${selectedPartner.gpRate || 0}%`, usePUA), 110, currentY);
+      doc.text(shapeThai(`เบอร์โทร: ${selectedPartner.phone || '-'}`, usePUA), 15, currentY);
+      doc.text(shapeThai(`อีเมล: ${selectedPartner.email || '-'}`, usePUA), 110, currentY);
       
       currentY += 5;
       const partnerAddress = selectedPartner.address || '-';
-      const splitPartnerAddress = doc.splitTextToSize(shapeThai(`ที่อยู่ (Address): ${partnerAddress}`, usePUA), 170);
+      const splitPartnerAddress = doc.splitTextToSize(shapeThai(`ที่อยู่: ${partnerAddress}`, usePUA), 170);
       doc.text(splitPartnerAddress, 15, currentY);
       
       currentY += (splitPartnerAddress.length * 4) + 2;
@@ -215,14 +211,14 @@ const Inventory = () => {
       currentY += 6;
     } else {
       doc.setFont(fontName, "normal");
-      doc.text(shapeThai(`Customer / Partner : คู่ค้าทั้งหมด (All Partners)`, usePUA), 15, currentY);
+      doc.text(shapeThai(`คู่ค้า: คู่ค้าทั้งหมด`, usePUA), 15, currentY);
       currentY += 8;
     }
 
     // Date of document
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(shapeThai(`วันที่ออกเอกสาร (Date): ${dateNow}`, usePUA), 130, 73);
+    doc.text(shapeThai(`วันที่ออกเอกสาร: ${dateNow}`, usePUA), 130, 73);
 
     const tableStartY = selectedPartner ? currentY : 85;
 
