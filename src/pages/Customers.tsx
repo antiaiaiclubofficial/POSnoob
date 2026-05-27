@@ -64,8 +64,8 @@ const Customers = () => {
             type,
             breed,
             birth_date,
-            weight_history,
-            notes,
+            weight,
+            medical_condition,
             image_url
           )
         `);
@@ -108,9 +108,9 @@ const Customers = () => {
             species: (p.type || 'Dog') as 'Dog' | 'Cat' | 'Other',
             breed: p.breed || '-',
             birthday: p.birth_date || '',
-            weightHistory: p.weight_history || [],
+            weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
             serviceHistory: [],
-            notes: p.notes || '',
+            notes: p.medical_condition || '',
             image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
           }))
         };

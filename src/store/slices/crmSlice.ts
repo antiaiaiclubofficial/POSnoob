@@ -171,6 +171,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   addPet: async (customerId, petData) => {
+    const initialWeight = petData.weightHistory?.[0]?.value || 0;
     const { data, error } = await supabase
       .from('pets')
       .insert([{ 
@@ -179,9 +180,9 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         type: petData.species,
         breed: petData.breed,
         birth_date: petData.birthday,
-        notes: petData.notes,
+        medical_condition: petData.notes,
         image_url: petData.image,
-        weight_history: petData.weightHistory || []
+        weight: initialWeight
       }])
       .select()
       .single();
@@ -196,9 +197,9 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
             species: data.type as 'Dog' | 'Cat' | 'Other',
             breed: data.breed || '',
             birthday: data.birth_date || '',
-            notes: data.notes || '',
+            notes: data.medical_condition || '',
             image: data.image_url || '',
-            weightHistory: data.weight_history || [],
+            weightHistory: [{ date: new Date().toISOString().split('T')[0], value: Number(data.weight || 0) }],
             serviceHistory: []
           }]
         } : c)
@@ -214,7 +215,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         type: petData.species,
         breed: petData.breed,
         birth_date: petData.birthday,
-        notes: petData.notes,
+        medical_condition: petData.notes,
         image_url: petData.image
       })
       .eq('id', petId);
@@ -230,16 +231,19 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   updatePetWeight: async (customerId, petId, weight) => {
-    const { data: currentPet } = await supabase.from('pets').select('weight_history').eq('id', petId).single();
-    const newHistory = [...(currentPet?.weight_history || []), { date: new Date().toISOString().split('T')[0], value: weight }];
-    
-    const { error } = await supabase.from('pets').update({ weight_history: newHistory }).eq('id', petId);
+    const { error } = await supabase
+      .from('pets')
+      .update({ weight: weight })
+      .eq('id', petId);
     
     if (!error) {
       set((state) => ({
         customers: state.customers.map(c => c.id === customerId ? {
           ...c,
-          pets: c.pets.map(p => p.id === petId ? { ...p, weightHistory: newHistory } : p)
+          pets: c.pets.map(p => p.id === petId ? { 
+            ...p, 
+            weightHistory: [...p.weightHistory, { date: new Date().toISOString().split('T')[0], value: weight }] 
+          } : p)
         } : c)
       }));
     }
