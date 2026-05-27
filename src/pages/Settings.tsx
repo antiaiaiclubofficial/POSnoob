@@ -14,6 +14,7 @@ import ReceiptPreview from '@/components/ReceiptPreview';
 import PackageModal from '@/components/PackageModal';
 import AddonSettingsModal from '@/components/AddonSettingsModal';
 import CreditPackageModal from '@/components/CreditPackageModal';
+import StoreHolidaysConfig from '@/components/StoreHolidaysConfig';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 
@@ -30,6 +31,7 @@ const Settings = () => {
     packageTemplates, deletePackageTemplate,
     creditPackages, deleteCreditPackage,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings,
+    recurringHolidays, specificHolidays,
     language, setLanguage
   } = useStore();
 
@@ -54,6 +56,8 @@ const Settings = () => {
   const [localMaxCapacity, setLocalMaxCapacity] = useState(maxCapacity);
   const [localOpenTime, setLocalOpenTime] = useState(openTime);
   const [localCloseTime, setLocalCloseTime] = useState(closeTime);
+  const [localRecurringHolidays, setLocalRecurringHolidays] = useState<number[]>(recurringHolidays);
+  const [localSpecificHolidays, setLocalSpecificHolidays] = useState<string[]>(specificHolidays);
 
   // Modals
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
@@ -90,7 +94,9 @@ const Settings = () => {
       slotDuration: localSlotDuration,
       maxCapacity: localMaxCapacity,
       openTime: localOpenTime,
-      closeTime: localCloseTime
+      closeTime: localCloseTime,
+      recurringHolidays: localRecurringHolidays,
+      specificHolidays: localSpecificHolidays
     });
     toast.success("All settings synchronized successfully!");
   };
@@ -225,6 +231,14 @@ const Settings = () => {
                     </div>
                   </div>
                 </section>
+
+                {/* Store Holidays Configuration Section */}
+                <StoreHolidaysConfig 
+                  recurringHolidays={localRecurringHolidays}
+                  onChangeRecurring={setLocalRecurringHolidays}
+                  specificHolidays={localSpecificHolidays}
+                  onChangeSpecific={setLocalSpecificHolidays}
+                />
 
                 <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
                    <div className="flex justify-between items-center mb-10">
