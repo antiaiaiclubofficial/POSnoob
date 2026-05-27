@@ -1,14 +1,13 @@
 "use client";
 
 /**
- * ดึงข้อมูลฟอนต์ภาษาไทย TH Sarabun New จาก CDN ที่มีความเสถียรสูงสุด
- * และเปิด CORS 100% ป้องกันปัญหาโหลดฟอนต์ล้มเหลวใน Sandbox
+ * ดึงข้อมูลฟอนต์ Prompt (Regular) ซึ่งรองรับทั้งภาษาไทยและภาษาอังกฤษสไตล์โมเดิร์น
+ * จากแหล่งเก็บฟอนต์อย่างเป็นทางการของ Google Fonts
  */
 export const fetchThaiFontBase64 = async (): Promise<string> => {
   const urls = [
-    'https://cdn.jsdelivr.net/gh/ChampS/TH-Sarabun-New-TrueType-Font@master/THSarabunNew.ttf', // THSarabunNew Primary
-    'https://fonts.gstatic.com/s/sarabun/v13/Dt8z6Kcx07Wv6ALQ65R-gOcg.ttf', // Google Fonts Official CDN (Sarabun Regular) Fallback
-    'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Regular.ttf' // jsDelivr Fallback
+    'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/prompt/Prompt-Regular.ttf', // Google Fonts GitHub CDN (Prompt Regular)
+    'https://fonts.gstatic.com/s/prompt/v10/-9rQ5Qs6LT9Fp6502g.ttf' // Google Fonts Official Direct Link Fallback
   ];
 
   for (const url of urls) {
@@ -28,7 +27,7 @@ export const fetchThaiFontBase64 = async (): Promise<string> => {
         });
       }
     } catch (error) {
-      console.error(`Failed to fetch Thai font from ${url}:`, error);
+      console.error(`Failed to fetch Prompt font from ${url}:`, error);
     }
   }
   return "";
