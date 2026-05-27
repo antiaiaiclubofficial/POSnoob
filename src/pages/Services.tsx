@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { 
-  Plus, Edit3, Trash2, Dog, Cat, Scissors, 
+  Plus, Edit3, Trash2, Dog, Cat, Scissors, Search, Filter,
   Bath, Sparkles, Zap, Wind, Stethoscope, Brush, Home, Heart, Bone, Award
 } from 'lucide-react';
 import { useStore, Service, ServiceIcon } from '@/store/useStore';
@@ -14,9 +14,20 @@ const Services = () => {
   const { services, deleteService, toggleServiceActive, currency } = useStore();
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Filter States
   const [speciesTab, setSpeciesTab] = useState<'Dog' | 'Cat'>('Dog');
+  const [coatFilter, setCoatFilter] = useState<'All' | 'Short' | 'Long'>('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredServices = services.filter(s => s.targetSpecies === speciesTab);
+  // Filter Logic
+  const filteredServices = services.filter(s => {
+    const matchesSpecies = s.targetSpecies === speciesTab;
+    const matchesCoat = coatFilter === 'All' || s.coatType === coatFilter;
+    const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          s.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSpecies && matchesCoat && matchesSearch;
+  });
 
   const handleEdit = (service: Service) => {
     setSelectedService(service);
@@ -49,44 +60,86 @@ const Services = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <header className="px-12 py-10 shrink-0 flex justify-between items-start">
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
+      {/* Header */}
+      <header className="px-12 py-10 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pl-14 lg:pl-12">
         <div>
           <h1 className="text-4xl font-black text-[#1A1F3D] mb-2">Service Catalog</h1>
-          <p className="text-sm text-gray-500 max-w-lg">
-            Manage your professional grooming services, tiered pricing models, and availability for dog and cat clients.
+          <p className="text-sm text-gray-400 max-w-lg">
+            จัดการและตั้งค่าบริการ อาบน้ำ ตัดขน สปา พร้อมกำหนดราคาแยกตามขนาดและประเภทเส้นขน
           </p>
         </div>
         
-        <div className="bg-[#E9EBF1] p-1.5 rounded-full flex gap-1 shadow-inner">
-          <button 
-            onClick={() => setSpeciesTab('Dog')}
-            className={cn(
-              "px-6 py-2.5 rounded-full text-xs font-black flex items-center gap-2 transition-all",
-              speciesTab === 'Dog' ? "bg-white text-[#1A1F3D] shadow-md" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            <Dog size={16} /> Dog Services
-          </button>
-          <button 
-            onClick={() => setSpeciesTab('Cat')}
-            className={cn(
-              "px-6 py-2.5 rounded-full text-xs font-black flex items-center gap-2 transition-all",
-              speciesTab === 'Cat' ? "bg-white text-[#1A1F3D] shadow-md" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            <Cat size={16} /> Cat Services
-          </button>
-        </div>
+        <button 
+          onClick={handleAdd}
+          className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all"
+        >
+          <Plus size={20} /> เพิ่มบริการใหม่
+        </button>
       </header>
 
+      {/* Filters Toolbar */}
+      <div className="px-12 mb-8 flex flex-col lg:flex-row justify-between items-center gap-6">
+        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+          {/* Species Filter */}
+          <div className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm flex gap-1">
+            <button 
+              onClick={() => setSpeciesTab('Dog')}
+              className={cn(
+                "px-6 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition-all",
+                speciesTab === 'Dog' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:text-gray-600"
+              )}
+            >
+              <Dog size={16} /> สุนัข (Dog)
+            </button>
+            <button 
+              onClick={() => setSpeciesTab('Cat')}
+              className={cn(
+                "px-6 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition-all",
+                speciesTab === 'Cat' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:text-gray-600"
+              )}
+            >
+              <Cat size={16} /> แมว (Cat)
+            </button>
+          </div>
+
+          {/* Coat Type Filter */}
+          <div className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm flex gap-1">
+            {(['All', 'Short', 'Long'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setCoatFilter(type)}
+                className={cn(
+                  "px-5 py-2.5 rounded-xl text-xs font-black transition-all",
+                  coatFilter === type ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                {type === 'All' ? 'ทุกประเภทขน' : type === 'Short' ? 'ขนสั้น' : 'ขนยาว'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Search Input */}
+        <div className="relative w-full lg:w-80">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+          <input 
+            className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-6 py-3.5 text-sm font-bold shadow-sm"
+            placeholder="ค้นหาบริการ..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Services Grid */}
       <div className="flex-1 overflow-y-auto px-12 pb-12 scrollbar-hide">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {filteredServices.map((service) => (
             <div 
               key={service.id} 
               className={cn(
-                "bg-white rounded-[40px] p-8 shadow-sm border border-gray-100 flex flex-col transition-all hover:shadow-xl",
+                "bg-white rounded-[40px] p-8 shadow-sm border border-gray-100 flex flex-col transition-all hover:shadow-xl group",
                 !service.isActive && "opacity-60 grayscale-[0.5]"
               )}
             >
@@ -101,8 +154,13 @@ const Services = () => {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-2xl font-black text-[#1A1F3D]">{service.title}</h3>
-                      {service.isPopular && (
-                        <span className="bg-[#D9ED5F] text-[#1A1F3D] text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wider">Popular</span>
+                      {service.coatType && (
+                        <span className={cn(
+                          "text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wider",
+                          service.coatType === 'Short' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
+                        )}>
+                          {service.coatType === 'Short' ? 'ขนสั้น' : 'ขนยาว'}
+                        </span>
                       )}
                     </div>
                     <p className="text-xs text-gray-400 leading-relaxed max-w-[280px]">{service.description}</p>
@@ -122,7 +180,11 @@ const Services = () => {
                     <Edit3 size={18} />
                   </button>
                   <button 
-                    onClick={() => deleteService(service.id)}
+                    onClick={() => {
+                      if (window.confirm("ต้องการลบบริการนี้หรือไม่?")) {
+                        deleteService(service.id);
+                      }
+                    }}
                     className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                   >
                     <Trash2 size={18} />
@@ -147,16 +209,12 @@ const Services = () => {
             </div>
           ))}
 
-          <button 
-            onClick={handleAdd}
-            className="bg-transparent border-2 border-dashed border-gray-200 rounded-[40px] flex flex-col items-center justify-center py-20 group hover:bg-white hover:border-[#1A1F3D]/20 transition-all cursor-pointer"
-          >
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Plus size={24} className="text-gray-400" />
+          {filteredServices.length === 0 && (
+            <div className="col-span-full py-20 text-center opacity-20 border-2 border-dashed border-gray-200 rounded-[40px]">
+              <Scissors size={48} className="mx-auto mb-4" />
+              <p className="font-black text-lg">ไม่พบรายการบริการที่ตรงตามเงื่อนไข</p>
             </div>
-            <h4 className="text-lg font-black text-[#1A1F3D] mb-1">Add New Service</h4>
-            <p className="text-xs text-gray-400">Configure a new grooming or spa package</p>
-          </button>
+          )}
         </div>
       </div>
 
