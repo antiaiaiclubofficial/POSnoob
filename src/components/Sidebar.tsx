@@ -65,7 +65,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   return (
     <div className={cn(
       "h-full bg-white flex flex-col border-r border-gray-100 shrink-0 transition-all duration-300 ease-in-out overflow-hidden group/sidebar z-50",
-      "w-[88px] hover:w-64",
+      "w-64 lg:w-[88px] lg:hover:w-64",
       className
     )}>
       <div className="flex items-center gap-4 mb-10 px-6 pt-8 shrink-0">
@@ -76,7 +76,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
             <Scissors className="text-white w-5 h-5" />
           )}
         </div>
-        <div className="min-w-0 opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+        <div className="min-w-0 opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 whitespace-nowrap">
           <h1 className="font-black text-[#1A1F3D] leading-tight truncate text-sm">
             {shopName}
           </h1>
@@ -100,7 +100,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
               )}
             >
               <item.icon size={20} className={cn("shrink-0 transition-transform group-hover:scale-110", isActive ? "text-[#D9ED5F]" : "")} />
-              <span className="text-xs opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">
+              <span className="text-xs opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
                 {item.label}
               </span>
             </Link>
@@ -117,14 +117,14 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
             className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-[#1A1F3D] transition-colors group overflow-hidden whitespace-nowrap"
           >
             <HelpCircle size={20} className="shrink-0 group-hover:rotate-12 transition-transform" />
-            <span className="text-xs font-bold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.support}</span>
+            <span className="text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.support}</span>
           </a>
           <button 
             onClick={handleLogout}
             className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-red-500 transition-colors w-full group overflow-hidden whitespace-nowrap"
           >
             <LogOut size={20} className="shrink-0 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-xs font-bold opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.logout}</span>
+            <span className="text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.logout}</span>
           </button>
         </div>
         
@@ -136,7 +136,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
               userInitial
             )}
           </div>
-          <div className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 min-w-0">
+          <div className="opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 min-w-0">
             <p className="text-[10px] font-black text-[#1A1F3D] truncate">{userDisplayName}</p>
             <p className="text-[8px] text-gray-400 font-bold uppercase">{userDisplayRole}</p>
           </div>
