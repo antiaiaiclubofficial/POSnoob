@@ -182,13 +182,53 @@ const Inventory = () => {
     doc.setDrawColor(230);
     doc.line(15, 65, 195, 65);
 
+    let currentY = 73;
     doc.setFontSize(10);
-    doc.text(shapeThai(`Customer / Partner : ${selectedPartner ? selectedPartner.companyName : 'คู่ค้าทั้งหมด'}`, usePUA), 15, 75);
-    doc.text(shapeThai(`วันที่ออกเอกสาร (Date): ${dateNow}`, usePUA), 130, 75);
+    doc.setTextColor(26, 31, 61);
+
+    if (selectedPartner) {
+      doc.setFont(fontName, "normal");
+      doc.text(shapeThai(`ข้อมูลคู่ค้า (Partner Details):`, usePUA), 15, currentY);
+      doc.setFontSize(9);
+      doc.setTextColor(80);
+      
+      currentY += 5;
+      doc.text(shapeThai(`ชื่อบริษัท (Company): ${selectedPartner.companyName}`, usePUA), 15, currentY);
+      doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี (Tax ID): ${selectedPartner.taxId || '-'}`, usePUA), 110, currentY);
+      
+      currentY += 5;
+      doc.text(shapeThai(`ผู้ติดต่อ (Contact): ${selectedPartner.contactPerson || '-'}`, usePUA), 15, currentY);
+      doc.text(shapeThai(`เบอร์โทร (Phone): ${selectedPartner.phone || '-'}`, usePUA), 110, currentY);
+      
+      currentY += 5;
+      doc.text(shapeThai(`อีเมล (Email): ${selectedPartner.email || '-'}`, usePUA), 15, currentY);
+      doc.text(shapeThai(`ส่วนแบ่ง GP (GP Rate): ${selectedPartner.gpRate || 0}%`, usePUA), 110, currentY);
+      
+      currentY += 5;
+      const partnerAddress = selectedPartner.address || '-';
+      const splitPartnerAddress = doc.splitTextToSize(shapeThai(`ที่อยู่ (Address): ${partnerAddress}`, usePUA), 170);
+      doc.text(splitPartnerAddress, 15, currentY);
+      
+      currentY += (splitPartnerAddress.length * 4) + 2;
+      doc.setDrawColor(230);
+      doc.line(15, currentY, 195, currentY);
+      currentY += 6;
+    } else {
+      doc.setFont(fontName, "normal");
+      doc.text(shapeThai(`Customer / Partner : คู่ค้าทั้งหมด (All Partners)`, usePUA), 15, currentY);
+      currentY += 8;
+    }
+
+    // Date of document
+    doc.setFontSize(9);
+    doc.setTextColor(80);
+    doc.text(shapeThai(`วันที่ออกเอกสาร (Date): ${dateNow}`, usePUA), 130, 73);
+
+    const tableStartY = selectedPartner ? currentY : 85;
 
     // Table
     autoTable(doc, {
-      startY: 85,
+      startY: tableStartY,
       head: [[
         shapeThai('ลำดับ\nNo.', usePUA), 
         shapeThai('รายการสินค้า\nProduct Name', usePUA), 
