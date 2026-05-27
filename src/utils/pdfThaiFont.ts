@@ -1,14 +1,14 @@
 "use client";
 
 /**
- * ดึงข้อมูลฟอนต์ภาษาไทย Sarabun-Regular จาก Google Fonts CDN (gstatic)
- * ซึ่งมีความเสถียรสูงสุดและเปิด CORS 100% ป้องกันปัญหาโหลดฟอนต์ล้มเหลวใน Sandbox
+ * ดึงข้อมูลฟอนต์ภาษาไทย TH Sarabun New จาก CDN ที่มีความเสถียรสูงสุด
+ * และเปิด CORS 100% ป้องกันปัญหาโหลดฟอนต์ล้มเหลวใน Sandbox
  */
 export const fetchThaiFontBase64 = async (): Promise<string> => {
   const urls = [
-    'https://fonts.gstatic.com/s/sarabun/v13/Dt8z6Kcx07Wv6ALQ65R-gOcg.ttf', // Google Fonts Official CDN (Sarabun Regular)
-    'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Regular.ttf', // jsDelivr Fallback
-    'https://cdn.jsdelivr.net/gh/ChampS/TH-Sarabun-New-TrueType-Font@master/THSarabunNew.ttf' // THSarabunNew Fallback
+    'https://cdn.jsdelivr.net/gh/ChampS/TH-Sarabun-New-TrueType-Font@master/THSarabunNew.ttf', // THSarabunNew Primary
+    'https://fonts.gstatic.com/s/sarabun/v13/Dt8z6Kcx07Wv6ALQ65R-gOcg.ttf', // Google Fonts Official CDN (Sarabun Regular) Fallback
+    'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Regular.ttf' // jsDelivr Fallback
   ];
 
   for (const url of urls) {
