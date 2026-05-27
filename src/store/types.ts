@@ -226,6 +226,12 @@ export interface AppState {
   receiptHeader: string;
   receiptFooter: string;
   receiptPaperSize: '58mm' | '80mm';
+
+  // LINE LIFF Settings
+  liffId: string;
+  liffChannelId: string;
+  liffChannelSecret: string;
+  liffEnabled: boolean;
   
   // Lists
   customers: Customer[];

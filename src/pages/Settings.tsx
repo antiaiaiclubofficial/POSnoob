@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { 
-  Store, Save, Clock, Phone, MessageSquare, Calendar, AlertCircle, Send, Camera, Eye, Globe, ChevronRight
+  Store, Save, Clock, Phone, MessageSquare, Calendar, AlertCircle, Send, Camera, Eye, Globe, ChevronRight, Copy, ShieldCheck, ExternalLink
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -14,12 +14,13 @@ import StoreHolidaysConfig from '@/components/StoreHolidaysConfig';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 
-type SettingTab = 'profile' | 'operations' | 'system';
+type SettingTab = 'profile' | 'operations' | 'integrations' | 'system';
 
 const Settings = () => {
   const { 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
     receiptHeader, receiptFooter, receiptPaperSize,
+    liffId, liffChannelId, liffChannelSecret, liffEnabled,
     updateBusinessProfile,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings,
     recurringHolidays, specificHolidays,
@@ -49,6 +50,12 @@ const Settings = () => {
   const [localRecurringHolidays, setLocalRecurringHolidays] = useState<number[]>(recurringHolidays);
   const [localSpecificHolidays, setLocalSpecificHolidays] = useState<string[]>(specificHolidays);
 
+  // LINE LIFF Local States
+  const [localLiffId, setLocalLiffId] = useState(liffId);
+  const [localLiffChannelId, setLocalLiffChannelId] = useState(liffChannelId);
+  const [localLiffChannelSecret, setLocalLiffChannelSecret] = useState(liffChannelSecret);
+  const [localLiffEnabled, setLocalLiffEnabled] = useState(liffEnabled);
+
   // Modals
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [isReceiptPreviewOpen, setIsReceiptPreviewOpen] = useState(false);
@@ -65,6 +72,10 @@ const Settings = () => {
       receiptPaperSize: localReceiptPaperSize,
       currency: localCurrency,
       shopIsOpen: localShopIsOpen,
+      liffId: localLiffId,
+      liffChannelId: localLiffChannelId,
+      liffChannelSecret: localLiffChannelSecret,
+      liffEnabled: localLiffEnabled,
     });
     updateBookingSettings({
       slotDuration: localSlotDuration,
@@ -77,9 +88,16 @@ const Settings = () => {
     toast.success("All settings synchronized successfully!");
   };
 
+  const handleCopyLiffUrl = () => {
+    const url = `https://liff.line.me/${localLiffId || 'liff-id'}`;
+    navigator.clipboard.writeText(url);
+    toast.success("LIFF URL copied to clipboard!");
+  };
+
   const navItems = [
     { id: 'profile', label: 'Store Profile', icon: Store, desc: 'Identity & Contacts' },
     { id: 'operations', label: 'Operations', icon: Clock, desc: 'Hours & Booking Rules' },
+    { id: 'integrations', label: 'LINE Integrations', icon: MessageSquare, desc: 'LIFF & Messaging' },
     { id: 'system', label: 'System', icon: Globe, desc: 'Language & Preferences' },
   ];
 
@@ -276,6 +294,87 @@ const Settings = () => {
                    </div>
                 </div>
               </section>
+            )}
+
+            {/* Tab: LINE Integrations */}
+            {activeTab === 'integrations' && (
+              <div className="space-y-10">
+                <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-black text-[#1A1F3D] mb-1">LINE Front-end Framework (LIFF)</h3>
+                      <p className="text-xs text-gray-400 font-medium">เชื่อมต่อระบบ CRM และการจองคิวเข้ากับ LINE Official Account ของคุณ</p>
+                    </div>
+                    <div className={cn("flex items-center gap-3 px-4 py-2 rounded-2xl border", localLiffEnabled ? "bg-green-50 border-green-100" : "bg-gray-50 border-gray-100")}>
+                       <span className={cn("text-[10px] font-black uppercase tracking-widest", localLiffEnabled ? "text-green-600" : "text-gray-400")}>{localLiffEnabled ? "Enabled" : "Disabled"}</span>
+                       <Switch checked={localLiffEnabled} onCheckedChange={setLocalLiffEnabled} className="data-[state=checked]:bg-green-600" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">LIFF ID</label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                        value={localLiffId} 
+                        onChange={e => setLocalLiffId(e.target.value)} 
+                        placeholder="e.g. 2001234567-AbCdEfGh"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Channel ID</label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                        value={localLiffChannelId} 
+                        onChange={e => setLocalLiffChannelId(e.target.value)} 
+                        placeholder="e.g. 1657483920"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Channel Secret</label>
+                      <input 
+                        type="password"
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                        value={localLiffChannelSecret} 
+                        onChange={e => setLocalLiffChannelSecret(e.target.value)} 
+                        placeholder="••••••••••••••••••••••••••••••••"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">LIFF URL (สำหรับนำไปใส่ใน LINE OA Rich Menu)</label>
+                    <div className="flex gap-3">
+                      <input 
+                        className="flex-1 bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-mono text-gray-500 select-all" 
+                        value={`https://liff.line.me/${localLiffId || 'liff-id'}`} 
+                        readOnly 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={handleCopyLiffUrl} 
+                        className="bg-[#1A1F3D] text-white px-6 py-4 rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-[#2A3152] transition-all"
+                      >
+                        <Copy size={14} /> Copy
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-8 bg-green-50/50 rounded-[40px] border border-green-100 flex items-start gap-4">
+                     <div className="p-3 bg-white rounded-2xl shadow-sm text-green-600"><ShieldCheck size={20} /></div>
+                     <div>
+                        <p className="text-xs font-black text-green-900 mb-1">ขั้นตอนการตั้งค่า LINE LIFF</p>
+                        <ol className="list-decimal list-inside text-[11px] text-green-800/80 leading-relaxed font-medium space-y-1.5 mt-2">
+                          <li>ไปที่ <a href="https://developers.line.biz" target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-1 text-green-700 font-bold">LINE Developers Console <ExternalLink size={10} /></a></li>
+                          <li>สร้าง Provider และสร้าง Channel ประเภท <b>LINE Login</b></li>
+                          <li>ไปที่แท็บ <b>LIFF</b> แล้วกดสร้าง LIFF App ใหม่</li>
+                          <li>คัดลอก <b>LIFF ID</b>, <b>Channel ID</b> และ <b>Channel Secret</b> มากรอกในหน้านี้</li>
+                          <li>กำหนด Endpoint URL ใน LINE Developers เป็น URL ของแอปพลิเคชันนี้</li>
+                        </ol>
+                     </div>
+                  </div>
+                </section>
+              </div>
             )}
 
             {/* Tab: System & Language */}

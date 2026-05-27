@@ -32,6 +32,12 @@ export const useStore = create<AppState>()((set, get) => ({
   receiptFooter: 'Thank you for your visit!',
   receiptPaperSize: '80mm',
 
+  // LINE LIFF Default Settings
+  liffId: '2001234567-AbCdEfGh',
+  liffChannelId: '1657483920',
+  liffChannelSecret: '••••••••••••••••••••••••••••••••',
+  liffEnabled: true,
+
   customers: [],
   selectedOwner: null,
   activePet: null,
