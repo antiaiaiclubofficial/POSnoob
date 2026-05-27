@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { fetchThaiFont } from '@/utils/pdfThaiFont';
+import { fetchThaiFontBase64 } from '@/utils/pdfThaiFont';
 import { shapeThai } from '@/utils/thaiShaper';
 import InventoryModal from '@/components/InventoryModal';
 import VendorModal from '@/components/VendorModal';
@@ -129,8 +129,9 @@ const Inventory = () => {
     const doc = new jsPDF();
     
     // Load Thai Font dynamically
-    const { base64: thaiFont, name: fontName } = await fetchThaiFont();
-    const activeFont = thaiFont ? "ThaiFont" : "helvetica";
+    const thaiFont = await fetchThaiFontBase64();
+    const fontName = thaiFont ? "ThaiFont" : "helvetica";
+    const usePUA = false; // Disable PUA since we use standard Sarabun
 
     if (thaiFont) {
       doc.addFileToVFS("ThaiFont.ttf", thaiFont);
@@ -153,13 +154,13 @@ const Inventory = () => {
     // Header Left: Company Info
     doc.setFontSize(14);
     doc.setTextColor(26, 31, 61);
-    doc.text(shapeThai(shopName, fontName), 15, 20);
+    doc.text(shapeThai(shopName, usePUA), 15, 20);
     
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี: ${mockTaxId}`, fontName), 15, 26);
-    doc.text(shapeThai(`ที่อยู่: ${shopAddress}`, fontName), 15, 31);
-    doc.text(shapeThai(`โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`, fontName), 15, 36);
+    doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี: ${mockTaxId}`, usePUA), 15, 26);
+    doc.text(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 15, 31);
+    doc.text(shapeThai(`โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`, usePUA), 15, 36);
 
     // Header Right: Logo & Title (Dynamic Format Detection to prevent auto-rotation)
     if (shopLogo) {
@@ -175,7 +176,7 @@ const Inventory = () => {
     doc.setTextColor(26, 31, 61);
     doc.text("Sales Report", 195, 52, { align: 'right' });
     doc.setFontSize(11);
-    doc.text(shapeThai("เอกสารแจ้งยอดฝากขาย", fontName), 195, 58, { align: 'right' });
+    doc.text(shapeThai("เอกสารแจ้งยอดฝากขาย", usePUA), 195, 58, { align: 'right' });
 
     // Customer / Partner Box
     doc.setDrawColor(230);
@@ -186,23 +187,23 @@ const Inventory = () => {
     doc.setTextColor(26, 31, 61);
 
     if (selectedPartner) {
-      doc.setFont(activeFont, "normal");
-      doc.text(shapeThai(`ข้อมูลคู่ค้า: ${selectedPartner.companyName}`, fontName), 15, currentY);
+      doc.setFont(fontName, "normal");
+      doc.text(shapeThai(`ข้อมูลคู่ค้า: ${selectedPartner.companyName}`, usePUA), 15, currentY);
       doc.setFontSize(9);
       doc.setTextColor(80);
       
       currentY += 5;
-      doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี: ${selectedPartner.taxId || '-'}`, fontName), 15, currentY);
+      doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี: ${selectedPartner.taxId || '-'}`, usePUA), 15, currentY);
       
       currentY += 5;
-      doc.text(shapeThai(`เบอร์โทร: ${selectedPartner.phone || '-'}`, fontName), 15, currentY);
+      doc.text(shapeThai(`เบอร์โทร: ${selectedPartner.phone || '-'}`, usePUA), 15, currentY);
       
       currentY += 5;
-      doc.text(shapeThai(`อีเมล: ${selectedPartner.email || '-'}`, fontName), 15, currentY);
+      doc.text(shapeThai(`อีเมล: ${selectedPartner.email || '-'}`, usePUA), 15, currentY);
       
       currentY += 5;
       const partnerAddress = selectedPartner.address || '-';
-      const splitPartnerAddress = doc.splitTextToSize(shapeThai(`ที่อยู่: ${partnerAddress}`, fontName), 170);
+      const splitPartnerAddress = doc.splitTextToSize(shapeThai(`ที่อยู่: ${partnerAddress}`, usePUA), 170);
       doc.text(splitPartnerAddress, 15, currentY);
       
       currentY += (splitPartnerAddress.length * 4) + 2;
@@ -210,15 +211,15 @@ const Inventory = () => {
       doc.line(15, currentY, 195, currentY);
       currentY += 6;
     } else {
-      doc.setFont(activeFont, "normal");
-      doc.text(shapeThai(`คู่ค้า: คู่ค้าทั้งหมด`, fontName), 15, currentY);
+      doc.setFont(fontName, "normal");
+      doc.text(shapeThai(`คู่ค้า: คู่ค้าทั้งหมด`, usePUA), 15, currentY);
       currentY += 8;
     }
 
     // Date of document
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(shapeThai(`วันที่ออกเอกสาร: ${dateNow}`, fontName), 130, 73);
+    doc.text(shapeThai(`วันที่ออกเอกสาร: ${dateNow}`, usePUA), 130, 73);
 
     const tableStartY = selectedPartner ? currentY : 85;
 
@@ -226,20 +227,20 @@ const Inventory = () => {
     autoTable(doc, {
       startY: tableStartY,
       head: [[
-        shapeThai('ชื่อสินค้า', fontName), 
-        shapeThai('SKU', fontName), 
-        shapeThai('จำนวนที่ขาย', fontName), 
-        shapeThai('ราคาสินค้า', fontName), 
-        shapeThai('ราคาหลังหักGP', fontName), 
-        shapeThai('รวม', fontName)
+        shapeThai('ชื่อสินค้า', usePUA), 
+        shapeThai('SKU', usePUA), 
+        shapeThai('จำนวนที่ขาย', usePUA), 
+        shapeThai('ราคาสินค้า', usePUA), 
+        shapeThai('ราคาหลังหักGP', usePUA), 
+        shapeThai('รวม', usePUA)
       ]],
       body: itemsToExport.map((i) => {
         const gp = selectedPartner?.gpRate || 0;
         const priceAfterGP = i.price * (1 - gp / 100);
         const total = priceAfterGP * i.stock;
         return [
-          shapeThai(i.name, fontName),
-          shapeThai(i.barcode || '-', fontName),
+          shapeThai(i.name, usePUA),
+          shapeThai(i.barcode || '-', usePUA),
           i.stock.toLocaleString(),
           i.price.toLocaleString(),
           priceAfterGP.toLocaleString(),
@@ -247,7 +248,7 @@ const Inventory = () => {
         ];
       }),
       styles: { 
-        font: activeFont, 
+        font: fontName, 
         fontSize: 9, 
         cellPadding: { top: 10, bottom: 6, left: 4, right: 4 },
         valign: 'middle'
@@ -256,8 +257,8 @@ const Inventory = () => {
         fillColor: [26, 31, 61], 
         textColor: [255, 255, 255], 
         halign: 'center',
-        font: activeFont,
-        fontStyle: activeFont === 'ThaiFont' ? 'normal' : 'bold', // Prevent fallback to Helvetica-Bold
+        font: fontName,
+        fontStyle: fontName === 'ThaiFont' ? 'normal' : 'bold', // Prevent fallback to Helvetica-Bold
         fontSize: 9,
         cellPadding: { top: 10, bottom: 6, left: 4, right: 4 }
       },
@@ -284,10 +285,10 @@ const Inventory = () => {
     doc.line(20, sigY, 80, sigY);
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(shapeThai("ผู้จัดทำ (Prepared By)", fontName), 50, sigY + 5, { align: 'center' });
+    doc.text(shapeThai("ผู้จัดทำ (Prepared By)", usePUA), 50, sigY + 5, { align: 'center' });
     
     doc.line(130, sigY, 190, sigY);
-    doc.text(shapeThai("ผู้อนุมัติ (Authorized By)", fontName), 160, sigY + 5, { align: 'center' });
+    doc.text(shapeThai("ผู้อนุมัติ (Authorized By)", usePUA), 160, sigY + 5, { align: 'center' });
 
     // 2. เงื่อนไขการวางบิล (ขยับลงมาเกือบติดขอบล่างที่ y = 240 มม.)
     const footerStartY = 240;
@@ -295,12 +296,12 @@ const Inventory = () => {
     // *เงื่อนไขการวางบิล :
     doc.setFontSize(10);
     doc.setTextColor(26, 31, 61);
-    doc.text(shapeThai("*เงื่อนไขการวางบิล :", fontName), 15, footerStartY);
+    doc.text(shapeThai("*เงื่อนไขการวางบิล :", usePUA), 15, footerStartY);
     
     doc.setFontSize(9);
     doc.setTextColor(80);
     const conditionText = "ผู้ขายสามารถวางบิลได้ตั้งแต่วันที่ได้รับรายงานยอดขาย จนถึงภายในวันที่ 20 ของเดือน ในกรณีที่วางบิลไม่ตรงรอบหรือเอกสารไม่ครบ จะมีการดำเนินการชำระค่าสินค้าให้ในรอบถัดไป";
-    const splitCondition = doc.splitTextToSize(shapeThai(conditionText, fontName), 180);
+    const splitCondition = doc.splitTextToSize(shapeThai(conditionText, usePUA), 180);
     doc.text(splitCondition, 15, footerStartY + 5);
 
     // 3. ที่อยู่สำหรับจัดส่งเอกสาร (ขยับลงมาเกือบติดขอบล่างสุดที่ y = 260 มม.)
@@ -309,17 +310,17 @@ const Inventory = () => {
     // วางบิลและส่งเอกสารมาที่
     doc.setFontSize(10);
     doc.setTextColor(26, 31, 61);
-    doc.text(shapeThai("วางบิลและส่งเอกสารมาที่ :", fontName), 15, nextY);
+    doc.text(shapeThai("วางบิลและส่งเอกสารมาที่ :", usePUA), 15, nextY);
 
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(shapeThai(`${shopName}`, fontName), 15, nextY + 5);
+    doc.text(shapeThai(`${shopName}`, usePUA), 15, nextY + 5);
     
-    const splitAddress = doc.splitTextToSize(shapeThai(`ที่อยู่: ${shopAddress}`, fontName), 180);
+    const splitAddress = doc.splitTextToSize(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 180);
     doc.text(splitAddress, 15, nextY + 10);
     
     const contactY = nextY + 10 + (splitAddress.length * 5);
-    doc.text(shapeThai(`ติดต่อ: ${shopPhone} ${shopLineId ? `| LINE: ${shopLineId}` : ''}`, fontName), 15, contactY);
+    doc.text(shapeThai(`ติดต่อ: ${shopPhone} ${shopLineId ? `| LINE: ${shopLineId}` : ''}`, usePUA), 15, contactY);
 
     return doc;
   };

@@ -1,13 +1,14 @@
 "use client";
 
 /**
- * ดึงข้อมูลฟอนต์ภาษาไทย "Sarabun" จาก Google Fonts CDN ที่มีความเสถียรสูงสุด 100%
- * ป้องกันปัญหาการดาวน์โหลดล้มเหลวและปัญหาภาษาต่างดาวอย่างถาวร
+ * ดึงข้อมูลฟอนต์ภาษาไทย Sarabun-Regular จาก Google Fonts CDN (gstatic)
+ * ซึ่งมีความเสถียรสูงสุดและเปิด CORS 100% ป้องกันปัญหาโหลดฟอนต์ล้มเหลวใน Sandbox
  */
-export const fetchThaiFont = async (): Promise<{ base64: string; name: string }> => {
+export const fetchThaiFontBase64 = async (): Promise<string> => {
   const urls = [
     'https://fonts.gstatic.com/s/sarabun/v13/Dt8z6Kcx07Wv6ALQ65R-gOcg.ttf', // Google Fonts Official CDN (Sarabun Regular)
-    'https://fastly.jsdelivr.net/gh/ChampS/TH-Sarabun-New-TrueType-Font@master/THSarabunNew.ttf' // High-speed Fallback
+    'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Regular.ttf', // jsDelivr Fallback
+    'https://cdn.jsdelivr.net/gh/ChampS/TH-Sarabun-New-TrueType-Font@master/THSarabunNew.ttf' // THSarabunNew Fallback
   ];
 
   for (const url of urls) {
@@ -16,18 +17,19 @@ export const fetchThaiFont = async (): Promise<{ base64: string; name: string }>
       if (response.ok) {
         const arrayBuffer = await response.arrayBuffer();
         const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
-        const base64 = await new Promise<string>((resolve) => {
+        
+        return new Promise((resolve) => {
           const reader = new FileReader();
-          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          reader.onloadend = () => {
+            const base64data = reader.result as string;
+            resolve(base64data.split(',')[1]);
+          };
           reader.readAsDataURL(blob);
         });
-        return { base64, name: 'Sarabun' };
       }
-    } catch (e) {
-      console.error("Failed to load Sarabun font from", url, e);
+    } catch (error) {
+      console.error(`Failed to fetch Thai font from ${url}:`, error);
     }
   }
-
-  // หากเกิดข้อผิดพลาดร้ายแรงจริงๆ ให้ใช้ Helvetica สำรอง
-  return { base64: "", name: "helvetica" };
+  return "";
 };
