@@ -227,25 +227,24 @@ const Inventory = () => {
     autoTable(doc, {
       startY: tableStartY,
       head: [[
-        shapeThai('ลำดับ\nNo.', usePUA), 
-        shapeThai('รายการสินค้า\nProduct Name', usePUA), 
-        shapeThai('บาร์โค้ด\nBarcode', usePUA), 
-        shapeThai('จำนวน\nQty', usePUA), 
-        shapeThai('ราคาขาย\nPrice', usePUA), 
-        shapeThai('GP %', usePUA), 
-        shapeThai('ยอดที่ต้องจ่าย\nPayout', usePUA)
+        shapeThai('ชื่อสินค้า', usePUA), 
+        shapeThai('SKU', usePUA), 
+        shapeThai('จำนวนที่ขาย', usePUA), 
+        shapeThai('ราคาสินค้า', usePUA), 
+        shapeThai('ราคาหลังหักGP', usePUA), 
+        shapeThai('รวม', usePUA)
       ]],
-      body: itemsToExport.map((i, idx) => {
+      body: itemsToExport.map((i) => {
         const gp = selectedPartner?.gpRate || 0;
-        const payout = (i.price * i.stock) * (1 - gp / 100);
+        const priceAfterGP = i.price * (1 - gp / 100);
+        const total = priceAfterGP * i.stock;
         return [
-          idx + 1,
           shapeThai(i.name, usePUA),
           shapeThai(i.barcode || '-', usePUA),
           i.stock.toLocaleString(),
           i.price.toLocaleString(),
-          `${gp}%`,
-          payout.toLocaleString()
+          priceAfterGP.toLocaleString(),
+          total.toLocaleString()
         ];
       }),
       styles: { 
@@ -264,11 +263,12 @@ const Inventory = () => {
         cellPadding: { top: 10, bottom: 6, left: 4, right: 4 }
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 15 },
-        3: { halign: 'center' },
+        0: { halign: 'left' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'right' },
         4: { halign: 'right' },
-        5: { halign: 'center' },
-        6: { halign: 'right' }
+        5: { halign: 'right' }
       }
     });
 
