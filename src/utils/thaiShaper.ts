@@ -1,32 +1,12 @@
 "use client";
 
 /**
- * จัดการตำแหน่งสระและวรรณยุกต์ภาษาไทย (Thai Shaping) ให้เหมาะสมกับฟอนต์แต่ละประเภท
- * ป้องกันปัญหาสระลอย สระซ้อน และสระตกหล่นในเอกสาร PDF อย่างสมบูรณ์แบบ
+ * จัดการตำแหน่งสระและวรรณยุกต์ภาษาไทย (Thai Shaping) สำหรับฟอนต์ Sarabun
+ * แก้ไขปัญหาสระลอย สระซ้อน และวรรณยุกต์ทับกันใน PDF ให้สวยงามสมบูรณ์แบบ
  */
-export const shapeThai = (text: string, fontName: string = 'THNiramitAS'): string => {
+export const shapeThai = (text: string, fontName: string = 'Sarabun'): string => {
   if (!text) return "";
   
-  // หากฟอนต์ที่โหลดได้จริงไม่ใช่ TH Niramit AS (เช่น Sarabun) 
-  // เราจะไม่ใช้รหัส PUA (F700-F71A) เพื่อป้องกันไม่ให้แสดงผลเป็นช่องสี่เหลี่ยมเต้าหู้
-  if (fontName !== 'THNiramitAS') {
-    const chars = Array.from(text);
-    const result: string[] = [];
-    for (let i = 0; i < chars.length; i++) {
-      const char = chars[i];
-      const code = char.charCodeAt(0);
-      if (i > 0) {
-        const prevCode = chars[i - 1].charCodeAt(0);
-        if ((code >= 0x0E34 && code <= 0x0E3A) && (prevCode >= 0x0E34 && prevCode <= 0x0E3A)) {
-          continue;
-        }
-      }
-      result.push(char);
-    }
-    return result.join('');
-  }
-
-  // ระบบจัดสระแบบ PUA สำหรับฟอนต์ TH Niramit AS
   const chars = Array.from(text);
   const result: string[] = [];
   
@@ -47,9 +27,8 @@ export const shapeThai = (text: string, fontName: string = 'THNiramitAS'): strin
       const isTall = baseConsonant === 0x0E1B || baseConsonant === 0x0E1D || baseConsonant === 0x0E1F || baseConsonant === 0x0E2C; // ป, ฝ, ฟ, ฬ
       
       if (hasAboveVowel) {
-        // วรรณยุกต์ซ้อนบนสระบนอีกที
+        // วรรณยุกต์ซ้อนบนสระบนอีกที -> หลบหางพยัญชนะยาวหรือปรับระดับให้สวยงาม
         if (isTall) {
-          // พยัญชนะหางยาว (ป, ฝ, ฟ, ฬ) + สระบน + วรรณยุกต์ -> หลบหางไปทางซ้าย
           if (code === 0x0E48) result.push(String.fromCharCode(0xF713));
           else if (code === 0x0E49) result.push(String.fromCharCode(0xF714));
           else if (code === 0x0E4A) result.push(String.fromCharCode(0xF715));
@@ -62,7 +41,6 @@ export const shapeThai = (text: string, fontName: string = 'THNiramitAS'): strin
       } else {
         // วรรณยุกต์อยู่บนพยัญชนะโดยตรง (ไม่มีสระบน) -> ดึงลงมาไม่ให้ลอยสูงเกินไป
         if (isTall) {
-          // พยัญชนะหางยาว + วรรณยุกต์ -> หลบหางไปทางซ้ายและดึงลงมา
           if (code === 0x0E48) result.push(String.fromCharCode(0xF713));
           else if (code === 0x0E49) result.push(String.fromCharCode(0xF714));
           else if (code === 0x0E4A) result.push(String.fromCharCode(0xF715));
@@ -70,7 +48,6 @@ export const shapeThai = (text: string, fontName: string = 'THNiramitAS'): strin
           else if (code === 0x0E4C) result.push(String.fromCharCode(0xF717));
           else result.push(char);
         } else {
-          // พยัญชนะปกติ + วรรณยุกต์ -> ดึงลงมาที่ระดับปกติ
           if (code === 0x0E48) result.push(String.fromCharCode(0xF70A));
           else if (code === 0x0E49) result.push(String.fromCharCode(0xF70B));
           else if (code === 0x0E4A) result.push(String.fromCharCode(0xF70C));
@@ -86,7 +63,6 @@ export const shapeThai = (text: string, fontName: string = 'THNiramitAS'): strin
       const isTall = prevCode === 0x0E1B || prevCode === 0x0E1D || prevCode === 0x0E1F || prevCode === 0x0E2C; // ป, ฝ, ฟ, ฬ
       
       if (isTall) {
-        // พยัญชนะหางยาว + สระบน -> หลบหางไปทางซ้าย
         if (code === 0x0E31) result.push(String.fromCharCode(0xF710));
         else if (code === 0x0E34) result.push(String.fromCharCode(0xF701));
         else if (code === 0x0E35) result.push(String.fromCharCode(0xF702));
@@ -106,13 +82,11 @@ export const shapeThai = (text: string, fontName: string = 'THNiramitAS'): strin
       const isBelowTall = prevCode === 0x0E0E || prevCode === 0x0E0F; // ฎ, ฏ
       
       if (isDescender) {
-        // พยัญชนะมีหางล่าง (ญ, ฐ) + สระล่าง -> ตัดหางล่างออกและขยับสระขึ้นมาแทนที่
         if (code === 0x0E38) result.push(String.fromCharCode(0xF718));
         else if (code === 0x0E39) result.push(String.fromCharCode(0xF719));
         else if (code === 0x0E3A) result.push(String.fromCharCode(0xF71A));
         else result.push(char);
       } else if (isBelowTall) {
-        // พยัญชนะหางล่างยาว (ฎ, ฏ) + สระล่าง -> หลบหางไปทางซ้าย
         if (code === 0x0E38) result.push(String.fromCharCode(0xF705));
         else if (code === 0x0E39) result.push(String.fromCharCode(0xF706));
         else result.push(char);
@@ -126,7 +100,6 @@ export const shapeThai = (text: string, fontName: string = 'THNiramitAS'): strin
       const hasBelowVowel = nextCode === 0x0E38 || nextCode === 0x0E39 || nextCode === 0x0E3A;
       
       if (hasBelowVowel) {
-        // ใช้พยัญชนะเวอร์ชันตัดหางล่างออก
         if (code === 0x0E03) result.push(String.fromCharCode(0xF70F));
         else if (code === 0x0E10) result.push(String.fromCharCode(0xF700));
       } else {
