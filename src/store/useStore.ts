@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { 
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
   QueueItem, Service, InventoryItem, Partner, StockLog, Transaction, 
@@ -96,14 +98,235 @@ export const useStore = create<AppState>()((set, get) => ({
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
   setActivePet: (pet) => set({ activePet: pet }),
   setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
-  addCustomer: (data) => set(s => ({ customers: [...s.customers, { ...data, id: Math.random().toString(), pets: [], totalSpent: 0, creditBalance: 0 }] })),
-  updateCustomer: (id, data) => set(s => ({ customers: s.customers.map(c => c.id === id ? { ...c, ...data } : c) })),
-  deleteCustomer: (id) => set(s => ({ customers: s.customers.filter(c => c.id !== id) })),
-  bindLineToCustomer: (cid, lid) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, lineId: lid } : c) })),
 
-  addPet: (cid, pet) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: [...c.pets, { ...pet, id: Math.random().toString() }] } : c) })),
-  updatePet: (cid, pid, data) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: c.pets.map(p => p.id === pid ? { ...p, ...data } : p) } : c) })),
-  updatePetWeight: (cid, pid, w) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: c.pets.map(p => p.id === pid ? { ...p, weightHistory: [...p.weightHistory, { date: new Date().toISOString(), value: w }] } : p) } : c) })),
+  addCustomer: async (customerData) => {
+    const { data: inserted, error } = await supabase
+      .from('customers')
+      .insert([{ 
+        first_name: customerData.firstName || customerData.name.split(' ')[0] || '',
+        last_name: customerData.lastName || customerData.name.split(' ').slice(1).join(' ') || '',
+        display_name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email,
+        membership: customerData.membership || 'Standard',
+        tax_id: customerData.taxId,
+        branch_name: customerData.branchName,
+        house_no: customerData.houseNo,
+        village_no: customerData.villageNo,
+        soi: customerData.soi,
+        road: customerData.road,
+        sub_district: customerData.subDistrict,
+        district: customerData.district,
+        province: customerData.province,
+        postal_code: customerData.postalCode,
+        points: 0, 
+        total_spent: 0,
+        credit_balance: 0
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Failed to add customer to Supabase");
+      console.error(error);
+      return;
+    }
+
+    if (inserted) {
+      const formatted = {
+        id: inserted.id,
+        name: inserted.display_name || `${inserted.first_name || ''} ${inserted.last_name || ''}`.trim(),
+        firstName: inserted.first_name,
+        lastName: inserted.last_name,
+        phone: inserted.phone || '-',
+        email: inserted.email || '-',
+        lineId: inserted.line_id,
+        membership: (inserted.membership as MembershipLevel) || 'Standard',
+        points: inserted.points || 0,
+        totalSpent: inserted.total_spent || 0,
+        creditBalance: inserted.credit_balance || 0,
+        pets: [],
+        packages: [],
+        creditHistory: []
+      };
+      set((state) => ({
+        customers: [...state.customers, formatted]
+      }));
+    }
+  },
+
+  updateCustomer: async (id, customerData) => {
+    const { error } = await supabase
+      .from('customers')
+      .update({
+        first_name: customerData.firstName,
+        last_name: customerData.lastName,
+        display_name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email,
+        membership: customerData.membership,
+        tax_id: customerData.taxId,
+        branch_name: customerData.branchName,
+        house_no: customerData.houseNo,
+        village_no: customerData.villageNo,
+        soi: customerData.soi,
+        road: customerData.road,
+        sub_district: customerData.subDistrict,
+        district: customerData.district,
+        province: customerData.province,
+        postal_code: customerData.postalCode
+      })
+      .eq('id', id);
+
+    if (error) {
+      toast.error("Failed to update customer in Supabase");
+      console.error(error);
+      return;
+    }
+
+    set((state) => ({
+      customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c)
+    }));
+  },
+
+  deleteCustomer: async (id) => {
+    const { error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast.error("Failed to delete customer from Supabase");
+      console.error(error);
+      return;
+    }
+
+    set((state) => ({
+      customers: state.customers.filter(c => c.id !== id),
+      selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
+      activePet: state.selectedOwner?.id === id ? null : state.activePet
+    }));
+  },
+
+  bindLineToCustomer: async (customerId, lineId) => {
+    const { error } = await supabase
+      .from('customers')
+      .update({ line_id: lineId })
+      .eq('id', customerId);
+
+    if (error) {
+      toast.error("Failed to bind LINE ID in Supabase");
+      console.error(error);
+      return;
+    }
+
+    set((state) => ({
+      customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c)
+    }));
+  },
+
+  addPet: async (customerId, petData) => {
+    const { data: inserted, error } = await supabase
+      .from('pets')
+      .insert([{ 
+        customer_id: customerId,
+        name: petData.name,
+        species: petData.species,
+        breed: petData.breed,
+        birthday: petData.birthday,
+        notes: petData.notes,
+        image: petData.image,
+        weight_history: petData.weightHistory || []
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Failed to add pet to Supabase");
+      console.error(error);
+      return;
+    }
+
+    if (inserted) {
+      const formattedPet = {
+        id: inserted.id,
+        name: inserted.name,
+        species: inserted.species as 'Dog' | 'Cat' | 'Other',
+        breed: inserted.breed || '-',
+        birthday: inserted.birthday || '',
+        notes: inserted.notes || '',
+        image: inserted.image || '',
+        weightHistory: inserted.weight_history || [],
+        serviceHistory: []
+      };
+      set((state) => ({
+        customers: state.customers.map(c => c.id === customerId ? {
+          ...c,
+          pets: [...c.pets, formattedPet]
+        } : c)
+      }));
+    }
+  },
+
+  updatePet: async (customerId, petId, petData) => {
+    const { error } = await supabase
+      .from('pets')
+      .update({
+        name: petData.name,
+        species: petData.species,
+        breed: petData.breed,
+        birthday: petData.birthday,
+        notes: petData.notes,
+        image: petData.image
+      })
+      .eq('id', petId);
+
+    if (error) {
+      toast.error("Failed to update pet in Supabase");
+      console.error(error);
+      return;
+    }
+
+    set((state) => ({
+      customers: state.customers.map(c => c.id === customerId ? {
+        ...c,
+        pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
+      } : c)
+    }));
+  },
+
+  updatePetWeight: async (customerId, petId, weight) => {
+    const { data: currentPet, error: fetchError } = await supabase
+      .from('pets')
+      .select('weight_history')
+      .eq('id', petId)
+      .single();
+
+    if (fetchError) {
+      toast.error("Failed to fetch pet weight history");
+      return;
+    }
+
+    const newHistory = [...(currentPet?.weight_history || []), { date: new Date().toISOString().split('T')[0], value: weight }];
+    
+    const { error: updateError } = await supabase
+      .from('pets')
+      .update({ weight_history: newHistory })
+      .eq('id', pid => petId);
+    
+    if (updateError) {
+      toast.error("Failed to update pet weight in Supabase");
+      return;
+    }
+
+    set((state) => ({
+      customers: state.customers.map(c => c.id === customerId ? {
+        ...c,
+        pets: c.pets.map(p => p.id === petId ? { ...p, weightHistory: newHistory } : p)
+      } : c)
+    }));
+  },
+
   saveIntakeRecord: (cid, pid, rec) => {},
 
   addBooking: (b) => set(s => ({ queue: [...s.queue, { ...b, id: Math.random().toString() }] })),
