@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet, Crown, Gem, Percent, Save } from 'lucide-react';
+import { 
+  Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet, Crown, Gem, Percent, Save, Scissors, Dog, Cat, Package,
+  Bath, Sparkles, Wind, Brush, Stethoscope, Home, Bone
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useStore, TierRule } from '@/store/useStore';
+import { useStore, TierRule, Service, AddonItem, ServiceIcon } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -13,10 +16,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CouponModal from '@/components/CouponModal';
 import PromotionModal from '@/components/PromotionModal';
 import CreditPackageModal from '@/components/CreditPackageModal';
+import ServiceModal from '@/components/ServiceModal';
+import AddonSettingsModal from '@/components/AddonSettingsModal';
+import PackageModal from '@/components/PackageModal';
 
 const Marketing = () => {
   const queryClient = useQueryClient();
-  const { language, creditPackages, deleteCreditPackage, currency, tierRules, updateTierRules } = useStore();
+  const { 
+    language, creditPackages, deleteCreditPackage, currency, tierRules, updateTierRules,
+    services, toggleServiceActive, deleteService, addons, deleteAddon, packageTemplates, deletePackageTemplate
+  } = useStore();
   const t = translations[language];
   
   const [activeTab, setActiveTab] = useState('promotions');
@@ -26,6 +35,17 @@ const Marketing = () => {
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+
+  // Services & Add-ons States
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [isAddonModalOpen, setIsAddonModalOpen] = useState(false);
+  const [selectedAddon, setSelectedAddon] = useState<AddonItem | null>(null);
+  const [speciesTab, setSpeciesTab] = useState<'Dog' | 'Cat'>('Dog');
+  const [coatFilter, setCoatFilter] = useState<'All' | 'Short' | 'Long'>('All');
+
+  // Bundles States
+  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
 
   // Local state for editing tier rules
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
@@ -112,6 +132,12 @@ const Marketing = () => {
     if (activeTab === 'promotions') setIsPromoModalOpen(true);
     else if (activeTab === 'coupons') setIsCouponModalOpen(true);
     else if (activeTab === 'credits') setIsCreditModalOpen(true);
+    else if (activeTab === 'services') {
+      setSelectedService(null);
+      setIsServiceModalOpen(true);
+    } else if (activeTab === 'bundles') {
+      setIsPackageModalOpen(true);
+    }
   };
 
   const handleSaveTiers = () => {
@@ -119,9 +145,39 @@ const Marketing = () => {
     toast.success(language === 'th' ? "บันทึกเกณฑ์ระดับสมาชิกเรียบร้อย" : "Membership tiers updated successfully");
   };
 
+  const handleEditService = (s: Service) => {
+    setSelectedService(s);
+    setIsServiceModalOpen(true);
+  };
+
+  const getServiceIcon = (iconName: ServiceIcon, species: string) => {
+    const isDog = species === 'Dog';
+    const colorClass = isDog ? "text-blue-600" : "text-pink-600";
+    
+    switch(iconName) {
+      case 'grooming': return <Scissors className={colorClass} size={24} />;
+      case 'bath': return <Bath className={colorClass} size={24} />;
+      case 'spa': return <Sparkles className={colorClass} size={24} />;
+      case 'nail': return <Zap className={colorClass} size={24} />;
+      case 'dry': return <Wind className={colorClass} size={24} />;
+      case 'brush': return <Brush className={colorClass} size={24} />;
+      case 'health': return <Stethoscope className={colorClass} size={24} />;
+      case 'hotel': return <Home className={colorClass} size={24} />;
+      case 'love': return <Heart className={colorClass} size={24} />;
+      case 'food': return <Bone className={colorClass} size={24} />;
+      case 'premium': return <Award className={colorClass} size={24} />;
+      default: return isDog ? <Dog className={colorClass} size={24} /> : <Cat className={colorClass} size={24} />;
+    }
+  };
+
   const filteredPromos = promotions?.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredCoupons = coupons?.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredCredits = creditPackages.filter(pkg => pkg.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredServices = services.filter(s => 
+    s.targetSpecies === speciesTab && 
+    (coatFilter === 'All' || s.coatType === coatFilter) &&
+    s.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
@@ -138,7 +194,13 @@ const Marketing = () => {
             onClick={handleAdd}
             className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all"
           >
-            <Plus size={20} /> {activeTab === 'promotions' ? t.createPromo : activeTab === 'coupons' ? t.createCoupon : 'สร้างแพ็กเกจเครดิต'}
+            <Plus size={20} /> {
+              activeTab === 'promotions' ? t.createPromo : 
+              activeTab === 'coupons' ? t.createCoupon : 
+              activeTab === 'services' ? 'เพิ่มบริการใหม่' :
+              activeTab === 'bundles' ? 'สร้างแพ็กเกจบริการ' :
+              'สร้างแพ็กเกจเครดิต'
+            }
           </button>
         )}
       </header>
@@ -154,6 +216,12 @@ const Marketing = () => {
             </TabsTrigger>
             <TabsTrigger value="credits" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Wallet size={16} className="mr-2" /> แพ็กเกจเครดิต
+            </TabsTrigger>
+            <TabsTrigger value="services" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
+              <Scissors size={16} className="mr-2" /> บริการและส่วนเสริม
+            </TabsTrigger>
+            <TabsTrigger value="bundles" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
+              <Package size={16} className="mr-2" /> แพ็กเกจบริการ
             </TabsTrigger>
             <TabsTrigger value="tiers" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Crown size={16} className="mr-2" /> {t.membershipTierLogic}
@@ -330,6 +398,120 @@ const Marketing = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="services" className="m-0">
+            <div className="space-y-12">
+               <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
+                     <div>
+                        <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Service Catalog</h3>
+                        <p className="text-xs text-gray-400 font-medium">Define your specialized grooming treatments.</p>
+                     </div>
+                     <div className="flex flex-wrap gap-3">
+                        <div className="bg-[#F5F6FA] p-1 rounded-2xl flex gap-1">
+                           <button onClick={() => setSpeciesTab('Dog')} className={cn("px-4 py-2 rounded-xl text-[10px] font-black transition-all", speciesTab === 'Dog' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>DOG</button>
+                           <button onClick={() => setSpeciesTab('Cat')} className={cn("px-4 py-2 rounded-xl text-[10px] font-black transition-all", speciesTab === 'Cat' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>CAT</button>
+                        </div>
+                        <div className="bg-[#F5F6FA] p-1 rounded-2xl flex gap-1">
+                           {(['All', 'Short', 'Long'] as const).map(type => (
+                             <button
+                               key={type}
+                               onClick={() => setCoatFilter(type)}
+                               className={cn(
+                                 "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
+                                 coatFilter === type ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400"
+                               )}
+                             >
+                               {type === 'All' ? 'ALL' : type === 'Short' ? 'SHORT' : 'LONG'}
+                             </button>
+                           ))}
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     {filteredServices.map(s => (
+                        <div key={s.id} className="p-5 bg-white border border-gray-100 rounded-[32px] flex items-center justify-between group hover:shadow-lg transition-all">
+                           <div className="flex items-center gap-4">
+                              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm", s.targetSpecies === 'Dog' ? "bg-blue-500" : "bg-pink-500")}><Scissors size={20}/></div>
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <h4 className="font-black text-[#1A1F3D] text-sm">{s.title}</h4>
+                                  {s.coatType && (
+                                    <span className={cn(
+                                      "text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase",
+                                      s.coatType === 'Short' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
+                                    )}>
+                                      {s.coatType === 'Short' ? 'Short' : 'Long'}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase">{s.category}</p>
+                              </div>
+                           </div>
+                           <div className="flex items-center gap-3">
+                              <Switch checked={s.isActive} onCheckedChange={() => toggleServiceActive(s.id)} className="data-[state=checked]:bg-[#1A1F3D]" />
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <button onClick={() => handleEditService(s)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-lg"><Edit3 size={16}/></button>
+                                 <button onClick={() => { if(confirm('Delete service?')) deleteService(s.id); }} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-lg"><Trash2 size={16}/></button>
+                              </div>
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </section>
+
+               <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-8">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Global Add-ons</h3>
+                      <p className="text-xs text-gray-400 font-medium">Extra items that can be added to any order.</p>
+                    </div>
+                    <button onClick={() => { setSelectedAddon(null); setIsAddonModalOpen(true); }} className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2"><Plus size={16} /> Add Add-on</button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                     {addons.map(addon => (
+                       <div key={addon.id} className="p-6 bg-[#F5F6FA] rounded-[32px] flex justify-between items-center group relative overflow-hidden">
+                          <div className="flex items-center gap-4">
+                             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-500 shadow-sm"><Zap size={18} /></div>
+                             <div><p className="text-sm font-black text-[#1A1F3D]">{addon.name}</p><p className="text-[10px] text-gray-400 font-bold uppercase">{currency}{addon.price}</p></div>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <button onClick={() => { setSelectedAddon(addon); setIsAddonModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={16}/></button>
+                             <button onClick={() => deleteAddon(addon.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
+                          </div>
+                       </div>
+                     ))}
+                  </div>
+               </section>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="bundles" className="m-0">
+            <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-8">
+               <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Service Bundle Templates</h3>
+                    <p className="text-xs text-gray-400 font-medium">Configure multi-session packages (e.g., Buy 8 Get 2 Free).</p>
+                  </div>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {packageTemplates.map(t => (
+                     <div key={t.id} className="p-8 bg-[#F5F6FA] rounded-[40px] flex justify-between items-center group relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500" />
+                        <div>
+                          <h4 className="font-black text-[#1A1F3D] text-lg">{t.name}</h4>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{t.paidSlots}+{t.freeSlots} Sessions • {currency}{t.price.toLocaleString()}</p>
+                        </div>
+                        <button onClick={() => deletePackageTemplate(t.id)} className="p-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-xl shadow-sm"><Trash2 size={18} /></button>
+                     </div>
+                  ))}
+                  {packageTemplates.length === 0 && (
+                    <div className="col-span-full py-20 text-center opacity-20"><Package size={48} className="mx-auto mb-4"/><p className="font-black">No bundles created yet</p></div>
+                  )}
+               </div>
+            </section>
+          </TabsContent>
+
           <TabsContent value="tiers" className="m-0">
             <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-12">
                <div className="flex justify-between items-center">
@@ -379,6 +561,9 @@ const Marketing = () => {
       {isCouponModalOpen && <CouponModal coupon={selectedItem} onClose={() => setIsCouponModalOpen(false)} />}
       {isPromoModalOpen && <PromotionModal promotion={selectedItem} onClose={() => setIsPromoModalOpen(false)} />}
       {isCreditModalOpen && <CreditPackageModal onClose={() => setIsCreditModalOpen(false)} />}
+      {isServiceModalOpen && <ServiceModal service={selectedService} defaultSpecies={speciesTab} onClose={() => setIsServiceModalOpen(false)} />}
+      {isAddonModalOpen && <AddonSettingsModal addon={selectedAddon} onClose={() => setIsAddonModalOpen(false)} />}
+      {isPackageModalOpen && <PackageModal onClose={() => setIsPackageModalOpen(false)} />}
     </div>
   );
 };
