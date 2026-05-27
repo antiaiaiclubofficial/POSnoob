@@ -184,9 +184,63 @@ export const useStore = create<AppState>()((set, get) => ({
   },
   deleteTransaction: (id) => set(s => ({ transactions: s.transactions.filter(t => t.id !== id) })),
 
-  addService: (ser) => set(s => ({ services: [...s.services, { ...ser, id: Math.random().toString() }] })),
-  updateService: (id, ser) => set(s => ({ services: s.services.map(s => s.id === id ? { ...s, ...ser } : s) })),
-  deleteService: (id) => set(s => ({ services: s.services.filter(s => s.id !== id) })),
+  setServices: (services) => set({ services }),
+  addService: async (ser) => {
+    const priceKeys = Object.keys(ser.prices);
+    const defaultPrice = priceKeys.length > 0 ? ser.prices[priceKeys[0]].price : 0;
+    const defaultDuration = priceKeys.length > 0 ? ser.prices[priceKeys[0]].duration : 60;
+
+    const { data, error } = await supabase
+      .from('services')
+      .insert([{
+        name: ser.title,
+        description: ser.description,
+        price: defaultPrice,
+        duration_minutes: defaultDuration
+      }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      const newService: Service = {
+        ...ser,
+        id: data.id,
+        prices: ser.prices || {
+          'Standard': { price: data.price || 0, duration: data.duration_minutes || 60 }
+        }
+      };
+      set(s => ({ services: [...s.services, newService] }));
+    }
+  },
+  updateService: async (id, ser) => {
+    const priceKeys = Object.keys(ser.prices);
+    const defaultPrice = priceKeys.length > 0 ? ser.prices[priceKeys[0]].price : 0;
+    const defaultDuration = priceKeys.length > 0 ? ser.prices[priceKeys[0]].duration : 60;
+
+    const { error } = await supabase
+      .from('services')
+      .update({
+        name: ser.title,
+        description: ser.description,
+        price: defaultPrice,
+        duration_minutes: defaultDuration
+      })
+      .eq('id', id);
+
+    if (!error) {
+      set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser } : item) }));
+    }
+  },
+  deleteService: async (id) => {
+    const { error } = await supabase
+      .from('services')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      set(s => ({ services: s.services.filter(item => item.id !== id) }));
+    }
+  },
   toggleServiceActive: (id) => set(s => ({ services: s.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
 
   addAddon: (ad) => set(s => ({ addons: [...s.addons, { ...ad, id: Math.random().toString() }] })),

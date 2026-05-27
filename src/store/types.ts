@@ -304,6 +304,7 @@ export interface AppState {
   processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean) => void;
   deleteTransaction: (id: string) => void;
 
+  setServices: (services: Service[]) => void;
   addService: (service: any) => void;
   updateService: (id: string, service: any) => void;
   deleteService: (id: string) => void;

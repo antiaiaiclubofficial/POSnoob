@@ -26,7 +26,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const { language, setSession, setCustomers } = useStore();
+  const { language, setSession, setCustomers, setServices } = useStore();
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -44,8 +44,9 @@ const App = () => {
       if (session) fetchInitialData();
     });
 
-    // CRM Data Sync Logic
+    // CRM & Services Data Sync Logic
     const fetchInitialData = async () => {
+      // 1. Fetch Customers
       const { data: customersData } = await supabase
         .from('customers')
         .select(`
@@ -124,10 +125,31 @@ const App = () => {
         });
         setCustomers(formattedCustomers);
       }
+
+      // 2. Fetch Services
+      const { data: servicesData } = await supabase
+        .from('services')
+        .select('*');
+
+      if (servicesData) {
+        const formattedServices = servicesData.map(s => ({
+          id: s.id,
+          title: s.name,
+          category: 'Grooming',
+          description: s.description || '',
+          icon: 'grooming' as any,
+          targetSpecies: 'Dog' as any,
+          prices: {
+            'Standard': { price: Number(s.price || 0), duration: s.duration_minutes || 60 }
+          },
+          isActive: true
+        }));
+        setServices(formattedServices);
+      }
     };
 
     return () => subscription.unsubscribe();
-  }, [setSession, setCustomers]);
+  }, [setSession, setCustomers, setServices]);
 
   return (
     <QueryClientProvider client={queryClient}>
