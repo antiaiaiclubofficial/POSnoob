@@ -77,6 +77,28 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
     }));
   };
 
+  const handleRenameSize = (oldSize: string, newSize: string) => {
+    const trimmed = newSize.trim();
+    if (!trimmed || trimmed === oldSize) return;
+    
+    if (formData.prices[trimmed]) {
+      toast.error('มีขนาดชื่อนี้อยู่ในระบบแล้ว');
+      return;
+    }
+
+    setFormData(prev => {
+      const updatedPrices = { ...prev.prices };
+      const info = updatedPrices[oldSize];
+      delete updatedPrices[oldSize];
+      updatedPrices[trimmed] = info;
+      return {
+        ...prev,
+        prices: updatedPrices
+      };
+    });
+    toast.success(`เปลี่ยนชื่อขนาดเป็น "${trimmed}" เรียบร้อย`);
+  };
+
   const handleAddSize = () => {
     const trimmedSize = newSizeName.trim();
     if (!trimmedSize) {
@@ -193,11 +215,24 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
 
           {/* Pricing Matrix */}
           <div className="space-y-4">
-             <label className="text-[10px] font-black uppercase text-gray-400 ml-2">ตารางราคาตามขนาด (Pricing Matrix)</label>
+             <label className="text-[10px] font-black uppercase text-gray-400 ml-2">ตารางราคาตามขนาด (Pricing Matrix) - *คลิกที่ชื่อขนาดเพื่อแก้ไขชื่อได้*</label>
              <div className="grid grid-cols-1 gap-3">
                 {(Object.entries(formData.prices) as [string, ServicePriceInfo][]).map(([size, info]) => (
                    <div key={size} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-gray-50 p-4 rounded-3xl border border-gray-100">
-                      <div className="w-full sm:w-32 font-black text-[#1A1F3D] truncate">{size}</div>
+                      <div className="w-full sm:w-32">
+                         <input 
+                            type="text"
+                            className="w-full bg-transparent border-none font-black text-[#1A1F3D] focus:ring-0 p-0 text-sm"
+                            defaultValue={size}
+                            onBlur={(e) => handleRenameSize(size, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                         />
+                      </div>
                       <div className="flex-1 flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
                          <DollarSign size={14} className="text-gray-400" />
                          <input 
