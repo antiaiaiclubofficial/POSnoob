@@ -31,7 +31,6 @@ const Customers = () => {
   const [isLineModalOpen, setIsLineModalOpen] = useState(false);
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
 
-  // แก้ไข Query ให้ดึงข้อมูลจากตารางที่ถูกต้อง
   const { isLoading, refetch } = useQuery({
     queryKey: ['customers-list'],
     queryFn: async () => {
@@ -44,19 +43,30 @@ const Customers = () => {
           display_name,
           phone,
           email,
-          line_id,
-          points,
-          total_spent,
-          credit_balance,
+          line_user_id,
+          gender,
+          age,
+          house_no,
+          village_no,
+          soi,
+          road,
+          sub_district,
+          district,
+          province,
+          postal_code,
+          store_customers (
+            points,
+            tier
+          ),
           pets (
             id,
             name,
-            species,
+            type,
             breed,
-            birthday,
+            birth_date,
             weight_history,
             notes,
-            image
+            image_url
           )
         `);
       
@@ -67,30 +77,41 @@ const Customers = () => {
       }
 
       const transformed: Customer[] = data.map((item: any) => {
+        const storeCustomer = item.store_customers?.[0] || {};
         return {
           id: item.id,
           name: item.display_name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Unnamed',
-          firstName: item.first_name,
-          lastName: item.last_name,
+          firstName: item.first_name || '',
+          lastName: item.last_name || '',
           phone: item.phone || '-',
           email: item.email || '-',
-          lineId: item.line_id,
-          membership: 'Standard', // จะถูกคำนวณใหม่ใน store หรือเก็บเพิ่มใน DB
-          points: item.points || 0,
-          totalSpent: item.total_spent || 0,
-          creditBalance: item.credit_balance || 0,
+          lineId: item.line_user_id || '',
+          membership: (storeCustomer.tier || 'Standard') as MembershipLevel,
+          points: storeCustomer.points || 0,
+          totalSpent: 0,
+          creditBalance: 0,
+          gender: item.gender || 'Male',
+          age: item.age || '',
+          houseNo: item.house_no || '',
+          villageNo: item.village_no || '',
+          soi: item.soi || '',
+          road: item.road || '',
+          subDistrict: item.sub_district || '',
+          district: item.district || '',
+          province: item.province || '',
+          postalCode: item.postal_code || '',
           creditHistory: [],
           packages: [],
           pets: (item.pets || []).map((p: any) => ({
             id: p.id,
             name: p.name,
-            species: p.species || 'Dog',
+            species: (p.type || 'Dog') as 'Dog' | 'Cat' | 'Other',
             breed: p.breed || '-',
-            birthday: p.birthday || '',
+            birthday: p.birth_date || '',
             weightHistory: p.weight_history || [],
             serviceHistory: [],
             notes: p.notes || '',
-            image: p.image || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+            image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
           }))
         };
       });

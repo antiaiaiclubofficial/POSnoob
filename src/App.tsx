@@ -48,21 +48,80 @@ const App = () => {
     const fetchInitialData = async () => {
       const { data: customersData } = await supabase
         .from('customers')
-        .select('*, pets(*), packages(*), credit_history(*)');
+        .select(`
+          id,
+          first_name,
+          last_name,
+          display_name,
+          phone,
+          email,
+          line_user_id,
+          gender,
+          age,
+          house_no,
+          village_no,
+          soi,
+          road,
+          sub_district,
+          district,
+          province,
+          postal_code,
+          store_customers (
+            points,
+            tier
+          ),
+          pets (
+            id,
+            name,
+            type,
+            breed,
+            birth_date,
+            weight_history,
+            notes,
+            image_url
+          )
+        `);
       
       if (customersData) {
-        // Map snake_case from DB to camelCase for the app
-        const formattedCustomers = customersData.map(c => ({
-          ...c,
-          creditBalance: c.credit_balance,
-          totalSpent: c.total_spent,
-          lineId: c.line_id,
-          pets: c.pets.map(p => ({
-            ...p,
-            weightHistory: p.weight_history || [],
-            serviceHistory: p.service_history || []
-          }))
-        }));
+        const formattedCustomers = customersData.map(c => {
+          const storeCustomer = (c.store_customers?.[0] || {}) as any;
+          return {
+            id: c.id,
+            name: c.display_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unnamed',
+            firstName: c.first_name || '',
+            lastName: c.last_name || '',
+            phone: c.phone || '-',
+            email: c.email || '-',
+            lineId: c.line_user_id || '',
+            membership: storeCustomer.tier || 'Standard',
+            points: storeCustomer.points || 0,
+            totalSpent: 0,
+            creditBalance: 0,
+            gender: c.gender || 'Male',
+            age: c.age || '',
+            houseNo: c.house_no || '',
+            villageNo: c.village_no || '',
+            soi: c.soi || '',
+            road: c.road || '',
+            subDistrict: c.sub_district || '',
+            district: c.district || '',
+            province: c.province || '',
+            postalCode: c.postal_code || '',
+            creditHistory: [],
+            packages: [],
+            pets: (c.pets || []).map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              species: p.type || 'Dog',
+              breed: p.breed || '-',
+              birthday: p.birth_date || '',
+              weightHistory: p.weight_history || [],
+              serviceHistory: [],
+              notes: p.notes || '',
+              image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+            }))
+          };
+        });
         setCustomers(formattedCustomers);
       }
     };

@@ -16,76 +16,139 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
 
   addBooking: async (booking) => {
     const { data, error } = await supabase
-      .from('bookings')
-      .insert([{ ...booking, is_paid: false }])
-      .select()
-      .single();
-
-    if (!error && data) {
-      set((state) => ({
-        queue: [...state.queue, data].sort((a, b) => a.time.localeCompare(b.time))
-      }));
-    }
-  },
-
-  updateQueueStatus: async (id, status) => {
-    const now = new Date().toISOString();
-    const update: any = { status };
-    if (status === 'In Progress') update.start_time = now;
-    if (status === 'Completed') update.end_time = now;
-
-    const { error } = await supabase
-      .from('bookings')
-      .update(update)
-      .eq('id', id);
-
-    if (!error) {
-      set((state) => ({
-        queue: state.queue.map(q => {
-          if (q.id !== id) return q;
-          return { ...q, status, startTime: update.start_time || q.startTime, endTime: update.end_time || q.endTime };
-        })
-      }));
-    }
-  },
-
-  removeQueueItem: async (id) => {
-    const { error } = await supabase.from('bookings').delete().eq('id', id);
-    if (!error) {
-      set((state) => ({ queue: state.queue.filter(q => q.id !== id) }));
-    }
-  },
-
-  markAsPaid: async (id) => {
-    const { error } = await supabase.from('bookings').update({ is_paid: true }).eq('id', id);
-    if (!error) {
-      set((state) => ({ queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) }));
-    }
-  },
-
-  addCustomer: async (customerData) => {
-    const { data, error } = await supabase
-      .from('customers')
+      .from('appointments')
       .insert([{ 
-        ...customerData, 
-        points: 0, 
-        total_spent: 0,
-        credit_balance: 0
+        customer_id: get().selectedOwner?.id,
+        pet_id: booking.petId,
+        status: 'pending',
+        start_time: new Date(`${booking.date}T${booking.time}:00`).toISOString(),
+        notes: booking.serviceName
       }])
       .select()
       .single();
 
     if (!error && data) {
       set((state) => ({
-        customers: [...state.customers, { ...data, pets: [], packages: [], creditHistory: [] }]
+        queue: [...state.queue, {
+          id: data.id,
+          petId: data.pet_id,
+          petName: booking.petName,
+          ownerName: booking.ownerName,
+          serviceName: booking.serviceName,
+          date: booking.date,
+          time: booking.time,
+          status: 'Waiting' as QueueStatus,
+          image: booking.image
+        }].sort((a, b) => a.time.localeCompare(b.time))
+      }));
+    }
+  },
+
+  updateQueueStatus: async (id, status) => {
+    const dbStatus = status === 'Waiting' ? 'pending' : status === 'Checked-in' ? 'confirmed' : status === 'In Progress' ? 'confirmed' : 'completed';
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: dbStatus })
+      .eq('id', id);
+
+    if (!error) {
+      set((state) => ({
+        queue: state.queue.map(q => {
+          if (q.id !== id) return q;
+          return { ...q, status };
+        })
+      }));
+    }
+  },
+
+  removeQueueItem: async (id) => {
+    const { error } = await supabase.from('appointments').delete().eq('id', id);
+    if (!error) {
+      set((state) => ({ queue: state.queue.filter(q => q.id !== id) }));
+    }
+  },
+
+  markAsPaid: async (id) => {
+    set((state) => ({ queue: state.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) }));
+  },
+
+  addCustomer: async (customerData) => {
+    const { data, error } = await supabase
+      .from('customers')
+      .insert([{ 
+        first_name: customerData.firstName,
+        last_name: customerData.lastName,
+        display_name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email,
+        gender: customerData.gender,
+        age: customerData.age,
+        house_no: customerData.houseNo,
+        village_no: customerData.villageNo,
+        soi: customerData.soi,
+        road: customerData.road,
+        sub_district: customerData.subDistrict,
+        district: customerData.district,
+        province: customerData.province,
+        postal_code: customerData.postalCode
+      }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      // Create store_customer entry
+      await supabase.from('store_customers').insert([{
+        customer_id: data.id,
+        points: 0,
+        tier: 'Standard'
+      }]);
+
+      set((state) => ({
+        customers: [...state.customers, {
+          id: data.id,
+          name: data.display_name || `${data.first_name} ${data.last_name}`,
+          firstName: data.first_name,
+          lastName: data.last_name,
+          phone: data.phone || '',
+          email: data.email || '',
+          membership: 'Standard',
+          points: 0,
+          totalSpent: 0,
+          creditBalance: 0,
+          pets: [],
+          packages: [],
+          creditHistory: []
+        }]
       }));
     }
   },
 
   updateCustomer: async (id, customerData) => {
-    const { error } = await supabase.from('customers').update(customerData).eq('id', id);
+    const { error } = await supabase
+      .from('customers')
+      .update({
+        first_name: customerData.firstName,
+        last_name: customerData.lastName,
+        display_name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email,
+        gender: customerData.gender,
+        age: customerData.age,
+        house_no: customerData.houseNo,
+        village_no: customerData.villageNo,
+        soi: customerData.soi,
+        road: customerData.road,
+        sub_district: customerData.subDistrict,
+        district: customerData.district,
+        province: customerData.province,
+        postal_code: customerData.postalCode
+      })
+      .eq('id', id);
+
     if (!error) {
-      set((state) => ({ customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c) }));
+      set((state) => ({
+        customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c)
+      }));
     }
   },
 
@@ -101,7 +164,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   bindLineToCustomer: async (customerId, lineId) => {
-    const { error } = await supabase.from('customers').update({ line_id: lineId }).eq('id', customerId);
+    const { error } = await supabase.from('customers').update({ line_user_id: lineId }).eq('id', customerId);
     if (!error) {
       set((state) => ({ customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c) }));
     }
@@ -110,7 +173,16 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   addPet: async (customerId, petData) => {
     const { data, error } = await supabase
       .from('pets')
-      .insert([{ ...petData, customer_id: customerId }])
+      .insert([{ 
+        customer_id: customerId,
+        name: petData.name,
+        type: petData.species,
+        breed: petData.breed,
+        birth_date: petData.birthday,
+        notes: petData.notes,
+        image_url: petData.image,
+        weight_history: petData.weightHistory || []
+      }])
       .select()
       .single();
 
@@ -118,14 +190,35 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       set((state) => ({
         customers: state.customers.map(c => c.id === customerId ? {
           ...c,
-          pets: [...c.pets, { ...data, serviceHistory: [] }]
+          pets: [...c.pets, {
+            id: data.id,
+            name: data.name,
+            species: data.type as 'Dog' | 'Cat' | 'Other',
+            breed: data.breed || '',
+            birthday: data.birth_date || '',
+            notes: data.notes || '',
+            image: data.image_url || '',
+            weightHistory: data.weight_history || [],
+            serviceHistory: []
+          }]
         } : c)
       }));
     }
   },
 
   updatePet: async (customerId, petId, petData) => {
-    const { error } = await supabase.from('pets').update(petData).eq('id', petId);
+    const { error } = await supabase
+      .from('pets')
+      .update({
+        name: petData.name,
+        type: petData.species,
+        breed: petData.breed,
+        birth_date: petData.birthday,
+        notes: petData.notes,
+        image_url: petData.image
+      })
+      .eq('id', petId);
+
     if (!error) {
       set((state) => ({
         customers: state.customers.map(c => c.id === customerId ? {
