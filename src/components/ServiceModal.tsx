@@ -2,28 +2,31 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Scissors, Clock, DollarSign, Plus, Trash2, Save, Info, Star } from 'lucide-react';
-import { useStore, Service, ServiceIcon, ServicePriceInfo, SubService } from '@/store/useStore';
+import { useStore, Service, ServiceIcon, ServicePriceInfo } from '@/store/useStore';
 import { toast } from 'sonner';
 
 interface ServiceModalProps {
   service: Service | null;
-  defaultSpecies: 'Dog' | 'Cat'; // Added to fix TS2322
+  defaultSpecies: 'Dog' | 'Cat';
   onClose: () => void;
 }
 
 const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) => {
   const { addService, updateService } = useStore();
+  
   const [formData, setFormData] = useState({
     title: '',
     category: 'Grooming',
     description: '',
     icon: 'grooming' as ServiceIcon,
-    targetSpecies: defaultSpecies, // Initialize with defaultSpecies
+    targetSpecies: defaultSpecies,
     isActive: true,
     prices: {
       'Small': { price: 0, duration: 60 }
     } as Record<string, ServicePriceInfo>
   });
+
+  const [newSizeName, setNewSizeName] = useState('');
 
   useEffect(() => {
     if (service) {
@@ -34,22 +37,30 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
         icon: service.icon,
         targetSpecies: service.targetSpecies,
         isActive: service.isActive,
-        prices: service.prices
+        prices: { ...service.prices }
       });
     } else {
-      // If adding new, ensure species matches current tab
       setFormData(prev => ({ ...prev, targetSpecies: defaultSpecies }));
     }
   }, [service, defaultSpecies]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title) {
+      toast.error('กรุณากรอกชื่อบริการ');
+      return;
+    }
+    if (Object.keys(formData.prices).length === 0) {
+      toast.error('กรุณากำหนดขนาดและราคาอย่างน้อย 1 รายการ');
+      return;
+    }
+
     if (service) {
       updateService(service.id, formData);
-      toast.success('Service updated');
+      toast.success('อัปเดตบริการเรียบร้อยแล้ว');
     } else {
       addService(formData);
-      toast.success('Service added');
+      toast.success('เพิ่มบริการใหม่เรียบร้อยแล้ว');
     }
     onClose();
   };
@@ -64,74 +75,153 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
     }));
   };
 
+  const handleAddSize = () => {
+    const trimmedSize = newSizeName.trim();
+    if (!trimmedSize) {
+      toast.error('กรุณาระบุชื่อขนาด');
+      return;
+    }
+    if (formData.prices[trimmedSize]) {
+      toast.error('มีขนาดนี้อยู่ในระบบแล้ว');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      prices: {
+        ...prev.prices,
+        [trimmedSize]: { price: 0, duration: 60 }
+      }
+    }));
+    setNewSizeName('');
+    toast.success(`เพิ่มขนาด ${trimmedSize} เรียบร้อย`);
+  };
+
+  const handleRemoveSize = (size: string) => {
+    if (Object.keys(formData.prices).length <= 1) {
+      toast.error('ต้องมีขนาดบริการอย่างน้อย 1 รายการ');
+      return;
+    }
+    const updatedPrices = { ...formData.prices };
+    delete updatedPrices[size];
+    setFormData(prev => ({
+      ...prev,
+      prices: updatedPrices
+    }));
+    toast.success(`ลบขนาด ${size} เรียบร้อย`);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
         <div className="p-8 border-b border-gray-100 flex justify-between items-center">
-          <h2 className="text-2xl font-black text-[#1A1F3D]">{service ? 'Edit Service' : 'Add New Service'}</h2>
+          <h2 className="text-2xl font-black text-[#1A1F3D]">{service ? 'แก้ไขบริการ' : 'เพิ่มบริการใหม่'}</h2>
           <button onClick={onClose} className="p-3 bg-gray-50 text-gray-400 hover:text-red-500 rounded-2xl transition-colors">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 overflow-y-auto space-y-8">
+        <form onSubmit={handleSubmit} className="p-8 overflow-y-auto space-y-8 scrollbar-hide flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Service Title</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">ชื่อบริการ (Service Title)</label>
                 <input 
-                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold"
+                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold focus:ring-2 focus:ring-[#1A1F3D]/10"
                   value={formData.title}
                   onChange={e => setFormData({...formData, title: e.target.value})}
+                  placeholder="เช่น อาบน้ำตัดขน"
                   required
                 />
              </div>
              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Target Species</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 ml-2">ประเภทสัตว์ (Target Species)</label>
                 <select 
-                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold"
+                  className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold focus:ring-2 focus:ring-[#1A1F3D]/10"
                   value={formData.targetSpecies}
                   onChange={e => setFormData({...formData, targetSpecies: e.target.value as 'Dog' | 'Cat'})}
                 >
-                  <option value="Dog">Dog</option>
-                  <option value="Cat">Cat</option>
+                  <option value="Dog">สุนัข (Dog)</option>
+                  <option value="Cat">แมว (Cat)</option>
                 </select>
              </div>
           </div>
 
+          <div className="space-y-2">
+             <label className="text-[10px] font-black uppercase text-gray-400 ml-2">รายละเอียดบริการ (Description)</label>
+             <textarea 
+                className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 font-bold h-24 resize-none focus:ring-2 focus:ring-[#1A1F3D]/10"
+                value={formData.description}
+                onChange={e => setFormData({...formData, description: e.target.value})}
+                placeholder="ระบุรายละเอียดของบริการนี้..."
+             />
+          </div>
+
+          {/* Add New Size Section */}
+          <div className="bg-gray-50 p-6 rounded-3xl space-y-4">
+             <label className="text-[10px] font-black uppercase text-gray-400 ml-2">เพิ่มขนาดบริการใหม่ (Add New Size)</label>
+             <div className="flex gap-3">
+                <input 
+                  className="flex-1 bg-white border-none rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/10"
+                  value={newSizeName}
+                  onChange={e => setNewSizeName(e.target.value)}
+                  placeholder="เช่น Medium, Large, น้ำหนัก 10-20 กก."
+                  onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSize())}
+                />
+                <button 
+                  type="button"
+                  onClick={handleAddSize}
+                  className="bg-[#1A1F3D] text-white px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 hover:bg-[#2A3152] transition-all"
+                >
+                  <Plus size={16} /> เพิ่มขนาด
+                </button>
+             </div>
+          </div>
+
+          {/* Pricing Matrix */}
           <div className="space-y-4">
-             <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Pricing by Size</label>
+             <label className="text-[10px] font-black uppercase text-gray-400 ml-2">ตารางราคาตามขนาด (Pricing Matrix)</label>
              <div className="grid grid-cols-1 gap-3">
                 {(Object.entries(formData.prices) as [string, ServicePriceInfo][]).map(([size, info]) => (
-                   <div key={size} className="flex items-center gap-4 bg-gray-50 p-4 rounded-3xl">
-                      <div className="w-24 font-black text-[#1A1F3D]">{size}</div>
-                      <div className="flex-1 flex items-center gap-2">
+                   <div key={size} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-gray-50 p-4 rounded-3xl border border-gray-100">
+                      <div className="w-full sm:w-32 font-black text-[#1A1F3D] truncate">{size}</div>
+                      <div className="flex-1 flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
                          <DollarSign size={14} className="text-gray-400" />
                          <input 
                             type="number"
-                            className="bg-transparent border-none w-full font-black"
+                            className="bg-transparent border-none w-full font-black text-sm focus:ring-0"
                             value={info.price}
                             onChange={e => handlePriceChange(size, 'price', Number(e.target.value))}
+                            placeholder="ราคา"
                          />
+                         <span className="text-[10px] font-black text-gray-400 uppercase">บาท</span>
                       </div>
-                      <div className="flex-1 flex items-center gap-2">
+                      <div className="flex-1 flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
                          <Clock size={14} className="text-gray-400" />
                          <input 
                             type="number"
-                            className="bg-transparent border-none w-full font-black"
+                            className="bg-transparent border-none w-full font-black text-sm focus:ring-0"
                             value={info.duration}
                             onChange={e => handlePriceChange(size, 'duration', Number(e.target.value))}
+                            placeholder="เวลา"
                          />
-                         <span className="text-[10px] font-black text-gray-400 uppercase">Min</span>
+                         <span className="text-[10px] font-black text-gray-400 uppercase">นาที</span>
                       </div>
+                      <button 
+                        type="button"
+                        onClick={() => handleRemoveSize(size)}
+                        className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all self-end sm:self-auto"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                    </div>
                 ))}
              </div>
           </div>
         </form>
 
-        <div className="p-8 bg-gray-50/50 flex gap-4">
-           <button onClick={onClose} className="flex-1 py-4 rounded-2xl font-black text-gray-400">Cancel</button>
-           <button onClick={handleSubmit} className="flex-[2] bg-[#1A1F3D] text-white py-4 rounded-2xl font-black shadow-xl">Save Service</button>
+        <div className="p-8 bg-gray-50/50 flex gap-4 border-t border-gray-100">
+           <button type="button" onClick={onClose} className="flex-1 py-4 rounded-2xl font-black text-gray-400 hover:bg-gray-100 transition-all">ยกเลิก</button>
+           <button type="button" onClick={handleSubmit} className="flex-[2] bg-[#1A1F3D] text-white py-4 rounded-2xl font-black shadow-xl hover:bg-[#2A3152] transition-all">บันทึกบริการ</button>
         </div>
       </div>
     </div>
