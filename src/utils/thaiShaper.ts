@@ -1,12 +1,32 @@
 "use client";
 
 /**
- * จัดการตำแหน่งสระและวรรณยุกต์ภาษาไทย (Thai Shaping) สำหรับฟอนต์ TH Niramit AS
+ * จัดการตำแหน่งสระและวรรณยุกต์ภาษาไทย (Thai Shaping) ให้เหมาะสมกับฟอนต์แต่ละประเภท
  * ป้องกันปัญหาสระลอย สระซ้อน และสระตกหล่นในเอกสาร PDF อย่างสมบูรณ์แบบ
  */
-export const shapeThai = (text: string): string => {
+export const shapeThai = (text: string, fontName: string = 'THNiramitAS'): string => {
   if (!text) return "";
   
+  // หากฟอนต์ที่โหลดได้จริงไม่ใช่ TH Niramit AS (เช่น Sarabun) 
+  // เราจะไม่ใช้รหัส PUA (F700-F71A) เพื่อป้องกันไม่ให้แสดงผลเป็นช่องสี่เหลี่ยมเต้าหู้
+  if (fontName !== 'THNiramitAS') {
+    const chars = Array.from(text);
+    const result: string[] = [];
+    for (let i = 0; i < chars.length; i++) {
+      const char = chars[i];
+      const code = char.charCodeAt(0);
+      if (i > 0) {
+        const prevCode = chars[i - 1].charCodeAt(0);
+        if ((code >= 0x0E34 && code <= 0x0E3A) && (prevCode >= 0x0E34 && prevCode <= 0x0E3A)) {
+          continue;
+        }
+      }
+      result.push(char);
+    }
+    return result.join('');
+  }
+
+  // ระบบจัดสระแบบ PUA สำหรับฟอนต์ TH Niramit AS
   const chars = Array.from(text);
   const result: string[] = [];
   
