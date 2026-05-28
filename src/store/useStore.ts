@@ -163,26 +163,36 @@ export const useStore = create<AppState>()((set, get) => ({
         queryParams: {
           prompt: 'select_account'
         },
-        redirectTo: window.location.origin
+        redirectTo: window.location.origin + '/superadmin'
       }
     });
     if (error) throw error;
   },
 
-  setSession: (user) => {
+  setSession: async (user) => {
     if (user) {
-      const storeIdFromMetadata = user.user_metadata?.store_id || 'default-store';
+      // ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase เพื่อตรวจสอบสิทธิ์และบทบาทจริง
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, store_id')
+        .eq('id', user.id)
+        .single();
+
+      // หากไม่มีโปรไฟล์ในฐานข้อมูล ให้กำหนดบทบาทเริ่มต้นเป็น 'staff' เพื่อความปลอดภัย (ป้องกันการสวมสิทธิ์เป็น Admin)
+      const userRole = profile?.role || 'staff';
+      const storeIdFromMetadata = profile?.store_id || user.user_metadata?.store_id || 'default-store';
+
       set({ 
         isAuthenticated: true, 
         isAuthLoading: false,
         currentUser: {
           id: user.id,
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          role: 'Admin', 
+          role: userRole, 
           email: user.email,
           avatar: user.user_metadata?.avatar_url || undefined 
         },
-        storeId: storeIdFromMetadata
+        storeId: userRole === 'superadmin' ? null : storeIdFromMetadata
       });
     } else {
       set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
