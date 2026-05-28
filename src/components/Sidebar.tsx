@@ -16,8 +16,7 @@ import {
   CalendarDays,
   Target,
   Megaphone,
-  Package,
-  ShieldAlert
+  Package
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -49,14 +48,13 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     { icon: History, label: t.logs, path: '/logs' },
     { icon: BarChart3, label: t.reports, path: '/reports' },
     { icon: SettingsIcon, label: t.settings, path: '/settings' },
-    { icon: ShieldAlert, label: 'Super Admin', path: '/superadmin' },
   ];
 
   // ตรวจสอบสิทธิ์การเข้าถึงเมนูตามบทบาทของผู้ใช้
   const userRole = currentUser?.role || 'Assistant';
   const allowedPaths = rolePermissions[userRole] || ['/', '/queue', '/customers'];
   
-  // กรองเมนูตามสิทธิ์ที่กำหนดไว้ใน useStore
+  // กรองเมนูตามสิทธิ์ที่กำหนดไว้ใน useStore (ไม่รวม /superadmin ในแถบเมนู)
   const filteredMenuItems = menuItems.filter(item => allowedPaths.includes(item.path));
 
   const handleLogout = () => {
