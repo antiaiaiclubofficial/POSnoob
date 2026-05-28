@@ -185,7 +185,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   logout: async () => {
     await supabase.auth.signOut();
-    set({ isAuthenticated: false, currentUser: null, storeId: null });
+    set({ isAuthenticated: false, currentUser: null, storeId: null, isAuthLoading: false });
   },
 
   verifyPassword: (pass) => {

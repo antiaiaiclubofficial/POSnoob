@@ -1,7 +1,6 @@
 import { StateCreator } from 'zustand';
-import { AppState, StaffRole } from '../types';
+import { AppState } from '../types';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isAuthenticated' | 'isAuthLoading' | 'currentUser' | 'storeId' | 'login' | 'loginWithGoogle' | 'setSession' | 'verifyPassword' | 'logout'>> = (set, get) => ({
   isAuthenticated: false,
@@ -69,6 +68,6 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
   
   logout: async () => {
     await supabase.auth.signOut();
-    set({ isAuthenticated: false, currentUser: null, storeId: null });
+    set({ isAuthenticated: false, currentUser: null, storeId: null, isAuthLoading: false });
   },
 });
