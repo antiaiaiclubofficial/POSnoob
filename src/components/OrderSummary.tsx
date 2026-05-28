@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText, Landmark
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText, Landmark, Percent, Tag
 } from 'lucide-react';
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import PaymentModal from './PaymentModal';
+import ReceiptPreview from './ReceiptPreview';
 import { translations } from '@/utils/translations';
 import { Switch } from "@/components/ui/switch";
 
@@ -16,7 +17,13 @@ interface OrderSummaryProps {
 }
 
 const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
-  const { cart, removeFromCart, updateCartQuantity, clearCart, selectedOwner, activePet, markAsPaid, processPayment, tierRules, inventory, addToCart, currency, language } = useStore();
+  const { 
+    cart, removeFromCart, updateCartQuantity, updateCartItemDiscount, clearCart, 
+    selectedOwner, activePet, markAsPaid, processPayment, tierRules, inventory, 
+    addToCart, currency, language, shopName, shopLogo, shopAddress, shopPhone,
+    receiptHeader, receiptFooter, receiptPaperSize
+  } = useStore();
+  
   const t = translations[language];
   
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
@@ -24,6 +31,12 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [isTaxInvoice, setIsTaxInvoice] = useState(false);
   const [barcodeQuery, setBarcodeQuery] = useState('');
+  const [activeDiscountIndex, setActiveDiscountIndex] = useState<number | null>(null);
+  const [tempDiscountVal, setTempDiscountVal] = useState('');
+  const [tempDiscountType, setTempDiscountType] = useState<'percent' | 'amount'>('percent');
+
+  // เก็บข้อมูลธุรกรรมที่เพิ่งทำเสร็จเพื่อแสดงใบเสร็จ
+  const [completedTransaction, setCompletedTransaction] = useState<any | null>(null);
 
   useEffect(() => {
     setSelectedPackageId(null);
@@ -53,12 +66,37 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
     setBarcodeQuery('');
   };
 
-  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  // คำนวณราคาสินค้าแต่ละรายการหลังหักส่วนลดรายรายการ
+  const getItemPriceAfterDiscount = (item: any) => {
+    if (!item.discountType || !item.discountValue) return item.price;
+    if (item.discountType === 'percent') {
+      return Math.max(0, item.price * (1 - item.discountValue / 100));
+    } else {
+      return Math.max(0, item.price - item.discountValue);
+    }
+  };
+
+  // คำนวณยอดรวมของตะกร้า
+  const subtotal = cart.reduce((acc, item) => {
+    const finalPrice = getItemPriceAfterDiscount(item);
+    return acc + (finalPrice * item.quantity);
+  }, 0);
+
+  // คำนวณส่วนลดรวมของตะกร้า (จากส่วนลดรายรายการ)
+  const totalItemDiscounts = cart.reduce((acc, item) => {
+    if (!item.discountType || !item.discountValue) return acc;
+    const originalTotal = item.price * item.quantity;
+    const discountedTotal = getItemPriceAfterDiscount(item) * item.quantity;
+    return acc + (originalTotal - discountedTotal);
+  }, 0);
+
+  // ส่วนลดระดับสมาชิก (Tier Discount) จะคำนวณจากยอดรวมหลังหักส่วนลดรายรายการแล้ว
   const userTier = selectedOwner ? tierRules.find(r => r.level === selectedOwner.membership) : null;
   const tierDiscountPercent = userTier?.discount || 0;
-  const discountAmount = (subtotal * tierDiscountPercent) / 100;
-  const tax = (subtotal - discountAmount) * 0.07;
-  const total = subtotal - discountAmount + tax;
+  const tierDiscountAmount = (subtotal * tierDiscountPercent) / 100;
+  
+  const tax = (subtotal - tierDiscountAmount) * 0.07;
+  const total = subtotal - tierDiscountAmount + tax;
 
   const availablePackages = selectedOwner?.packages?.filter(pkg => {
     return cart.some(item => pkg.targetServiceId === item.id && pkg.remainingSlots > 0);
@@ -89,12 +127,47 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       ...details,
       packageId: paymentMethod === 'Package' ? selectedPackageId : undefined
     };
-    processPayment(selectedOwner.id, total, discountAmount, cart, paymentMethod, finalDetails, isTaxInvoice);
+
+    // สร้างข้อมูลจำลองของ Transaction เพื่อส่งให้ ReceiptPreview แสดงผล
+    const txId = `TX-${Date.now()}`;
+    const txData = {
+      id: txId,
+      date: new Date().toISOString(),
+      customerName: selectedOwner.name,
+      items: [...cart],
+      amount: total,
+      discountAmount: totalItemDiscounts + tierDiscountAmount,
+      paymentMethod: paymentMethod
+    };
+
+    processPayment(selectedOwner.id, total, totalItemDiscounts + tierDiscountAmount, cart, paymentMethod, finalDetails, isTaxInvoice);
     cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
+    
     toast.success("Transaction Complete!");
+    
+    // แสดงใบเสร็จรับเงินทันที
+    setCompletedTransaction(txData);
+    
     clearCart();
     setIsPaymentModalOpen(false);
     setSelectedPackageId(null);
+  };
+
+  const handleApplyDiscount = (index: number) => {
+    const val = Number(tempDiscountVal);
+    if (isNaN(val) || val < 0) {
+      toast.error("Invalid discount value");
+      return;
+    }
+    updateCartItemDiscount(index, tempDiscountType, val);
+    setActiveDiscountIndex(null);
+    setTempDiscountVal('');
+    toast.success("Discount applied to item");
+  };
+
+  const handleRemoveDiscount = (index: number) => {
+    updateCartItemDiscount(index, null, 0);
+    toast.info("Discount removed");
   };
 
   return (
@@ -145,29 +218,117 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
         ) : (
           <div className="space-y-4">
             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.services}</p>
-            {cart.map((item, idx) => (
-              <div key={`${item.id}-${idx}`} className="flex flex-col gap-3 p-4 bg-white border border-gray-100 rounded-[24px] shadow-sm">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center shrink-0">
-                    <Dog className="text-[#1A1F3D] w-5 h-5" />
+            {cart.map((item, idx) => {
+              const hasDiscount = item.discountType && item.discountValue > 0;
+              const finalPrice = getItemPriceAfterDiscount(item);
+              
+              return (
+                <div key={`${item.id}-${idx}`} className="flex flex-col gap-3 p-4 bg-white border border-gray-100 rounded-[24px] shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center shrink-0">
+                      <Dog className="text-[#1A1F3D] w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-[#1A1F3D] text-[12px] leading-tight truncate">{item.title}</h4>
+                      <p className="text-[8px] text-gray-400 font-black uppercase mt-0.5">{item.petName || 'Retail Item'}</p>
+                    </div>
+                    <button onClick={() => removeFromCart(idx)} className="p-1.5 text-red-200 hover:text-red-500"><X size={14} /></button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-[#1A1F3D] text-[12px] leading-tight truncate">{item.title}</h4>
-                    <p className="text-[8px] text-gray-400 font-black uppercase mt-0.5">{item.petName || 'Retail Item'}</p>
+
+                  {/* ส่วนลดรายรายการ */}
+                  <div className="px-2 py-1 bg-gray-50 rounded-xl flex flex-col gap-2">
+                    {activeDiscountIndex === idx ? (
+                      <div className="flex items-center gap-2 animate-in slide-in-from-top-1">
+                        <div className="flex bg-white p-0.5 rounded-lg border border-gray-100 gap-0.5">
+                          <button 
+                            type="button"
+                            onClick={() => setTempDiscountType('percent')}
+                            className={cn("px-2 py-1 rounded-md text-[9px] font-black", tempDiscountType === 'percent' ? "bg-[#1A1F3D] text-white" : "text-gray-400")}
+                          >
+                            %
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => setTempDiscountType('amount')}
+                            className={cn("px-2 py-1 rounded-md text-[9px] font-black", tempDiscountType === 'amount' ? "bg-[#1A1F3D] text-white" : "text-gray-400")}
+                          >
+                            {currency}
+                          </button>
+                        </div>
+                        <input 
+                          type="number"
+                          className="w-16 bg-white border border-gray-100 rounded-lg px-2 py-1 text-[10px] font-bold text-center"
+                          placeholder="0"
+                          value={tempDiscountVal}
+                          onChange={e => setTempDiscountVal(e.target.value)}
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => handleApplyDiscount(idx)}
+                          className="bg-green-500 text-white px-2 py-1 rounded-lg text-[9px] font-black"
+                        >
+                          Apply
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setActiveDiscountIndex(null)}
+                          className="text-gray-400 text-[9px] font-bold"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        {hasDiscount ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] bg-red-50 text-red-600 px-2 py-0.5 rounded-md font-black">
+                              Discount: -{item.discountType === 'percent' ? `${item.discountValue}%` : `${currency}${item.discountValue}`}
+                            </span>
+                            <button 
+                              type="button"
+                              onClick={() => handleRemoveDiscount(idx)}
+                              className="text-[8px] text-red-400 hover:text-red-600 font-bold uppercase"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setActiveDiscountIndex(idx);
+                              setTempDiscountType('percent');
+                              setTempDiscountVal('');
+                            }}
+                            className="text-[9px] text-blue-500 hover:text-blue-700 font-black flex items-center gap-1"
+                          >
+                            <Tag size={10} /> Add Item Discount
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <button onClick={() => removeFromCart(idx)} className="p-1.5 text-red-200 hover:text-red-500"><X size={14} /></button>
+                  
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                     <div className="flex items-center bg-[#F5F6FA] rounded-xl p-1 gap-3">
+                        <button onClick={() => updateCartQuantity(idx, -1)} className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Minus size={12} /></button>
+                        <span className="text-[10px] font-black w-4 text-center">{item.quantity}</span>
+                        <button onClick={() => updateCartQuantity(idx, 1)} className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Plus size={12} /></button>
+                     </div>
+                     <div className="text-right">
+                       {hasDiscount && (
+                         <p className="text-[9px] text-gray-300 line-through font-bold">
+                           {currency}{(item.price * item.quantity).toFixed(2)}
+                         </p>
+                       )}
+                       <span className="font-black text-[12px] text-[#1A1F3D]">
+                         {currency}{(finalPrice * item.quantity).toFixed(2)}
+                       </span>
+                     </div>
+                  </div>
                 </div>
-                
-                <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-                   <div className="flex items-center bg-[#F5F6FA] rounded-xl p-1 gap-3">
-                      <button onClick={() => updateCartQuantity(idx, -1)} className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Minus size={12} /></button>
-                      <span className="text-[10px] font-black w-4 text-center">{item.quantity}</span>
-                      <button onClick={() => updateCartQuantity(idx, 1)} className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Plus size={12} /></button>
-                   </div>
-                   <span className="font-black text-[12px] text-[#1A1F3D]">{currency}{(item.price * item.quantity).toFixed(2)}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -197,10 +358,16 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       </div>
 
       <div className="pt-6 space-y-3 border-t border-dashed border-gray-200 mt-auto">
+        {totalItemDiscounts > 0 && (
+          <div className="flex justify-between items-center text-xs text-red-500 font-bold bg-red-50 px-4 py-2.5 rounded-2xl">
+            <span className="flex items-center gap-2"><ArrowDownCircle size={12}/> Item Discounts</span>
+            <span>-{currency}{totalItemDiscounts.toFixed(2)}</span>
+          </div>
+        )}
         {tierDiscountPercent > 0 && paymentMethod !== 'Package' && (
-          <div className="flex justify-between items-center text-xs text-green-600 font-bold bg-green-50 px-4 py-3 rounded-2xl">
+          <div className="flex justify-between items-center text-xs text-green-600 font-bold bg-green-50 px-4 py-2.5 rounded-2xl">
             <span className="flex items-center gap-2"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
-            <span>-{currency}{discountAmount.toFixed(2)}</span>
+            <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between items-end pt-2 px-2">
@@ -214,6 +381,21 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       </button>
 
       {isPaymentModalOpen && <PaymentModal total={paymentMethod === 'Package' || paymentMethod === 'Store Credit' ? 0 : total} method={paymentMethod === 'Store Credit' ? 'Cash' : paymentMethod} onClose={() => setIsPaymentModalOpen(false)} onComplete={handleCompletePayment} />}
+      
+      {/* แสดงใบเสร็จรับเงินทันทีหลังชำระเงินเสร็จสิ้น */}
+      {completedTransaction && (
+        <ReceiptPreview 
+          shopName={shopName}
+          shopLogo={shopLogo}
+          shopAddress={shopAddress}
+          shopPhone={shopPhone}
+          header={receiptHeader}
+          footer={receiptFooter}
+          paperSize={receiptPaperSize}
+          transaction={completedTransaction}
+          onClose={() => setCompletedTransaction(null)}
+        />
+      )}
     </div>
   );
 };

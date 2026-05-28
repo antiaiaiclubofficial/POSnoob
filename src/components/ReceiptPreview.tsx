@@ -14,24 +14,53 @@ interface ReceiptPreviewProps {
   footer: string;
   paperSize: '58mm' | '80mm';
   onClose: () => void;
+  transaction?: {
+    id: string;
+    date: string;
+    customerName: string;
+    items: any[];
+    amount: number;
+    discountAmount: number;
+    paymentMethod: string;
+  } | null;
 }
 
 const ReceiptPreview = ({ 
   shopName, shopLogo, shopAddress, shopPhone, 
-  header, footer, paperSize, onClose 
+  header, footer, paperSize, onClose, transaction 
 }: ReceiptPreviewProps) => {
   
   const is80mm = paperSize === '80mm';
   
-  // จำลอง Link สำหรับ Electronic Receipt
-  const electronicReceiptUrl = `https://e-receipt.tactilesanctuary.com/view/INV-2024-001`;
+  // ใช้ข้อมูลจริงจากธุรกรรม หรือใช้ข้อมูลจำลองหากไม่มีการส่งเข้ามา
+  const isDemo = !transaction;
+  const txId = transaction?.id || "INV-2024-001";
+  const txDate = transaction?.date ? format(new Date(transaction.date), 'dd/MM/yyyy HH:mm') : format(new Date(), 'dd/MM/yyyy HH:mm');
+  const customerName = transaction?.customerName || "Admin User";
+  const paymentMethod = transaction?.paymentMethod || "Cash";
+  
+  const items = transaction?.items || [
+    { title: "Full Grooming (Large)", price: 1200, quantity: 1, petName: "Buddy (Golden Retriever)" },
+    { title: "Pet Shampoo (Sensitive)", price: 350, quantity: 1, petName: "Retail Item" }
+  ];
+
+  const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const discountAmount = transaction?.discountAmount || 155.00;
+  const tax = (subtotal - discountAmount) * 0.07;
+  const total = transaction?.amount || (subtotal - discountAmount + tax);
+
+  const electronicReceiptUrl = `https://e-receipt.tactilesanctuary.com/view/${txId}`;
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
-    <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-      <div className="bg-[#E5E7EB] w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6 print:p-0 print:bg-white">
+      <div className="bg-[#E5E7EB] w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:shadow-none print:rounded-none print:w-auto print:h-auto print:max-h-none">
         
         {/* Toolbar */}
-        <div className="p-6 bg-white border-b border-gray-100 flex justify-between items-center shrink-0">
+        <div className="p-6 bg-white border-b border-gray-100 flex justify-between items-center shrink-0 print:hidden">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gray-100 rounded-xl text-gray-400">
               <Printer size={18} />
@@ -41,16 +70,24 @@ const ReceiptPreview = ({
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{paperSize} Thermal Print</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-all">
-            <X size={20} className="text-gray-400" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handlePrint}
+              className="bg-[#1A1F3D] text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-[#2A3152] transition-all"
+            >
+              Print Receipt
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-all">
+              <X size={20} className="text-gray-400" />
+            </button>
+          </div>
         </div>
 
         {/* Paper Container */}
-        <div className="flex-1 overflow-y-auto p-10 flex justify-center bg-[#D1D5DB] scrollbar-hide">
+        <div className="flex-1 overflow-y-auto p-10 flex justify-center bg-[#D1D5DB] scrollbar-hide print:bg-white print:p-0">
           <div 
             className={cn(
-              "bg-white shadow-xl h-fit min-h-full p-6 sm:p-8 flex flex-col font-mono text-[#1A1F3D] transition-all duration-500",
+              "bg-white shadow-xl h-fit min-h-full p-6 sm:p-8 flex flex-col font-mono text-[#1A1F3D] transition-all duration-500 print:shadow-none print:p-4",
               is80mm ? "w-[380px]" : "w-[280px]"
             )}
             style={{ fontSize: is80mm ? '13px' : '11px' }}
@@ -74,15 +111,19 @@ const ReceiptPreview = ({
             <div className="space-y-1 mb-6 opacity-80 text-[10px]">
               <div className="flex justify-between">
                 <span>Date:</span>
-                <span>{format(new Date(), 'dd/MM/yyyy HH:mm')}</span>
+                <span>{txDate}</span>
               </div>
               <div className="flex justify-between">
                 <span>Receipt:</span>
-                <span>#INV-2024-001</span>
+                <span>#{txId}</span>
               </div>
               <div className="flex justify-between">
-                <span>Staff:</span>
-                <span>Admin User</span>
+                <span>Customer:</span>
+                <span>{customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Payment:</span>
+                <span>{paymentMethod}</span>
               </div>
             </div>
 
@@ -95,20 +136,17 @@ const ReceiptPreview = ({
                 <span>Total</span>
               </div>
               <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col">
-                    <span>Full Grooming (Large)</span>
-                    <span className="text-[9px] opacity-60">Pet: Buddy (Golden Retriever)</span>
+                {items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-start">
+                    <div className="flex flex-col">
+                      <span>{item.title} {item.quantity > 1 ? `x${item.quantity}` : ''}</span>
+                      <span className="text-[9px] opacity-60">
+                        {item.petName ? `Pet: ${item.petName}` : 'Retail Item'}
+                      </span>
+                    </div>
+                    <span>{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
-                  <span>1,200.00</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col">
-                    <span>Pet Shampoo (Sensitive)</span>
-                    <span className="text-[9px] opacity-60">Retail Item</span>
-                  </div>
-                  <span>350.00</span>
-                </div>
+                ))}
               </div>
             </div>
 
@@ -118,19 +156,21 @@ const ReceiptPreview = ({
             <div className="space-y-1.5 mb-8">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>1,550.00</span>
+                <span>{subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-red-500">
-                <span>Discount (10%)</span>
-                <span>-155.00</span>
-              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-red-500">
+                  <span>Discount</span>
+                  <span>-{discountAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Vat (7%)</span>
-                <span>97.65</span>
+                <span>{tax.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-bold text-base pt-2">
                 <span>TOTAL</span>
-                <span>1,492.65</span>
+                <span>{total.toFixed(2)}</span>
               </div>
             </div>
 
@@ -140,7 +180,7 @@ const ReceiptPreview = ({
             <div className="text-center space-y-4 pt-2">
               <p className="whitespace-pre-wrap leading-relaxed opacity-80">{footer || 'Thank you for your visit!'}</p>
               
-              <div className="py-4 flex flex-col items-center gap-3">
+              <div className="py-4 flex flex-col items-center gap-3 print:hidden">
                 <div className="p-2 bg-white border border-gray-100 rounded-xl shadow-sm">
                   <img 
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(electronicReceiptUrl)}`} 
