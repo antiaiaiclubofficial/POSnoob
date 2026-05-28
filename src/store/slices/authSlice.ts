@@ -47,8 +47,10 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
 
   setSession: async (user) => {
     if (user) {
+      const isSuperAdminPath = window.location.pathname.startsWith('/superadmin');
       const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
-      
+      const shouldBeSuperAdmin = isSuperAdminEmail && isSuperAdminPath;
+
       // ดึงข้อมูลโปรไฟล์จากฐานข้อมูลเพื่อตรวจสอบบทบาทจริง (เช่น superadmin)
       let { data: profile, error } = await supabase
         .from('profiles')
@@ -56,15 +58,15 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         .eq('id', user.id)
         .single();
 
-      if (error || !profile || (isSuperAdminEmail && profile.role !== 'superadmin')) {
+      if (error || !profile) {
         const { data: stores } = await supabase.from('stores').select('id').limit(1);
         const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
 
         const newProfile = {
           id: user.id,
           email: user.email,
-          role: isSuperAdminEmail ? 'superadmin' : 'admin',
-          store_id: isSuperAdminEmail ? null : defaultStoreId
+          role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
+          store_id: shouldBeSuperAdmin ? null : defaultStoreId
         };
 
         const { error: upsertError } = await supabase
@@ -75,21 +77,32 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
           profile = { role: newProfile.role, store_id: newProfile.store_id };
         } else {
           console.error("Failed to upsert profile:", upsertError);
-          if (isSuperAdminEmail) {
+          if (shouldBeSuperAdmin) {
             profile = { role: 'superadmin', store_id: null };
           } else {
-            await supabase.auth.signOut();
-            set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
-            const isTh = get().language === 'th';
-            toast.error(isTh ? "ไม่มีสิทธิ์การเข้าถึงระบบ" : "No permission to access the system");
-            return;
+            profile = { role: 'Admin', store_id: defaultStoreId };
           }
         }
       }
 
-      const userRole = profile.role || 'staff';
-      const storeIdFromMetadata = profile.store_id || 'default-store';
+      // แยกแยะบทบาทตามหน้าเว็บที่ล็อกอินเข้ามา
+      let userRole = profile.role || 'staff';
+      let storeIdFromMetadata = profile.store_id || 'default-store';
       
+      if (isSuperAdminEmail) {
+        if (shouldBeSuperAdmin) {
+          userRole = 'superadmin';
+          storeIdFromMetadata = null;
+        } else {
+          // หากล็อกอินผ่านหน้าปกติ ให้เป็น Admin ของร้านค้า
+          userRole = 'Admin';
+          if (!storeIdFromMetadata || storeIdFromMetadata === 'default-store') {
+            const { data: stores } = await supabase.from('stores').select('id').limit(1);
+            storeIdFromMetadata = stores && stores.length > 0 ? stores[0].id : 'default-store';
+          }
+        }
+      }
+
       set({ 
         isAuthenticated: true, 
         isAuthLoading: false,
