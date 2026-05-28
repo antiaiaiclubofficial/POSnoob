@@ -68,6 +68,6 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
   
   logout: async () => {
     await supabase.auth.signOut();
-    set({ isAuthenticated: false, currentUser: null, storeId: null, isAuthLoading: false });
+    set({ isAuthenticated: false, currentUser: null, storeId: null });
   },
 });

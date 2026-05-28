@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { 
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
   QueueItem, Service, InventoryItem, Partner, StockLog, Transaction, 
@@ -185,7 +184,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   logout: async () => {
     await supabase.auth.signOut();
-    set({ isAuthenticated: false, currentUser: null, storeId: null, isAuthLoading: false });
+    set({ isAuthenticated: false, currentUser: null, storeId: null });
   },
 
   verifyPassword: (pass) => {
@@ -380,7 +379,6 @@ export const useStore = create<AppState>()((set, get) => ({
   updatePartner: (id, v) => set(s => ({ partners: s.partners.map(p => p.id === id ? { ...p, ...v } : p) })),
   deletePartner: (id) => set(s => ({ partners: s.partners.filter(p => p.id !== id) })),
 
-  setStaff: (staff) => set({ staff }),
   addStaff: (st) => set(s => ({ staff: [...s.staff, { ...st, id: Math.random().toString() }] })),
   updateStaff: (id, st) => set(s => ({ staff: s.staff.map(mem => mem.id === id ? { ...mem, ...st } : mem) })),
   deleteStaff: (id) => set(s => ({ staff: s.staff.filter(mem => mem.id !== id) })),
