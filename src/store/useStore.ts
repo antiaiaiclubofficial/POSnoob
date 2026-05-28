@@ -15,23 +15,30 @@ export type {
   PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory 
 };
 
+// ตรวจสอบว่าเส้นทางปัจจุบันเป็นหน้าล็อกอินหรือหน้า Super Admin หรือไม่
+const isAuthOrSuperAdminPath = typeof window !== 'undefined' && 
+  (window.location.pathname === '/login' || window.location.pathname.startsWith('/superadmin'));
+
 export const useStore = create<AppState>()((set, get) => ({
   language: 'th',
   setLanguage: (lang) => set({ language: lang }),
   currency: '฿',
-  // ตั้งค่าเริ่มต้นเป็น true เพื่อข้ามหน้า Login ในช่วงพัฒนา
-  isAuthenticated: true,
+  
+  // หากไม่ใช่หน้าล็อกอินหรือหน้า Super Admin ให้ Bypass เป็น True ทันที
+  isAuthenticated: !isAuthOrSuperAdminPath,
   isAuthLoading: false,
   isPendingApproval: false,
   isUserSuspended: false,
   isStoreSuspended: false,
-  // กำหนดผู้ใช้จำลองเป็น Admin เริ่มต้น
-  currentUser: {
+  
+  // กำหนดผู้ใช้จำลองเป็น Admin เฉพาะเมื่อทำการ Bypass เท่านั้น
+  currentUser: !isAuthOrSuperAdminPath ? {
     id: 'admin',
     name: 'Admin (Dev Mode)',
     role: 'Admin',
     username: 'admin'
-  },
+  } : null,
+  
   storeId: 'default-store',
 
   shopName: 'Mellow Fellow Sanctuary',
