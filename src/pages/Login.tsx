@@ -38,9 +38,8 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      await loginWithGoogle();
-      // หมายเหตุ: หลังจากเรียก loginWithGoogle หน้าจอจะ redirect ไปที่ Google
-      // และเมื่อกลับมา Logic ใน useEffect ข้างบนจะพาเข้าหน้า Dashboard เองครับ
+      // ส่งพารามิเตอร์ redirectTo ไปยังหน้าหลักของร้านค้าปกติ (/)
+      await loginWithGoogle(window.location.origin);
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in with Google");
       setIsGoogleLoading(false);

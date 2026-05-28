@@ -89,7 +89,8 @@ const SuperAdmin = () => {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      await loginWithGoogle();
+      // ส่งพารามิเตอร์ redirectTo ไปยังหน้า Super Admin (/superadmin)
+      await loginWithGoogle(window.location.origin + '/superadmin');
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in with Google");
       setIsGoogleLoading(false);
