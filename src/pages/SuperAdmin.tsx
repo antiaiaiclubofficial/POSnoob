@@ -66,6 +66,14 @@ const SuperAdmin = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
 
+  // ตรวจสอบสิทธิ์: หากล็อกอินแล้วแต่ไม่ใช่ superadmin (เช่น เป็น admin หรือ staff ของร้านค้า) ให้พาไปหน้าหลักของร้านค้าทันที
+  useEffect(() => {
+    if (currentUser && currentUser.role !== 'superadmin') {
+      toast.info("เข้าสู่ระบบร้านค้าปกติเรียบร้อยแล้ว");
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
+
   useEffect(() => {
     if (currentUser?.role === 'superadmin') {
       fetchInitialData();

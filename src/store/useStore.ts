@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { 
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
   QueueItem, Service, InventoryItem, Partner, StockLog, Transaction, 
@@ -172,15 +173,23 @@ export const useStore = create<AppState>()((set, get) => ({
   setSession: async (user) => {
     if (user) {
       // ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase เพื่อตรวจสอบสิทธิ์และบทบาทจริง
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('role, store_id')
         .eq('id', user.id)
         .single();
 
-      // หากไม่มีโปรไฟล์ในฐานข้อมูล ให้กำหนดบทบาทเริ่มต้นเป็น 'staff' เพื่อความปลอดภัย (ป้องกันการสวมสิทธิ์เป็น Admin)
-      const userRole = profile?.role || 'staff';
-      const storeIdFromMetadata = profile?.store_id || user.user_metadata?.store_id || 'default-store';
+      // หากไม่มีโปรไฟล์ในฐานข้อมูล (บัญชี Google นี้ไม่เคยถูกลงทะเบียนในระบบ)
+      if (error || !profile) {
+        await supabase.auth.signOut();
+        set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
+        const isTh = get().language === 'th';
+        toast.error(isTh ? "ไม่มีสิทธิ์การเข้าถึงระบบ" : "No permission to access the system");
+        return;
+      }
+
+      const userRole = profile.role || 'staff';
+      const storeIdFromMetadata = profile.store_id || 'default-store';
 
       set({ 
         isAuthenticated: true, 
