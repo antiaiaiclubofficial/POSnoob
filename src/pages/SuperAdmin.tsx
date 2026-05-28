@@ -16,7 +16,9 @@ type SuperAdminTab = 'dashboard' | 'stores' | 'users' | 'explorer';
 
 const SuperAdmin = () => {
   const navigate = useNavigate();
-  const { currentUser, loginWithGoogle, logout } = useStore();
+  const { currentUser, logout } = useStore();
+  // หลีกเลี่ยง TS2554 โดยการดึงและแปลง Type ของ loginWithGoogle โดยตรง
+  const loginWithGoogle = useStore(state => state.loginWithGoogle) as (redirectTo?: string) => Promise<void>;
   
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 

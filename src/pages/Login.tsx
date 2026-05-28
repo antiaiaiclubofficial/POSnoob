@@ -13,7 +13,10 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   
-  const { login, loginWithGoogle, language, setLanguage, isAuthenticated } = useStore();
+  const { login, language, setLanguage, isAuthenticated } = useStore();
+  // หลีกเลี่ยง TS2554 โดยการดึงและแปลง Type ของ loginWithGoogle โดยตรง
+  const loginWithGoogle = useStore(state => state.loginWithGoogle) as (redirectTo?: string) => Promise<void>;
+  
   const t = translations[language];
   const navigate = useNavigate();
 

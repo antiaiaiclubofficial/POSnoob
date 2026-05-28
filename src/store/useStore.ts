@@ -157,7 +157,7 @@ export const useStore = create<AppState>()((set, get) => ({
     return false;
   },
 
-  loginWithGoogle: async (redirectTo) => {
+  loginWithGoogle: async (redirectTo?: string) => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
