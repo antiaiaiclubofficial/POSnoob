@@ -373,49 +373,107 @@ export const useStore = create<AppState>()((set, get) => ({
   updateCartQuantity: (idx, delta) => set(s => ({ cart: s.cart.map((item, i) => i === idx ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item) })),
   updateCartItemDiscount: (idx, type, val) => set(s => ({ cart: s.cart.map((item, i) => i === idx ? { ...item, discountType: type, discountValue: val } : item) })),
   clearCart: () => set({ cart: [] }),
-  processPayment: (cid, total, disc, items, method, details, isTaxInvoice) => {
-    const tx = { id: `TX-${Date.now()}`, date: new Date().toISOString().split('T')[0], amount: total, discountAmount: disc, customerId: cid, customerName: get().customers.find(c => c.id === cid)?.name || 'Walk-in', items, paymentMethod: method, staffName: 'Admin', species: [], bookingType: 'Walk-in' };
-    set(s => ({ transactions: [tx as any, ...s.transactions] }));
+  processPayment: async (cid, total, disc, items, method, details, isTaxInvoice) => {
+    const customerName = cid === 'walk-in' ? 'ลูกค้าทั่วไป (Walk-in)' : (get().customers.find(c => c.id === cid)?.name || 'Walk-in');
+    
+    // 1. บันทึกธุรกรรมลงใน Supabase
+    const { data, error } = await supabase
+      .from('sales_transactions')
+      .insert([{
+        customer_id: cid === 'walk-in' ? null : cid,
+        customer_name: customerName,
+        amount: total,
+        discount_amount: disc,
+        payment_method: method,
+        items: items,
+        staff_name: get().currentUser?.name || 'Admin'
+      }])
+      .select()
+      .single();
 
-    // If the customer is not walk-in, process package/credit purchases and credit usage
-    if (cid && cid !== 'walk-in') {
-      // 1. Deduct credit balance if paid via Store Credit
-      if (method === 'Store Credit') {
-        set(s => ({
-          customers: s.customers.map(c => {
-            if (c.id !== cid) return c;
-            const prevBalance = c.creditBalance || 0;
-            return {
-              ...c,
-              creditBalance: Math.max(0, prevBalance - total),
-              creditHistory: [
-                ...(c.creditHistory || []),
-                {
-                  id: `cr-use-${Date.now()}`,
-                  date: new Date().toISOString().split('T')[0],
-                  amount: -total,
-                  type: 'Usage',
-                  description: `Paid for order ${tx.id}`
-                }
-              ]
-            };
-          })
-        }));
-      }
+    if (error) {
+      console.error("Error saving transaction:", error);
+      toast.error("ไม่สามารถบันทึกธุรกรรมลงฐานข้อมูลได้");
+      return;
+    }
 
-      // 2. Process items in cart
+    if (data) {
+      const tx = {
+        id: data.id,
+        date: data.created_at.split('T')[0],
+        amount: Number(data.amount),
+        discountAmount: Number(data.discount_amount),
+        customerId: cid,
+        customerName: customerName,
+        items: items,
+        paymentMethod: method,
+        staffName: data.staff_name || 'Admin',
+        species: [],
+        bookingType: 'Walk-in'
+      };
+
+      // 2. ตัดสต็อกสินค้าอัตโนมัติ
       items.forEach(item => {
-        if (item.type === 'Package') {
-          const templateId = item.id.replace('package-', '');
-          get().assignPackageToCustomer(cid, templateId);
-        } else if (item.type === 'Credit') {
-          const packageId = item.id.replace('credit-', '');
-          get().buyCreditPackage(cid, packageId);
+        if (item.type === 'Product') {
+          get().adjustStock(item.id, item.quantity, 'Out', `ขายสินค้าผ่านบิล ${data.id}`);
         }
       });
+
+      // 3. อัปเดตสถานะในแอปพลิเคชัน
+      set(s => ({ transactions: [tx as any, ...s.transactions] }));
+
+      // 4. หักเครดิตสะสมหากชำระด้วย Store Credit
+      if (cid && cid !== 'walk-in') {
+        if (method === 'Store Credit') {
+          set(s => ({
+            customers: s.customers.map(c => {
+              if (c.id !== cid) return c;
+              const prevBalance = c.creditBalance || 0;
+              return {
+                ...c,
+                creditBalance: Math.max(0, prevBalance - total),
+                creditHistory: [
+                  ...(c.creditHistory || []),
+                  {
+                    id: `cr-use-${Date.now()}`,
+                    date: new Date().toISOString().split('T')[0],
+                    amount: -total,
+                    type: 'Usage',
+                    description: `Paid for order ${tx.id}`
+                  }
+                ]
+              };
+            })
+          }));
+        }
+
+        // จัดการแพ็กเกจและเครดิต
+        items.forEach(item => {
+          if (item.type === 'Package') {
+            const templateId = item.id.replace('package-', '');
+            get().assignPackageToCustomer(cid, templateId);
+          } else if (item.type === 'Credit') {
+            const packageId = item.id.replace('credit-', '');
+            get().buyCreditPackage(cid, packageId);
+          }
+        });
+      }
     }
   },
-  deleteTransaction: (id) => set(s => ({ transactions: s.transactions.filter(t => t.id !== id) })),
+  deleteTransaction: async (id) => {
+    const { error } = await supabase
+      .from('sales_transactions')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      set(s => ({ transactions: s.transactions.filter(t => t.id !== id) }));
+      toast.success("ลบธุรกรรมเรียบร้อยแล้ว");
+    } else {
+      console.error("Error deleting transaction:", error);
+      toast.error("ไม่สามารถลบธุรกรรมได้");
+    }
+  },
 
   setServices: (services) => set({ services }),
   addService: async (ser) => {

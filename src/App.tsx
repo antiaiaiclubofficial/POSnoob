@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useStore } from "@/store/useStore";
+import { useStore, BookingType } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -220,6 +220,29 @@ const App = () => {
           timestamp: l.created_at
         }));
         useStore.setState({ stockLogs: formattedLogs });
+      }
+
+      // 6. Fetch Sales Transactions
+      const { data: txData } = await supabase
+        .from('sales_transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (txData) {
+        const formattedTx = txData.map(t => ({
+          id: t.id,
+          date: t.created_at.split('T')[0],
+          amount: Number(t.amount),
+          discountAmount: Number(t.discount_amount),
+          customerId: t.customer_id || 'walk-in',
+          customerName: t.customer_name,
+          items: t.items,
+          paymentMethod: t.payment_method,
+          staffName: t.staff_name || 'Admin',
+          species: [],
+          bookingType: 'Walk-in' as BookingType
+        }));
+        useStore.setState({ transactions: formattedTx });
       }
     };
 
