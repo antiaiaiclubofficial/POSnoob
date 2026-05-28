@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
@@ -34,6 +33,17 @@ const App = () => {
   }, [language]);
 
   useEffect(() => {
+    // Auth Session Handling
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session?.user ?? null);
+      if (session) fetchInitialData();
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session?.user ?? null);
+      if (session) fetchInitialData();
+    });
+
     // CRM & Services Data Sync Logic
     const fetchInitialData = async () => {
       // 1. Fetch Customers
@@ -137,91 +147,6 @@ const App = () => {
         setServices(formattedServices);
       }
     };
-
-    const handleAuth = async (session: any) => {
-      if (session?.user) {
-        // ดึงโปรไฟล์ทั้งหมดที่ตรงกับ email ของผู้ใช้
-        let { data: profiles, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', session.user.email);
-
-        if (error) {
-          console.error("Error fetching profiles:", error);
-        }
-
-        let profile = null;
-        if (profiles && profiles.length > 0) {
-          // เลือกโปรไฟล์ที่มี store_id (ที่แอดมินสร้างไว้ให้ล่วงหน้า) หรือตัวแรกที่มี
-          profile = profiles.find(p => p.store_id) || profiles[0];
-        }
-
-        // หากยังไม่พบ ให้ลองค้นหาด้วย id ตรงๆ
-        if (!profile) {
-          const { data: profileById } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          profile = profileById;
-        }
-
-        if (!profile) {
-          await supabase.auth.signOut();
-          setSession(null);
-          toast.error("คุณไม่มีสิทธิ์การเข้าถึง กรุณาติดต่อผู้ดูแลระบบ");
-          return;
-        }
-
-        // อัปเดต id ในตาราง profiles ให้ตรงกับ auth user id หากยังไม่ตรงกัน
-        if (profile.id !== session.user.id) {
-          // ตรวจสอบว่ามีโปรไฟล์อื่นที่ใช้ id นี้อยู่แล้วหรือไม่ (เช่น ตัวที่ถูกสร้างจาก trigger อัตโนมัติ)
-          const hasTriggerProfile = profiles?.some(p => p.id === session.user.id);
-          
-          if (hasTriggerProfile) {
-            // ลบโปรไฟล์ว่างเปล่าที่สร้างจาก trigger ออกก่อน เพื่อไม่ให้ชน primary key
-            await supabase
-              .from('profiles')
-              .delete()
-              .eq('id', session.user.id);
-          }
-
-          // อัปเดตโปรไฟล์หลักของแอดมินให้ใช้ id จริงของผู้ใช้
-          await supabase
-            .from('profiles')
-            .update({ id: session.user.id })
-            .eq('email', session.user.email);
-        }
-
-        // ส่ง session พร้อม store_id ไปยัง store เพื่อให้ระบบดึงข้อมูลร้านค้าได้ถูกต้อง
-        const userWithStore = {
-          ...session.user,
-          user_metadata: {
-            ...session.user.user_metadata,
-            store_id: profile.store_id
-          }
-        };
-
-        setSession(userWithStore);
-        fetchInitialData();
-      } else {
-        // ป้องกันการเคลียร์ session ของ local admin (mock login)
-        const currentAdmin = useStore.getState().currentUser;
-        if (currentAdmin && currentAdmin.id === 'admin') {
-          return;
-        }
-        setSession(null);
-      }
-    };
-
-    // Auth Session Handling
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      handleAuth(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      handleAuth(session);
-    });
 
     return () => subscription.unsubscribe();
   }, [setSession, setCustomers, setServices]);
