@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
@@ -26,7 +27,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const { language, setSession, setCustomers, setServices, setStaff } = useStore();
+  const { language, setSession, setCustomers, setServices, setStaff, logout } = useStore();
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -35,18 +36,74 @@ const App = () => {
   useEffect(() => {
     // Auth Session Handling
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session?.user ?? null);
-      if (session) fetchInitialData();
+      if (session) {
+        fetchInitialData(session);
+      } else {
+        setSession(null);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session?.user ?? null);
-      if (session) fetchInitialData();
+      if (session) {
+        fetchInitialData(session);
+      } else {
+        setSession(null);
+      }
     });
 
     // CRM, Services & Staff Data Sync Logic
-    const fetchInitialData = async () => {
-      // 1. Fetch Customers
+    const fetchInitialData = async (currentSession: any) => {
+      // 1. Fetch Staff first to verify permission (Now we are authenticated, so RLS allows reading)
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('*');
+
+      if (staffError) {
+        console.error("Error fetching staff:", staffError);
+      }
+
+      const currentEmail = currentSession.user?.email;
+      const staffMember = staffData?.find(s => s.email?.toLowerCase() === currentEmail?.toLowerCase());
+      const isAllowed = !!staffMember && staffMember.status === 'Active';
+
+      if (!isAllowed) {
+        await supabase.auth.signOut();
+        logout();
+        toast.error("บัญชีนี้ไม่มีสิทธิ์เข้าใช้งานระบบ กรุณาติดต่อผู้ดูแลระบบเพื่อลงทะเบียน");
+        return;
+      }
+
+      // Set session state with verified staff details
+      setSession(currentSession.user);
+
+      // Update currentUser with actual staff details
+      useStore.setState({
+        currentUser: {
+          id: currentSession.user.id,
+          name: staffMember.name,
+          role: staffMember.role || 'Assistant',
+          email: currentEmail,
+          avatar: staffMember.avatar_url || currentSession.user.user_metadata?.avatar_url
+        }
+      });
+
+      if (staffData) {
+        const formattedStaff = staffData.map(s => ({
+          id: s.id,
+          name: s.name,
+          role: s.role || 'Assistant',
+          phone: s.phone || '',
+          status: s.status || 'Active',
+          avatar: s.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+          username: s.username || '',
+          password: s.password || '',
+          commissionRate: s.commission_rate || 0,
+          email: s.email || ''
+        }));
+        setStaff(formattedStaff);
+      }
+
+      // 2. Fetch Customers
       const { data: customersData } = await supabase
         .from('customers')
         .select(`
@@ -126,7 +183,7 @@ const App = () => {
         setCustomers(formattedCustomers);
       }
 
-      // 2. Fetch Services
+      // 3. Fetch Services
       const { data: servicesData } = await supabase
         .from('services')
         .select('*');
@@ -146,31 +203,10 @@ const App = () => {
         }));
         setServices(formattedServices);
       }
-
-      // 3. Fetch Staff
-      const { data: staffData } = await supabase
-        .from('staff')
-        .select('*');
-
-      if (staffData) {
-        const formattedStaff = staffData.map(s => ({
-          id: s.id,
-          name: s.name,
-          role: s.role || 'Assistant',
-          phone: s.phone || '',
-          status: s.status || 'Active',
-          avatar: s.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-          username: s.username || '',
-          password: s.password || '',
-          commissionRate: s.commission_rate || 0,
-          email: s.email || ''
-        }));
-        setStaff(formattedStaff);
-      }
     };
 
     return () => subscription.unsubscribe();
-  }, [setSession, setCustomers, setServices, setStaff]);
+  }, [setSession, setCustomers, setServices, setStaff, logout]);
 
   return (
     <QueryClientProvider client={queryClient}>
