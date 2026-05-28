@@ -19,12 +19,19 @@ export const useStore = create<AppState>()((set, get) => ({
   language: 'th',
   setLanguage: (lang) => set({ language: lang }),
   currency: '฿',
-  isAuthenticated: false,
-  isAuthLoading: true,
+  // ตั้งค่าเริ่มต้นเป็น true เพื่อข้ามหน้า Login ในช่วงพัฒนา
+  isAuthenticated: true,
+  isAuthLoading: false,
   isPendingApproval: false,
   isUserSuspended: false,
   isStoreSuspended: false,
-  currentUser: null,
+  // กำหนดผู้ใช้จำลองเป็น Admin เริ่มต้น
+  currentUser: {
+    id: 'admin',
+    name: 'Admin (Dev Mode)',
+    role: 'Admin',
+    username: 'admin'
+  },
   storeId: 'default-store',
 
   shopName: 'Mellow Fellow Sanctuary',
