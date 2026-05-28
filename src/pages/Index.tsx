@@ -12,7 +12,7 @@ import {
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
   CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath
 } from 'lucide-react';
-import { useStore, QueueItem, ServiceIcon } from '@/store/useStore';
+import { useStore, QueueItem, ServiceIcon, Customer } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -38,6 +38,41 @@ const getIcon = (iconName: ServiceIcon) => {
   }
 };
 
+// ข้อมูลลูกค้า Walk-in สำหรับระบบ Quick Sale
+const walkInCustomer: Customer = {
+  id: 'walk-in',
+  name: 'ลูกค้าทั่วไป (Walk-in)',
+  phone: '-',
+  email: '-',
+  membership: 'Standard',
+  pets: [
+    {
+      id: 'walk-in-dog',
+      name: 'สุนัขทั่วไป',
+      species: 'Dog',
+      breed: 'Mixed Breed',
+      birthday: new Date().toISOString().split('T')[0],
+      weightHistory: [],
+      serviceHistory: [],
+      notes: '',
+      image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+    },
+    {
+      id: 'walk-in-cat',
+      name: 'แมวทั่วไป',
+      species: 'Cat',
+      breed: 'Mixed Breed',
+      birthday: new Date().toISOString().split('T')[0],
+      weightHistory: [],
+      serviceHistory: [],
+      notes: '',
+      image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200&h=200&fit=crop'
+    }
+  ],
+  totalSpent: 0,
+  creditBalance: 0
+};
+
 const Index = () => {
   const isMobile = useIsMobile();
   const { 
@@ -60,7 +95,7 @@ const Index = () => {
 
   const [posTab, setPosTab] = useState('services');
   const [speciesFilter, setSpeciesFilter] = useState<'Dog' | 'Cat'>('Dog');
-  const [coatFilter, setCoatFilter] = useState<'Short' | 'Long'>('Short');
+  const [coatFilter, setCoatFilter] = useState<'All' | 'Short' | 'Long'>('Short');
   const [productSearch, setProductQuery] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
@@ -88,6 +123,11 @@ const Index = () => {
     }
   };
 
+  const handleQuickSale = () => {
+    selectOwner(walkInCustomer);
+    toast.success(language === 'th' ? "เปิดโหมดขายด่วน (ลูกค้าทั่วไป)" : "Quick Sale Mode Activated");
+  };
+
   const filteredServices = services.filter(s => 
     s.targetSpecies === speciesFilter && 
     s.isActive && 
@@ -112,13 +152,22 @@ const Index = () => {
             </div>
             <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">{t.pos}</h1>
           </div>
-          <button 
-            onClick={() => setIsCustomerModalOpen(true)}
-            className="hidden sm:flex items-center gap-2 bg-[#D9ED5F] text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
-          >
-            <UserPlus size={16} />
-            {t.newCustomer}
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={handleQuickSale}
+              className="flex items-center gap-2 bg-[#1A1F3D] text-[#D9ED5F] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
+            >
+              <Zap size={16} />
+              {language === 'th' ? 'ขายด่วน (Quick Sale)' : 'Quick Sale'}
+            </button>
+            <button 
+              onClick={() => setIsCustomerModalOpen(true)}
+              className="hidden sm:flex items-center gap-2 bg-[#D9ED5F] text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
+            >
+              <UserPlus size={16} />
+              {t.newCustomer}
+            </button>
+          </div>
         </header>
 
         <div className="px-6 lg:px-10 space-y-6 shrink-0 mb-6">
@@ -126,17 +175,39 @@ const Index = () => {
             <CustomerSearch />
             
             {selectedOwner && (
-              <div className="flex items-center gap-3 bg-[#1A1F3D] text-white pl-4 pr-2 py-2 rounded-full shadow-xl shadow-[#1A1F3D]/10 animate-in slide-in-from-right-4 duration-300">
-                <div className="flex items-center gap-2">
-                  <Home size={14} className="text-[#D9ED5F]" />
-                  <span className="text-[11px] font-black uppercase tracking-tight">{selectedOwner.name}</span>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-3 bg-[#1A1F3D] text-white pl-4 pr-2 py-2 rounded-full shadow-xl shadow-[#1A1F3D]/10 animate-in slide-in-from-right-4 duration-300">
+                  <div className="flex items-center gap-2">
+                    <Home size={14} className="text-[#D9ED5F]" />
+                    <span className="text-[11px] font-black uppercase tracking-tight">{selectedOwner.name}</span>
+                  </div>
+                  <button 
+                    onClick={() => selectOwner(null)}
+                    className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
-                <button 
-                  onClick={() => selectOwner(null)}
-                  className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
-                >
-                  <X size={14} />
-                </button>
+
+                {/* ตัวเลือกสัตว์เลี้ยงสำหรับลูกค้าที่เลือกอยู่ */}
+                {selectedOwner.pets.length > 0 && (
+                  <div className="flex gap-1.5 bg-white p-1 rounded-full border border-gray-100 shadow-sm animate-in fade-in duration-300">
+                    {selectedOwner.pets.map(pet => (
+                      <button
+                        key={pet.id}
+                        onClick={() => setActivePet(pet)}
+                        className={cn(
+                          "px-4 py-1.5 rounded-full text-[10px] font-black uppercase transition-all flex items-center gap-1.5",
+                          activePet?.id === pet.id 
+                            ? "bg-[#1A1F3D] text-white shadow-sm" 
+                            : "text-gray-400 hover:text-gray-600"
+                        )}
+                      >
+                        {pet.species === 'Dog' ? '🐶' : '🐱'} {pet.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -171,7 +242,7 @@ const Index = () => {
                       onClick={() => setIntakeItem(item)}
                       className={cn(
                         "absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl flex items-center justify-center transition-all",
-                        item.status === 'Waiting' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20" : "bg-gray-50 text-gray-300"
+                        item.status === 'Waiting' ? "bg-orange-50 text-white shadow-lg shadow-orange-500/20" : "bg-gray-50 text-gray-300"
                       )}
                     >
                       <ClipboardList size={14} />
