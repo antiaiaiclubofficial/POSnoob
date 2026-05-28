@@ -178,7 +178,12 @@ const Queue = () => {
           )}
 
           {view === 'week' && (
-            <QueueWeekView currentDate={currentDate} onDateSelect={(d) => { setCurrentDate(d); setView('day'); }} />
+            <QueueWeekView 
+              currentDate={currentDate} 
+              onDateSelect={(d) => { setCurrentDate(d); setView('day'); }} 
+              onBookingClick={(booking) => setSelectedQueueItem(booking)}
+              onUpdateStatus={updateQueueStatus}
+            />
           )}
 
           {view === 'month' && (

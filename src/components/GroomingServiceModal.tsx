@@ -126,7 +126,7 @@ const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: G
       }
     }
 
-    updateQueueStatus(item.id, 'Checked-in');
+    updateQueueStatus(item.id, 'In Progress');
     toast.success("Service Form Saved & Pet Checked-in!");
     onClose();
   };
