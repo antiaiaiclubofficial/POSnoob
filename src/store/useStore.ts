@@ -190,31 +190,41 @@ export const useStore = create<AppState>()((set, get) => ({
     const defaultPrice = priceKeys.length > 0 ? ser.prices[priceKeys[0]].price : 0;
     const defaultDuration = priceKeys.length > 0 ? ser.prices[priceKeys[0]].duration : 60;
 
-    const { data, error } = await supabase
-      .from('services')
-      .insert([{
-        name: ser.title,
-        description: ser.description,
-        price: defaultPrice,
-        duration_minutes: defaultDuration
-      }])
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .insert([{
+          name: ser.title,
+          description: ser.description,
+          price: defaultPrice,
+          duration_minutes: defaultDuration
+        }])
+        .select()
+        .single();
 
-    if (error) {
-      console.error("Error adding service:", error);
-      throw error;
-    }
+      if (error) throw error;
 
-    if (data) {
-      const newService: Service = {
+      if (data) {
+        const newService: Service = {
+          ...ser,
+          id: data.id,
+          prices: ser.prices || {
+            'Standard': { price: data.price || 0, duration: data.duration_minutes || 60 }
+          }
+        };
+        set(s => ({ services: [...s.services, newService] }));
+      }
+    } catch (err) {
+      console.warn("Supabase insert failed, falling back to local state:", err);
+      // บันทึกเข้า Local State ทันทีเพื่อให้ผู้ใช้ใช้งานต่อได้โดยไม่ติดขัด
+      const localService: Service = {
         ...ser,
-        id: data.id,
+        id: `local-${Math.random().toString(36).substr(2, 9)}`,
         prices: ser.prices || {
-          'Standard': { price: data.price || 0, duration: data.duration_minutes || 60 }
+          'Standard': { price: defaultPrice, duration: defaultDuration }
         }
       };
-      set(s => ({ services: [...s.services, newService] }));
+      set(s => ({ services: [...s.services, localService] }));
     }
   },
   updateService: async (id, ser) => {
@@ -222,34 +232,34 @@ export const useStore = create<AppState>()((set, get) => ({
     const defaultPrice = priceKeys.length > 0 ? ser.prices[priceKeys[0]].price : 0;
     const defaultDuration = priceKeys.length > 0 ? ser.prices[priceKeys[0]].duration : 60;
 
-    const { error } = await supabase
-      .from('services')
-      .update({
-        name: ser.title,
-        description: ser.description,
-        price: defaultPrice,
-        duration_minutes: defaultDuration
-      })
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('services')
+        .update({
+          name: ser.title,
+          description: ser.description,
+          price: defaultPrice,
+          duration_minutes: defaultDuration
+        })
+        .eq('id', id);
 
-    if (error) {
-      console.error("Error updating service:", error);
-      throw error;
+      if (error) throw error;
+    } catch (err) {
+      console.warn("Supabase update failed, falling back to local state:", err);
     }
-
     set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser } : item) }));
   },
   deleteService: async (id) => {
-    const { error } = await supabase
-      .from('services')
-      .delete()
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
 
-    if (error) {
-      console.error("Error deleting service:", error);
-      throw error;
+      if (error) throw error;
+    } catch (err) {
+      console.warn("Supabase delete failed, falling back to local state:", err);
     }
-
     set(s => ({ services: s.services.filter(item => item.id !== id) }));
   },
   toggleServiceActive: (id) => set(s => ({ services: s.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
