@@ -140,21 +140,31 @@ const App = () => {
 
     const handleAuth = async (session: any) => {
       if (session?.user) {
-        // ตรวจสอบสิทธิ์การเข้าใช้งานจากตาราง profiles โดยเช็คจาก id หรือ email
-        const { data: profile, error } = await supabase
+        // 1. ค้นหาด้วย email ก่อน (เสถียรที่สุดสำหรับบัญชีที่แอดมินเพิ่มไว้ล่วงหน้า)
+        let { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
-          .or(`id.eq.${session.user.id},email.eq.${session.user.email}`)
+          .eq('email', session.user.email)
           .maybeSingle();
 
-        if (error || !profile) {
+        // 2. หากไม่พบด้วย email ให้ลองค้นหาด้วย id (UUID)
+        if (!profile && !error) {
+          const { data: profileById, error: errorById } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          profile = profileById;
+        }
+
+        if (!profile) {
           await supabase.auth.signOut();
           setSession(null);
           toast.error("คุณไม่มีสิทธิ์การเข้าถึง กรุณาติดต่อผู้ดูแลระบบ");
           return;
         }
 
-        // อัปเดต id ในตาราง profiles ให้ตรงกับ auth user id หากยังไม่ตรงกัน (สำหรับกรณีที่แอดมินเพิ่มด้วยอีเมลไว้ก่อน)
+        // อัปเดต id ในตาราง profiles ให้ตรงกับ auth user id หากยังไม่ตรงกัน
         if (profile.id !== session.user.id) {
           await supabase
             .from('profiles')
