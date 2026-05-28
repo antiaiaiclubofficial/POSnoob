@@ -24,6 +24,7 @@ export const useStore = create<AppState>()((set, get) => ({
   isPendingApproval: false,
   isUserSuspended: false,
   isStoreSuspended: false,
+  currentUser: null,
   storeId: 'default-store',
 
   shopName: 'Mellow Fellow Sanctuary',
