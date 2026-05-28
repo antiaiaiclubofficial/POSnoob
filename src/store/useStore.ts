@@ -172,6 +172,8 @@ export const useStore = create<AppState>()((set, get) => ({
 
   setSession: async (user) => {
     if (user) {
+      const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
+      
       // ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase เพื่อตรวจสอบสิทธิ์และบทบาทจริง
       let { data: profile, error } = await supabase
         .from('profiles')
@@ -179,13 +181,12 @@ export const useStore = create<AppState>()((set, get) => ({
         .eq('id', user.id)
         .single();
 
-      // หากไม่มีโปรไฟล์ในฐานข้อมูล (บัญชี Google นี้ไม่เคยถูกลงทะเบียนในระบบ)
-      if (error || !profile) {
+      // หากไม่มีโปรไฟล์ในฐานข้อมูล หรือเกิดข้อผิดพลาด หรือบทบาทไม่ถูกต้องสำหรับ Super Admin
+      if (error || !profile || (isSuperAdminEmail && profile.role !== 'superadmin')) {
         // ดึง ID ของร้านค้าแรกในระบบ
         const { data: stores } = await supabase.from('stores').select('id').limit(1);
         const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
 
-        const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
         const newProfile = {
           id: user.id,
           email: user.email,
@@ -193,19 +194,25 @@ export const useStore = create<AppState>()((set, get) => ({
           store_id: isSuperAdminEmail ? null : defaultStoreId
         };
 
-        const { error: insertError } = await supabase
+        // ใช้ upsert เพื่อป้องกันข้อผิดพลาด duplicate key และอัปเดตบทบาทให้ถูกต้องเสมอ
+        const { error: upsertError } = await supabase
           .from('profiles')
-          .insert([newProfile]);
+          .upsert(newProfile, { onConflict: 'id' });
 
-        if (!insertError) {
+        if (!upsertError) {
           profile = { role: newProfile.role, store_id: newProfile.store_id };
         } else {
-          console.error("Failed to create profile:", insertError);
-          await supabase.auth.signOut();
-          set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
-          const isTh = get().language === 'th';
-          toast.error(isTh ? "ไม่มีสิทธิ์การเข้าถึงระบบ" : "No permission to access the system");
-          return;
+          console.error("Failed to upsert profile:", upsertError);
+          // ระบบสำรอง: หากเป็นอีเมล Super Admin ให้บังคับสิทธิ์ใน Client State ทันทีเพื่อไม่ให้ถูกบล็อก
+          if (isSuperAdminEmail) {
+            profile = { role: 'superadmin', store_id: null };
+          } else {
+            await supabase.auth.signOut();
+            set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
+            const isTh = get().language === 'th';
+            toast.error(isTh ? "ไม่มีสิทธิ์การเข้าถึงระบบ" : "No permission to access the system");
+            return;
+          }
         }
       }
 

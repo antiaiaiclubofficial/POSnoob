@@ -47,6 +47,8 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
 
   setSession: async (user) => {
     if (user) {
+      const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
+      
       // ดึงข้อมูลโปรไฟล์จากฐานข้อมูลเพื่อตรวจสอบบทบาทจริง (เช่น superadmin)
       let { data: profile, error } = await supabase
         .from('profiles')
@@ -54,11 +56,10 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         .eq('id', user.id)
         .single();
 
-      if (error || !profile) {
+      if (error || !profile || (isSuperAdminEmail && profile.role !== 'superadmin')) {
         const { data: stores } = await supabase.from('stores').select('id').limit(1);
         const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
 
-        const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
         const newProfile = {
           id: user.id,
           email: user.email,
@@ -66,19 +67,23 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
           store_id: isSuperAdminEmail ? null : defaultStoreId
         };
 
-        const { error: insertError } = await supabase
+        const { error: upsertError } = await supabase
           .from('profiles')
-          .insert([newProfile]);
+          .upsert(newProfile, { onConflict: 'id' });
 
-        if (!insertError) {
+        if (!upsertError) {
           profile = { role: newProfile.role, store_id: newProfile.store_id };
         } else {
-          console.error("Failed to create profile:", insertError);
-          await supabase.auth.signOut();
-          set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
-          const isTh = get().language === 'th';
-          toast.error(isTh ? "ไม่มีสิทธิ์การเข้าถึงระบบ" : "No permission to access the system");
-          return;
+          console.error("Failed to upsert profile:", upsertError);
+          if (isSuperAdminEmail) {
+            profile = { role: 'superadmin', store_id: null };
+          } else {
+            await supabase.auth.signOut();
+            set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
+            const isTh = get().language === 'th';
+            toast.error(isTh ? "ไม่มีสิทธิ์การเข้าถึงระบบ" : "No permission to access the system");
+            return;
+          }
         }
       }
 
