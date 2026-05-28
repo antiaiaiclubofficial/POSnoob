@@ -125,14 +125,21 @@ export const useStore = create<AppState>()((set, get) => ({
     { level: 'VIP', label: 'VIP Member', minSpent: 50000, discount: 15 },
   ],
 
-  // Default Role Permissions
+  // Role Permissions: แยกสิทธิ์ของร้านค้าและเจ้าของระบบ (superadmin) ออกจากกันอย่างเด็ดขาด
   rolePermissions: {
+    superadmin: ['/superadmin'], // Superadmin จัดการเฉพาะระบบส่วนกลาง (ร้านค้า, ผู้ใช้, ตารางข้อมูล)
     Admin: ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings'],
     Groomer: ['/', '/queue', '/customers'],
     Assistant: ['/', '/pos', '/queue', '/customers']
   },
 
   login: (id, pass) => {
+    if (id === 'superadmin' && pass === 'superadmin') {
+      const user = { id: 'superadmin', name: 'System Owner', role: 'superadmin', username: 'superadmin' };
+      set({ isAuthenticated: true, currentUser: user, storeId: null, isAuthLoading: false });
+      get().addLog({ staffName: 'System', action: 'Login Success', details: 'Super Administrator logged into the system', type: 'success' });
+      return true;
+    }
     if (id === 'admin' && pass === '1234') {
       const user = { id: 'admin', name: 'Admin', role: 'Admin', username: 'admin' };
       set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });

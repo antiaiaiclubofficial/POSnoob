@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "./components/Layout";
@@ -25,6 +25,15 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
+
+// คอมโพเนนต์สำหรับจัดการหน้าแรกตามบทบาทของผู้ใช้
+const HomeRedirect = () => {
+  const { currentUser } = useStore();
+  if (currentUser?.role === 'superadmin') {
+    return <Navigate to="/superadmin" replace />;
+  }
+  return <Dashboard />;
+};
 
 const App = () => {
   const { language, setSession, setCustomers, setServices } = useStore();
@@ -161,7 +170,7 @@ const App = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<HomeRedirect />} />
               <Route path="/pos" element={<Index />} />
               <Route path="/queue" element={<Queue />} />
               <Route path="/services" element={<Services />} />

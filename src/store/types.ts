@@ -5,7 +5,7 @@ export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package' | 'Store Credit';
-export type StaffRole = 'Admin' | 'Groomer' | 'Assistant';
+export type StaffRole = 'Admin' | 'Groomer' | 'Assistant' | 'superadmin';
 export type BookingType = 'Appointment' | 'Walk-in';
 
 // Entities

@@ -52,13 +52,12 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     { icon: ShieldAlert, label: 'Super Admin', path: '/superadmin' },
   ];
 
-  // Filter menu items based on role permissions
+  // ตรวจสอบสิทธิ์การเข้าถึงเมนูตามบทบาทของผู้ใช้
   const userRole = currentUser?.role || 'Assistant';
   const allowedPaths = rolePermissions[userRole] || ['/', '/queue', '/customers'];
   
-  // Always allow Super Admin path for Admin role
-  const finalAllowedPaths = userRole === 'Admin' ? [...allowedPaths, '/superadmin'] : allowedPaths;
-  const filteredMenuItems = menuItems.filter(item => finalAllowedPaths.includes(item.path));
+  // กรองเมนูตามสิทธิ์ที่กำหนดไว้ใน useStore
+  const filteredMenuItems = menuItems.filter(item => allowedPaths.includes(item.path));
 
   const handleLogout = () => {
     logout();
@@ -80,7 +79,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     )}>
       <div className="flex items-center gap-4 mb-10 px-6 pt-8 shrink-0">
         <div className="w-10 h-10 bg-[#1A1F3D] rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-[#1A1F3D]/10">
-          {shopLogo ? (
+          {shopLogo && userRole !== 'superadmin' ? (
             <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" />
           ) : (
             <Scissors className="text-white w-5 h-5" />
@@ -88,9 +87,11 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
         </div>
         <div className="min-w-0 opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 whitespace-nowrap">
           <h1 className="font-black text-[#1A1F3D] leading-tight truncate text-sm">
-            {shopName}
+            {userRole === 'superadmin' ? 'System Central' : shopName}
           </h1>
-          <p className="text-[9px] text-gray-400 font-black tracking-widest uppercase opacity-60">Premium Care</p>
+          <p className="text-[9px] text-gray-400 font-black tracking-widest uppercase opacity-60">
+            {userRole === 'superadmin' ? 'Platform Owner' : 'Premium Care'}
+          </p>
         </div>
       </div>
 
