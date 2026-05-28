@@ -20,6 +20,7 @@ import Logs from "./pages/Logs";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
+import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -172,6 +173,7 @@ const App = () => {
               <Route path="/logs" element={<Logs />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/superadmin" element={<SuperAdmin />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

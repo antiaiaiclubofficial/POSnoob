@@ -16,7 +16,8 @@ import {
   CalendarDays,
   Target,
   Megaphone,
-  Package
+  Package,
+  ShieldAlert
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -48,12 +49,16 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     { icon: History, label: t.logs, path: '/logs' },
     { icon: BarChart3, label: t.reports, path: '/reports' },
     { icon: SettingsIcon, label: t.settings, path: '/settings' },
+    { icon: ShieldAlert, label: 'Super Admin', path: '/superadmin' },
   ];
 
   // Filter menu items based on role permissions
   const userRole = currentUser?.role || 'Assistant';
   const allowedPaths = rolePermissions[userRole] || ['/', '/queue', '/customers'];
-  const filteredMenuItems = menuItems.filter(item => allowedPaths.includes(item.path));
+  
+  // Always allow Super Admin path for Admin role
+  const finalAllowedPaths = userRole === 'Admin' ? [...allowedPaths, '/superadmin'] : allowedPaths;
+  const filteredMenuItems = menuItems.filter(item => finalAllowedPaths.includes(item.path));
 
   const handleLogout = () => {
     logout();
