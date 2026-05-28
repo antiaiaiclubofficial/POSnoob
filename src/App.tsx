@@ -156,6 +156,71 @@ const App = () => {
         }));
         setServices(formattedServices);
       }
+
+      // 3. Fetch Partners
+      const { data: partnersData } = await supabase
+        .from('partners')
+        .select('*');
+
+      if (partnersData) {
+        const formattedPartners = partnersData.map(p => ({
+          id: p.id,
+          companyName: p.company_name,
+          taxId: p.tax_id || '',
+          address: p.address || '',
+          phone: p.phone || '',
+          email: p.email || '',
+          contactPerson: p.contact_person || '',
+          notes: p.notes || '',
+          mainCategory: p.main_category || '',
+          gpRate: Number(p.gp_rate || 0)
+        }));
+        useStore.setState({ partners: formattedPartners });
+      }
+
+      // 4. Fetch Products (Inventory)
+      const { data: productsData } = await supabase
+        .from('products')
+        .select('*');
+
+      if (productsData) {
+        const formattedInventory = productsData.map(p => ({
+          id: p.id,
+          name: p.name,
+          barcode: p.barcode || '',
+          stock: p.stock || 0,
+          minStock: p.min_stock || 5,
+          price: Number(p.price || 0),
+          costPrice: Number(p.cost_price || 0),
+          unit: p.unit || 'ชิ้น',
+          category: p.category || 'ทั่วไป',
+          image: p.image_url || '',
+          isConsignment: p.is_consignment || false,
+          partnerId: p.partner_id || '',
+          consignmentRate: Number(p.consignment_rate || 0)
+        }));
+        useStore.setState({ inventory: formattedInventory });
+      }
+
+      // 5. Fetch Stock Logs
+      const { data: logsData } = await supabase
+        .from('stock_logs')
+        .select('*, products(name)');
+
+      if (logsData) {
+        const formattedLogs = logsData.map(l => ({
+          id: l.id,
+          productId: l.product_id,
+          productName: l.products?.name || 'Unknown Product',
+          action: l.action as any,
+          oldQty: l.old_qty,
+          newQty: l.new_qty,
+          reason: l.reason || '',
+          staffName: l.staff_name || 'System',
+          timestamp: l.created_at
+        }));
+        useStore.setState({ stockLogs: formattedLogs });
+      }
     };
 
     return () => subscription.unsubscribe();
