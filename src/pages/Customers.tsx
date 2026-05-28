@@ -76,6 +76,28 @@ const Customers = () => {
         throw error;
       }
 
+      // ดึงข้อมูลประวัติการใช้บริการ (service_history)
+      const { data: serviceHistoryData } = await supabase
+        .from('service_history')
+        .select('*');
+      
+      const serviceHistoryMap: Record<string, any[]> = {};
+      if (serviceHistoryData) {
+        serviceHistoryData.forEach(sh => {
+          if (sh.pet_id) {
+            if (!serviceHistoryMap[sh.pet_id]) {
+              serviceHistoryMap[sh.pet_id] = [];
+            }
+            serviceHistoryMap[sh.pet_id].push({
+              id: sh.id,
+              serviceName: sh.note || 'บริการ',
+              date: sh.created_at.split('T')[0],
+              price: Number(sh.price || 0)
+            });
+          }
+        });
+      }
+
       const transformed: Customer[] = data.map((item: any) => {
         const storeCustomer = item.store_customers?.[0] || {};
         return {
@@ -109,7 +131,7 @@ const Customers = () => {
             breed: p.breed || '-',
             birthday: p.birth_date || '',
             weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
-            serviceHistory: [],
+            serviceHistory: serviceHistoryMap[p.id] || [], // แมปประวัติการใช้บริการจริงจาก Supabase
             notes: p.medical_condition || '',
             image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
           }))

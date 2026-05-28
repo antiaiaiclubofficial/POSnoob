@@ -454,7 +454,8 @@ export const useStore = create<AppState>()((set, get) => ({
             const { data: historyData, error: historyError } = await supabase
               .from('service_history')
               .insert([{
-                customer_id: cid,
+                store_id: data.store_id, // ส่งค่า store_id ที่ได้จากธุรกรรมการขาย
+                customer_id: cid === 'walk-in' ? null : cid,
                 pet_id: item.petId,
                 price: item.price * item.quantity,
                 note: item.title
