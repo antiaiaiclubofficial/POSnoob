@@ -447,6 +447,52 @@ export const useStore = create<AppState>()((set, get) => ({
           }));
         }
 
+        // 5. บันทึกประวัติการใช้บริการลง Supabase ตาราง service_history และอัปเดต local state
+        const serviceItems = items.filter(item => item.type === 'Service');
+        for (const item of serviceItems) {
+          if (item.petId) {
+            const { data: historyData, error: historyError } = await supabase
+              .from('service_history')
+              .insert([{
+                customer_id: cid,
+                pet_id: item.petId,
+                price: item.price * item.quantity,
+                note: item.title
+              }])
+              .select()
+              .single();
+
+            if (!historyError && historyData) {
+              // อัปเดตประวัติใน local state ของลูกค้าและสัตว์เลี้ยง
+              set(s => ({
+                customers: s.customers.map(c => {
+                  if (c.id !== cid) return c;
+                  return {
+                    ...c,
+                    pets: c.pets.map(p => {
+                      if (p.id !== item.petId) return p;
+                      return {
+                        ...p,
+                        serviceHistory: [
+                          ...(p.serviceHistory || []),
+                          {
+                            id: historyData.id,
+                            serviceName: item.title,
+                            date: historyData.created_at.split('T')[0],
+                            price: Number(historyData.price)
+                          }
+                        ]
+                      };
+                    })
+                  };
+                })
+              }));
+            } else {
+              console.error("Error saving service history:", historyError);
+            }
+          }
+        }
+
         // จัดการแพ็กเกจและเครดิต
         items.forEach(item => {
           if (item.type === 'Package') {
