@@ -225,6 +225,8 @@ export interface AppState {
   currentUser: any;
   isAuthLoading: boolean;
   isPendingApproval?: boolean;
+  isUserSuspended?: boolean;
+  isStoreSuspended?: boolean;
   storeId: string | null;
   
   // Business Profile

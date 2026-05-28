@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { 
   Store, Users, ShieldAlert, Plus, Edit3, Trash2, Search, 
   Database, LayoutDashboard, Calendar, Scissors, Tag, Package, 
-  Check, X, RefreshCw, Eye, ArrowLeft, Settings, Layers, Dog, Lock, User, LogOut, Chrome, CheckCircle2, XCircle, AlertCircle
+  Check, X, RefreshCw, Eye, ArrowLeft, Settings, Layers, Dog, Lock, User, LogOut, Chrome, CheckCircle2, XCircle, AlertCircle, Ban, Play
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -232,6 +232,23 @@ const SuperAdmin = () => {
     }
   };
 
+  const handleToggleStoreSuspension = async (id: string, currentStatus: boolean) => {
+    const actionText = currentStatus ? "เปิดใช้งานร้านค้า" : "พักสิทธิ์ร้านค้า";
+    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการ ${actionText}?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from('stores')
+        .update({ is_suspended: !currentStatus })
+        .eq('id', id);
+      if (error) throw error;
+      toast.success(`${actionText}เรียบร้อยแล้ว`);
+      fetchInitialData();
+    } catch (error: any) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
+    }
+  };
+
   // User Actions
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,7 +271,8 @@ const SuperAdmin = () => {
             email: userForm.email,
             role: userForm.role,
             store_id: userForm.store_id || null,
-            is_approved: true
+            is_approved: true,
+            is_suspended: false
           }]);
         if (error) throw error;
         toast.success("เพิ่มผู้ใช้งานในระบบเรียบร้อยแล้ว");
@@ -279,6 +297,23 @@ const SuperAdmin = () => {
       fetchInitialData();
     } catch (error: any) {
       toast.error("ไม่สามารถลบได้: " + error.message);
+    }
+  };
+
+  const handleToggleUserSuspension = async (id: string, currentStatus: boolean) => {
+    const actionText = currentStatus ? "เปิดใช้งานผู้ใช้" : "พักสิทธิ์ผู้ใช้";
+    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการ ${actionText}?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_suspended: !currentStatus })
+        .eq('id', id);
+      if (error) throw error;
+      toast.success(`${actionText}เรียบร้อยแล้ว`);
+      fetchInitialData();
+    } catch (error: any) {
+      toast.error("เกิดข้อผิดพลาด: " + error.message);
     }
   };
 
@@ -579,13 +614,13 @@ const SuperAdmin = () => {
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">โลโก้ / ชื่อร้าน</th>
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Slug (URL)</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สีหลัก / สีรอง</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">วันที่สร้าง</th>
+                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
                           <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {filteredStores.map(store => (
-                          <tr key={store.id} className="hover:bg-gray-50/50 transition-colors">
+                          <tr key={store.id} className={cn("hover:bg-gray-50/50 transition-colors", store.is_suspended && "bg-red-50/30")}>
                             <td className="px-8 py-5 flex items-center gap-4">
                               <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-100 flex items-center justify-center">
                                 {store.logo_url ? (
@@ -606,11 +641,26 @@ const SuperAdmin = () => {
                                 <span className="w-6 h-6 rounded-full border border-gray-200 inline-block" style={{ backgroundColor: store.secondary_color }} title="Secondary Color" />
                               </div>
                             </td>
-                            <td className="px-8 py-5 text-center text-xs text-gray-400 font-bold">
-                              {new Date(store.created_at).toLocaleDateString()}
+                            <td className="px-8 py-5 text-center">
+                              <span className={cn(
+                                "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
+                                store.is_suspended ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                              )}>
+                                {store.is_suspended ? "ถูกระงับ" : "ปกติ"}
+                              </span>
                             </td>
                             <td className="px-8 py-5 text-right">
                               <div className="flex justify-end gap-2">
+                                <button 
+                                  onClick={() => handleToggleStoreSuspension(store.id, store.is_suspended)}
+                                  className={cn(
+                                    "p-2 rounded-xl transition-all",
+                                    store.is_suspended ? "text-green-600 hover:bg-green-50" : "text-amber-600 hover:bg-amber-50"
+                                  )}
+                                  title={store.is_suspended ? "เปิดใช้งานร้านค้า" : "พักสิทธิ์ร้านค้า"}
+                                >
+                                  {store.is_suspended ? <Play size={16} /> : <Ban size={16} />}
+                                </button>
                                 <button 
                                   onClick={() => openStoreModal(store)}
                                   className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-100 rounded-xl transition-all"
@@ -668,7 +718,7 @@ const SuperAdmin = () => {
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">อีเมลผู้ใช้</th>
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">สังกัดร้านค้า</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">บทบาท (Role)</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">อัปเดตล่าสุด</th>
+                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
                           <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
                         </tr>
                       </thead>
@@ -676,7 +726,7 @@ const SuperAdmin = () => {
                         {filteredProfiles.map(profile => {
                           const userStore = stores.find(s => s.id === profile.store_id);
                           return (
-                            <tr key={profile.id} className="hover:bg-gray-50/50 transition-colors">
+                            <tr key={profile.id} className={cn("hover:bg-gray-50/50 transition-colors", profile.is_suspended && "bg-red-50/30")}>
                               <td className="px-8 py-5">
                                 <p className="text-sm font-black text-[#1A1F3D]">{profile.email}</p>
                                 <p className="text-[9px] text-gray-400 font-bold uppercase">UID: {profile.id}</p>
@@ -692,11 +742,26 @@ const SuperAdmin = () => {
                                   {profile.role}
                                 </span>
                               </td>
-                              <td className="px-8 py-5 text-center text-xs text-gray-400 font-bold">
-                                {new Date(profile.updated_at).toLocaleDateString()}
+                              <td className="px-8 py-5 text-center">
+                                <span className={cn(
+                                  "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
+                                  profile.is_suspended ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                                )}>
+                                  {profile.is_suspended ? "ถูกระงับ" : "ปกติ"}
+                                </span>
                               </td>
                               <td className="px-8 py-5 text-right">
                                 <div className="flex justify-end gap-2">
+                                  <button 
+                                    onClick={() => handleToggleUserSuspension(profile.id, profile.is_suspended)}
+                                    className={cn(
+                                      "p-2 rounded-xl transition-all",
+                                      profile.is_suspended ? "text-green-600 hover:bg-green-50" : "text-amber-600 hover:bg-amber-50"
+                                    )}
+                                    title={profile.is_suspended ? "เปิดใช้งานผู้ใช้" : "พักสิทธิ์ผู้ใช้"}
+                                  >
+                                    {profile.is_suspended ? <Play size={16} /> : <Ban size={16} />}
+                                  </button>
                                   <button 
                                     onClick={() => openUserModal(profile)}
                                     className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-100 rounded-xl transition-all"

@@ -54,7 +54,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
       // ดึงข้อมูลโปรไฟล์จากฐานข้อมูลเพื่อตรวจสอบบทบาทจริง (เช่น superadmin)
       let { data: profile, error } = await supabase
         .from('profiles')
-        .select('role, store_id, is_approved')
+        .select('role, store_id, is_approved, is_suspended')
         .eq('id', user.id)
         .single();
 
@@ -67,7 +67,8 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
           email: user.email,
           role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
           store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-          is_approved: shouldBeSuperAdmin ? true : false
+          is_approved: shouldBeSuperAdmin ? true : false,
+          is_suspended: false
         };
 
         const { error: upsertError } = await supabase
@@ -75,18 +76,33 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
           .upsert(newProfile, { onConflict: 'id' });
 
         if (!upsertError) {
-          profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved };
+          profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false };
         } else {
           console.error("Failed to upsert profile:", upsertError);
           if (shouldBeSuperAdmin) {
-            profile = { role: 'superadmin', store_id: null, is_approved: true };
+            profile = { role: 'superadmin', store_id: null, is_approved: true, is_suspended: false };
           } else {
-            profile = { role: 'Admin', store_id: defaultStoreId, is_approved: false };
+            profile = { role: 'Admin', store_id: defaultStoreId, is_approved: false, is_suspended: false };
           }
         }
       }
 
-      // ตรวจสอบสถานะการอนุมัติ (is_approved)
+      // 1. ตรวจสอบการพักสิทธิ์ผู้ใช้ (is_suspended)
+      if (profile && profile.is_suspended && !isSuperAdminEmail) {
+        await supabase.auth.signOut();
+        set({ 
+          isAuthenticated: false, 
+          isAuthLoading: false, 
+          currentUser: null, 
+          storeId: null,
+          isUserSuspended: true,
+          isStoreSuspended: false,
+          isPendingApproval: false
+        });
+        return;
+      }
+
+      // 2. ตรวจสอบสถานะการอนุมัติ (is_approved)
       if (profile && !profile.is_approved && !isSuperAdminEmail) {
         await supabase.auth.signOut();
         set({ 
@@ -94,7 +110,9 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
           isAuthLoading: false, 
           currentUser: null, 
           storeId: null,
-          isPendingApproval: true 
+          isPendingApproval: true,
+          isUserSuspended: false,
+          isStoreSuspended: false
         });
         return;
       }
@@ -117,10 +135,35 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         }
       }
 
+      // 3. ตรวจสอบการพักสิทธิ์ร้านค้า (is_suspended ของ stores)
+      if (storeIdFromMetadata && storeIdFromMetadata !== 'default-store' && userRole !== 'superadmin') {
+        const { data: storeData } = await supabase
+          .from('stores')
+          .select('is_suspended')
+          .eq('id', storeIdFromMetadata)
+          .single();
+
+        if (storeData && storeData.is_suspended) {
+          await supabase.auth.signOut();
+          set({ 
+            isAuthenticated: false, 
+            isAuthLoading: false, 
+            currentUser: null, 
+            storeId: null,
+            isStoreSuspended: true,
+            isUserSuspended: false,
+            isPendingApproval: false
+          });
+          return;
+        }
+      }
+
       set({ 
         isAuthenticated: true, 
         isAuthLoading: false,
         isPendingApproval: false,
+        isUserSuspended: false,
+        isStoreSuspended: false,
         currentUser: {
           id: user.id,
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
@@ -151,6 +194,6 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
   
   logout: async () => {
     await supabase.auth.signOut();
-    set({ isAuthenticated: false, currentUser: null, storeId: null, isPendingApproval: false });
+    set({ isAuthenticated: false, currentUser: null, storeId: null, isPendingApproval: false, isUserSuspended: false, isStoreSuspended: false });
   },
 });

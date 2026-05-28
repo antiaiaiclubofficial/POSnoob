@@ -13,7 +13,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   
-  const { login, language, setLanguage, isAuthenticated, isPendingApproval } = useStore();
+  const { login, language, setLanguage, isAuthenticated, isPendingApproval, isUserSuspended, isStoreSuspended } = useStore();
   const loginWithGoogle = useStore(state => state.loginWithGoogle) as (redirectTo?: string) => Promise<void>;
   
   const t = translations[language];
@@ -91,6 +91,32 @@ const Login = () => {
                 <p className="text-xs font-black uppercase tracking-wider mb-1">อยู่ระหว่างรอการอนุมัติ</p>
                 <p className="text-[11px] font-medium leading-relaxed text-amber-700">
                   บัญชีของคุณลงทะเบียนสำเร็จแล้ว แต่ต้องรอให้ Super Admin อนุมัติและกำหนดร้านค้าให้ก่อน จึงจะสามารถเข้าใช้งานระบบได้
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* User Suspended Alert */}
+          {isUserSuspended && (
+            <div className="p-5 bg-red-50 border border-red-100 rounded-3xl flex items-start gap-3 text-red-800 animate-in fade-in zoom-in-95">
+              <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
+              <div className="text-left">
+                <p className="text-xs font-black uppercase tracking-wider mb-1">บัญชีถูกระงับการใช้งาน</p>
+                <p className="text-[11px] font-medium leading-relaxed text-red-700">
+                  ขออภัย บัญชีผู้ใช้ของคุณถูกระงับการใช้งานชั่วคราวโดยผู้ดูแลระบบสูงสุด กรุณาติดต่อฝ่ายสนับสนุนเพื่อขอข้อมูลเพิ่มเติม
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Store Suspended Alert */}
+          {isStoreSuspended && (
+            <div className="p-5 bg-red-50 border border-red-100 rounded-3xl flex items-start gap-3 text-red-800 animate-in fade-in zoom-in-95">
+              <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
+              <div className="text-left">
+                <p className="text-xs font-black uppercase tracking-wider mb-1">ร้านค้าถูกระงับการให้บริการ</p>
+                <p className="text-[11px] font-medium leading-relaxed text-red-700">
+                  ขออภัย ร้านค้าต้นสังกัดของคุณถูกระงับการให้บริการชั่วคราวโดยผู้ดูแลระบบสูงสุด ส่งผลให้ไม่สามารถเข้าใช้งานระบบจัดการร้านค้าได้ในขณะนี้
                 </p>
               </div>
             </div>
