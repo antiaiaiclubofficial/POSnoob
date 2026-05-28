@@ -74,18 +74,7 @@ export const useStore = create<AppState>()((set, get) => ({
   services: [],
   addons: [],
   inventory: [],
-  partners: [
-    { 
-      id: 'p1', 
-      companyName: 'บริษัท เพ็ทฟู้ด จำกัด', 
-      gpRate: 20,
-      contactPerson: 'คุณสมชาย',
-      phone: '081-234-5678',
-      email: 'contact@petfood.com',
-      notes: 'ส่งสินค้าทุกวันจันทร์',
-      mainCategory: 'อาหารสัตว์'
-    }
-  ],
+  partners: [],
   stockLogs: [],
   reportHistory: [],
   transactions: [],
@@ -511,20 +500,215 @@ export const useStore = create<AppState>()((set, get) => ({
   updateAddon: (id, ad) => set(s => ({ addons: s.addons.map(a => a.id === id ? { ...a, ...ad } : a) })),
   deleteAddon: (id) => set(s => ({ addons: s.addons.filter(a => a.id !== id) })),
 
-  addInventoryItem: (i) => set(s => ({ inventory: [...s.inventory, { ...i, id: Math.random().toString() }] })),
-  updateInventoryItem: (id, i) => set(s => ({ inventory: s.inventory.map(item => item.id === id ? { ...item, ...i } : item) })),
-  deleteInventoryItem: (id) => set(s => ({ inventory: s.inventory.filter(i => i.id !== id) })),
-  adjustStock: (id, qty, mode, reason) => {
+  addInventoryItem: async (item) => {
+    const { data, error } = await supabase
+      .from('products')
+      .insert([{
+        name: item.name,
+        barcode: item.barcode,
+        stock: item.stock || 0,
+        min_stock: item.minStock || 5,
+        price: item.price || 0,
+        cost_price: item.costPrice || 0,
+        unit: item.unit || 'ชิ้น',
+        category: item.category || 'ทั่วไป',
+        image_url: item.image || '',
+        is_consignment: item.isConsignment || false,
+        partner_id: item.partnerId || null,
+        consignment_rate: item.consignmentRate || 0
+      }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      const newItem = {
+        id: data.id,
+        name: data.name,
+        barcode: data.barcode || '',
+        stock: data.stock || 0,
+        minStock: data.min_stock || 5,
+        price: Number(data.price || 0),
+        costPrice: Number(data.cost_price || 0),
+        unit: data.unit || 'ชิ้น',
+        category: data.category || 'ทั่วไป',
+        image: data.image_url || '',
+        isConsignment: data.is_consignment || false,
+        partnerId: data.partner_id || '',
+        consignmentRate: Number(data.consignment_rate || 0)
+      };
+      set(s => ({ inventory: [...s.inventory, newItem] }));
+    } else {
+      console.error("Error adding product:", error);
+    }
+  },
+  updateInventoryItem: async (id, item) => {
+    const { error } = await supabase
+      .from('products')
+      .update({
+        name: item.name,
+        barcode: item.barcode,
+        stock: item.stock,
+        min_stock: item.minStock,
+        price: item.price,
+        cost_price: item.costPrice,
+        unit: item.unit,
+        category: item.category,
+        image_url: item.image,
+        is_consignment: item.isConsignment,
+        partner_id: item.partnerId || null,
+        consignment_rate: item.consignmentRate || 0
+      })
+      .eq('id', id);
+
+    if (!error) {
+      set(s => ({
+        inventory: s.inventory.map(itemObj => itemObj.id === id ? { ...itemObj, ...item } : itemObj)
+      }));
+    } else {
+      console.error("Error updating product:", error);
+    }
+  },
+  deleteInventoryItem: async (id) => {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      set(s => ({ inventory: s.inventory.filter(i => i.id !== id) }));
+    } else {
+      console.error("Error deleting product:", error);
+    }
+  },
+  adjustStock: async (id, qty, mode, reason) => {
     const item = get().inventory.find(i => i.id === id);
     if (!item) return;
     const oldQty = item.stock;
     const newQty = mode === 'Add' || mode === 'In' ? oldQty + qty : mode === 'Out' ? oldQty - qty : qty;
-    set(s => ({ inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i) }));
+
+    // 1. Update product stock in Supabase
+    const { error: updateError } = await supabase
+      .from('products')
+      .update({ stock: newQty })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error("Error adjusting stock:", updateError);
+      return;
+    }
+
+    // 2. Insert stock log in Supabase
+    const staffName = get().currentUser?.name || 'System';
+    const { data: logData, error: logError } = await supabase
+      .from('stock_logs')
+      .insert([{
+        product_id: id,
+        action: mode,
+        old_qty: oldQty,
+        new_qty: newQty,
+        reason: reason,
+        staff_name: staffName
+      }])
+      .select()
+      .single();
+
+    if (!logError && logData) {
+      const newLog: StockLog = {
+        id: logData.id,
+        productId: id,
+        productName: item.name,
+        action: (mode === 'Set' ? 'Adjust' : mode) as StockLog['action'],
+        oldQty: oldQty,
+        newQty: newQty,
+        reason: reason,
+        staffName: staffName,
+        timestamp: logData.created_at
+      };
+
+      set(s => ({
+        inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i),
+        stockLogs: [newLog, ...s.stockLogs]
+      }));
+    } else {
+      console.error("Error inserting stock log:", logError);
+      // Fallback local update even if log fails
+      set(s => ({
+        inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i)
+      }));
+    }
   },
 
-  addPartner: (v) => set(s => ({ partners: [...s.partners, { ...v, id: Math.random().toString() }] })),
-  updatePartner: (id, v) => set(s => ({ partners: s.partners.map(p => p.id === id ? { ...p, ...v } : p) })),
-  deletePartner: (id) => set(s => ({ partners: s.partners.filter(p => p.id !== id) })),
+  addPartner: async (v) => {
+    const { data, error } = await supabase
+      .from('partners')
+      .insert([{
+        company_name: v.companyName,
+        tax_id: v.taxId,
+        address: v.address,
+        phone: v.phone,
+        email: v.email,
+        contact_person: v.contactPerson,
+        notes: v.notes,
+        main_category: v.mainCategory,
+        gp_rate: v.gpRate || 0
+      }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      const newPartner = {
+        id: data.id,
+        companyName: data.company_name,
+        taxId: data.tax_id || '',
+        address: data.address || '',
+        phone: data.phone || '',
+        email: data.email || '',
+        contactPerson: data.contact_person || '',
+        notes: data.notes || '',
+        mainCategory: data.main_category || '',
+        gpRate: Number(data.gp_rate || 0)
+      };
+      set(s => ({ partners: [...s.partners, newPartner] }));
+    } else {
+      console.error("Error adding partner:", error);
+    }
+  },
+  updatePartner: async (id, v) => {
+    const { error } = await supabase
+      .from('partners')
+      .update({
+        company_name: v.companyName,
+        tax_id: v.taxId,
+        address: v.address,
+        phone: v.phone,
+        email: v.email,
+        contact_person: v.contactPerson,
+        notes: v.notes,
+        main_category: v.mainCategory,
+        gp_rate: v.gpRate || 0
+      })
+      .eq('id', id);
+
+    if (!error) {
+      set(s => ({
+        partners: s.partners.map(p => p.id === id ? { ...p, ...v } : p)
+      }));
+    } else {
+      console.error("Error updating partner:", error);
+    }
+  },
+  deletePartner: async (id) => {
+    const { error } = await supabase
+      .from('partners')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      set(s => ({ partners: s.partners.filter(p => p.id !== id) }));
+    } else {
+      console.error("Error deleting partner:", error);
+    }
+  },
 
   addStaff: (st) => set(s => ({ staff: [...s.staff, { ...st, id: Math.random().toString() }] })),
   updateStaff: (id, st) => set(s => ({ staff: s.staff.map(mem => mem.id === id ? { ...mem, ...st } : mem) })),
