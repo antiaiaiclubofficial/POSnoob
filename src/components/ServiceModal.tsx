@@ -46,7 +46,7 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
     }
   }, [service, defaultSpecies]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title) {
       toast.error('กรุณากรอกชื่อบริการ');
@@ -58,10 +58,10 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
     }
 
     if (service) {
-      updateService(service.id, formData);
+      await updateService(service.id, formData);
       toast.success('อัปเดตบริการเรียบร้อยแล้ว');
     } else {
-      addService(formData);
+      await addService(formData);
       toast.success('เพิ่มบริการใหม่เรียบร้อยแล้ว');
     }
     onClose();

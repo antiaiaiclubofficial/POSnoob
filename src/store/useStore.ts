@@ -201,7 +201,12 @@ export const useStore = create<AppState>()((set, get) => ({
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) {
+      console.error("Error adding service:", error);
+      throw error;
+    }
+
+    if (data) {
       const newService: Service = {
         ...ser,
         id: data.id,
@@ -227,9 +232,12 @@ export const useStore = create<AppState>()((set, get) => ({
       })
       .eq('id', id);
 
-    if (!error) {
-      set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser } : item) }));
+    if (error) {
+      console.error("Error updating service:", error);
+      throw error;
     }
+
+    set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser } : item) }));
   },
   deleteService: async (id) => {
     const { error } = await supabase
@@ -237,9 +245,12 @@ export const useStore = create<AppState>()((set, get) => ({
       .delete()
       .eq('id', id);
 
-    if (!error) {
-      set(s => ({ services: s.services.filter(item => item.id !== id) }));
+    if (error) {
+      console.error("Error deleting service:", error);
+      throw error;
     }
+
+    set(s => ({ services: s.services.filter(item => item.id !== id) }));
   },
   toggleServiceActive: (id) => set(s => ({ services: s.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
 
