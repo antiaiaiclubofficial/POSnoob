@@ -6,22 +6,19 @@ import { useStore } from '@/store/useStore';
 import { 
   Store, Users, ShieldAlert, Plus, Edit3, Trash2, Search, 
   Database, LayoutDashboard, Calendar, Scissors, Tag, Package, 
-  Check, X, RefreshCw, Eye, ArrowLeft, Settings, Layers, Dog, Lock, User, LogOut
+  Check, X, RefreshCw, Eye, ArrowLeft, Settings, Layers, Dog, Lock, User, LogOut, Chrome
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 type SuperAdminTab = 'dashboard' | 'stores' | 'users' | 'explorer';
 
 const SuperAdmin = () => {
   const navigate = useNavigate();
-  const { currentUser, login, logout } = useStore();
+  const { currentUser, loginWithGoogle, logout } = useStore();
   
-  // Login States
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // SuperAdmin States
   const [activeTab, setActiveTab] = useState<SuperAdminTab>('dashboard');
@@ -81,15 +78,13 @@ const SuperAdmin = () => {
     }
   }, [selectedStoreId, selectedTable, activeTab, currentUser]);
 
-  const handleLocalLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoggingIn(true);
-    const success = login(username, password);
-    setIsLoggingIn(false);
-    if (success) {
-      toast.success("ยินดีต้อนรับผู้ดูแลระบบสูงสุด");
-    } else {
-      toast.error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign in with Google");
+      setIsGoogleLoading(false);
     }
   };
 
@@ -323,49 +318,42 @@ const SuperAdmin = () => {
             <p className="text-xs text-gray-500 font-black uppercase tracking-[0.2em]">System Owner Authentication</p>
           </div>
 
-          <div className="bg-[#151824] p-10 rounded-[48px] border border-gray-800 shadow-2xl">
-            <form onSubmit={handleLocalLogin} className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Username</label>
-                  <div className="relative">
-                    <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600" size={18} />
-                    <input 
-                      type="text"
-                      autoFocus
-                      className="w-full bg-[#1C1F2E] border border-gray-800 rounded-[24px] pl-14 pr-6 py-4 text-sm font-bold text-white focus:ring-4 focus:ring-red-500/10 focus:border-red-500/50 transition-all"
-                      placeholder="superadmin"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                    />
-                  </div>
+          <div className="bg-[#151824] p-10 rounded-[48px] border border-gray-800 shadow-2xl text-center space-y-6">
+            {currentUser ? (
+              // Logged in but NOT a superadmin
+              <div className="space-y-6">
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs font-bold leading-relaxed">
+                  ปฏิเสธการเข้าถึง: บัญชี Google ของคุณ ({currentUser.email}) ไม่มีสิทธิ์ผู้ดูแลระบบสูงสุด (Super Admin)
                 </div>
-
-                <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600" size={18} />
-                    <input 
-                      type="password"
-                      className="w-full bg-[#1C1F2E] border border-gray-800 rounded-[24px] pl-14 pr-6 py-4 text-sm font-bold text-white focus:ring-4 focus:ring-red-500/10 focus:border-red-500/50 transition-all"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
+                <button 
+                  onClick={handleLocalLogout}
+                  className="w-full bg-gray-800 hover:bg-gray-700 text-white font-black py-4 rounded-[24px] flex items-center justify-center gap-3 transition-all"
+                >
+                  <LogOut size={18} /> ออกจากระบบ / สลับบัญชี
+                </button>
               </div>
-
-              <button 
-                type="submit"
-                disabled={isLoggingIn}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-red-600/10 transition-all active:scale-95 mt-4"
-              >
-                {isLoggingIn ? "Authenticating..." : "Access System Console"}
-              </button>
-            </form>
+            ) : (
+              // Not logged in at all
+              <div className="space-y-6">
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  กรุณาลงชื่อเข้าใช้งานด้วยบัญชี Google ที่ได้รับสิทธิ์เป็นผู้ดูแลระบบสูงสุด (Super Admin) เท่านั้นเพื่อเข้าสู่แผงควบคุมระบบส่วนกลาง
+                </p>
+                <button 
+                  onClick={handleGoogleLogin}
+                  disabled={isGoogleLoading}
+                  className="w-full bg-white hover:bg-gray-100 text-[#1A1F3D] font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isGoogleLoading ? (
+                    <div className="w-5 h-5 border-2 border-[#1A1F3D]/10 border-t-[#1A1F3D] rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Chrome size={20} className="text-blue-500" />
+                      Sign in with Google
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
