@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../types';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isAuthenticated' | 'isAuthLoading' | 'currentUser' | 'storeId' | 'login' | 'loginWithGoogle' | 'setSession' | 'verifyPassword' | 'logout'>> = (set, get) => ({
   isAuthenticated: false,
@@ -47,14 +48,42 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
   setSession: async (user) => {
     if (user) {
       // ดึงข้อมูลโปรไฟล์จากฐานข้อมูลเพื่อตรวจสอบบทบาทจริง (เช่น superadmin)
-      const { data: profile } = await supabase
+      let { data: profile, error } = await supabase
         .from('profiles')
         .select('role, store_id')
         .eq('id', user.id)
         .single();
 
-      const userRole = profile?.role || 'staff';
-      const storeIdFromMetadata = profile?.store_id || user.user_metadata?.store_id || 'default-store';
+      if (error || !profile) {
+        const { data: stores } = await supabase.from('stores').select('id').limit(1);
+        const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
+
+        const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
+        const newProfile = {
+          id: user.id,
+          email: user.email,
+          role: isSuperAdminEmail ? 'superadmin' : 'admin',
+          store_id: isSuperAdminEmail ? null : defaultStoreId
+        };
+
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert([newProfile]);
+
+        if (!insertError) {
+          profile = { role: newProfile.role, store_id: newProfile.store_id };
+        } else {
+          console.error("Failed to create profile:", insertError);
+          await supabase.auth.signOut();
+          set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
+          const isTh = get().language === 'th';
+          toast.error(isTh ? "ไม่มีสิทธิ์การเข้าถึงระบบ" : "No permission to access the system");
+          return;
+        }
+      }
+
+      const userRole = profile.role || 'staff';
+      const storeIdFromMetadata = profile.store_id || 'default-store';
       
       set({ 
         isAuthenticated: true, 
@@ -69,6 +98,11 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         storeId: userRole === 'superadmin' ? null : storeIdFromMetadata
       });
     } else {
+      const current = get().currentUser;
+      if (current && (current.id === 'superadmin' || current.id === 'admin' || get().staff.some(s => s.id === current.id))) {
+        set({ isAuthLoading: false });
+        return;
+      }
       set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
     }
   },

@@ -173,7 +173,7 @@ export const useStore = create<AppState>()((set, get) => ({
   setSession: async (user) => {
     if (user) {
       // ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase เพื่อตรวจสอบสิทธิ์และบทบาทจริง
-      const { data: profile, error } = await supabase
+      let { data: profile, error } = await supabase
         .from('profiles')
         .select('role, store_id')
         .eq('id', user.id)
@@ -181,11 +181,32 @@ export const useStore = create<AppState>()((set, get) => ({
 
       // หากไม่มีโปรไฟล์ในฐานข้อมูล (บัญชี Google นี้ไม่เคยถูกลงทะเบียนในระบบ)
       if (error || !profile) {
-        await supabase.auth.signOut();
-        set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
-        const isTh = get().language === 'th';
-        toast.error(isTh ? "ไม่มีสิทธิ์การเข้าถึงระบบ" : "No permission to access the system");
-        return;
+        // ดึง ID ของร้านค้าแรกในระบบ
+        const { data: stores } = await supabase.from('stores').select('id').limit(1);
+        const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
+
+        const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
+        const newProfile = {
+          id: user.id,
+          email: user.email,
+          role: isSuperAdminEmail ? 'superadmin' : 'admin',
+          store_id: isSuperAdminEmail ? null : defaultStoreId
+        };
+
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert([newProfile]);
+
+        if (!insertError) {
+          profile = { role: newProfile.role, store_id: newProfile.store_id };
+        } else {
+          console.error("Failed to create profile:", insertError);
+          await supabase.auth.signOut();
+          set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
+          const isTh = get().language === 'th';
+          toast.error(isTh ? "ไม่มีสิทธิ์การเข้าถึงระบบ" : "No permission to access the system");
+          return;
+        }
       }
 
       const userRole = profile.role || 'staff';
@@ -204,6 +225,12 @@ export const useStore = create<AppState>()((set, get) => ({
         storeId: userRole === 'superadmin' ? null : storeIdFromMetadata
       });
     } else {
+      // ป้องกันไม่ให้เซสชันของ Local Login โดนล้างเมื่อ Supabase session เป็น null
+      const current = get().currentUser;
+      if (current && (current.id === 'superadmin' || current.id === 'admin' || get().staff.some(s => s.id === current.id))) {
+        set({ isAuthLoading: false });
+        return;
+      }
       set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
     }
   },
