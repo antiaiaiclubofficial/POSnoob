@@ -136,25 +136,40 @@ const App = () => {
         setCustomers(formattedCustomers);
       }
 
-      // 2. Fetch Services
+      // 2. Fetch Services & Add-ons
       const { data: servicesData } = await supabase
         .from('services')
         .select('*');
 
       if (servicesData) {
-        const formattedServices = servicesData.map(s => ({
-          id: s.id,
-          title: s.name,
-          category: 'Grooming',
-          description: s.description || '',
-          icon: 'grooming' as any,
-          targetSpecies: 'Dog' as any,
-          prices: {
-            'Standard': { price: Number(s.price || 0), duration: s.duration_minutes || 60 }
-          },
-          isActive: true
-        }));
-        setServices(formattedServices);
+        // แยกบริการหลัก
+        const mainServices = servicesData
+          .filter(s => !s.is_addon)
+          .map(s => ({
+            id: s.id,
+            title: s.name,
+            category: s.category || 'Grooming',
+            description: s.description || '',
+            icon: (s.icon || 'grooming') as any,
+            targetSpecies: (s.target_species || 'Dog') as any,
+            prices: s.prices && Object.keys(s.prices).length > 0 ? s.prices : {
+              'Standard': { price: Number(s.price || 0), duration: s.duration_minutes || 60 }
+            },
+            isActive: s.is_active !== false,
+            coatType: s.coat_type || undefined
+          }));
+        setServices(mainServices);
+
+        // แยกบริการเสริม (Add-ons)
+        const addonsList = servicesData
+          .filter(s => s.is_addon)
+          .map(s => ({
+            id: s.id,
+            name: s.name,
+            price: Number(s.price || 0),
+            icon: (s.icon || 'nail') as any
+          }));
+        useStore.setState({ addons: addonsList });
       }
 
       // 3. Fetch Partners

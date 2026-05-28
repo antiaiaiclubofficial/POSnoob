@@ -488,7 +488,14 @@ export const useStore = create<AppState>()((set, get) => ({
           name: ser.title,
           description: ser.description,
           price: defaultPrice,
-          duration_minutes: defaultDuration
+          duration_minutes: defaultDuration,
+          category: ser.category || 'Grooming',
+          icon: ser.icon || 'grooming',
+          target_species: ser.targetSpecies || 'Dog',
+          prices: ser.prices || {},
+          is_active: ser.isActive !== false,
+          coat_type: ser.coatType || null,
+          is_addon: false
         }])
         .select()
         .single();
@@ -497,24 +504,22 @@ export const useStore = create<AppState>()((set, get) => ({
 
       if (data) {
         const newService: Service = {
-          ...ser,
           id: data.id,
-          prices: ser.prices || {
-            'Standard': { price: data.price || 0, duration: data.duration_minutes || 60 }
-          }
+          title: data.name,
+          category: data.category || 'Grooming',
+          description: data.description || '',
+          icon: (data.icon || 'grooming') as any,
+          targetSpecies: (data.target_species || 'Dog') as any,
+          prices: data.prices && Object.keys(data.prices).length > 0 ? data.prices : {
+            'Standard': { price: Number(data.price || 0), duration: data.duration_minutes || 60 }
+          },
+          isActive: data.is_active !== false,
+          coatType: data.coat_type || undefined
         };
         set(s => ({ services: [...s.services, newService] }));
       }
     } catch (err) {
-      console.warn("Supabase insert failed, falling back to local state:", err);
-      const localService: Service = {
-        ...ser,
-        id: `local-${Math.random().toString(36).substr(2, 9)}`,
-        prices: ser.prices || {
-          'Standard': { price: defaultPrice, duration: defaultDuration }
-        }
-      };
-      set(s => ({ services: [...s.services, localService] }));
+      console.error("Supabase insert failed:", err);
     }
   },
   updateService: async (id, ser) => {
@@ -529,15 +534,21 @@ export const useStore = create<AppState>()((set, get) => ({
           name: ser.title,
           description: ser.description,
           price: defaultPrice,
-          duration_minutes: defaultDuration
+          duration_minutes: defaultDuration,
+          category: ser.category || 'Grooming',
+          icon: ser.icon || 'grooming',
+          target_species: ser.targetSpecies || 'Dog',
+          prices: ser.prices || {},
+          is_active: ser.isActive !== false,
+          coat_type: ser.coatType || null
         })
         .eq('id', id);
 
       if (error) throw error;
+      set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser } : item) }));
     } catch (err) {
-      console.warn("Supabase update failed, falling back to local state:", err);
+      console.error("Supabase update failed:", err);
     }
-    set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser } : item) }));
   },
   deleteService: async (id) => {
     try {
@@ -547,16 +558,88 @@ export const useStore = create<AppState>()((set, get) => ({
         .eq('id', id);
 
       if (error) throw error;
+      set(s => ({ services: s.services.filter(item => item.id !== id) }));
     } catch (err) {
-      console.warn("Supabase delete failed, falling back to local state:", err);
+      console.error("Supabase delete failed:", err);
     }
-    set(s => ({ services: s.services.filter(item => item.id !== id) }));
   },
-  toggleServiceActive: (id) => set(s => ({ services: s.services.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s) })),
+  toggleServiceActive: async (id) => {
+    const service = get().services.find(s => s.id === id);
+    if (!service) return;
+    const nextActive = !service.isActive;
 
-  addAddon: (ad) => set(s => ({ addons: [...s.addons, { ...ad, id: Math.random().toString() }] })),
-  updateAddon: (id, ad) => set(s => ({ addons: s.addons.map(a => a.id === id ? { ...a, ...ad } : a) })),
-  deleteAddon: (id) => set(s => ({ addons: s.addons.filter(a => a.id !== id) })),
+    try {
+      const { error } = await supabase
+        .from('services')
+        .update({ is_active: nextActive })
+        .eq('id', id);
+
+      if (error) throw error;
+      set(s => ({ services: s.services.map(item => item.id === id ? { ...item, isActive: nextActive } : item) }));
+    } catch (err) {
+      console.error("Supabase toggle active failed:", err);
+    }
+  },
+
+  addAddon: async (ad) => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .insert([{
+          name: ad.name,
+          price: ad.price || 0,
+          icon: ad.icon || 'nail',
+          is_addon: true,
+          is_active: true
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        const newAddon: AddonItem = {
+          id: data.id,
+          name: data.name,
+          price: Number(data.price || 0),
+          icon: (data.icon || 'nail') as any
+        };
+        set(s => ({ addons: [...s.addons, newAddon] }));
+      }
+    } catch (err) {
+      console.error("Supabase add addon failed:", err);
+    }
+  },
+  updateAddon: async (id, ad) => {
+    try {
+      const { error } = await supabase
+        .from('services')
+        .update({
+          name: ad.name,
+          price: ad.price || 0,
+          icon: ad.icon || 'nail'
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      set(s => ({ addons: s.addons.map(a => a.id === id ? { ...a, ...ad } : a) }));
+    } catch (err) {
+      console.error("Supabase update addon failed:", err);
+    }
+  },
+  deleteAddon: async (id) => {
+    try {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      set(s => ({ addons: s.addons.filter(a => a.id !== id) }));
+    } catch (err) {
+      console.error("Supabase delete addon failed:", err);
+    }
+  },
 
   addInventoryItem: async (item) => {
     const { data, error } = await supabase
