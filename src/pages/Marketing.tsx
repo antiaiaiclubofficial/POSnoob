@@ -394,7 +394,6 @@ const Marketing = () => {
                <div className="space-y-6">
                   {localTierRules.map((rule, idx) => (
                     <div key={rule.level} className="flex flex-col lg:flex-row items-center gap-8 p-8 bg-[#F5F6FA] rounded-[40px] relative overflow-hidden transition-all hover:shadow-md border border-transparent hover:border-gray-200">
-                       <div className="absolute top-0 left-0 w-2 h-full bg-[#1A1F3D]" />
                        <div className="w-16 h-16 bg-white rounded-[24px] flex items-center justify-center shadow-sm shrink-0">
                           {rule.level === 'VIP' ? <Gem className="text-purple-500" size={32} /> : rule.level === 'Gold' ? <Crown className="text-amber-500" size={32} /> : rule.level === 'Silver' ? <Star className="text-blue-500" size={32} /> : <Award className="text-gray-400" size={32} />}
                        </div>
