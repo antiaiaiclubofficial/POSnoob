@@ -279,7 +279,7 @@ export interface AppState {
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
   verifyPassword: (pass: string) => boolean;
-  setSession: (user: any) => Promise<void>;
+  setSession: (user: any) => void;
   addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
   addReportLog: (log: Omit<ReportHistory, 'id' | 'timestamp'>) => void;
   

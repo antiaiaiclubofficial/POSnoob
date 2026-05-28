@@ -1,7 +1,6 @@
 import { StateCreator } from 'zustand';
 import { AppState } from '../types';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isAuthenticated' | 'isAuthLoading' | 'currentUser' | 'storeId' | 'login' | 'loginWithGoogle' | 'setSession' | 'verifyPassword' | 'logout'>> = (set, get) => ({
   isAuthenticated: false,
@@ -39,47 +38,21 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
     if (error) throw error;
   },
 
-  setSession: async (user) => {
+  setSession: (user) => {
     if (user) {
-      set({ isAuthLoading: true });
-      try {
-        // Query profiles table to check if user is authorized
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', user.email)
-          .maybeSingle();
-
-        if (error || !profile) {
-          // Not authorized! Sign out immediately
-          await supabase.auth.signOut();
-          set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
-          toast.error(
-            get().language === 'th' 
-              ? "อีเมลนี้ไม่มีสิทธิ์เข้าใช้งานระบบ กรุณาติดต่อผู้ดูแลระบบ" 
-              : "This email is not authorized to access the system. Please contact the administrator."
-          );
-          return;
-        }
-
-        const storeIdFromMetadata = profile.store_id || 'default-store';
-        set({ 
-          isAuthenticated: true, 
-          isAuthLoading: false,
-          currentUser: {
-            id: user.id,
-            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            role: profile.role || 'Admin', 
-            email: user.email,
-            avatar: user.user_metadata?.avatar_url || undefined 
-          },
-          storeId: storeIdFromMetadata
-        });
-      } catch (err) {
-        console.error("Error verifying session:", err);
-        await supabase.auth.signOut();
-        set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
-      }
+      const storeIdFromMetadata = user.user_metadata?.store_id || 'default-store';
+      set({ 
+        isAuthenticated: true, 
+        isAuthLoading: false,
+        currentUser: {
+          id: user.id,
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          role: 'Admin', 
+          email: user.email,
+          avatar: user.user_metadata?.avatar_url || undefined 
+        },
+        storeId: storeIdFromMetadata
+      });
     } else {
       set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
     }
