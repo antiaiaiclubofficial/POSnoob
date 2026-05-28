@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Scissors, Clock, DollarSign, Plus, Trash2, Save, Info, Star } from 'lucide-react';
+import { X, Scissors, Clock, DollarSign, Plus, Trash2, Save, Info, Star, GripVertical } from 'lucide-react';
 import { useStore, Service, ServiceIcon, ServicePriceInfo } from '@/store/useStore';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface ServiceModalProps {
   service: Service | null;
@@ -28,6 +29,8 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
   });
 
   const [newSizeName, setNewSizeName] = useState('');
+  const [draggedSize, setDraggedSize] = useState<string | null>(null);
+  const [dragOverSize, setDragOverSize] = useState<string | null>(null);
 
   useEffect(() => {
     if (service) {
@@ -135,6 +138,45 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
     toast.success(`ลบขนาด ${size} เรียบร้อย`);
   };
 
+  // Drag and Drop Reordering Logic
+  const handleDragStart = (size: string) => {
+    setDraggedSize(size);
+  };
+
+  const handleDragOver = (e: React.DragEvent, size: string) => {
+    e.preventDefault();
+    if (draggedSize !== size) {
+      setDragOverSize(size);
+    }
+  };
+
+  const handleDrop = (targetSize: string) => {
+    if (!draggedSize || draggedSize === targetSize) return;
+
+    const entries = Object.entries(formData.prices);
+    const draggedIdx = entries.findIndex(([k]) => k === draggedSize);
+    const targetIdx = entries.findIndex(([k]) => k === targetSize);
+
+    if (draggedIdx !== -1 && targetIdx !== -1) {
+      const newEntries = [...entries];
+      const [removed] = newEntries.splice(draggedIdx, 1);
+      newEntries.splice(targetIdx, 0, removed);
+
+      setFormData(prev => ({
+        ...prev,
+        prices: Object.fromEntries(newEntries)
+      }));
+    }
+
+    setDraggedSize(null);
+    setDragOverSize(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedSize(null);
+    setDragOverSize(null);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4">
       <div className="bg-white w-full max-w-3xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
@@ -215,55 +257,77 @@ const ServiceModal = ({ service, defaultSpecies, onClose }: ServiceModalProps) =
 
           {/* Pricing Matrix */}
           <div className="space-y-4">
-             <label className="text-[10px] font-black uppercase text-gray-400 ml-2">ตารางราคาตามขนาด (Pricing Matrix) - *คลิกที่ชื่อขนาดเพื่อแก้ไขชื่อได้*</label>
+             <label className="text-[10px] font-black uppercase text-gray-400 ml-2">ตารางราคาตามขนาด (Pricing Matrix) - *ลากปุ่มซ้ายสุดเพื่อเรียงลำดับ หรือคลิกที่ชื่อขนาดเพื่อแก้ไขชื่อได้*</label>
              <div className="grid grid-cols-1 gap-3">
-                {(Object.entries(formData.prices) as [string, ServicePriceInfo][]).map(([size, info]) => (
-                   <div key={size} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-gray-50 p-4 rounded-3xl border border-gray-100">
-                      <div className="w-full sm:w-32">
-                         <input 
-                            type="text"
-                            className="w-full bg-transparent border-none font-black text-[#1A1F3D] focus:ring-0 p-0 text-sm"
-                            defaultValue={size}
-                            onBlur={(e) => handleRenameSize(size, e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                (e.target as HTMLInputElement).blur();
-                              }
-                            }}
-                         />
-                      </div>
-                      <div className="flex-1 flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
-                         <DollarSign size={14} className="text-gray-400" />
-                         <input 
-                            type="number"
-                            className="bg-transparent border-none w-full font-black text-sm focus:ring-0"
-                            value={info.price}
-                            onChange={e => handlePriceChange(size, 'price', Number(e.target.value))}
-                            placeholder="ราคา"
-                         />
-                         <span className="text-[10px] font-black text-gray-400 uppercase">บาท</span>
-                      </div>
-                      <div className="flex-1 flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
-                         <Clock size={14} className="text-gray-400" />
-                         <input 
-                            type="number"
-                            className="bg-transparent border-none w-full font-black text-sm focus:ring-0"
-                            value={info.duration}
-                            onChange={e => handlePriceChange(size, 'duration', Number(e.target.value))}
-                            placeholder="เวลา"
-                         />
-                         <span className="text-[10px] font-black text-gray-400 uppercase">นาที</span>
-                      </div>
-                      <button 
-                        type="button"
-                        onClick={() => handleRemoveSize(size)}
-                        className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all self-end sm:self-auto"
+                {(Object.entries(formData.prices) as [string, ServicePriceInfo][]).map(([size, info]) => {
+                   const isDraggingThis = draggedSize === size;
+                   const isDragOverThis = dragOverSize === size;
+
+                   return (
+                      <div 
+                        key={size} 
+                        draggable
+                        onDragStart={() => handleDragStart(size)}
+                        onDragOver={(e) => handleDragOver(e, size)}
+                        onDrop={() => handleDrop(size)}
+                        onDragEnd={handleDragEnd}
+                        className={cn(
+                          "flex flex-col sm:flex-row sm:items-center gap-4 bg-gray-50 p-4 rounded-3xl border transition-all duration-200",
+                          isDraggingThis ? "opacity-40 border-dashed border-indigo-300 bg-indigo-50/20" : "border-gray-100",
+                          isDragOverThis ? "border-indigo-400 bg-indigo-50/50 scale-[1.01]" : ""
+                        )}
                       >
-                        <Trash2 size={16} />
-                      </button>
-                   </div>
-                ))}
+                         {/* Drag Handle */}
+                         <div className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-[#1A1F3D] transition-colors shrink-0 flex items-center justify-center">
+                            <GripVertical size={18} />
+                         </div>
+
+                         <div className="w-full sm:w-32">
+                            <input 
+                               type="text"
+                               className="w-full bg-transparent border-none font-black text-[#1A1F3D] focus:ring-0 p-0 text-sm"
+                               defaultValue={size}
+                               onBlur={(e) => handleRenameSize(size, e.target.value)}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Enter') {
+                                   e.preventDefault();
+                                   (e.target as HTMLInputElement).blur();
+                                 }
+                               }}
+                            />
+                         </div>
+                         <div className="flex-1 flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
+                            <DollarSign size={14} className="text-gray-400" />
+                            <input 
+                               type="number"
+                               className="bg-transparent border-none w-full font-black text-sm focus:ring-0"
+                               value={info.price}
+                               onChange={e => handlePriceChange(size, 'price', Number(e.target.value))}
+                               placeholder="ราคา"
+                            />
+                            <span className="text-[10px] font-black text-gray-400 uppercase">บาท</span>
+                         </div>
+                         <div className="flex-1 flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
+                            <Clock size={14} className="text-gray-400" />
+                            <input 
+                               type="number"
+                               className="bg-transparent border-none w-full font-black text-sm focus:ring-0"
+                               value={info.duration}
+                               onChange={e => handlePriceChange(size, 'duration', Number(e.target.value))}
+                               placeholder="เวลา"
+                            />
+                            <span className="text-[10px] font-black text-gray-400 uppercase">นาที</span>
+                         </div>
+                         <button 
+                           type="button"
+                           onClick={() => handleRemoveSize(size)}
+                           className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all self-end sm:self-auto"
+                         >
+                           <Trash2 size={16} />
+                         </button>
+                      </div>
+                   );
+                })}
              </div>
           </div>
         </form>
