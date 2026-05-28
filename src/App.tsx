@@ -34,14 +34,26 @@ const App = () => {
 
   useEffect(() => {
     // Auth Session Handling
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session?.user ?? null);
-      if (session) fetchInitialData();
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        await setSession(session.user);
+        if (useStore.getState().isAuthenticated) {
+          fetchInitialData();
+        }
+      } else {
+        await setSession(null);
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session?.user ?? null);
-      if (session) fetchInitialData();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        await setSession(session.user);
+        if (useStore.getState().isAuthenticated) {
+          fetchInitialData();
+        }
+      } else {
+        await setSession(null);
+      }
     });
 
     // CRM & Services Data Sync Logic
