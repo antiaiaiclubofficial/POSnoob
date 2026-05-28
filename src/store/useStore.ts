@@ -125,6 +125,13 @@ export const useStore = create<AppState>()((set, get) => ({
     { level: 'VIP', label: 'VIP Member', minSpent: 50000, discount: 15 },
   ],
 
+  // Default Role Permissions
+  rolePermissions: {
+    Admin: ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings'],
+    Groomer: ['/', '/queue', '/customers'],
+    Assistant: ['/', '/pos', '/queue', '/customers']
+  },
+
   login: (id, pass) => {
     if (id === 'admin' && pass === '1234') {
       const user = { id: 'admin', name: 'Admin', role: 'Admin', username: 'admin' };
@@ -195,6 +202,12 @@ export const useStore = create<AppState>()((set, get) => ({
   updateBusinessProfile: (profile) => set(s => ({ ...s, ...profile })),
   updateBookingSettings: (settings) => set(s => ({ ...s, ...settings })),
   updateTierRules: (rules) => set({ tierRules: rules }),
+  updateRolePermissions: (role, permissions) => set(s => ({
+    rolePermissions: {
+      ...s.rolePermissions,
+      [role]: permissions
+    }
+  })),
 
   setCustomers: (customers) => set({ customers }),
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
