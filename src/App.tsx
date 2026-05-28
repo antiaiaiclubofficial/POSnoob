@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
@@ -33,17 +34,6 @@ const App = () => {
   }, [language]);
 
   useEffect(() => {
-    // Auth Session Handling
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session?.user ?? null);
-      if (session) fetchInitialData();
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session?.user ?? null);
-      if (session) fetchInitialData();
-    });
-
     // CRM & Services Data Sync Logic
     const fetchInitialData = async () => {
       // 1. Fetch Customers
@@ -147,6 +137,43 @@ const App = () => {
         setServices(formattedServices);
       }
     };
+
+    const handleAuth = async (session: any) => {
+      if (session?.user) {
+        // ตรวจสอบสิทธิ์การเข้าใช้งานจากตาราง profiles
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (error || !profile) {
+          await supabase.auth.signOut();
+          setSession(null);
+          toast.error("คุณไม่มีสิทธิ์การเข้าถึง กรุณาติดต่อผู้ดูแลระบบ");
+          return;
+        }
+
+        setSession(session.user);
+        fetchInitialData();
+      } else {
+        // ป้องกันการเคลียร์ session ของ local admin (mock login)
+        const currentAdmin = useStore.getState().currentUser;
+        if (currentAdmin && currentAdmin.id === 'admin') {
+          return;
+        }
+        setSession(null);
+      }
+    };
+
+    // Auth Session Handling
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuth(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleAuth(session);
+    });
 
     return () => subscription.unsubscribe();
   }, [setSession, setCustomers, setServices]);
