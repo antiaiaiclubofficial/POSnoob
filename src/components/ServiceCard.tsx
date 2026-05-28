@@ -14,7 +14,7 @@ interface ServiceCardProps {
 }
 
 const ServiceCard = ({ service }: ServiceCardProps) => {
-  const { addToCart, activePet, selectedOwner, activeQueueItemId, currency } = useStore();
+  const { addToCart, activePet, selectedOwner, activeQueueItemId, currency, services } = useStore();
   const [selectedSize, setSelectedSize] = useState<string>('');
 
   const availableSizes = useMemo(() => Object.keys(service.prices), [service.prices]);
@@ -25,7 +25,9 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
     }
   }, [activePet?.id, service.id, availableSizes]);
 
-  if (activePet && activePet.species !== service.targetSpecies) return null;
+  // Only hide mismatched species services if there are actually matching services available
+  const hasMatchingServices = services.some(s => s.targetSpecies === activePet?.species && s.isActive);
+  if (activePet && hasMatchingServices && activePet.species !== service.targetSpecies) return null;
 
   // ราคาพื้นฐานตามขนาดที่เลือก
   const totalPrice = selectedSize ? service.prices[selectedSize].price : 0;
@@ -38,8 +40,8 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       case 'spa': return Sparkles;
       case 'nail': return Zap;
       case 'dry': return Wind;
-      case 'health': return Stethoscope;
       case 'brush': return Brush;
+      case 'health': return Stethoscope;
       case 'hotel': return Home;
       case 'love': return Heart;
       case 'food': return Bone;

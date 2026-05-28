@@ -43,7 +43,7 @@ import {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { queue, transactions, inventory, customers, currency, kennelCapacity, language } = useStore();
+  const { queue, transactions, inventory, customers, currency, kennelCapacity, language, currentUser } = useStore();
   const t = translations[language];
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -132,7 +132,9 @@ const Dashboard = () => {
             <LineChartIcon size={14} className="text-[#D9ED5F]" />
             <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">{t.dailyOverview}</p>
           </div>
-          <h1 className="text-3xl font-black text-[#1A1F3D]">{t.helloAdmin}</h1>
+          <h1 className="text-3xl font-black text-[#1A1F3D]">
+            {language === 'th' ? `สวัสดี, ${currentUser?.name || 'แอดมิน'}!` : `Hello, ${currentUser?.name || 'Admin'}!`}
+          </h1>
           <p className="text-xs text-gray-400 font-bold mt-1">{t.todayIs} {format(new Date(), 'EEEE, MMMM do')}</p>
         </div>
         <div className="flex gap-3 mt-4 sm:mt-0">
