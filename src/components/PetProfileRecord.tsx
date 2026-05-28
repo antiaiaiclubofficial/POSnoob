@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { 
   Edit3, TrendingUp, History, ClipboardList, Calendar, 
-  ChevronDown, ChevronUp, Scale, FileSearch 
+  ChevronDown, ChevronUp, Scale, FileSearch, Eye 
 } from 'lucide-react';
 import { useStore, Pet } from '@/store/useStore';
 import { calculateAge } from '@/utils/petData';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import GroomingServiceModal from './GroomingServiceModal';
+import PetDetailModal from './PetDetailModal';
 
 interface PetProfileRecordProps {
   pet: Pet;
@@ -21,19 +22,28 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
   const { currency } = useStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedIntake, setSelectedIntake] = useState<any>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const weightHistory = pet.weightHistory || [];
   const latestWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1]?.value : 'N/A';
 
   return (
     <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden flex flex-col relative group/pet transition-all hover:shadow-md">
-      {/* Edit Button */}
-      <button 
-        onClick={() => onEdit(pet)}
-        className="absolute top-6 right-6 p-3 bg-gray-50 text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-2xl transition-all shadow-sm z-10 opacity-0 group-hover/pet:opacity-100"
-      >
-        <Edit3 size={18} />
-      </button>
+      {/* Action Buttons */}
+      <div className="absolute top-6 right-6 flex gap-2 z-10 opacity-0 group-hover/pet:opacity-100 transition-opacity">
+        <button 
+          onClick={() => setIsDetailOpen(true)}
+          className="p-3 bg-white text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-2xl transition-all shadow-sm border border-gray-100 flex items-center gap-1.5 text-xs font-bold"
+        >
+          <Eye size={16} /> ดูข้อมูล
+        </button>
+        <button 
+          onClick={() => onEdit(pet)}
+          className="p-3 bg-white text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-2xl transition-all shadow-sm border border-gray-100"
+        >
+          <Edit3 size={16} />
+        </button>
+      </div>
 
       {/* Main Info Section */}
       <div className="flex flex-col md:flex-row">
@@ -46,7 +56,7 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
               alt={pet.name}
             />
             <div className="absolute -bottom-2 -right-2 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
-               {pet.species === 'Dog' ? <span className="text-lg">🐶</span> : <span className="text-lg">🐱</span>}
+               {pet.species === 'Dog' ? <span className="text-lg">🐶</span> : pet.species === 'Cat' ? <span className="text-lg">🐱</span> : <span className="text-lg">🐰</span>}
             </div>
           </div>
           <div className="text-center">
@@ -211,6 +221,14 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
           intakeData={selectedIntake}
           readOnly={true}
           onClose={() => setSelectedIntake(null)} 
+        />
+      )}
+
+      {/* Pet Detail Modal */}
+      {isDetailOpen && (
+        <PetDetailModal 
+          pet={pet} 
+          onClose={() => setIsDetailOpen(false)} 
         />
       )}
     </div>
