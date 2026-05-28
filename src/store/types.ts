@@ -300,6 +300,7 @@ export interface AppState {
   addToCart: (item: any) => void;
   removeFromCart: (index: number) => void;
   updateCartQuantity: (index: number, delta: number) => void;
+  updateCartItemDiscount: (index: number, discountType: 'percent' | 'amount' | null, discountValue: number) => void;
   clearCart: () => void;
   processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean) => void;
   deleteTransaction: (id: string) => void;

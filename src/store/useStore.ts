@@ -174,9 +174,10 @@ export const useStore = create<AppState>()((set, get) => ({
   toggleSlotStatus: (time) => set(s => ({ disabledSlots: s.disabledSlots.includes(time) ? s.disabledSlots.filter(t => t !== time) : [...s.disabledSlots, time] })),
   markAsPaid: (id) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
 
-  addToCart: (item) => set(s => ({ cart: [...s.cart, item] })),
+  addToCart: (item) => set(s => ({ cart: [...s.cart, { ...item, discountType: null, discountValue: 0 }] })),
   removeFromCart: (idx) => set(s => ({ cart: s.cart.filter((_, i) => i !== idx) })),
   updateCartQuantity: (idx, delta) => set(s => ({ cart: s.cart.map((item, i) => i === idx ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item) })),
+  updateCartItemDiscount: (idx, type, val) => set(s => ({ cart: s.cart.map((item, i) => i === idx ? { ...item, discountType: type, discountValue: val } : item) })),
   clearCart: () => set({ cart: [] }),
   processPayment: (cid, total, disc, items, method, details, tax) => {
     const tx = { id: `TX-${Date.now()}`, date: new Date().toISOString().split('T')[0], amount: total, discountAmount: disc, customerId: cid, customerName: get().customers.find(c => c.id === cid)?.name || 'Walk-in', items, paymentMethod: method, staffName: 'Admin', species: [], bookingType: 'Walk-in' };
