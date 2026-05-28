@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
-import { AppState } from '../types';
+import { AppState, StaffRole } from '../types';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isAuthenticated' | 'isAuthLoading' | 'currentUser' | 'storeId' | 'login' | 'loginWithGoogle' | 'setSession' | 'verifyPassword' | 'logout'>> = (set, get) => ({
   isAuthenticated: false,
@@ -38,21 +39,50 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
     if (error) throw error;
   },
 
-  setSession: (user) => {
+  setSession: async (user) => {
     if (user) {
-      const storeIdFromMetadata = user.user_metadata?.store_id || 'default-store';
-      set({ 
-        isAuthenticated: true, 
-        isAuthLoading: false,
-        currentUser: {
-          id: user.id,
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          role: 'Admin', 
-          email: user.email,
-          avatar: user.user_metadata?.avatar_url || undefined 
-        },
-        storeId: storeIdFromMetadata
-      });
+      set({ isAuthLoading: true });
+      try {
+        // ตรวจสอบว่าอีเมลนี้มีอยู่ในตาราง staff ของ Supabase หรือไม่
+        const { data: staffMember, error } = await supabase
+          .from('staff')
+          .select('*')
+          .eq('email', user.email)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error checking staff authorization:", error);
+        }
+
+        // อนุญาตเฉพาะอีเมลที่มีในตาราง staff และมีสถานะ Active
+        const isAllowed = !!staffMember && staffMember.status === 'Active';
+
+        if (!isAllowed) {
+          await supabase.auth.signOut();
+          set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
+          toast.error("บัญชีนี้ไม่มีสิทธิ์เข้าใช้งานระบบ กรุณาติดต่อผู้ดูแลระบบเพื่อลงทะเบียน");
+          return;
+        }
+
+        const storeIdFromMetadata = user.user_metadata?.store_id || 'default-store';
+        set({ 
+          isAuthenticated: true, 
+          isAuthLoading: false,
+          currentUser: {
+            id: user.id,
+            name: staffMember?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+            role: (staffMember?.role || 'Admin') as StaffRole, 
+            email: user.email,
+            avatar: user.user_metadata?.avatar_url || undefined 
+          },
+          storeId: storeIdFromMetadata
+        });
+      } catch (err) {
+        console.error("Auth check failed:", err);
+        await supabase.auth.signOut();
+        set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
+        toast.error("เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์การเข้าใช้งาน");
+      }
     } else {
       set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
     }

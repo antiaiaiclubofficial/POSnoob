@@ -26,7 +26,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const { language, setSession, setCustomers, setServices } = useStore();
+  const { language, setSession, setCustomers, setServices, setStaff } = useStore();
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -44,7 +44,7 @@ const App = () => {
       if (session) fetchInitialData();
     });
 
-    // CRM & Services Data Sync Logic
+    // CRM, Services & Staff Data Sync Logic
     const fetchInitialData = async () => {
       // 1. Fetch Customers
       const { data: customersData } = await supabase
@@ -146,10 +146,31 @@ const App = () => {
         }));
         setServices(formattedServices);
       }
+
+      // 3. Fetch Staff
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('*');
+
+      if (staffData) {
+        const formattedStaff = staffData.map(s => ({
+          id: s.id,
+          name: s.name,
+          role: s.role || 'Assistant',
+          phone: s.phone || '',
+          status: s.status || 'Active',
+          avatar: s.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+          username: s.username || '',
+          password: s.password || '',
+          commissionRate: s.commission_rate || 0,
+          email: s.email || ''
+        }));
+        setStaff(formattedStaff);
+      }
     };
 
     return () => subscription.unsubscribe();
-  }, [setSession, setCustomers, setServices]);
+  }, [setSession, setCustomers, setServices, setStaff]);
 
   return (
     <QueryClientProvider client={queryClient}>

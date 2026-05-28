@@ -170,6 +170,7 @@ export interface Staff {
   username?: string;
   password?: string;
   commissionRate?: number;
+  email?: string;
 }
 
 export interface ActivityLog {
@@ -336,6 +337,7 @@ export interface AppState {
   updatePartner: (id: string, partner: any) => void;
   deletePartner: (id: string) => void;
   
+  setStaff: (staff: Staff[]) => void;
   addStaff: (staff: any) => void;
   updateStaff: (id: string, staff: any) => void;
   deleteStaff: (id: string) => void;
