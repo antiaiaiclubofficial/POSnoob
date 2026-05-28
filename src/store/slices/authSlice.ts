@@ -54,7 +54,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
       // ดึงข้อมูลโปรไฟล์จากฐานข้อมูลเพื่อตรวจสอบบทบาทจริง (เช่น superadmin)
       let { data: profile, error } = await supabase
         .from('profiles')
-        .select('role, store_id')
+        .select('role, store_id, is_approved')
         .eq('id', user.id)
         .single();
 
@@ -66,7 +66,8 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
           id: user.id,
           email: user.email,
           role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
-          store_id: shouldBeSuperAdmin ? null : defaultStoreId
+          store_id: shouldBeSuperAdmin ? null : defaultStoreId,
+          is_approved: shouldBeSuperAdmin ? true : false
         };
 
         const { error: upsertError } = await supabase
@@ -74,15 +75,28 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
           .upsert(newProfile, { onConflict: 'id' });
 
         if (!upsertError) {
-          profile = { role: newProfile.role, store_id: newProfile.store_id };
+          profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved };
         } else {
           console.error("Failed to upsert profile:", upsertError);
           if (shouldBeSuperAdmin) {
-            profile = { role: 'superadmin', store_id: null };
+            profile = { role: 'superadmin', store_id: null, is_approved: true };
           } else {
-            profile = { role: 'Admin', store_id: defaultStoreId };
+            profile = { role: 'Admin', store_id: defaultStoreId, is_approved: false };
           }
         }
+      }
+
+      // ตรวจสอบสถานะการอนุมัติ (is_approved)
+      if (profile && !profile.is_approved && !isSuperAdminEmail) {
+        await supabase.auth.signOut();
+        set({ 
+          isAuthenticated: false, 
+          isAuthLoading: false, 
+          currentUser: null, 
+          storeId: null,
+          isPendingApproval: true 
+        });
+        return;
       }
 
       // แยกแยะบทบาทตามหน้าเว็บที่ล็อกอินเข้ามา
@@ -106,6 +120,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
       set({ 
         isAuthenticated: true, 
         isAuthLoading: false,
+        isPendingApproval: false,
         currentUser: {
           id: user.id,
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
@@ -136,6 +151,6 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
   
   logout: async () => {
     await supabase.auth.signOut();
-    set({ isAuthenticated: false, currentUser: null, storeId: null });
+    set({ isAuthenticated: false, currentUser: null, storeId: null, isPendingApproval: false });
   },
 });

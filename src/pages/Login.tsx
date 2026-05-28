@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { Lock, User, Scissors, Sparkles, ArrowRight, Chrome } from 'lucide-react';
+import { Lock, User, Scissors, Sparkles, ArrowRight, Chrome, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
@@ -13,14 +13,12 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   
-  const { login, language, setLanguage, isAuthenticated } = useStore();
-  // หลีกเลี่ยง TS2554 โดยการดึงและแปลง Type ของ loginWithGoogle โดยตรง
+  const { login, language, setLanguage, isAuthenticated, isPendingApproval } = useStore();
   const loginWithGoogle = useStore(state => state.loginWithGoogle) as (redirectTo?: string) => Promise<void>;
   
   const t = translations[language];
   const navigate = useNavigate();
 
-  // ตรวจสอบว่าถ้าล็อกอินสำเร็จแล้ว (รวมถึงกลับมาจาก Google OAuth) ให้ไปหน้าหลักทันที
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/');
@@ -41,7 +39,6 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      // ส่งพารามิเตอร์ redirectTo ไปยังหน้าหลักของร้านค้าปกติ (/)
       await loginWithGoogle(window.location.origin);
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in with Google");
@@ -85,7 +82,20 @@ const Login = () => {
           <p className="text-xs text-gray-400 font-bold uppercase tracking-[0.2em]">{t.loginSystem}</p>
         </div>
 
-        <div className="bg-white p-10 rounded-[48px] shadow-sm border border-gray-100">
+        <div className="bg-white p-10 rounded-[48px] shadow-sm border border-gray-100 space-y-6">
+          {/* Pending Approval Alert */}
+          {isPendingApproval && (
+            <div className="p-5 bg-amber-50 border border-amber-100 rounded-3xl flex items-start gap-3 text-amber-800 animate-in fade-in zoom-in-95">
+              <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={18} />
+              <div className="text-left">
+                <p className="text-xs font-black uppercase tracking-wider mb-1">อยู่ระหว่างรอการอนุมัติ</p>
+                <p className="text-[11px] font-medium leading-relaxed text-amber-700">
+                  บัญชีของคุณลงทะเบียนสำเร็จแล้ว แต่ต้องรอให้ Super Admin อนุมัติและกำหนดร้านค้าให้ก่อน จึงจะสามารถเข้าใช้งานระบบได้
+                </p>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-4">
               <div>

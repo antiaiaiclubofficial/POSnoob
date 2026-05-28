@@ -6,18 +6,17 @@ import { useStore } from '@/store/useStore';
 import { 
   Store, Users, ShieldAlert, Plus, Edit3, Trash2, Search, 
   Database, LayoutDashboard, Calendar, Scissors, Tag, Package, 
-  Check, X, RefreshCw, Eye, ArrowLeft, Settings, Layers, Dog, Lock, User, LogOut, Chrome
+  Check, X, RefreshCw, Eye, ArrowLeft, Settings, Layers, Dog, Lock, User, LogOut, Chrome, CheckCircle2, XCircle, AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-type SuperAdminTab = 'dashboard' | 'stores' | 'users' | 'explorer';
+type SuperAdminTab = 'dashboard' | 'stores' | 'users' | 'approvals' | 'explorer';
 
 const SuperAdmin = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useStore();
-  // หลีกเลี่ยง TS2554 โดยการดึงและแปลง Type ของ loginWithGoogle โดยตรง
   const loginWithGoogle = useStore(state => state.loginWithGoogle) as (redirectTo?: string) => Promise<void>;
   
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -29,9 +28,11 @@ const SuperAdmin = () => {
   // Data States
   const [stores, setStores] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [stats, setStats] = useState({
     storesCount: 0,
     usersCount: 0,
+    pendingCount: 0,
     petsCount: 0,
     appointmentsCount: 0,
     customersCount: 0
@@ -66,9 +67,11 @@ const SuperAdmin = () => {
     store_id: ''
   });
 
+  // Approval States
+  const [selectedStoreForApproval, setSelectedStoreForApproval] = useState<Record<string, string>>({});
+
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ตรวจสอบสิทธิ์: หากล็อกอินแล้วแต่ไม่ใช่ superadmin (เช่น เป็น admin หรือ staff ของร้านค้า) ให้พาไปหน้าหลักของร้านค้าทันที
   useEffect(() => {
     if (currentUser && currentUser.role !== 'superadmin') {
       toast.info("เข้าสู่ระบบร้านค้าปกติเรียบร้อยแล้ว");
@@ -91,7 +94,6 @@ const SuperAdmin = () => {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      // ส่งพารามิเตอร์ redirectTo ไปยังหน้า Super Admin (/superadmin)
       await loginWithGoogle(window.location.origin + '/superadmin');
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in with Google");
@@ -116,15 +118,25 @@ const SuperAdmin = () => {
       if (storesError) throw storesError;
       setStores(storesData || []);
 
-      // 2. Fetch Profiles
+      // 2. Fetch Profiles (Approved Users)
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
+        .eq('is_approved', true)
         .order('updated_at', { ascending: false });
       if (profilesError) throw profilesError;
       setProfiles(profilesData || []);
 
-      // 3. Fetch Stats
+      // 3. Fetch Pending Users
+      const { data: pendingData, error: pendingError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('is_approved', false)
+        .order('updated_at', { ascending: false });
+      if (pendingError) throw pendingError;
+      setPendingUsers(pendingData || []);
+
+      // 4. Fetch Stats
       const { count: petsCount } = await supabase.from('pets').select('*', { count: 'exact', head: true });
       const { count: appointmentsCount } = await supabase.from('appointments').select('*', { count: 'exact', head: true });
       const { count: customersCount } = await supabase.from('customers').select('*', { count: 'exact', head: true });
@@ -132,10 +144,20 @@ const SuperAdmin = () => {
       setStats({
         storesCount: storesData?.length || 0,
         usersCount: profilesData?.length || 0,
+        pendingCount: pendingData?.length || 0,
         petsCount: petsCount || 0,
         appointmentsCount: appointmentsCount || 0,
         customersCount: customersCount || 0
       });
+
+      // Initialize default store selection for approvals
+      if (storesData && storesData.length > 0) {
+        const initialApprovals: Record<string, string> = {};
+        pendingData?.forEach(user => {
+          initialApprovals[user.id] = storesData[0].id;
+        });
+        setSelectedStoreForApproval(initialApprovals);
+      }
 
     } catch (error: any) {
       console.error("Error fetching superadmin data:", error);
@@ -150,9 +172,7 @@ const SuperAdmin = () => {
     try {
       let query = supabase.from(selectedTable).select('*');
       
-      // Filter by store if applicable and not 'all'
       if (selectedStoreId !== 'all') {
-        // Check if table has store_id column
         const tablesWithStoreId = ['appointments', 'services', 'coupon_templates', 'deal_templates', 'package_templates', 'customer_coupons', 'customers_deals', 'customer_packages', 'store_customers'];
         if (tablesWithStoreId.includes(selectedTable)) {
           query = query.eq('store_id', selectedStoreId);
@@ -227,14 +247,14 @@ const SuperAdmin = () => {
         if (error) throw error;
         toast.success("อัปเดตสิทธิ์ผู้ใช้งานเรียบร้อยแล้ว");
       } else {
-        // For new users, they must already exist in auth.users
         const { error } = await supabase
           .from('profiles')
           .insert([{
             id: userForm.id,
             email: userForm.email,
             role: userForm.role,
-            store_id: userForm.store_id || null
+            store_id: userForm.store_id || null,
+            is_approved: true
           }]);
         if (error) throw error;
         toast.success("เพิ่มผู้ใช้งานในระบบเรียบร้อยแล้ว");
@@ -259,6 +279,48 @@ const SuperAdmin = () => {
       fetchInitialData();
     } catch (error: any) {
       toast.error("ไม่สามารถลบได้: " + error.message);
+    }
+  };
+
+  // Approval Actions
+  const handleAcceptUser = async (userId: string, email: string) => {
+    const assignedStoreId = selectedStoreForApproval[userId];
+    if (!assignedStoreId) {
+      toast.error("กรุณาเลือกร้านค้าที่จะมอบหมายให้ผู้ใช้นี้");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          is_approved: true,
+          store_id: assignedStoreId,
+          role: 'Admin' // กำหนดบทบาทเริ่มต้นเป็น Admin ของร้านค้านั้นๆ
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+      toast.success(`อนุมัติผู้ใช้ ${email} เรียบร้อยแล้ว!`);
+      fetchInitialData();
+    } catch (error: any) {
+      toast.error("ไม่สามารถอนุมัติได้: " + error.message);
+    }
+  };
+
+  const handleRejectUser = async (userId: string, email: string) => {
+    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการปฏิเสธคำขอของ ${email}? บัญชีนี้จะถูกลบออกจากระบบ`)) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (error) throw error;
+      toast.success(`ปฏิเสธคำขอของ ${email} เรียบร้อยแล้ว`);
+      fetchInitialData();
+    } catch (error: any) {
+      toast.error("ไม่สามารถปฏิเสธได้: " + error.message);
     }
   };
 
@@ -316,7 +378,10 @@ const SuperAdmin = () => {
     p.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Render Login Gate if not authenticated as superadmin
+  const filteredPendingUsers = pendingUsers.filter(p => 
+    p.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (currentUser?.role !== 'superadmin') {
     return (
       <div className="min-h-screen bg-[#0F111A] flex items-center justify-center p-6 relative">
@@ -331,7 +396,6 @@ const SuperAdmin = () => {
 
           <div className="bg-[#151824] p-10 rounded-[48px] border border-gray-800 shadow-2xl text-center space-y-6">
             {currentUser ? (
-              // Logged in but NOT a superadmin
               <div className="space-y-6">
                 <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs font-bold leading-relaxed">
                   ปฏิเสธการเข้าถึง: บัญชี Google ของคุณ ({currentUser.email}) ไม่มีสิทธิ์ผู้ดูแลระบบสูงสุด (Super Admin)
@@ -344,7 +408,6 @@ const SuperAdmin = () => {
                 </button>
               </div>
             ) : (
-              // Not logged in at all
               <div className="space-y-6">
                 <p className="text-xs text-gray-400 leading-relaxed">
                   กรุณาลงชื่อเข้าใช้งานด้วยบัญชี Google ที่ได้รับสิทธิ์เป็นผู้ดูแลระบบสูงสุด (Super Admin) เท่านั้นเพื่อเข้าสู่แผงควบคุมระบบส่วนกลาง
@@ -406,6 +469,7 @@ const SuperAdmin = () => {
           { id: 'dashboard', label: 'ภาพรวมระบบ', icon: LayoutDashboard },
           { id: 'stores', label: 'จัดการร้านค้า', icon: Store },
           { id: 'users', label: 'สิทธิ์ผู้ใช้งาน', icon: Users },
+          { id: 'approvals', label: `คำขออนุมัติ (${stats.pendingCount})`, icon: AlertCircle },
           { id: 'explorer', label: 'สำรวจข้อมูลตาราง', icon: Database }
         ].map(tab => (
           <button
@@ -440,7 +504,7 @@ const SuperAdmin = () => {
             {activeTab === 'dashboard' && (
               <div className="space-y-8">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6">
                   <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                     <Store size={24} className="text-blue-500 mb-4" />
                     <p className="text-[10px] font-black uppercase text-gray-400 mb-1">ร้านค้าทั้งหมด</p>
@@ -450,6 +514,11 @@ const SuperAdmin = () => {
                     <Users size={24} className="text-purple-500 mb-4" />
                     <p className="text-[10px] font-black uppercase text-gray-400 mb-1">ผู้ใช้งานระบบ</p>
                     <h2 className="text-3xl font-black text-[#1A1F3D]">{stats.usersCount}</h2>
+                  </div>
+                  <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+                    <AlertCircle size={24} className="text-amber-500 mb-4" />
+                    <p className="text-[10px] font-black uppercase text-gray-400 mb-1">คำขอรออนุมัติ</p>
+                    <h2 className="text-3xl font-black text-amber-600">{stats.pendingCount}</h2>
                   </div>
                   <div className="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
                     <Users size={24} className="text-emerald-500 mb-4" />
@@ -648,6 +717,91 @@ const SuperAdmin = () => {
                         {filteredProfiles.length === 0 && (
                           <tr>
                             <td colSpan={5} className="py-20 text-center opacity-20 font-black">ไม่พบข้อมูลผู้ใช้งาน</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Approvals */}
+            {activeTab === 'approvals' && (
+              <div className="space-y-6">
+                <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                    <input 
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-3 text-sm font-bold"
+                      placeholder="ค้นหาคำขออนุมัติ..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="p-6 border-b border-gray-50 bg-gray-50/30">
+                    <h4 className="text-xs font-black text-[#1A1F3D] uppercase tracking-widest">
+                      คำขอลงทะเบียนผู้ใช้ใหม่ที่รอการอนุมัติ ({filteredPendingUsers.length} รายการ)
+                    </h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50/50 border-b border-gray-100">
+                          <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">อีเมลผู้สมัคร</th>
+                          <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">มอบหมายร้านค้า (Assign Store)</th>
+                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">วันที่สมัคร</th>
+                          <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">การดำเนินการ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredPendingUsers.map(user => (
+                          <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-8 py-5">
+                              <p className="text-sm font-black text-[#1A1F3D]">{user.email}</p>
+                              <p className="text-[9px] text-gray-400 font-bold uppercase">UID: {user.id}</p>
+                            </td>
+                            <td className="px-8 py-5">
+                              <select 
+                                className="bg-[#F5F6FA] border-none rounded-xl px-4 py-2.5 text-xs font-bold focus:ring-2 focus:ring-indigo-500/10"
+                                value={selectedStoreForApproval[user.id] || ''}
+                                onChange={e => setSelectedStoreForApproval({
+                                  ...selectedStoreForApproval,
+                                  [user.id]: e.target.value
+                                })}
+                              >
+                                {stores.map(s => (
+                                  <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-8 py-5 text-center text-xs text-gray-400 font-bold">
+                              {new Date(user.updated_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-8 py-5 text-right">
+                              <div className="flex justify-end gap-2">
+                                <button 
+                                  onClick={() => handleAcceptUser(user.id, user.email)}
+                                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm"
+                                >
+                                  <CheckCircle2 size={14} /> อนุมัติ (Accept)
+                                </button>
+                                <button 
+                                  onClick={() => handleRejectUser(user.id, user.email)}
+                                  className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5"
+                                >
+                                  <XCircle size={14} /> ปฏิเสธ (Reject)
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {filteredPendingUsers.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="py-20 text-center opacity-20 font-black">ไม่มีคำขออนุมัติใหม่ในขณะนี้</td>
                           </tr>
                         )}
                       </tbody>

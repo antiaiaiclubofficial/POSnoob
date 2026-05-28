@@ -224,6 +224,7 @@ export interface AppState {
   isAuthenticated: boolean;
   currentUser: any;
   isAuthLoading: boolean;
+  isPendingApproval?: boolean;
   storeId: string | null;
   
   // Business Profile
