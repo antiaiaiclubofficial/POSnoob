@@ -6,11 +6,11 @@ import {
   Search, Edit3, Package, Download, Save, Trash2,
   DollarSign, PieChart as PieIcon, LineChart as LineIcon, BarChart as BarIcon,
   ChevronRight, Camera, CheckCircle2, Plus, Tag, Building2, Filter,
-  AlertCircle, ArrowUpRight, RotateCcw, History, ArrowDown, ArrowUp, Info, Eye, Clock, X
+  AlertCircle, ArrowUpRight, RotateCcw, History, ArrowDown, ArrowUp, Info, Eye, Clock, X, Calendar, User
 } from 'lucide-react';
 import { useStore, InventoryItem, Partner } from '@/store/useStore';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, subDays, startOfMonth } from 'date-fns';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -19,6 +19,7 @@ import { shapeThai } from '@/utils/thaiShaper';
 import InventoryModal from '@/components/InventoryModal';
 import VendorModal from '@/components/VendorModal';
 import VendorInventoryView from '@/components/VendorInventoryView';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 
 type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashboard';
 
@@ -47,10 +48,10 @@ const normalizeImageOrientation = (src: string): Promise<string> => {
 const Inventory = () => {
   const { 
     inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLogo, shopLineId,
-    adjustStock, deletePartner, currency, currentUser, addReportLog
+    adjustStock, deletePartner, currency, currentUser, addReportLog, transactions
   } = useStore();
   
-  const [activeTab, setActiveTab] = useState<WmsTab>('master');
+  const [activeTab, setActiveTab] = useState<WmsTab>('dashboard');
   const [repPartnerFilter, setRepPartnerFilter] = useState('All');
   const [repCategoryFilter, setRepCategoryFilter] = useState('All');
   const [repStatusFilter, setRepStatusFilter] = useState('All');
@@ -67,6 +68,10 @@ const Inventory = () => {
   const [adjustMode, setAdjustMode] = useState<'Add' | 'Set'>('Add');
   const [adjustQty, setAdjustQty] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
+
+  // Dashboard Date Filter States
+  const [dashStartDate, setDashStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [dashEndDate, setDashEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   // Modals
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -110,6 +115,65 @@ const Inventory = () => {
   }, [inventory, adjustSearch]);
 
   const selectedItemForAdjust = inventory.find(i => i.id === selectedAdjustId);
+
+  // Dashboard Calculations
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(tx => tx.date >= dashStartDate && tx.date <= dashEndDate);
+  }, [transactions, dashStartDate, dashEndDate]);
+
+  const productSales = useMemo(() => {
+    const salesList: {
+      txId: string;
+      date: string;
+      productName: string;
+      quantity: number;
+      price: number;
+      total: number;
+      customerName: string;
+      paymentMethod: string;
+      staffName: string;
+    }[] = [];
+
+    filteredTransactions.forEach(tx => {
+      tx.items.forEach(item => {
+        if (item.type === 'Product') {
+          salesList.push({
+            txId: tx.id,
+            date: tx.date,
+            productName: item.title,
+            quantity: item.quantity,
+            price: item.price,
+            total: item.price * item.quantity,
+            customerName: tx.customerName,
+            paymentMethod: tx.paymentMethod,
+            staffName: tx.staffName || 'Admin'
+          });
+        }
+      });
+    });
+
+    return salesList;
+  }, [filteredTransactions]);
+
+  const chartData = useMemo(() => {
+    const agg: Record<string, { name: string; qty: number; revenue: number }> = {};
+    productSales.forEach(sale => {
+      if (!agg[sale.productName]) {
+        agg[sale.productName] = { name: sale.productName, qty: 0, revenue: 0 };
+      }
+      agg[sale.productName].qty += sale.quantity;
+      agg[sale.productName].revenue += sale.total;
+    });
+    return Object.values(agg).sort((a, b) => b.revenue - a.revenue);
+  }, [productSales]);
+
+  const totalProductRevenue = useMemo(() => {
+    return productSales.reduce((acc, s) => acc + s.total, 0);
+  }, [productSales]);
+
+  const totalProductsSold = useMemo(() => {
+    return productSales.reduce((acc, s) => acc + s.quantity, 0);
+  }, [productSales]);
 
   // Partner Actions
   const handleEditPartner = (partner: Partner) => {
@@ -391,11 +455,171 @@ const Inventory = () => {
       <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
         {activeTab === 'dashboard' && (
           <div className="space-y-10 animate-in fade-in duration-500">
+            {/* Date Filter Row */}
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Calendar size={18} className="text-indigo-500" />
+                <span className="text-xs font-black text-[#1A1F3D] uppercase tracking-wider">ช่วงเวลาวิเคราะห์ยอดขายสินค้า</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex bg-[#F5F6FA] p-1 rounded-xl gap-1">
+                  <button 
+                    onClick={() => {
+                      setDashStartDate(format(new Date(), 'yyyy-MM-dd'));
+                      setDashEndDate(format(new Date(), 'yyyy-MM-dd'));
+                    }}
+                    className={cn("px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", dashStartDate === format(new Date(), 'yyyy-MM-dd') ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}
+                  >
+                    วันนี้
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setDashStartDate(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
+                      setDashEndDate(format(new Date(), 'yyyy-MM-dd'));
+                    }}
+                    className={cn("px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", dashStartDate === format(subDays(new Date(), 7), 'yyyy-MM-dd') ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}
+                  >
+                    7 วันที่ผ่านมา
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setDashStartDate(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+                      setDashEndDate(format(new Date(), 'yyyy-MM-dd'));
+                    }}
+                    className={cn("px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", dashStartDate === format(startOfMonth(new Date()), 'yyyy-MM-dd') ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}
+                  >
+                    เดือนนี้
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 bg-[#F5F6FA] p-1.5 rounded-xl border border-gray-100">
+                  <input 
+                    type="date" 
+                    className="bg-transparent border-none text-xs font-bold p-1 focus:ring-0" 
+                    value={dashStartDate} 
+                    onChange={e => setDashStartDate(e.target.value)} 
+                  />
+                  <span className="text-xs text-gray-400 font-bold">ถึง</span>
+                  <input 
+                    type="date" 
+                    className="bg-transparent border-none text-xs font-bold p-1 focus:ring-0" 
+                    value={dashEndDate} 
+                    onChange={e => setDashEndDate(e.target.value)} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Metric Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"><Package size={24} className="text-blue-500 mb-6"/><p className="text-[10px] font-black uppercase text-gray-400 mb-1">Total SKUs</p><h2 className="text-4xl font-black">{inventory.length}</h2></div>
-              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"><DollarSign size={24} className="text-green-500 mb-6"/><p className="text-[10px] font-black uppercase text-gray-400 mb-1">Inventory Value</p><h2 className="text-4xl font-black">{currency}{inventory.reduce((a,b) => a+(b.costPrice*b.stock), 0).toLocaleString()}</h2></div>
-              <div className="bg-white p-8 rounded-[40px] border border-orange-100 shadow-sm"><AlertTriangle size={24} className="text-orange-500 mb-6"/><p className="text-[10px] font-black uppercase text-gray-400 mb-1">Low Stock</p><h2 className="text-4xl font-black">{inventory.filter(i => i.stock > 0 && i.stock <= i.minStock).length}</h2></div>
-              <div className="bg-white p-8 rounded-[40px] border border-red-100 shadow-sm"><Trash2 size={24} className="text-red-500 mb-6"/><p className="text-[10px] font-black uppercase text-red-400 mb-1">Out of Stock</p><h2 className="text-4xl font-black">{inventory.filter(i => i.stock === 0).length}</h2></div>
+              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                <Package size={24} className="text-blue-500 mb-6"/>
+                <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Total SKUs</p>
+                <h2 className="text-4xl font-black">{inventory.length}</h2>
+              </div>
+              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                <DollarSign size={24} className="text-green-500 mb-6"/>
+                <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Inventory Value</p>
+                <h2 className="text-4xl font-black">{currency}{inventory.reduce((a,b) => a+(b.costPrice*b.stock), 0).toLocaleString()}</h2>
+              </div>
+              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                <ArrowUpRight size={24} className="text-indigo-500 mb-6"/>
+                <p className="text-[10px] font-black uppercase text-gray-400 mb-1">ยอดขายสินค้า (ช่วงที่เลือก)</p>
+                <h2 className="text-4xl font-black text-indigo-600">{currency}{totalProductRevenue.toLocaleString()}</h2>
+              </div>
+              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                <CheckCircle2 size={24} className="text-emerald-500 mb-6"/>
+                <p className="text-[10px] font-black uppercase text-gray-400 mb-1">จำนวนชิ้นที่ขายได้</p>
+                <h2 className="text-4xl font-black text-emerald-600">{totalProductsSold} ชิ้น</h2>
+              </div>
+            </div>
+
+            {/* Chart & Sales List Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Chart Section */}
+              <div className="lg:col-span-1 bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col">
+                <div className="mb-6">
+                  <h3 className="text-lg font-black text-[#1A1F3D]">ยอดขายแยกตามสินค้า</h3>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">จัดอันดับสินค้าขายดี</p>
+                </div>
+                <div className="h-[300px] w-full flex-1">
+                  {chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData} layout="vertical">
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#1A1F3D', fontSize: 10, fontWeight: 700 }} width={100} />
+                        <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)' }} />
+                        <Bar dataKey="revenue" radius={[0, 8, 8, 0]} barSize={16}>
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={index === 0 ? '#1A1F3D' : '#3b82f6'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+                      <BarIcon size={48} className="mb-2" />
+                      <p className="text-xs font-black uppercase">ไม่มีข้อมูลยอดขายในช่วงเวลานี้</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Sales List Section */}
+              <div className="lg:col-span-2 bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                <div className="p-8 border-b border-gray-50 bg-gray-50/30 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-black text-[#1A1F3D]">รายการขายสินค้า</h3>
+                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">รายละเอียดธุรกรรมการขายสินค้า</p>
+                  </div>
+                  <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-3 py-1.5 rounded-full uppercase">
+                    {productSales.length} รายการ
+                  </span>
+                </div>
+                <div className="overflow-x-auto flex-1 max-h-[380px] scrollbar-hide">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50/50 border-b border-gray-100">
+                        <th className="px-8 py-4 text-left text-[10px] font-black uppercase text-gray-400">วันที่ / สินค้า</th>
+                        <th className="px-8 py-4 text-center text-[10px] font-black uppercase text-gray-400">จำนวน</th>
+                        <th className="px-8 py-4 text-right text-[10px] font-black uppercase text-gray-400">ยอดรวม</th>
+                        <th className="px-8 py-4 text-left text-[10px] font-black uppercase text-gray-400">ลูกค้า / ช่องทาง</th>
+                        <th className="px-8 py-4 text-right text-[10px] font-black uppercase text-gray-400">ผู้ขาย</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {productSales.map((sale, idx) => (
+                        <tr key={`${sale.txId}-${idx}`} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-8 py-5">
+                            <p className="text-xs font-black text-[#1A1F3D]">{sale.productName}</p>
+                            <p className="text-[9px] text-gray-400 font-bold">{sale.date}</p>
+                          </td>
+                          <td className="px-8 py-5 text-center font-bold text-gray-600">{sale.quantity}</td>
+                          <td className="px-8 py-5 text-right font-black text-[#1A1F3D]">฿{sale.total.toLocaleString()}</td>
+                          <td className="px-8 py-5">
+                            <p className="text-xs font-bold text-gray-700">{sale.customerName}</p>
+                            <span className="text-[8px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-black uppercase">
+                              {sale.paymentMethod}
+                            </span>
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <User size={10} className="text-gray-400" />
+                              <span className="text-xs font-black text-gray-500">{sale.staffName}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {productSales.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-20 text-center opacity-20 font-black">
+                            ไม่มีรายการขายสินค้าในช่วงเวลานี้
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         )}
