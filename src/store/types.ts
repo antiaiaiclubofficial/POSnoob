@@ -203,6 +203,9 @@ export interface PackageTemplate {
   price: number;
   recurringFreebie?: string;
   oneTimeFreebie?: string;
+  bonusType?: 'none' | 'recurring' | 'limited';
+  bonusName?: string;
+  bonusCount?: number;
 }
 
 export interface CreditPackageTemplate {

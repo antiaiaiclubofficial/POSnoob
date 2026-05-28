@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Package, Plus, Trash2, Edit3, CheckCircle2, Star, Gift, AlertCircle } from 'lucide-react';
+import { X, Package, Plus, Trash2, Edit3, CheckCircle2, Star, Gift, AlertCircle, Sparkles } from 'lucide-react';
 import { useStore, PackageTemplate } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -23,7 +23,10 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
     freeSlots: 2,
     price: 0,
     recurringFreebie: '',
-    oneTimeFreebie: ''
+    oneTimeFreebie: '',
+    bonusType: 'none',
+    bonusName: '',
+    bonusCount: 1
   });
 
   const handleSave = () => {
@@ -32,11 +35,26 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
       return;
     }
 
+    // Sync legacy fields for backward compatibility
+    let finalRecurring = '';
+    let finalOneTime = '';
+    if (formData.bonusType === 'recurring') {
+      finalRecurring = formData.bonusName || '';
+    } else if (formData.bonusType === 'limited') {
+      finalOneTime = `${formData.bonusName || ''} (${formData.bonusCount || 1} ครั้ง)`;
+    }
+
+    const payload = {
+      ...formData,
+      recurringFreebie: finalRecurring,
+      oneTimeFreebie: finalOneTime
+    };
+
     if (editingId) {
-      updatePackageTemplate(editingId, formData);
+      updatePackageTemplate(editingId, payload);
       toast.success("Package template updated");
     } else {
-      addPackageTemplate(formData);
+      addPackageTemplate(payload);
       toast.success("Package template created");
     }
     setIsCreating(false);
@@ -48,7 +66,10 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
       freeSlots: 2,
       price: 0,
       recurringFreebie: '',
-      oneTimeFreebie: ''
+      oneTimeFreebie: '',
+      bonusType: 'none',
+      bonusName: '',
+      bonusCount: 1
     });
   };
 
@@ -61,34 +82,20 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
       freeSlots: pkg.freeSlots,
       price: pkg.price,
       recurringFreebie: pkg.recurringFreebie || '',
-      oneTimeFreebie: pkg.oneTimeFreebie || ''
+      oneTimeFreebie: pkg.oneTimeFreebie || '',
+      bonusType: pkg.bonusType || (pkg.recurringFreebie ? 'recurring' : pkg.oneTimeFreebie ? 'limited' : 'none'),
+      bonusName: pkg.bonusName || pkg.recurringFreebie || pkg.oneTimeFreebie?.replace(/\s\(\d+\sครั้ง\)$/, '') || '',
+      bonusCount: pkg.bonusCount || 1
     });
     setIsCreating(true);
   };
 
-  const handleAssign = (templateId: string) => {
+  const handleAssign = (packageTemplateId: string) => {
     if (customerId) {
-      assignPackageToCustomer(customerId, templateId);
-      toast.success("Package assigned to customer successfully");
+      assignPackageToCustomer(customerId, packageTemplateId);
+      toast.success("Package assigned successfully!");
       onClose();
     }
-  };
-
-  // Mutually exclusive logic: update one and clear the other
-  const handleUpdateRecurring = (val: string) => {
-    setFormData({ 
-      ...formData, 
-      recurringFreebie: val,
-      oneTimeFreebie: val ? '' : formData.oneTimeFreebie 
-    });
-  };
-
-  const handleUpdateOneTime = (val: string) => {
-    setFormData({ 
-      ...formData, 
-      oneTimeFreebie: val,
-      recurringFreebie: val ? '' : formData.recurringFreebie 
-    });
   };
 
   return (
@@ -168,46 +175,67 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
                 </div>
               </div>
 
-              <div className="p-6 bg-indigo-50/50 rounded-[32px] space-y-4 border border-indigo-100">
+              {/* Flexible Bonus Service Section */}
+              <div className="p-6 bg-indigo-50/50 rounded-[32px] space-y-6 border border-indigo-100">
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Bonus Service (Select one)</p>
+                  <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1.5">
+                    <Sparkles size={14} /> แถมบริการเสริมพิเศษ (Bonus Service)
+                  </p>
                   <AlertCircle size={14} className="text-indigo-300" />
                 </div>
                 
                 <div className="space-y-4">
-                  <div className={cn("transition-opacity", formData.oneTimeFreebie && "opacity-50")}>
-                    <label className="text-[9px] font-bold text-gray-400 uppercase mb-1 block">Recurring Bonus (Every visit)</label>
-                    <div className="relative">
-                      <Star className={cn("absolute left-3 top-1/2 -translate-y-1/2", formData.recurringFreebie ? "text-green-500" : "text-gray-300")} size={14} />
-                      <input 
-                        className="w-full bg-white border-none rounded-xl pl-10 pr-4 py-3 text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500/10"
-                        placeholder="e.g. Free Tooth Brushing"
-                        disabled={!!formData.oneTimeFreebie}
-                        value={formData.recurringFreebie}
-                        onChange={e => handleUpdateRecurring(e.target.value)}
-                      />
+                  <div>
+                    <label className="text-[9px] font-bold text-gray-400 uppercase mb-2 block">รูปแบบของแถม (Bonus Type)</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'none', label: 'ไม่มีของแถม' },
+                        { id: 'recurring', label: 'แถมทุกครั้งที่มา' },
+                        { id: 'limited', label: 'แถมแบบจำกัดครั้ง' }
+                      ].map(opt => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, bonusType: opt.id as any, bonusName: opt.id === 'none' ? '' : formData.bonusName })}
+                          className={cn(
+                            "py-2.5 rounded-xl text-[10px] font-black transition-all border",
+                            formData.bonusType === opt.id 
+                              ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-md" 
+                              : "bg-white border-gray-100 text-gray-400 hover:bg-gray-50"
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="h-px flex-1 bg-indigo-100" />
-                    <span className="text-[8px] font-black text-indigo-200 uppercase">OR</span>
-                    <div className="h-px flex-1 bg-indigo-100" />
-                  </div>
+                  {formData.bonusType !== 'none' && (
+                    <div className="grid grid-cols-3 gap-4 animate-in slide-in-from-top-2 duration-200">
+                      <div className="col-span-2 space-y-2">
+                        <label className="text-[9px] font-bold text-gray-400 uppercase block">ชื่อบริการเสริมที่แถม</label>
+                        <input 
+                          className="w-full bg-white border-none rounded-xl px-4 py-3 text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500/10"
+                          placeholder="เช่น แปรงฟัน, สปาโคลน"
+                          value={formData.bonusName}
+                          onChange={e => setFormData({ ...formData, bonusName: e.target.value })}
+                        />
+                      </div>
 
-                  <div className={cn("transition-opacity", formData.recurringFreebie && "opacity-50")}>
-                    <label className="text-[9px] font-bold text-gray-400 uppercase mb-1 block">One-time Special (Once per package)</label>
-                    <div className="relative">
-                      <Gift className={cn("absolute left-3 top-1/2 -translate-y-1/2", formData.oneTimeFreebie ? "text-amber-500" : "text-gray-300")} size={14} />
-                      <input 
-                        className="w-full bg-white border-none rounded-xl pl-10 pr-4 py-3 text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500/10"
-                        placeholder="e.g. Free Mud Spa 1 time"
-                        disabled={!!formData.recurringFreebie}
-                        value={formData.oneTimeFreebie}
-                        onChange={e => handleUpdateOneTime(e.target.value)}
-                      />
+                      {formData.bonusType === 'limited' && (
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-bold text-gray-400 uppercase block">จำนวนครั้งที่แถม</label>
+                          <input 
+                            type="number"
+                            min={1}
+                            className="w-full bg-white border-none rounded-xl px-4 py-3 text-xs font-black text-center shadow-sm focus:ring-2 focus:ring-indigo-500/10"
+                            value={formData.bonusCount}
+                            onChange={e => setFormData({ ...formData, bonusCount: Math.max(1, Number(e.target.value)) })}
+                          />
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -241,6 +269,12 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
                         <p className="text-[10px] text-gray-400 font-bold uppercase">
                           {targetService?.title} • {pkg.paidSlots}+{pkg.freeSlots} Sessions
                         </p>
+                        {pkg.bonusType && pkg.bonusType !== 'none' && (
+                          <p className="text-[9px] text-indigo-600 font-black uppercase mt-1 flex items-center gap-1">
+                            <Sparkles size={10} /> 
+                            {pkg.bonusType === 'recurring' ? `แถมฟรี: ${pkg.bonusName} (ทุกครั้งที่มา)` : `แถมฟรี: ${pkg.bonusName} (จำนวน ${pkg.bonusCount} ครั้ง)`}
+                          </p>
+                        )}
                       </div>
                     </div>
                     
