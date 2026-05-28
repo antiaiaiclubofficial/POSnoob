@@ -180,9 +180,17 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         type: petData.species,
         breed: petData.breed,
         birth_date: petData.birthday,
-        medical_condition: petData.notes,
+        medical_condition: petData.medicalCondition,
+        precautions: petData.precautions,
+        fur_length: petData.coatType,
         image_url: petData.image,
-        weight: initialWeight
+        weight: initialWeight,
+        custom_preferences: [
+          { key: 'color', value: petData.color || '' },
+          { key: 'temperament', value: petData.temperament || '' },
+          { key: 'vaccineBookImage', value: petData.vaccineBookImage || '' },
+          { key: 'notes', value: petData.notes || '' }
+        ]
       }])
       .select()
       .single();
@@ -194,13 +202,19 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
           pets: [...c.pets, {
             id: data.id,
             name: data.name,
-            species: data.type as 'Dog' | 'Cat' | 'Other',
+            species: data.type,
             breed: data.breed || '',
             birthday: data.birth_date || '',
-            notes: data.medical_condition || '',
+            notes: petData.notes || '',
             image: data.image_url || '',
             weightHistory: [{ date: new Date().toISOString().split('T')[0], value: Number(data.weight || 0) }],
-            serviceHistory: []
+            serviceHistory: [],
+            coatType: petData.coatType,
+            color: petData.color,
+            temperament: petData.temperament,
+            vaccineBookImage: petData.vaccineBookImage,
+            precautions: petData.precautions,
+            medicalCondition: petData.medicalCondition
           }]
         } : c)
       }));
@@ -215,8 +229,16 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         type: petData.species,
         breed: petData.breed,
         birth_date: petData.birthday,
-        medical_condition: petData.notes,
-        image_url: petData.image
+        medical_condition: petData.medicalCondition,
+        precautions: petData.precautions,
+        fur_length: petData.coatType,
+        image_url: petData.image,
+        custom_preferences: [
+          { key: 'color', value: petData.color || '' },
+          { key: 'temperament', value: petData.temperament || '' },
+          { key: 'vaccineBookImage', value: petData.vaccineBookImage || '' },
+          { key: 'notes', value: petData.notes || '' }
+        ]
       })
       .eq('id', petId);
 

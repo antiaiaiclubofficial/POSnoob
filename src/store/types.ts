@@ -12,7 +12,7 @@ export type BookingType = 'Appointment' | 'Walk-in';
 export interface Pet {
   id: string;
   name: string;
-  species: 'Dog' | 'Cat' | 'Other';
+  species: string; // เปลี่ยนเป็น string เพื่อรองรับประเภทสัตว์เลี้ยงที่พิมพ์เองได้
   breed: string;
   birthday: string;
   weightHistory: { date: string; value: number }[];
@@ -20,6 +20,12 @@ export interface Pet {
   intakeHistory?: any[];
   notes: string;
   image: string;
+  coatType?: 'Short' | 'Long' | string;
+  color?: string;
+  temperament?: string;
+  vaccineBookImage?: string;
+  precautions?: string;
+  medicalCondition?: string;
 }
 
 export interface Customer {
