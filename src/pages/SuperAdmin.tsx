@@ -2,18 +2,28 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useStore } from '@/store/useStore';
 import { 
   Store, Users, ShieldAlert, Plus, Edit3, Trash2, Search, 
   Database, LayoutDashboard, Calendar, Scissors, Tag, Package, 
-  Check, X, RefreshCw, Eye, ArrowLeft, Settings, Layers, Dog
+  Check, X, RefreshCw, Eye, ArrowLeft, Settings, Layers, Dog, Lock, User, LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 type SuperAdminTab = 'dashboard' | 'stores' | 'users' | 'explorer';
 
 const SuperAdmin = () => {
+  const navigate = useNavigate();
+  const { currentUser, login, logout } = useStore();
+  
+  // Login States
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // SuperAdmin States
   const [activeTab, setActiveTab] = useState<SuperAdminTab>('dashboard');
   const [loading, setLoading] = useState(true);
   
@@ -60,14 +70,34 @@ const SuperAdmin = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    fetchInitialData();
-  }, []);
+    if (currentUser?.role === 'superadmin') {
+      fetchInitialData();
+    }
+  }, [currentUser]);
 
   useEffect(() => {
-    if (activeTab === 'explorer') {
+    if (currentUser?.role === 'superadmin' && activeTab === 'explorer') {
       fetchExplorerData();
     }
-  }, [selectedStoreId, selectedTable, activeTab]);
+  }, [selectedStoreId, selectedTable, activeTab, currentUser]);
+
+  const handleLocalLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    const success = login(username, password);
+    setIsLoggingIn(false);
+    if (success) {
+      toast.success("ยินดีต้อนรับผู้ดูแลระบบสูงสุด");
+    } else {
+      toast.error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+    }
+  };
+
+  const handleLocalLogout = () => {
+    logout();
+    toast.info("ออกจากระบบ Super Admin เรียบร้อยแล้ว");
+    navigate('/login');
+  };
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -280,6 +310,68 @@ const SuperAdmin = () => {
     p.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Render Login Gate if not authenticated as superadmin
+  if (currentUser?.role !== 'superadmin') {
+    return (
+      <div className="min-h-screen bg-[#0F111A] flex items-center justify-center p-6 relative">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-10">
+            <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-2xl">
+              <ShieldAlert className="text-red-500 w-10 h-10 animate-pulse" />
+            </div>
+            <h1 className="text-3xl font-black text-white mb-2">Super Admin Gate</h1>
+            <p className="text-xs text-gray-500 font-black uppercase tracking-[0.2em]">System Owner Authentication</p>
+          </div>
+
+          <div className="bg-[#151824] p-10 rounded-[48px] border border-gray-800 shadow-2xl">
+            <form onSubmit={handleLocalLogin} className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Username</label>
+                  <div className="relative">
+                    <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600" size={18} />
+                    <input 
+                      type="text"
+                      autoFocus
+                      className="w-full bg-[#1C1F2E] border border-gray-800 rounded-[24px] pl-14 pr-6 py-4 text-sm font-bold text-white focus:ring-4 focus:ring-red-500/10 focus:border-red-500/50 transition-all"
+                      placeholder="superadmin"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600" size={18} />
+                    <input 
+                      type="password"
+                      className="w-full bg-[#1C1F2E] border border-gray-800 rounded-[24px] pl-14 pr-6 py-4 text-sm font-bold text-white focus:ring-4 focus:ring-red-500/10 focus:border-red-500/50 transition-all"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-red-600/10 transition-all active:scale-95 mt-4"
+              >
+                {isLoggingIn ? "Authenticating..." : "Access System Console"}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col bg-[#F8F9FD] overflow-hidden h-screen">
       {/* SuperAdmin Header */}
@@ -293,12 +385,12 @@ const SuperAdmin = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link 
-            to="/" 
-            className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-[#1A1F3D] px-5 py-3 rounded-2xl text-xs font-black transition-all"
+          <button 
+            onClick={handleLocalLogout}
+            className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 px-5 py-3 rounded-2xl text-xs font-black transition-all"
           >
-            <ArrowLeft size={16} /> กลับหน้าหลักร้านค้า
-          </Link>
+            <LogOut size={16} /> ออกจากระบบ Super Admin
+          </button>
           <button 
             onClick={fetchInitialData}
             className="p-3 bg-gray-50 hover:bg-gray-100 rounded-2xl text-gray-500 transition-all"

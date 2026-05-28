@@ -169,6 +169,7 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/superadmin" element={<SuperAdmin />} />
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<HomeRedirect />} />
               <Route path="/pos" element={<Index />} />
@@ -182,7 +183,6 @@ const App = () => {
               <Route path="/logs" element={<Logs />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/superadmin" element={<SuperAdmin />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
