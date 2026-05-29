@@ -41,6 +41,7 @@ export interface Customer {
   pets: Pet[];
   totalSpent: number;
   creditBalance: number;
+  points?: number;
   lineId?: string;
   packages?: any[];
   creditHistory?: any[];
