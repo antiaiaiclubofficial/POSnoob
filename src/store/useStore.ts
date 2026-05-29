@@ -50,7 +50,6 @@ export const useStore = create<AppState>()((set, get) => ({
   receiptHeader: 'Tax Invoice / Receipt',
   receiptFooter: 'Thank you for your visit!',
   receiptPaperSize: '80mm',
-  vatEnabled: true,
 
   // LINE LIFF Default Settings
   liffId: '2001234567-AbCdEfGh',
@@ -539,7 +538,7 @@ export const useStore = create<AppState>()((set, get) => ({
           duration_minutes: defaultDuration,
           category: ser.category || 'Grooming',
           icon: ser.icon || 'grooming',
-          target_species: ser.target_species || 'Dog',
+          target_species: ser.targetSpecies || 'Dog',
           prices: ser.prices || {},
           is_active: ser.isActive !== false,
           coat_type: ser.coatType || null,
@@ -585,7 +584,7 @@ export const useStore = create<AppState>()((set, get) => ({
           duration_minutes: defaultDuration,
           category: ser.category || 'Grooming',
           icon: ser.icon || 'grooming',
-          target_species: ser.target_species || 'Dog',
+          target_species: ser.targetSpecies || 'Dog',
           prices: ser.prices || {},
           is_active: ser.isActive !== false,
           coat_type: ser.coatType || null
