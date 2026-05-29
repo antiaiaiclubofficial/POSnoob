@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { X, Package, DollarSign, Save, Tag, Layers, Bell } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Package, DollarSign, Save, Tag, Layers, Bell, Upload, Camera } from 'lucide-react';
 import { useStore, InventoryItem } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ interface InventoryModalProps {
 
 const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
   const { addInventoryItem, updateInventoryItem, partners, currency } = useStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -46,6 +47,17 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
       });
     }
   }, [item]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,11 +98,40 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-10 space-y-8 scrollbar-hide">
+           {/* Image Upload Section */}
+           <div className="flex flex-col items-center justify-center bg-[#F5F6FA] p-6 rounded-[32px] border-2 border-dashed border-gray-200">
+             <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-wider">รูปภาพสินค้า (Product Image)</label>
+             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+               <div className="w-32 h-32 rounded-[28px] overflow-hidden border-4 border-white shadow-md flex items-center justify-center bg-white">
+                 {formData.image ? (
+                   <img src={formData.image} className="w-full h-full object-cover" alt="Product Preview" />
+                 ) : (
+                   <Package className="text-gray-300 w-12 h-12" />
+                 )}
+               </div>
+               <div className="absolute inset-0 bg-[#1A1F3D]/40 rounded-[28px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                 <Camera className="text-white mb-1" size={24} />
+                 <span className="text-[9px] text-white font-black uppercase">Upload</span>
+               </div>
+               <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#1A1F3D] text-white rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+                 <Upload size={14} />
+               </div>
+             </div>
+             <input 
+               type="file" 
+               ref={fileInputRef} 
+               className="hidden" 
+               accept="image/*" 
+               onChange={handleImageUpload} 
+             />
+             <p className="text-[10px] text-gray-400 font-medium mt-3">รองรับไฟล์รูปภาพ JPG, PNG เพื่อแสดงในระบบขายหน้าร้าน (POS)</p>
+           </div>
+
            {/* Section 1 & 2: Main Info Rows */}
            <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                  <label className={labelClasses}><Package size={12}/> ชื่อสินค้า</label>
-                 <input className={inputClasses} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="เช่น แชมพูสูตรอ่อนโยน" />
+                 <input className={inputClasses} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="เช่น แชมพูสูตรอ่อนโยน" required />
               </div>
               <div className="space-y-2">
                  <label className={labelClasses}><Layers size={12}/> บาร์โค้ด / รหัสสินค้า</label>
