@@ -21,7 +21,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
     cart, removeFromCart, updateCartQuantity, updateCartItemDiscount, clearCart, 
     selectedOwner, activePet, markAsPaid, processPayment, tierRules, inventory, 
     addToCart, currency, language, shopName, shopLogo, shopAddress, shopPhone,
-    receiptHeader, receiptFooter, receiptPaperSize
+    receiptHeader, receiptFooter, receiptPaperSize, vatEnabled
   } = useStore();
   
   const t = translations[language];
@@ -33,7 +33,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
   const [barcodeQuery, setBarcodeQuery] = useState('');
   const [activeDiscountIndex, setActiveDiscountIndex] = useState<number | null>(null);
   const [tempDiscountVal, setTempDiscountVal] = useState('');
-  const [tempDiscountType, setTempDiscountType] = useState<'percent' | 'amount'>('percent');
+  const [tempDiscountType, setTempDiscountType] = useState<'percent' | 'amount' | 'percent'>('percent');
 
   // เก็บข้อมูลธุรกรรมที่เพิ่งทำเสร็จเพื่อแสดงใบเสร็จ
   const [completedTransaction, setCompletedTransaction] = useState<any | null>(null);
@@ -95,8 +95,8 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
   const tierDiscountPercent = userTier?.discount || 0;
   const tierDiscountAmount = (subtotal * tierDiscountPercent) / 100;
   
-  // คำนวณภาษีเฉพาะเมื่อเปิดสวิตช์ขอใบกำกับภาษี (isTaxInvoice) เท่านั้น
-  const tax = isTaxInvoice ? (subtotal - tierDiscountAmount) * 0.07 : 0;
+  // คำนวณภาษีเฉพาะเมื่อเปิดสวิตช์ขอใบกำกับภาษี (isTaxInvoice) และเปิดใช้งาน VAT ในระบบ (vatEnabled) เท่านั้น
+  const tax = (isTaxInvoice && vatEnabled) ? (subtotal - tierDiscountAmount) * 0.07 : 0;
   const total = subtotal - tierDiscountAmount + tax;
 
   const availablePackages = selectedOwner?.packages?.filter(pkg => {
@@ -335,13 +335,15 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       </div>
 
       <div className="pt-6 mb-6 space-y-4">
-        <div className="bg-[#F8F9FD] p-4 rounded-2xl flex items-center justify-between border border-gray-100">
-           <div className="flex items-center gap-2">
-              <FileText size={16} className="text-gray-400" />
-              <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{language === 'th' ? 'ขอใบกำกับภาษี' : 'Tax Invoice'}</span>
-           </div>
-           <Switch checked={isTaxInvoice} onCheckedChange={setIsTaxInvoice} className="data-[state=checked]:bg-[#1A1F3D]" />
-        </div>
+        {vatEnabled && (
+          <div className="bg-[#F8F9FD] p-4 rounded-2xl flex items-center justify-between border border-gray-100 animate-in fade-in duration-300">
+             <div className="flex items-center gap-2">
+                <FileText size={16} className="text-gray-400" />
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{language === 'th' ? 'ขอใบกำกับภาษี' : 'Tax Invoice'}</span>
+             </div>
+             <Switch checked={isTaxInvoice} onCheckedChange={setIsTaxInvoice} className="data-[state=checked]:bg-[#1A1F3D]" />
+          </div>
+        )}
 
         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.paymentMethod}</p>
         <div className="grid grid-cols-5 gap-1.5">

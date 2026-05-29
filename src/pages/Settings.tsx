@@ -19,7 +19,7 @@ type SettingTab = 'profile' | 'operations' | 'integrations' | 'system';
 const Settings = () => {
   const { 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
-    receiptHeader, receiptFooter, receiptPaperSize,
+    receiptHeader, receiptFooter, receiptPaperSize, vatEnabled,
     liffId, liffChannelId, liffChannelSecret, liffEnabled,
     updateBusinessProfile,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings,
@@ -43,6 +43,7 @@ const Settings = () => {
   const [localReceiptHeader, setLocalReceiptHeader] = useState(receiptHeader);
   const [localReceiptFooter, setLocalReceiptFooter] = useState(receiptFooter);
   const [localReceiptPaperSize, setLocalReceiptPaperSize] = useState<'58mm' | '80mm'>(receiptPaperSize);
+  const [localVatEnabled, setLocalVatEnabled] = useState(vatEnabled);
   const [localSlotDuration, setLocalSlotDuration] = useState(slotDuration);
   const [localMaxCapacity, setLocalMaxCapacity] = useState(maxCapacity);
   const [localOpenTime, setLocalOpenTime] = useState(openTime);
@@ -70,6 +71,7 @@ const Settings = () => {
       receiptHeader: localReceiptHeader,
       receiptFooter: localReceiptFooter,
       receiptPaperSize: localReceiptPaperSize,
+      vatEnabled: localVatEnabled,
       currency: localCurrency,
       shopIsOpen: localShopIsOpen,
       liffId: localLiffId,
@@ -230,13 +232,22 @@ const Settings = () => {
                    </div>
                    
                    <div className="space-y-6">
-                      <div className="space-y-3">
-                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Paper Size</label>
-                         <div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2 w-full max-w-sm">
-                            {(['58mm', '80mm'] as const).map(size => (
-                              <button key={size} onClick={() => setLocalReceiptPaperSize(size)} className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all", localReceiptPaperSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{size} Thermal</button>
-                            ))}
-                         </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                           <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Paper Size</label>
+                           <div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2 w-full">
+                              {(['58mm', '80mm'] as const).map(size => (
+                                <button key={size} onClick={() => setLocalReceiptPaperSize(size)} className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all", localReceiptPaperSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{size} Thermal</button>
+                              ))}
+                           </div>
+                        </div>
+                        <div className="space-y-3">
+                           <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">VAT 7% (ภาษีมูลค่าเพิ่ม)</label>
+                           <div className="flex items-center justify-between bg-[#F5F6FA] p-3 rounded-[22px] h-[58px] px-6">
+                              <span className="text-xs font-bold text-gray-500">{localVatEnabled ? "เปิดใช้งาน (Enabled)" : "ปิดใช้งาน (Disabled)"}</span>
+                              <Switch checked={localVatEnabled} onCheckedChange={setLocalVatEnabled} className="data-[state=checked]:bg-[#1A1F3D]" />
+                           </div>
+                        </div>
                       </div>
                       <div className="space-y-2">
                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Header Title</label>
