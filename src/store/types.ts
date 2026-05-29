@@ -41,6 +41,7 @@ export interface Customer {
   pets: Pet[];
   totalSpent: number;
   creditBalance: number;
+  points?: number;
   lineId?: string;
   packages?: any[];
   creditHistory?: any[];
@@ -239,6 +240,7 @@ export interface AppState {
   receiptHeader: string;
   receiptFooter: string;
   receiptPaperSize: '58mm' | '80mm';
+  vatEnabled: boolean;
 
   // LINE LIFF Settings
   liffId: string;
@@ -279,7 +281,7 @@ export interface AppState {
 
   // Actions
   login: (id: string, pass: string) => boolean;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: (redirectTo?: string) => Promise<void>;
   logout: () => void;
   verifyPassword: (pass: string) => boolean;
   setSession: (user: any) => void;

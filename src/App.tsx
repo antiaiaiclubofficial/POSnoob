@@ -36,7 +36,7 @@ const HomeRedirect = () => {
 };
 
 const App = () => {
-  const { language, setSession, setCustomers, setServices } = useStore();
+  const { language, isAuthenticated, setSession, setCustomers, setServices } = useStore();
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -46,245 +46,255 @@ const App = () => {
     // Auth Session Handling
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session?.user ?? null);
-      if (session) fetchInitialData();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session?.user ?? null);
-      if (session) fetchInitialData();
     });
 
-    // CRM & Services Data Sync Logic
+    return () => subscription.unsubscribe();
+  }, [setSession]);
+
+  // CRM & Services Data Sync Logic - Runs whenever authenticated
+  useEffect(() => {
     const fetchInitialData = async () => {
-      // 1. Fetch Customers
-      const { data: customersData } = await supabase
-        .from('customers')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          display_name,
-          phone,
-          email,
-          line_user_id,
-          gender,
-          age,
-          house_no,
-          village_no,
-          soi,
-          road,
-          sub_district,
-          district,
-          province,
-          postal_code,
-          store_customers (
-            points,
-            tier
-          ),
-          pets (
+      try {
+        // 1. Fetch Customers
+        const { data: customersData, error: customersError } = await supabase
+          .from('customers')
+          .select(`
             id,
-            name,
-            type,
-            breed,
-            birth_date,
-            weight,
-            medical_condition,
-            image_url
-          )
-        `);
+            first_name,
+            last_name,
+            display_name,
+            phone,
+            email,
+            line_user_id,
+            gender,
+            age,
+            house_no,
+            village_no,
+            soi,
+            road,
+            sub_district,
+            district,
+            province,
+            postal_code,
+            store_customers (
+              points,
+              tier
+            ),
+            pets (
+              id,
+              name,
+              type,
+              breed,
+              birth_date,
+              weight,
+              medical_condition,
+              image_url
+            )
+          `);
 
-      // Fetch service history
-      const { data: serviceHistoryData } = await supabase
-        .from('service_history')
-        .select('*');
-      
-      const serviceHistoryMap: Record<string, any[]> = {};
-      if (serviceHistoryData) {
-        serviceHistoryData.forEach(sh => {
-          if (sh.pet_id) {
-            if (!serviceHistoryMap[sh.pet_id]) {
-              serviceHistoryMap[sh.pet_id] = [];
+        if (customersError) throw customersError;
+
+        // Fetch service history
+        const { data: serviceHistoryData } = await supabase
+          .from('service_history')
+          .select('*');
+        
+        const serviceHistoryMap: Record<string, any[]> = {};
+        if (serviceHistoryData) {
+          serviceHistoryData.forEach(sh => {
+            if (sh.pet_id) {
+              if (!serviceHistoryMap[sh.pet_id]) {
+                serviceHistoryMap[sh.pet_id] = [];
+              }
+              serviceHistoryMap[sh.pet_id].push({
+                id: sh.id,
+                serviceName: sh.note || 'บริการ',
+                date: sh.created_at.split('T')[0],
+                price: Number(sh.price || 0)
+              });
             }
-            serviceHistoryMap[sh.pet_id].push({
-              id: sh.id,
-              serviceName: sh.note || 'บริการ',
-              date: sh.created_at.split('T')[0],
-              price: Number(sh.price || 0)
-            });
-          }
-        });
-      }
-      
-      if (customersData) {
-        const formattedCustomers = customersData.map(c => {
-          const storeCustomer = (c.store_customers?.[0] || {}) as any;
-          return {
-            id: c.id,
-            name: c.display_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unnamed',
-            firstName: c.first_name || '',
-            lastName: c.last_name || '',
-            phone: c.phone || '-',
-            email: c.email || '-',
-            lineId: c.line_user_id || '',
-            membership: storeCustomer.tier || 'Standard',
-            points: storeCustomer.points || 0,
-            totalSpent: 0,
-            creditBalance: 0,
-            gender: c.gender || 'Male',
-            age: c.age || '',
-            houseNo: c.house_no || '',
-            villageNo: c.village_no || '',
-            soi: c.soi || '',
-            road: c.road || '',
-            subDistrict: c.sub_district || '',
-            district: c.district || '',
-            province: c.province || '',
-            postalCode: c.postal_code || '',
-            creditHistory: [],
-            packages: [],
-            pets: (c.pets || []).map((p: any) => ({
-              id: p.id,
-              name: p.name,
-              species: p.type || 'Dog',
-              breed: p.breed || '-',
-              birthday: p.birth_date || '',
-              weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
-              serviceHistory: serviceHistoryMap[p.id] || [],
-              notes: p.medical_condition || '',
-              image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
-            }))
-          };
-        });
-        setCustomers(formattedCustomers);
-      }
+          });
+        }
+        
+        if (customersData && customersData.length > 0) {
+          const formattedCustomers = customersData.map(c => {
+            const storeCustomer = (c.store_customers?.[0] || {}) as any;
+            return {
+              id: c.id,
+              name: c.display_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unnamed',
+              firstName: c.first_name || '',
+              lastName: c.last_name || '',
+              phone: c.phone || '-',
+              email: c.email || '-',
+              lineId: c.line_user_id || '',
+              membership: storeCustomer.tier || 'Standard',
+              points: storeCustomer.points || 0,
+              totalSpent: 0,
+              creditBalance: 0,
+              gender: c.gender || 'Male',
+              age: c.age || '',
+              houseNo: c.house_no || '',
+              villageNo: c.village_no || '',
+              soi: c.soi || '',
+              road: c.road || '',
+              subDistrict: c.sub_district || '',
+              district: c.district || '',
+              province: c.province || '',
+              postalCode: c.postal_code || '',
+              creditHistory: [],
+              packages: [],
+              pets: (c.pets || []).map((p: any) => ({
+                id: p.id,
+                name: p.name,
+                species: p.type || 'Dog',
+                breed: p.breed || '-',
+                birthday: p.birth_date || '',
+                weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
+                serviceHistory: serviceHistoryMap[p.id] || [],
+                notes: p.medical_condition || '',
+                image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+              }))
+            };
+          });
+          setCustomers(formattedCustomers);
+        }
 
-      // 2. Fetch Services & Add-ons
-      const { data: servicesData } = await supabase
-        .from('services')
-        .select('*');
+        // 2. Fetch Services & Add-ons
+        const { data: servicesData } = await supabase
+          .from('services')
+          .select('*');
 
-      if (servicesData) {
-        // แยกบริการหลัก
-        const mainServices = servicesData
-          .filter(s => !s.is_addon)
-          .map(s => ({
-            id: s.id,
-            title: s.name,
-            category: s.category || 'Grooming',
-            description: s.description || '',
-            icon: (s.icon || 'grooming') as any,
-            targetSpecies: (s.target_species || 'Dog') as any,
-            prices: s.prices && Object.keys(s.prices).length > 0 ? s.prices : {
-              'Standard': { price: Number(s.price || 0), duration: s.duration_minutes || 60 }
-            },
-            isActive: s.is_active !== false,
-            coatType: s.coat_type || undefined
+        if (servicesData) {
+          // แยกบริการหลัก
+          const mainServices = servicesData
+            .filter(s => !s.is_addon)
+            .map(s => ({
+              id: s.id,
+              title: s.name,
+              category: s.category || 'Grooming',
+              description: s.description || '',
+              icon: (s.icon || 'grooming') as any,
+              targetSpecies: (s.target_species || 'Dog') as any,
+              prices: s.prices && Object.keys(s.prices).length > 0 ? s.prices : {
+                'Standard': { price: Number(s.price || 0), duration: s.duration_minutes || 60 }
+              },
+              isActive: s.is_active !== false,
+              coatType: s.coat_type || undefined
+            }));
+          setServices(mainServices);
+
+          // แยกบริการเสริม (Add-ons)
+          const addonsList = servicesData
+            .filter(s => s.is_addon)
+            .map(s => ({
+              id: s.id,
+              name: s.name,
+              price: Number(s.price || 0),
+              icon: (s.icon || 'nail') as any
+            }));
+          useStore.setState({ addons: addonsList });
+        }
+
+        // 3. Fetch Partners
+        const { data: partnersData } = await supabase
+          .from('partners')
+          .select('*');
+
+        if (partnersData) {
+          const formattedPartners = partnersData.map(p => ({
+            id: p.id,
+            companyName: p.company_name,
+            taxId: p.tax_id || '',
+            address: p.address || '',
+            phone: p.phone || '',
+            email: p.email || '',
+            contactPerson: p.contact_person || '',
+            notes: p.notes || '',
+            mainCategory: p.main_category || '',
+            gpRate: Number(p.gp_rate || 0)
           }));
-        setServices(mainServices);
+          useStore.setState({ partners: formattedPartners });
+        }
 
-        // แยกบริการเสริม (Add-ons)
-        const addonsList = servicesData
-          .filter(s => s.is_addon)
-          .map(s => ({
-            id: s.id,
-            name: s.name,
-            price: Number(s.price || 0),
-            icon: (s.icon || 'nail') as any
+        // 4. Fetch Products (Inventory)
+        const { data: productsData } = await supabase
+          .from('products')
+          .select('*');
+
+        if (productsData) {
+          const formattedInventory = productsData.map(p => ({
+            id: p.id,
+            name: p.name,
+            barcode: p.barcode || '',
+            stock: p.stock || 0,
+            minStock: p.min_stock || 5,
+            price: Number(p.price || 0),
+            costPrice: Number(p.cost_price || 0),
+            unit: p.unit || 'ชิ้น',
+            category: p.category || 'ทั่วไป',
+            image: p.image_url || '',
+            isConsignment: p.is_consignment || false,
+            partnerId: p.partner_id || '',
+            consignmentRate: Number(p.consignment_rate || 0)
           }));
-        useStore.setState({ addons: addonsList });
-      }
+          useStore.setState({ inventory: formattedInventory });
+        }
 
-      // 3. Fetch Partners
-      const { data: partnersData } = await supabase
-        .from('partners')
-        .select('*');
+        // 5. Fetch Stock Logs
+        const { data: logsData } = await supabase
+          .from('stock_logs')
+          .select('*, products(name)');
 
-      if (partnersData) {
-        const formattedPartners = partnersData.map(p => ({
-          id: p.id,
-          companyName: p.company_name,
-          taxId: p.tax_id || '',
-          address: p.address || '',
-          phone: p.phone || '',
-          email: p.email || '',
-          contactPerson: p.contact_person || '',
-          notes: p.notes || '',
-          mainCategory: p.main_category || '',
-          gpRate: Number(p.gp_rate || 0)
-        }));
-        useStore.setState({ partners: formattedPartners });
-      }
+        if (logsData) {
+          const formattedLogs = logsData.map(l => ({
+            id: l.id,
+            productId: l.product_id,
+            productName: l.products?.name || 'Unknown Product',
+            action: l.action as any,
+            oldQty: l.old_qty,
+            newQty: l.new_qty,
+            reason: l.reason || '',
+            staffName: l.staff_name || 'System',
+            timestamp: l.created_at
+          }));
+          useStore.setState({ stockLogs: formattedLogs });
+        }
 
-      // 4. Fetch Products (Inventory)
-      const { data: productsData } = await supabase
-        .from('products')
-        .select('*');
+        // 6. Fetch Sales Transactions
+        const { data: txData } = await supabase
+          .from('sales_transactions')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (productsData) {
-        const formattedInventory = productsData.map(p => ({
-          id: p.id,
-          name: p.name,
-          barcode: p.barcode || '',
-          stock: p.stock || 0,
-          minStock: p.min_stock || 5,
-          price: Number(p.price || 0),
-          costPrice: Number(p.cost_price || 0),
-          unit: p.unit || 'ชิ้น',
-          category: p.category || 'ทั่วไป',
-          image: p.image_url || '',
-          isConsignment: p.is_consignment || false,
-          partnerId: p.partner_id || '',
-          consignmentRate: Number(p.consignment_rate || 0)
-        }));
-        useStore.setState({ inventory: formattedInventory });
-      }
-
-      // 5. Fetch Stock Logs
-      const { data: logsData } = await supabase
-        .from('stock_logs')
-        .select('*, products(name)');
-
-      if (logsData) {
-        const formattedLogs = logsData.map(l => ({
-          id: l.id,
-          productId: l.product_id,
-          productName: l.products?.name || 'Unknown Product',
-          action: l.action as any,
-          oldQty: l.old_qty,
-          newQty: l.new_qty,
-          reason: l.reason || '',
-          staffName: l.staff_name || 'System',
-          timestamp: l.created_at
-        }));
-        useStore.setState({ stockLogs: formattedLogs });
-      }
-
-      // 6. Fetch Sales Transactions
-      const { data: txData } = await supabase
-        .from('sales_transactions')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (txData) {
-        const formattedTx = txData.map(t => ({
-          id: t.id,
-          date: t.created_at.split('T')[0],
-          amount: Number(t.amount),
-          discountAmount: Number(t.discount_amount),
-          customerId: t.customer_id || 'walk-in',
-          customerName: t.customer_name,
-          items: t.items,
-          paymentMethod: t.payment_method,
-          staffName: t.staff_name || 'Admin',
-          species: [],
-          bookingType: 'Walk-in' as BookingType
-        }));
-        useStore.setState({ transactions: formattedTx });
+        if (txData) {
+          const formattedTx = txData.map(t => ({
+            id: t.id,
+            date: t.created_at.split('T')[0],
+            amount: Number(t.amount),
+            discountAmount: Number(t.discount_amount),
+            customerId: t.customer_id || 'walk-in',
+            customerName: t.customer_name,
+            items: t.items,
+            paymentMethod: t.payment_method,
+            staffName: t.staff_name || 'Admin',
+            species: [],
+            bookingType: 'Walk-in' as BookingType
+          }));
+          useStore.setState({ transactions: formattedTx });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch initial data from Supabase:", err);
       }
     };
 
-    return () => subscription.unsubscribe();
-  }, [setSession, setCustomers, setServices]);
+    if (isAuthenticated) {
+      fetchInitialData();
+    }
+  }, [isAuthenticated, setCustomers, setServices]);
 
   return (
     <QueryClientProvider client={queryClient}>
