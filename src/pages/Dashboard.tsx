@@ -21,7 +21,12 @@ import {
   Plus,
   ShoppingBag,
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  Crown,
+  Award,
+  Star,
+  Gem,
+  DoorOpen
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -46,6 +51,7 @@ import {
 } from "@/components/ui/popover";
 import BookingModal from '@/components/BookingModal';
 import CustomerModal from '@/components/CustomerModal';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -74,6 +80,60 @@ const Dashboard = () => {
       avgTicket
     };
   }, [todayQueue, todayTransactions]);
+
+  // 1. คำนวณลูกค้าที่มาบ่อยที่สุด (Most Frequent Customers)
+  const frequentCustomers = useMemo(() => {
+    const visitMap: Record<string, number> = {};
+    transactions.forEach(tx => {
+      if (tx.customerId && tx.customerId !== 'walk-in') {
+        visitMap[tx.customerId] = (visitMap[tx.customerId] || 0) + 1;
+      }
+    });
+    return customers
+      .map(c => ({ ...c, visits: visitMap[c.id] || 0 }))
+      .filter(c => c.visits > 0)
+      .sort((a, b) => b.visits - a.visits)
+      .slice(0, 5);
+  }, [customers, transactions]);
+
+  // 2. คำนวณลูกค้าที่มียอดชำระมากที่สุด 10 อันดับ (Top 10 Spending Customers)
+  const topSpendingCustomers = useMemo(() => {
+    const spendMap: Record<string, number> = {};
+    transactions.forEach(tx => {
+      if (tx.customerId && tx.customerId !== 'walk-in') {
+        spendMap[tx.customerId] = (spendMap[tx.customerId] || 0) + tx.amount;
+      }
+    });
+    return customers
+      .map(c => ({ ...c, dynamicSpent: spendMap[c.id] || c.totalSpent || 0 }))
+      .sort((a, b) => b.dynamicSpent - a.dynamicSpent)
+      .slice(0, 10);
+  }, [customers, transactions]);
+
+  // 3. ตารางห้องพักโรงแรมสัตว์เลี้ยงแบบโต้ตอบได้ (Interactive Hotel Rooms Grid)
+  const activeQueueItems = useMemo(() => {
+    return todayQueue.filter(q => q.status === 'Checked-in' || q.status === 'In Progress');
+  }, [todayQueue]);
+
+  const hotelRooms = useMemo(() => {
+    return Array.from({ length: kennelCapacity }).map((_, idx) => {
+      const roomNo = 101 + idx;
+      const occupiedBy = activeQueueItems[idx] || null;
+      return {
+        roomNo,
+        occupiedBy
+      };
+    });
+  }, [kennelCapacity, activeQueueItems]);
+
+  const handleRoomClick = (room: any) => {
+    if (room.occupiedBy) {
+      toast.info(`ห้อง ${room.roomNo} กำลังให้บริการสัตว์เลี้ยง: ${room.occupiedBy.petName} (${room.occupiedBy.ownerName})`);
+    } else {
+      setIsBookingOpen(true);
+      toast.success(`กำลังเปิดหน้าต่างจองคิวสำหรับห้องพัก ${room.roomNo}`);
+    }
+  };
 
   const busyHoursData = useMemo(() => {
     const hoursMap: Record<string, number> = {};
@@ -123,9 +183,7 @@ const Dashboard = () => {
     };
   }, [customers, transactions]);
 
-  const occupiedKennels = todayQueue.filter(q => q.status === 'Checked-in' || q.status === 'In Progress').length;
-  const availableKennels = Math.max(0, kennelCapacity - occupiedKennels);
-
+  const occupiedKennels = activeQueueItems.length;
   const lowStockItems = inventory.filter(i => i.stock <= i.minStock);
   const specialCarePets = useMemo(() => {
     const todayPetIds = todayQueue.map(q => q.petId);
@@ -291,6 +349,75 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {/* Interactive Hotel Rooms Grid */}
+          <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-xl font-black text-[#1A1F3D] flex items-center gap-2">
+                  <Home className="text-indigo-500" size={22} />
+                  {language === 'th' ? 'ตารางห้องพักโรงแรมสัตว์เลี้ยง' : 'Hotel Rooms Grid'}
+                </h3>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+                  {language === 'th' ? 'คลิกห้องว่างเพื่อจองคิว หรือดูสัตว์เลี้ยงที่เข้าพักอยู่' : 'Click empty room to book or view occupied status'}
+                </p>
+              </div>
+              <span className="text-xs font-black text-gray-400 bg-gray-50 px-3 py-1.5 rounded-xl">
+                {occupiedKennels} / {kennelCapacity} {language === 'th' ? 'ห้องไม่ว่าง' : 'Occupied'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {hotelRooms.map((room) => (
+                <button
+                  key={room.roomNo}
+                  onClick={() => handleRoomClick(room)}
+                  className={cn(
+                    "p-5 rounded-[32px] border-2 transition-all text-center flex flex-col items-center justify-between h-40 relative overflow-hidden group",
+                    room.occupiedBy 
+                      ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-lg" 
+                      : "bg-white border-gray-100 hover:border-indigo-500 hover:shadow-md text-gray-600"
+                  )}
+                >
+                  <div className="flex justify-between items-center w-full">
+                    <span className={cn("text-xs font-black", room.occupiedBy ? "text-[#D9ED5F]" : "text-gray-400")}>
+                      Room {room.roomNo}
+                    </span>
+                    {room.occupiedBy ? (
+                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    ) : (
+                      <DoorOpen size={14} className="text-green-500" />
+                    )}
+                  </div>
+
+                  {room.occupiedBy ? (
+                    <div className="flex flex-col items-center gap-2 my-2">
+                      <img 
+                        src={room.occupiedBy.image} 
+                        alt={room.occupiedBy.petName} 
+                        className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm"
+                      />
+                      <p className="text-xs font-black truncate max-w-[110px]">{room.occupiedBy.petName}</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 my-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                      <Plus size={20} className="text-indigo-500" />
+                      <span className="text-[9px] font-black uppercase tracking-wider">Book Room</span>
+                    </div>
+                  )}
+
+                  <div className="w-full">
+                    <span className={cn(
+                      "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md block text-center",
+                      room.occupiedBy ? "bg-white/10 text-white" : "bg-green-50 text-green-600"
+                    )}>
+                      {room.occupiedBy ? room.occupiedBy.status : "Available"}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Charts & Analytics Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Busy Hours Bar Chart */}
@@ -364,6 +491,91 @@ const Dashboard = () => {
                   </div>
                   <span className="text-xs font-black text-[#1A1F3D]">{loyaltyData.new} คน ({loyaltyData.percentNew}%)</span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Customers Section (Frequent & Spending) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Most Frequent Customers */}
+            <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm flex flex-col">
+              <div className="mb-6">
+                <h3 className="text-xl font-black text-[#1A1F3D] flex items-center gap-2">
+                  <Sparkles className="text-amber-500" size={20} />
+                  {language === 'th' ? 'ลูกค้าที่มาใช้บริการบ่อยที่สุด' : 'Most Frequent Customers'}
+                </h3>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+                  {language === 'th' ? 'จัดอันดับลูกค้าตามจำนวนครั้งที่มาใช้บริการ' : 'Ranked by total visits'}
+                </p>
+              </div>
+
+              <div className="divide-y divide-gray-50 flex-1">
+                {frequentCustomers.map((customer, idx) => (
+                  <div key={customer.id} className="py-4 flex items-center justify-between first:pt-0 last:pb-0">
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-black text-gray-300 w-6">#{idx + 1}</span>
+                      <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black text-sm">
+                        {customer.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-[#1A1F3D]">{customer.name}</p>
+                        <span className="text-[8px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-black uppercase tracking-wider">
+                          {customer.membership}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-indigo-600">{customer.visits} {language === 'th' ? 'ครั้ง' : 'Visits'}</p>
+                      <p className="text-[9px] text-gray-400 font-bold">{customer.phone}</p>
+                    </div>
+                  </div>
+                ))}
+                {frequentCustomers.length === 0 && (
+                  <div className="py-12 text-center opacity-20 font-black text-xs uppercase">
+                    No visit history recorded yet
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Top 10 Spending Customers */}
+            <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm flex flex-col">
+              <div className="mb-6">
+                <h3 className="text-xl font-black text-[#1A1F3D] flex items-center gap-2">
+                  <Crown className="text-amber-500" size={20} />
+                  {language === 'th' ? 'ลูกค้าที่มียอดชำระมากที่สุด 10 อันดับ' : 'Top 10 Spending Customers'}
+                </h3>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+                  {language === 'th' ? 'จัดอันดับลูกค้าตามยอดใช้จ่ายสะสมในระบบ' : 'Ranked by total spending'}
+                </p>
+              </div>
+
+              <div className="divide-y divide-gray-50 flex-1 max-h-[350px] overflow-y-auto scrollbar-hide">
+                {topSpendingCustomers.map((customer, idx) => (
+                  <div key={customer.id} className="py-4 flex items-center justify-between first:pt-0 last:pb-0">
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-black text-gray-300 w-6">#{idx + 1}</span>
+                      <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-black text-sm">
+                        {customer.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-[#1A1F3D]">{customer.name}</p>
+                        <span className="text-[8px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-black uppercase tracking-wider">
+                          {customer.membership}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-green-600">{currency}{customer.dynamicSpent.toLocaleString()}</p>
+                      <p className="text-[9px] text-gray-400 font-bold">{customer.phone}</p>
+                    </div>
+                  </div>
+                ))}
+                {topSpendingCustomers.length === 0 && (
+                  <div className="py-12 text-center opacity-20 font-black text-xs uppercase">
+                    No spending history recorded yet
+                  </div>
+                )}
               </div>
             </div>
           </div>
