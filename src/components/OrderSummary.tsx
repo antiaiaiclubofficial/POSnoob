@@ -95,7 +95,8 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
   const tierDiscountPercent = userTier?.discount || 0;
   const tierDiscountAmount = (subtotal * tierDiscountPercent) / 100;
   
-  const tax = (subtotal - tierDiscountAmount) * 0.07;
+  // คำนวณภาษีเฉพาะเมื่อเปิดสวิตช์ขอใบกำกับภาษี (isTaxInvoice) เท่านั้น
+  const tax = isTaxInvoice ? (subtotal - tierDiscountAmount) * 0.07 : 0;
   const total = subtotal - tierDiscountAmount + tax;
 
   const availablePackages = selectedOwner?.packages?.filter(pkg => {
