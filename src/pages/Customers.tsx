@@ -34,116 +34,112 @@ const Customers = () => {
   const { isLoading, refetch } = useQuery({
     queryKey: ['customers-list'],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('customers')
-          .select(`
+      const { data, error } = await supabase
+        .from('customers')
+        .select(`
+          id,
+          first_name,
+          last_name,
+          display_name,
+          phone,
+          email,
+          line_user_id,
+          gender,
+          age,
+          house_no,
+          village_no,
+          soi,
+          road,
+          sub_district,
+          district,
+          province,
+          postal_code,
+          store_customers (
+            points,
+            tier
+          ),
+          pets (
             id,
-            first_name,
-            last_name,
-            display_name,
-            phone,
-            email,
-            line_user_id,
-            gender,
-            age,
-            house_no,
-            village_no,
-            soi,
-            road,
-            sub_district,
-            district,
-            province,
-            postal_code,
-            store_customers (
-              points,
-              tier
-            ),
-            pets (
-              id,
-              name,
-              type,
-              breed,
-              birth_date,
-              weight,
-              medical_condition,
-              image_url
-            )
-          `);
-        
-        if (error) {
-          console.warn("Supabase error, using store default mock data:", error);
-          return customers;
-        }
-
-        // ดึงข้อมูลประวัติการใช้บริการ (service_history)
-        const { data: serviceHistoryData } = await supabase
-          .from('service_history')
-          .select('*');
-        
-        const serviceHistoryMap: Record<string, any[]> = {};
-        if (serviceHistoryData) {
-          serviceHistoryData.forEach(sh => {
-            if (sh.pet_id) {
-              if (!serviceHistoryMap[sh.pet_id]) {
-                serviceHistoryMap[sh.pet_id] = [];
-              }
-              serviceHistoryMap[sh.pet_id].push({
-                id: sh.id,
-                serviceName: sh.note || 'บริการ',
-                date: sh.created_at.split('T')[0],
-                price: Number(sh.price || 0)
-              });
-            }
-          });
-        }
-
-        const transformed: Customer[] = data.map((item: any) => {
-          const storeCustomer = item.store_customers?.[0] || {};
-          return {
-            id: item.id,
-            name: item.display_name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Unnamed',
-            firstName: item.first_name || '',
-            lastName: item.last_name || '',
-            phone: item.phone || '-',
-            email: item.email || '-',
-            lineId: item.line_user_id || '',
-            membership: (storeCustomer.tier || 'Standard') as MembershipLevel,
-            totalSpent: 0,
-            creditBalance: 0,
-            points: storeCustomer.points || 0,
-            gender: item.gender || 'Male',
-            age: item.age || '',
-            houseNo: item.house_no || '',
-            villageNo: item.village_no || '',
-            soi: item.soi || '',
-            road: item.road || '',
-            subDistrict: item.sub_district || '',
-            district: item.district || '',
-            province: item.province || '',
-            postalCode: item.postal_code || '',
-            creditHistory: [],
-            packages: [],
-            pets: (item.pets || []).map((p: any) => ({
-              id: p.id,
-              name: p.name,
-              species: (p.type || 'Dog') as 'Dog' | 'Cat' | 'Other',
-              breed: p.breed || '-',
-              birthday: p.birth_date || '',
-              weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
-              serviceHistory: serviceHistoryMap[p.id] || [],
-              notes: p.medical_condition || '',
-              image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
-            }))
-          };
-        });
-
-        setCustomers(transformed);
-        return transformed;
-      } catch (err) {
-        console.warn("Failed to fetch from Supabase, using store default mock data:", err);
-        return customers;
+            name,
+            type,
+            breed,
+            birth_date,
+            weight,
+            medical_condition,
+            image_url
+          )
+        `);
+      
+      if (error) {
+        console.error("Supabase error:", error);
+        toast.error("Failed to fetch customers");
+        throw error;
       }
+
+      // ดึงข้อมูลประวัติการใช้บริการ (service_history)
+      const { data: serviceHistoryData } = await supabase
+        .from('service_history')
+        .select('*');
+      
+      const serviceHistoryMap: Record<string, any[]> = {};
+      if (serviceHistoryData) {
+        serviceHistoryData.forEach(sh => {
+          if (sh.pet_id) {
+            if (!serviceHistoryMap[sh.pet_id]) {
+              serviceHistoryMap[sh.pet_id] = [];
+            }
+            serviceHistoryMap[sh.pet_id].push({
+              id: sh.id,
+              serviceName: sh.note || 'บริการ',
+              date: sh.created_at.split('T')[0],
+              price: Number(sh.price || 0)
+            });
+          }
+        });
+      }
+
+      const transformed: Customer[] = data.map((item: any) => {
+        const storeCustomer = item.store_customers?.[0] || {};
+        return {
+          id: item.id,
+          name: item.display_name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Unnamed',
+          firstName: item.first_name || '',
+          lastName: item.last_name || '',
+          phone: item.phone || '-',
+          email: item.email || '-',
+          lineId: item.line_user_id || '',
+          membership: (storeCustomer.tier || 'Standard') as MembershipLevel,
+          points: storeCustomer.points || 0,
+          totalSpent: 0,
+          creditBalance: 0,
+          gender: item.gender || 'Male',
+          age: item.age || '',
+          houseNo: item.house_no || '',
+          villageNo: item.village_no || '',
+          soi: item.soi || '',
+          road: item.road || '',
+          subDistrict: item.sub_district || '',
+          district: item.district || '',
+          province: item.province || '',
+          postalCode: item.postal_code || '',
+          creditHistory: [],
+          packages: [],
+          pets: (item.pets || []).map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            species: (p.type || 'Dog') as 'Dog' | 'Cat' | 'Other',
+            breed: p.breed || '-',
+            birthday: p.birth_date || '',
+            weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
+            serviceHistory: serviceHistoryMap[p.id] || [], // แมปประวัติการใช้บริการจริงจาก Supabase
+            notes: p.medical_condition || '',
+            image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+          }))
+        };
+      });
+
+      setCustomers(transformed);
+      return transformed;
     }
   });
 
@@ -165,7 +161,6 @@ const Customers = () => {
     if (isMobile) setShowDetailOnMobile(true);
   };
 
-  // ป้องกันการค้างหน้าโหลดโดยตรวจสอบว่ามีข้อมูลลูกค้าใน Store อยู่แล้วหรือไม่
   if (isLoading && customers.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#F8F9FD]">

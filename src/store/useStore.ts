@@ -19,106 +19,6 @@ export type {
 const isAuthOrSuperAdminPath = typeof window !== 'undefined' && 
   (window.location.pathname === '/login' || window.location.pathname.startsWith('/superadmin'));
 
-const DEFAULT_MOCK_CUSTOMERS: Customer[] = [
-  {
-    id: 'mock-cust-1',
-    name: 'คุณสมชาย ใจดี',
-    firstName: 'สมชาย',
-    lastName: 'ใจดี',
-    phone: '081-234-5678',
-    email: 'somchai@gmail.com',
-    lineId: 'somchai_line',
-    membership: 'Gold',
-    totalSpent: 12500,
-    creditBalance: 1500,
-    points: 120,
-    gender: 'Male',
-    age: '34',
-    houseNo: '12/3',
-    villageNo: '5',
-    soi: 'สุขุมวิท 23',
-    road: 'สุขุมวิท',
-    subDistrict: 'คลองเตยเหนือ',
-    district: 'วัฒนา',
-    province: 'กรุงเทพมหานคร',
-    postalCode: '10110',
-    creditHistory: [],
-    packages: [],
-    pets: [
-      {
-        id: 'mock-pet-1',
-        name: 'บัดดี้ (Buddy)',
-        species: 'Dog',
-        breed: 'Golden Retriever',
-        birthday: '2021-06-15',
-        weightHistory: [
-          { date: '2024-01-10', value: 28.5 },
-          { date: '2024-03-15', value: 29.2 },
-          { date: '2024-05-20', value: 30.1 }
-        ],
-        serviceHistory: [
-          { id: 'sh-1', serviceName: 'อาบน้ำตัดขนสุนัขใหญ่', date: '2024-05-20', price: 1200 }
-        ],
-        notes: 'แพ้แชมพูสูตรเย็น, กลัวเสียงไดร์เป่าผมแรงๆ',
-        image: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=400&fit=crop',
-        coatType: 'Long',
-        color: 'สีทอง',
-        temperament: 'เป็นมิตร ขี้เล่น',
-        precautions: 'ระวังเรื่องหูอักเสบง่าย',
-        medicalCondition: 'ไม่มี'
-      }
-    ]
-  },
-  {
-    id: 'mock-cust-2',
-    name: 'คุณวิภาดา รักดี',
-    firstName: 'วิภาดา',
-    lastName: 'รักดี',
-    phone: '089-876-5432',
-    email: 'wipada@hotmail.com',
-    lineId: '',
-    membership: 'Standard',
-    totalSpent: 3200,
-    creditBalance: 0,
-    points: 45,
-    gender: 'Female',
-    age: '28',
-    houseNo: '99/1',
-    villageNo: '2',
-    soi: 'ลาดพร้าว 101',
-    road: 'ลาดพร้าว',
-    subDistrict: 'คลองจั่น',
-    district: 'บางกะปิ',
-    province: 'กรุงเทพมหานคร',
-    postalCode: '10240',
-    creditHistory: [],
-    packages: [],
-    pets: [
-      {
-        id: 'mock-pet-2',
-        name: 'มิมี่ (Mimi)',
-        species: 'Cat',
-        breed: 'Persian',
-        birthday: '2022-02-10',
-        weightHistory: [
-          { date: '2024-02-10', value: 4.1 },
-          { date: '2024-04-12', value: 4.3 }
-        ],
-        serviceHistory: [
-          { id: 'sh-2', serviceName: 'สปาแมวพรีเมียม', date: '2024-04-12', price: 800 }
-        ],
-        notes: 'ไม่ชอบให้จับหาง, ดุเวลากล้อนขนหน้าท้อง',
-        image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&h=400&fit=crop',
-        coatType: 'Long',
-        color: 'สีขาว-เทา',
-        temperament: 'รักสงบ ขี้กลัว',
-        precautions: 'ระวังการแปรงขนบริเวณท้อง',
-        medicalCondition: 'โรคผิวหนังอักเสบง่าย'
-      }
-    ]
-  }
-];
-
 export const useStore = create<AppState>()((set, get) => ({
   language: 'th',
   setLanguage: (lang) => set({ language: lang }),
@@ -158,7 +58,7 @@ export const useStore = create<AppState>()((set, get) => ({
   liffChannelSecret: '••••••••••••••••••••••••••••••••',
   liffEnabled: true,
 
-  customers: DEFAULT_MOCK_CUSTOMERS,
+  customers: [],
   selectedOwner: null,
   activePet: null,
   activeQueueItemId: null,
@@ -427,7 +327,6 @@ export const useStore = create<AppState>()((set, get) => ({
   verifyPassword: (pass) => {
     const { currentUser, staff } = get();
     if (!currentUser) return false;
-    if (currentUser.username === 'superadmin') return pass === 'superadmin';
     if (currentUser.username === 'admin') return pass === '1234';
     const member = staff.find(s => s.username === currentUser.username);
     return member?.password === pass;

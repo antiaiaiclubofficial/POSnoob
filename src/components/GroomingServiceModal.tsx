@@ -61,9 +61,8 @@ const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: G
     ctx.strokeStyle = '#1A1F3D';
     
     const rect = canvas.getBoundingClientRect();
-    const isTouch = 'touches' in e;
-    const x = isTouch ? (e as React.TouchEvent).touches[0].clientX - rect.left : (e as React.MouseEvent).clientX - rect.left;
-    const y = isTouch ? (e as React.TouchEvent).touches[0].clientY - rect.top : (e as React.MouseEvent).clientY - rect.top;
+    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
     
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -78,9 +77,8 @@ const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: G
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    const isTouch = 'touches' in e;
-    const x = isTouch ? (e as React.TouchEvent).touches[0].clientX - rect.left : (e as React.MouseEvent).clientX - rect.left;
-    const y = isTouch ? (e as React.TouchEvent).touches[0].clientY - rect.top : (e as React.MouseEvent).clientY - rect.top;
+    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
 
     ctx.lineTo(x, y);
     ctx.stroke();

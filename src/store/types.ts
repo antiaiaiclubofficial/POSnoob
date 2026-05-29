@@ -41,7 +41,6 @@ export interface Customer {
   pets: Pet[];
   totalSpent: number;
   creditBalance: number;
-  points?: number;
   lineId?: string;
   packages?: any[];
   creditHistory?: any[];
@@ -281,7 +280,7 @@ export interface AppState {
 
   // Actions
   login: (id: string, pass: string) => boolean;
-  loginWithGoogle: (redirectTo?: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   verifyPassword: (pass: string) => boolean;
   setSession: (user: any) => void;
