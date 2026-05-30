@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Edit3, TrendingUp, History, ClipboardList, Calendar, 
-  ChevronDown, ChevronUp, Scale, FileSearch, Eye 
+  ChevronDown, ChevronUp, Scale, FileSearch, Eye, Home 
 } from 'lucide-react';
 import { useStore, Pet } from '@/store/useStore';
 import { calculateAge } from '@/utils/petData';
@@ -23,6 +23,36 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedIntake, setSelectedIntake] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Hotel Stay States
+  const [currentStay, setCurrentStay] = useState<any | null>(null);
+  const [hotelHistory, setHotelHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    // 1. ตรวจสอบสถานะการเข้าพักปัจจุบัน
+    const savedBookings = localStorage.getItem('hotel_bookings');
+    if (savedBookings) {
+      try {
+        const bookings = JSON.parse(savedBookings);
+        const activeStay = bookings.find((b: any) => b.petId === pet.id);
+        setCurrentStay(activeStay || null);
+      } catch (e) {
+        setCurrentStay(null);
+      }
+    }
+
+    // 2. ดึงประวัติการเข้าพักย้อนหลัง
+    const savedHistory = localStorage.getItem('hotel_stay_history');
+    if (savedHistory) {
+      try {
+        const historyList = JSON.parse(savedHistory);
+        const petHistory = historyList.filter((h: any) => h.petId === pet.id);
+        setHotelHistory(petHistory);
+      } catch (e) {
+        setHotelHistory([]);
+      }
+    }
+  }, [pet.id]);
 
   const weightHistory = pet.weightHistory || [];
   const latestWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1]?.value : 'N/A';
@@ -59,9 +89,18 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
                {pet.species === 'Dog' ? <span className="text-lg">🐶</span> : pet.species === 'Cat' ? <span className="text-lg">🐱</span> : <span className="text-lg">🐰</span>}
             </div>
           </div>
-          <div className="text-center">
+          <div className="text-center flex flex-col items-center">
             <h4 className="text-2xl font-black text-[#1A1F3D] mb-1">{pet.name}</h4>
-            <p className="text-xs text-gray-400 font-bold uppercase mb-4 tracking-wider">{pet.breed}</p>
+            <p className="text-xs text-gray-400 font-bold uppercase mb-2 tracking-wider">{pet.breed}</p>
+            
+            {/* Current Hotel Stay Status Badge */}
+            {currentStay && (
+              <div className="mb-4 bg-indigo-50 border border-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                🏨 พักห้อง {currentStay.roomName} ({currentStay.stayDays} คืน)
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3 w-full">
               <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50/50">
                 <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Age</p>
@@ -123,7 +162,7 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
         {isExpanded ? (
           <>Close History <ChevronUp size={14} /></>
         ) : (
-          <>View Records & Intake Forms <ChevronDown size={14} /></>
+          <>View Records & Hotel History <ChevronDown size={14} /></>
         )}
       </button>
 
@@ -137,7 +176,41 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="overflow-hidden bg-[#F8F9FD]/30"
           >
-            <div className="p-8 space-y-6">
+            <div className="p-8 space-y-8">
+              {/* Hotel Stay History */}
+              <div className="space-y-3">
+                 <p className="text-[9px] font-black uppercase text-indigo-600 tracking-widest px-2 mb-2 flex items-center gap-1.5">
+                   <Home size={12} /> Hotel Stay History (ประวัติการเข้าพักโรงแรม)
+                 </p>
+                 {hotelHistory.length > 0 ? (
+                    [...hotelHistory].reverse().map((stay, idx) => (
+                      <div key={idx} className="bg-white p-5 rounded-2xl flex items-center justify-between border border-gray-100 shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                            <Home size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-[#1A1F3D]">เข้าพักห้อง {stay.roomName}</p>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1 text-[10px] text-gray-400 font-bold uppercase">
+                              <span>Check-in: {stay.checkInDate} ({stay.checkInTime})</span>
+                              <span className="hidden sm:inline">•</span>
+                              <span>Check-out: {stay.checkOutDate} ({stay.checkOutTime})</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-base font-black text-indigo-600">{stay.stayDays} คืน</p>
+                          <span className="bg-green-100 text-green-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Checked Out</span>
+                        </div>
+                      </div>
+                    ))
+                 ) : (
+                    <div className="py-8 text-center bg-white rounded-2xl border border-dashed border-gray-200 opacity-50">
+                       <p className="text-[10px] font-bold uppercase tracking-widest">No past hotel stays</p>
+                    </div>
+                 )}
+              </div>
+
               {/* Service History */}
               <div className="space-y-3">
                  <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-2 mb-2">Service History</p>

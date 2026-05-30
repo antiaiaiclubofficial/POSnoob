@@ -229,6 +229,25 @@ const Dashboard = () => {
   const handleCheckOutRoom = (roomIndex: number) => {
     if (!window.confirm("คุณต้องการทำรายการ Check-out และคืนห้องพักนี้ใช่หรือไม่?")) return;
     
+    const bookingToCheckOut = hotelBookings.find(b => b.roomIndex === roomIndex);
+    if (bookingToCheckOut) {
+      // บันทึกประวัติการเข้าพักลงใน hotel_stay_history
+      const historySaved = localStorage.getItem('hotel_stay_history');
+      let history = [];
+      if (historySaved) {
+        try {
+          history = JSON.parse(historySaved);
+        } catch (e) {
+          history = [];
+        }
+      }
+      history.push({
+        ...bookingToCheckOut,
+        checkOutActualDate: format(new Date(), 'yyyy-MM-dd HH:mm')
+      });
+      localStorage.setItem('hotel_stay_history', JSON.stringify(history));
+    }
+
     const updatedBookings = hotelBookings.filter(b => b.roomIndex !== roomIndex);
     setHotelBookings(updatedBookings);
     localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
