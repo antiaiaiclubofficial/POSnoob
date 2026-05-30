@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { X, Calendar, Clock, User, Dog, Plus, ArrowRight } from 'lucide-react';
+import { X, Calendar, Clock, User, Dog, Plus, ArrowRight, Home } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
