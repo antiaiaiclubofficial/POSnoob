@@ -226,10 +226,12 @@ const Dashboard = () => {
   };
 
   // เช็คเอาท์ / คืนห้องพักโรงแรมสัตว์เลี้ยง
-  const handleCheckOutRoom = (roomIndex: number) => {
+  const handleCheckOutRoom = (roomIndex: number, roomName: string) => {
     if (!window.confirm("คุณต้องการทำรายการ Check-out และคืนห้องพักนี้ใช่หรือไม่?")) return;
     
-    const bookingToCheckOut = hotelBookings.find(b => b.roomIndex === roomIndex);
+    const bookingToCheckOut = hotelBookings.find(b => 
+      Number(b.roomIndex) === Number(roomIndex) || b.roomName === roomName
+    );
     if (bookingToCheckOut) {
       // บันทึกประวัติการเข้าพักลงใน hotel_stay_history
       const historySaved = localStorage.getItem('hotel_stay_history');
@@ -248,7 +250,9 @@ const Dashboard = () => {
       localStorage.setItem('hotel_stay_history', JSON.stringify(history));
     }
 
-    const updatedBookings = hotelBookings.filter(b => b.roomIndex !== roomIndex);
+    const updatedBookings = hotelBookings.filter(b => 
+      Number(b.roomIndex) !== Number(roomIndex) && b.roomName !== roomName
+    );
     setHotelBookings(updatedBookings);
     localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
     setSelectedOccupiedRoom(null);
@@ -306,8 +310,10 @@ const Dashboard = () => {
   const hotelRooms = useMemo(() => {
     if (roomsConfig.length === 0) return [];
     return roomsConfig.map((room, idx) => {
-      // ค้นหาข้อมูลการจองโรงแรมสัตว์เลี้ยงที่ตรงกับห้องนี้
-      const occupiedBy = hotelBookings.find(b => b.roomIndex === idx) || null;
+      // ค้นหาข้อมูลการจองโรงแรมสัตว์เลี้ยงที่ตรงกับห้องนี้ (เช็คทั้ง index และชื่อห้องเพื่อความถูกต้องสูงสุด)
+      const occupiedBy = hotelBookings.find(b => 
+        Number(b.roomIndex) === Number(idx) || b.roomName === room.name
+      ) || null;
       return {
         ...room,
         occupiedBy
@@ -950,7 +956,7 @@ const Dashboard = () => {
 
               {/* Check-out Button */}
               <button 
-                onClick={() => handleCheckOutRoom(selectedOccupiedRoom.roomIndex)}
+                onClick={() => handleCheckOutRoom(selectedOccupiedRoom.roomIndex, selectedOccupiedRoom.roomName)}
                 className="w-full bg-red-500 hover:bg-red-600 text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/10 active:scale-95 transition-all"
               >
                 <LogOut size={16} /> Check-out / คืนห้องพัก
