@@ -19,6 +19,7 @@ import {
   LineChart as LineChartIcon,
   Info,
   Plus,
+  Minus,
   ShoppingBag,
   ShieldAlert,
   Sparkles,
@@ -160,6 +161,40 @@ const Dashboard = () => {
     localStorage.setItem('kennel_rooms_config', JSON.stringify(updated));
     setEditingRoomIndex(null);
     toast.success("บันทึกการตั้งค่าห้องพักเรียบร้อยแล้ว");
+  };
+
+  // เพิ่มจำนวนห้องพัก
+  const handleIncreaseCapacity = () => {
+    const newCapacity = kennelCapacity + 1;
+    // อัปเดตค่าใน Zustand Store
+    useStore.setState({ kennelCapacity: newCapacity });
+    
+    // อัปเดตค่าใน Local Config
+    const updated = [...roomsConfig, {
+      id: newCapacity - 1,
+      name: newCapacity.toString().padStart(2, '0'),
+      color: 'gray' as const
+    }];
+    setRoomsConfig(updated);
+    localStorage.setItem('kennel_rooms_config', JSON.stringify(updated));
+    toast.success(`เพิ่มห้องพักเป็น ${newCapacity} ห้องเรียบร้อยแล้ว`);
+  };
+
+  // ลดจำนวนห้องพัก
+  const handleDecreaseCapacity = () => {
+    if (kennelCapacity <= 1) {
+      toast.error("ต้องมีห้องพักอย่างน้อย 1 ห้อง");
+      return;
+    }
+    const newCapacity = kennelCapacity - 1;
+    // อัปเดตค่าใน Zustand Store
+    useStore.setState({ kennelCapacity: newCapacity });
+    
+    // อัปเดตค่าใน Local Config
+    const updated = roomsConfig.slice(0, newCapacity);
+    setRoomsConfig(updated);
+    localStorage.setItem('kennel_rooms_config', JSON.stringify(updated));
+    toast.success(`ลดห้องพักเหลือ ${newCapacity} ห้องเรียบร้อยแล้ว`);
   };
 
   const todayQueue = queue.filter(q => q.date === today);
@@ -696,8 +731,30 @@ const Dashboard = () => {
                 </div>
 
                 {isEditRoomsMode && (
-                  <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-2xl text-[10px] font-bold text-indigo-700 leading-relaxed animate-in slide-in-from-top-2">
-                    💡 โหมดตั้งค่าเปิดอยู่: คลิกที่ห้องพักเพื่อแก้ไขชื่อห้องและเปลี่ยนสีประจำห้อง
+                  <div className="mb-4 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl space-y-3 animate-in slide-in-from-top-2">
+                    <p className="text-[10px] font-bold text-indigo-700 leading-relaxed">
+                      💡 โหมดตั้งค่าเปิดอยู่: คลิกที่ห้องพักเพื่อแก้ไขชื่อห้องและเปลี่ยนสีประจำห้อง
+                    </p>
+                    <div className="flex items-center justify-between pt-2 border-t border-indigo-100/50">
+                      <span className="text-[10px] font-black uppercase text-indigo-900">ปรับจำนวนห้องพัก:</span>
+                      <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-xl shadow-sm">
+                        <button 
+                          type="button" 
+                          onClick={handleDecreaseCapacity}
+                          className="w-6 h-6 rounded-lg bg-gray-50 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-gray-400 transition-colors"
+                        >
+                          <Minus size={12} strokeWidth={3} />
+                        </button>
+                        <span className="text-xs font-black text-[#1A1F3D] w-6 text-center">{kennelCapacity}</span>
+                        <button 
+                          type="button" 
+                          onClick={handleIncreaseCapacity}
+                          className="w-6 h-6 rounded-lg bg-gray-50 hover:bg-green-50 hover:text-green-500 flex items-center justify-center text-gray-400 transition-colors"
+                        >
+                          <Plus size={12} strokeWidth={3} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
 
