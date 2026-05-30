@@ -633,7 +633,7 @@ export const useStore = create<AppState>()((set, get) => ({
           duration_minutes: defaultDuration,
           category: ser.category || 'Grooming',
           icon: ser.icon || 'grooming',
-          target_species: ser.target_species || 'Dog',
+          target_species: ser.targetSpecies || ser.target_species || 'Dog',
           prices: ser.prices || {},
           is_active: ser.isActive !== false,
           coat_type: ser.coatType || null,
@@ -679,15 +679,15 @@ export const useStore = create<AppState>()((set, get) => ({
           duration_minutes: defaultDuration,
           category: ser.category || 'Grooming',
           icon: ser.icon || 'grooming',
-          target_species: ser.target_species || 'Dog',
+          target_species: ser.targetSpecies || ser.target_species || 'Dog',
           prices: ser.prices || {},
           is_active: ser.isActive !== false,
-          coat_type: ser.coatType || null
+          coat_type: ser.coat_type || null
         })
         .eq('id', id);
 
       if (error) throw error;
-      set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser } : item) }));
+      set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser, targetSpecies: ser.targetSpecies || ser.target_species || 'Dog' } : item) }));
     } catch (err) {
       console.error("Supabase update failed:", err);
     }
@@ -797,8 +797,8 @@ export const useStore = create<AppState>()((set, get) => ({
         category: item.category || 'ทั่วไป',
         image_url: item.image || '',
         is_consignment: item.isConsignment || false,
-        partner_id: item.partnerId || null,
-        consignment_rate: item.consignmentRate || 0
+        partner_id: item.partner_id || null,
+        consignment_rate: item.consignment_rate || 0
       }])
       .select()
       .single();
@@ -839,7 +839,7 @@ export const useStore = create<AppState>()((set, get) => ({
         image_url: item.image,
         is_consignment: item.isConsignment,
         partner_id: item.partnerId || null,
-        consignment_rate: item.consignmentRate || 0
+        consignment_rate: item.consignment_rate || 0
       })
       .eq('id', id);
 
@@ -965,7 +965,7 @@ export const useStore = create<AppState>()((set, get) => ({
         address: v.address,
         phone: v.phone,
         email: v.email,
-        contact_person: v.contactPerson,
+        contact_person: v.contact_person || '',
         notes: v.notes,
         main_category: v.mainCategory,
         gp_rate: v.gpRate || 0
