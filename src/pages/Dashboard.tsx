@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -26,7 +26,10 @@ import {
   Award,
   Star,
   Gem,
-  DoorOpen
+  DoorOpen,
+  Settings as SettingsIcon,
+  Check,
+  X
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -53,6 +56,51 @@ import BookingModal from '@/components/BookingModal';
 import CustomerModal from '@/components/CustomerModal';
 import { toast } from 'sonner';
 
+interface RoomConfig {
+  id: number;
+  name: string;
+  color: 'gray' | 'blue' | 'pink' | 'green' | 'purple' | 'amber';
+}
+
+const COLOR_MAP = {
+  gray: {
+    bg: "bg-[#F5F6FA] border-transparent text-gray-500 hover:bg-gray-100",
+    border: "border-gray-300",
+    dot: "bg-gray-400",
+    badge: "bg-gray-100 text-gray-600"
+  },
+  blue: {
+    bg: "bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100/70",
+    border: "border-blue-400",
+    dot: "bg-blue-500",
+    badge: "bg-blue-100 text-blue-700"
+  },
+  pink: {
+    bg: "bg-pink-50 border-pink-100 text-pink-600 hover:bg-pink-100/70",
+    border: "border-pink-400",
+    dot: "bg-pink-500",
+    badge: "bg-pink-100 text-pink-700"
+  },
+  green: {
+    bg: "bg-green-50 border-green-100 text-green-600 hover:bg-green-100/70",
+    border: "border-green-400",
+    dot: "bg-green-500",
+    badge: "bg-green-100 text-green-700"
+  },
+  purple: {
+    bg: "bg-purple-50 border-purple-100 text-purple-600 hover:bg-purple-100/70",
+    border: "border-purple-400",
+    dot: "bg-purple-500",
+    badge: "bg-purple-100 text-purple-700"
+  },
+  amber: {
+    bg: "bg-amber-50 border-amber-100 text-amber-600 hover:bg-amber-100/70",
+    border: "border-amber-400",
+    dot: "bg-amber-500",
+    badge: "bg-amber-100 text-amber-700"
+  }
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { queue, transactions, inventory, customers, currency, kennelCapacity, language, currentUser } = useStore();
@@ -62,6 +110,57 @@ const Dashboard = () => {
   // Modals State
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
+
+  // Kennel Customization States
+  const [isEditRoomsMode, setIsEditRoomsMode] = useState(false);
+  const [editingRoomIndex, setEditingRoomIndex] = useState<number | null>(null);
+  const [tempRoomName, setTempRoomName] = useState('');
+  const [tempRoomColor, setTempRoomColor] = useState<RoomConfig['color']>('gray');
+  const [roomsConfig, setRoomsConfig] = useState<RoomConfig[]>([]);
+
+  // Load & Save Room Configurations from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('kennel_rooms_config');
+    if (saved) {
+      try {
+        setRoomsConfig(JSON.parse(saved));
+      } catch (e) {
+        initializeDefaultRooms();
+      }
+    } else {
+      initializeDefaultRooms();
+    }
+  }, [kennelCapacity]);
+
+  const initializeDefaultRooms = () => {
+    const defaults = Array.from({ length: kennelCapacity }).map((_, idx) => ({
+      id: idx,
+      name: (idx + 1).toString().padStart(2, '0'),
+      color: 'gray' as RoomConfig['color']
+    }));
+    setRoomsConfig(defaults);
+    localStorage.setItem('kennel_rooms_config', JSON.stringify(defaults));
+  };
+
+  const handleSaveRoomEdit = () => {
+    if (editingRoomIndex === null) return;
+    if (!tempRoomName.trim()) {
+      toast.error("กรุณาระบุชื่อห้องพัก");
+      return;
+    }
+
+    const updated = [...roomsConfig];
+    updated[editingRoomIndex] = {
+      ...updated[editingRoomIndex],
+      name: tempRoomName.trim(),
+      color: tempRoomColor
+    };
+
+    setRoomsConfig(updated);
+    localStorage.setItem('kennel_rooms_config', JSON.stringify(updated));
+    setEditingRoomIndex(null);
+    toast.success("บันทึกการตั้งค่าห้องพักเรียบร้อยแล้ว");
+  };
 
   const todayQueue = queue.filter(q => q.date === today);
   const todayTransactions = transactions.filter(t => t.date === today);
@@ -116,22 +215,29 @@ const Dashboard = () => {
   }, [todayQueue]);
 
   const hotelRooms = useMemo(() => {
-    return Array.from({ length: kennelCapacity }).map((_, idx) => {
-      const roomNo = 101 + idx;
+    if (roomsConfig.length === 0) return [];
+    return roomsConfig.map((room, idx) => {
       const occupiedBy = activeQueueItems[idx] || null;
       return {
-        roomNo,
+        ...room,
         occupiedBy
       };
     });
-  }, [kennelCapacity, activeQueueItems]);
+  }, [roomsConfig, activeQueueItems]);
 
-  const handleRoomClick = (room: any) => {
+  const handleRoomClick = (room: any, idx: number) => {
+    if (isEditRoomsMode) {
+      setEditingRoomIndex(idx);
+      setTempRoomName(room.name);
+      setTempRoomColor(room.color);
+      return;
+    }
+
     if (room.occupiedBy) {
-      toast.info(`ห้อง ${room.roomNo} กำลังให้บริการสัตว์เลี้ยง: ${room.occupiedBy.petName} (${room.occupiedBy.ownerName})`);
+      toast.info(`ห้อง ${room.name} กำลังให้บริการสัตว์เลี้ยง: ${room.occupiedBy.petName} (${room.occupiedBy.ownerName})`);
     } else {
       setIsBookingOpen(true);
-      toast.success(`กำลังเปิดหน้าต่างจองคิวสำหรับห้องพัก ${room.roomNo}`);
+      toast.success(`กำลังเปิดหน้าต่างจองคิวสำหรับห้องพัก ${room.name}`);
     }
   };
 
@@ -572,30 +678,58 @@ const Dashboard = () => {
                     <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><Home size={20} /></div>
                     <h3 className="text-lg font-black text-[#1A1F3D]">{t.kennelStatus}</h3>
                   </div>
-                  <span className="text-xs font-black text-gray-400">{occupiedKennels}/{kennelCapacity}</span>
-                </div>
-                <div className="grid grid-cols-4 gap-2.5">
-                  {hotelRooms.map((room) => (
-                    <button
-                      key={room.roomNo}
-                      onClick={() => handleRoomClick(room)}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-gray-400">{occupiedKennels}/{kennelCapacity}</span>
+                    <button 
+                      onClick={() => setIsEditRoomsMode(!isEditRoomsMode)}
                       className={cn(
-                        "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-[10px] font-black relative group",
-                        room.occupiedBy 
-                          ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-sm shadow-[#1A1F3D]/10" 
-                          : "bg-[#F5F6FA] border-transparent text-gray-400 hover:border-indigo-500 hover:bg-white"
+                        "p-2 rounded-xl transition-all border",
+                        isEditRoomsMode 
+                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md" 
+                          : "bg-white border-gray-100 text-gray-400 hover:bg-gray-50"
                       )}
-                      title={room.occupiedBy ? `${room.occupiedBy.petName} (${room.occupiedBy.ownerName})` : `Room ${room.roomNo} (Available)`}
+                      title="ตั้งค่าห้องพัก"
                     >
-                      <span>{room.roomNo.toString().slice(1)}</span>
-                      {room.occupiedBy && (
-                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
-                      )}
+                      <SettingsIcon size={14} className={cn(isEditRoomsMode && "animate-spin")} />
                     </button>
-                  ))}
+                  </div>
+                </div>
+
+                {isEditRoomsMode && (
+                  <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-2xl text-[10px] font-bold text-indigo-700 leading-relaxed animate-in slide-in-from-top-2">
+                    💡 โหมดตั้งค่าเปิดอยู่: คลิกที่ห้องพักเพื่อแก้ไขชื่อห้องและเปลี่ยนสีประจำห้อง
+                  </div>
+                )}
+
+                <div className="grid grid-cols-4 gap-2.5">
+                  {hotelRooms.map((room, idx) => {
+                    const colorConfig = COLOR_MAP[room.color || 'gray'];
+                    return (
+                      <button
+                        key={room.id ?? idx}
+                        onClick={() => handleRoomClick(room, idx)}
+                        className={cn(
+                          "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-[10px] font-black relative overflow-hidden",
+                          isEditRoomsMode && "animate-pulse border-dashed border-indigo-400",
+                          room.occupiedBy 
+                            ? "bg-[#1A1F3D] text-[#D9ED5F] shadow-sm shadow-[#1A1F3D]/10" 
+                            : colorConfig.bg
+                        )}
+                        style={{
+                          borderColor: room.occupiedBy ? COLOR_MAP[room.color || 'gray'].dot.replace('bg-', '') : undefined
+                        }}
+                        title={room.occupiedBy ? `${room.occupiedBy.petName} (${room.occupiedBy.ownerName})` : `Room ${room.name} (Available)`}
+                      >
+                        <span>{room.name}</span>
+                        {room.occupiedBy && (
+                          <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="text-[8px] text-gray-400 font-bold uppercase tracking-wider mt-4 text-center">
-                  * คลิกที่ห้องเพื่อจองคิว หรือดูสถานะ
+                  {isEditRoomsMode ? "* คลิกห้องเพื่อแก้ไขชื่อและสี" : "* คลิกที่ห้องเพื่อจองคิว หรือดูสถานะ"}
                 </p>
               </div>
 
@@ -631,6 +765,80 @@ const Dashboard = () => {
       {/* Modals */}
       {isBookingOpen && <BookingModal onClose={() => setIsBookingOpen(false)} />}
       {isCustomerOpen && <CustomerModal onClose={() => setIsCustomerOpen(false)} />}
+
+      {/* Room Customization Modal */}
+      {editingRoomIndex !== null && (
+        <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
+          <div className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-[#1A1F3D] rounded-2xl flex items-center justify-center text-white">
+                  <SettingsIcon size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[#1A1F3D]">ตั้งค่าห้องพัก</h3>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Room Customization</p>
+                </div>
+              </div>
+              <button onClick={() => setEditingRoomIndex(null)} className="p-2 hover:bg-white rounded-xl transition-all">
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อห้องพัก (Room Name)</label>
+                <input 
+                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                  value={tempRoomName}
+                  onChange={e => setTempRoomName(e.target.value)}
+                  placeholder="เช่น 01, VIP 1, Suite"
+                  maxLength={10}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">สีประจำห้อง (Room Color)</label>
+                <div className="grid grid-cols-6 gap-2 bg-[#F5F6FA] p-2 rounded-2xl">
+                  {(Object.keys(COLOR_MAP) as RoomConfig['color'][]).map((colorKey) => {
+                    const config = COLOR_MAP[colorKey];
+                    return (
+                      <button
+                        key={colorKey}
+                        type="button"
+                        onClick={() => setTempRoomColor(colorKey)}
+                        className={cn(
+                          "aspect-square rounded-xl flex items-center justify-center transition-all border-2",
+                          config.bg,
+                          tempRoomColor === colorKey ? "border-indigo-600 scale-110 shadow-sm" : "border-transparent"
+                        )}
+                        title={colorKey}
+                      >
+                        <div className={cn("w-3 h-3 rounded-full", config.dot)} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={() => setEditingRoomIndex(null)}
+                  className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all"
+                >
+                  ยกเลิก
+                </button>
+                <button 
+                  onClick={handleSaveRoomEdit}
+                  className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all"
+                >
+                  <Check size={16} /> บันทึก
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
