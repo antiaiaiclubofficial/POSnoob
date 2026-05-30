@@ -58,8 +58,10 @@ const App = () => {
   // CRM & Services Data Sync Logic - Runs whenever authenticated
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (!isAuthenticated) return;
+
+      // 1. Fetch Customers & Service History
       try {
-        // 1. Fetch Customers
         const { data: customersData, error: customersError } = await supabase
           .from('customers')
           .select(`
@@ -162,13 +164,19 @@ const App = () => {
           });
           setCustomers(formattedCustomers);
         }
+      } catch (err) {
+        console.warn("Failed to fetch customers from Supabase:", err);
+      }
 
-        // 2. Fetch Services & Add-ons
-        const { data: servicesData } = await supabase
+      // 2. Fetch Services & Add-ons
+      try {
+        const { data: servicesData, error: servicesError } = await supabase
           .from('services')
           .select('*');
 
-        if (servicesData) {
+        if (servicesError) throw servicesError;
+
+        if (servicesData && servicesData.length > 0) {
           // แยกบริการหลัก
           const mainServices = servicesData
             .filter(s => !s.is_addon)
@@ -198,11 +206,17 @@ const App = () => {
             }));
           useStore.setState({ addons: addonsList });
         }
+      } catch (err) {
+        console.warn("Failed to fetch services from Supabase:", err);
+      }
 
-        // 3. Fetch Partners
-        const { data: partnersData } = await supabase
+      // 3. Fetch Partners
+      try {
+        const { data: partnersData, error: partnersError } = await supabase
           .from('partners')
           .select('*');
+
+        if (partnersError) throw partnersError;
 
         if (partnersData) {
           const formattedPartners = partnersData.map(p => ({
@@ -219,11 +233,17 @@ const App = () => {
           }));
           useStore.setState({ partners: formattedPartners });
         }
+      } catch (err) {
+        console.warn("Failed to fetch partners from Supabase:", err);
+      }
 
-        // 4. Fetch Products (Inventory)
-        const { data: productsData } = await supabase
+      // 4. Fetch Products (Inventory)
+      try {
+        const { data: productsData, error: productsError } = await supabase
           .from('products')
           .select('*');
+
+        if (productsError) throw productsError;
 
         if (productsData) {
           const formattedInventory = productsData.map(p => ({
@@ -243,11 +263,17 @@ const App = () => {
           }));
           useStore.setState({ inventory: formattedInventory });
         }
+      } catch (err) {
+        console.warn("Failed to fetch products from Supabase:", err);
+      }
 
-        // 5. Fetch Stock Logs
-        const { data: logsData } = await supabase
+      // 5. Fetch Stock Logs
+      try {
+        const { data: logsData, error: logsError } = await supabase
           .from('stock_logs')
           .select('*, products(name)');
+
+        if (logsError) throw logsError;
 
         if (logsData) {
           const formattedLogs = logsData.map(l => ({
@@ -263,12 +289,18 @@ const App = () => {
           }));
           useStore.setState({ stockLogs: formattedLogs });
         }
+      } catch (err) {
+        console.warn("Failed to fetch stock logs from Supabase:", err);
+      }
 
-        // 6. Fetch Sales Transactions
-        const { data: txData } = await supabase
+      // 6. Fetch Sales Transactions
+      try {
+        const { data: txData, error: txError } = await supabase
           .from('sales_transactions')
           .select('*')
           .order('created_at', { ascending: false });
+
+        if (txError) throw txError;
 
         if (txData) {
           const formattedTx = txData.map(t => ({
@@ -286,69 +318,68 @@ const App = () => {
           }));
           useStore.setState({ transactions: formattedTx });
         }
-
-        // 7. Fetch Package Templates
-        try {
-          const { data: packagesData } = await supabase
-            .from('package_templates')
-            .select('*');
-
-          if (packagesData) {
-            const formattedPackages = packagesData.map(p => ({
-              id: p.id,
-              name: p.name,
-              serviceId: p.service_id,
-              paidSlots: p.paid_slots || 0,
-              freeSlots: p.free_slots || 0,
-              price: Number(p.price || 0),
-              bonusType: p.bonus_type || 'none',
-              bonusName: p.bonus_name || '',
-              bonusCount: p.bonus_count || 1
-            }));
-            useStore.setState({ packageTemplates: formattedPackages });
-          }
-        } catch (e) {
-          console.warn("package_templates table might not exist yet:", e);
-        }
-
-        // 8. Fetch Credit Packages
-        try {
-          const { data: creditsData } = await supabase
-            .from('credit_packages')
-            .select('*');
-          if (creditsData) {
-            const formattedCredits = creditsData.map(c => ({
-              id: c.id,
-              name: c.name,
-              price: Number(c.price || 0),
-              creditValue: Number(c.credit_value || 0)
-            }));
-            useStore.setState({ creditPackages: formattedCredits });
-          }
-        } catch (e) {
-          console.warn("credit_packages table might not exist yet:", e);
-        }
-
-        // 9. Fetch Tier Rules
-        try {
-          const { data: tiersData } = await supabase
-            .from('tier_rules')
-            .select('*');
-          if (tiersData && tiersData.length > 0) {
-            const formattedTiers = tiersData.map(t => ({
-              level: t.level as MembershipLevel,
-              label: t.label,
-              minSpent: Number(t.min_spent || 0),
-              discount: Number(t.discount || 0)
-            }));
-            useStore.setState({ tierRules: formattedTiers });
-          }
-        } catch (e) {
-          console.warn("tier_rules table might not exist yet:", e);
-        }
-
       } catch (err) {
-        console.warn("Failed to fetch initial data from Supabase:", err);
+        console.warn("Failed to fetch transactions from Supabase:", err);
+      }
+
+      // 7. Fetch Package Templates
+      try {
+        const { data: packagesData } = await supabase
+          .from('package_templates')
+          .select('*');
+
+        if (packagesData) {
+          const formattedPackages = packagesData.map(p => ({
+            id: p.id,
+            name: p.name,
+            serviceId: p.service_id,
+            paidSlots: p.paid_slots || 0,
+            freeSlots: p.free_slots || 0,
+            price: Number(p.price || 0),
+            bonusType: p.bonus_type || 'none',
+            bonusName: p.bonus_name || '',
+            bonusCount: p.bonus_count || 1
+          }));
+          useStore.setState({ packageTemplates: formattedPackages });
+        }
+      } catch (e) {
+        console.warn("package_templates table might not exist yet:", e);
+      }
+
+      // 8. Fetch Credit Packages
+      try {
+        const { data: creditsData } = await supabase
+          .from('credit_packages')
+          .select('*');
+        if (creditsData) {
+          const formattedCredits = creditsData.map(c => ({
+            id: c.id,
+            name: c.name,
+            price: Number(c.price || 0),
+            creditValue: Number(c.credit_value || 0)
+          }));
+          useStore.setState({ creditPackages: formattedCredits });
+        }
+      } catch (e) {
+        console.warn("credit_packages table might not exist yet:", e);
+      }
+
+      // 9. Fetch Tier Rules
+      try {
+        const { data: tiersData } = await supabase
+          .from('tier_rules')
+          .select('*');
+        if (tiersData && tiersData.length > 0) {
+          const formattedTiers = tiersData.map(t => ({
+            level: t.level as MembershipLevel,
+            label: t.label,
+            minSpent: Number(t.min_spent || 0),
+            discount: Number(t.discount || 0)
+          }));
+          useStore.setState({ tierRules: formattedTiers });
+        }
+      } catch (e) {
+        console.warn("tier_rules table might not exist yet:", e);
       }
     };
 
