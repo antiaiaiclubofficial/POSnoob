@@ -229,9 +229,7 @@ const Dashboard = () => {
   const handleCheckOutRoom = (roomIndex: number, roomName: string) => {
     if (!window.confirm("คุณต้องการทำรายการ Check-out และคืนห้องพักนี้ใช่หรือไม่?")) return;
     
-    const bookingToCheckOut = hotelBookings.find(b => 
-      Number(b.roomIndex) === Number(roomIndex) || b.roomName === roomName
-    );
+    const bookingToCheckOut = hotelBookings.find(b => b.roomName === roomName);
     if (bookingToCheckOut) {
       // บันทึกประวัติการเข้าพักลงใน hotel_stay_history
       const historySaved = localStorage.getItem('hotel_stay_history');
@@ -250,9 +248,7 @@ const Dashboard = () => {
       localStorage.setItem('hotel_stay_history', JSON.stringify(history));
     }
 
-    const updatedBookings = hotelBookings.filter(b => 
-      Number(b.roomIndex) !== Number(roomIndex) && b.roomName !== roomName
-    );
+    const updatedBookings = hotelBookings.filter(b => b.roomName !== roomName);
     setHotelBookings(updatedBookings);
     localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
     setSelectedOccupiedRoom(null);
@@ -310,10 +306,8 @@ const Dashboard = () => {
   const hotelRooms = useMemo(() => {
     if (roomsConfig.length === 0) return [];
     return roomsConfig.map((room, idx) => {
-      // ค้นหาข้อมูลการจองโรงแรมสัตว์เลี้ยงที่ตรงกับห้องนี้ (เช็คทั้ง index และชื่อห้องเพื่อความถูกต้องสูงสุด)
-      const occupiedBy = hotelBookings.find(b => 
-        Number(b.roomIndex) === Number(idx) || b.roomName === room.name
-      ) || null;
+      // ค้นหาข้อมูลการจองโรงแรมสัตว์เลี้ยงที่ตรงกับห้องนี้โดยใช้ชื่อห้องพักเป็นหลักเพื่อความแม่นยำสูงสุด
+      const occupiedBy = hotelBookings.find(b => b.roomName === room.name) || null;
       return {
         ...room,
         occupiedBy
