@@ -119,6 +119,43 @@ const DEFAULT_MOCK_CUSTOMERS: Customer[] = [
   }
 ];
 
+const DEFAULT_MOCK_SERVICES: Service[] = [
+  {
+    id: '1',
+    title: 'อาบน้ำตัดขนสุนัข',
+    category: 'Grooming',
+    description: 'บริการอาบน้ำ แปรงขน ตัดเล็บ เช็ดหู และตัดแต่งทรงผมสำหรับสุนัข',
+    icon: 'grooming',
+    targetSpecies: 'Dog',
+    prices: {
+      'Small': { price: 500, duration: 60 },
+      'Medium': { price: 700, duration: 90 },
+      'Large': { price: 1000, duration: 120 }
+    },
+    isActive: true,
+    coatType: 'Short'
+  },
+  {
+    id: '2',
+    title: 'สปาแมวพรีเมียม',
+    category: 'Spa',
+    description: 'บริการสปาบำรุงขนด้วยแชมพูสูตรพิเศษ นวดผ่อนคลาย และเป่าขนไล่น้ำ',
+    icon: 'spa',
+    targetSpecies: 'Cat',
+    prices: {
+      'Standard': { price: 800, duration: 90 }
+    },
+    isActive: true,
+    coatType: 'Long'
+  }
+];
+
+const DEFAULT_MOCK_ADDONS: AddonItem[] = [
+  { id: 'addon-1', name: 'ตัดเล็บและตะไบเล็บ', price: 150, icon: 'nail' },
+  { id: 'addon-2', name: 'แปรงฟันลดกลิ่นปาก', price: 100, icon: 'brush' },
+  { id: 'addon-3', name: 'สปาโคลนบำรุงผิวหนัง', price: 300, icon: 'spa' }
+];
+
 export const useStore = create<AppState>()((set, get) => ({
   language: 'th',
   setLanguage: (lang) => set({ language: lang }),
@@ -165,8 +202,8 @@ export const useStore = create<AppState>()((set, get) => ({
   specificHolidays: [],
   kennelCapacity: 12,
 
-  services: [],
-  addons: [],
+  services: DEFAULT_MOCK_SERVICES,
+  addons: DEFAULT_MOCK_ADDONS,
   inventory: [],
   partners: [],
   stockLogs: [],
@@ -641,6 +678,23 @@ export const useStore = create<AppState>()((set, get) => ({
     const defaultPrice = priceKeys.length > 0 ? ser.prices[priceKeys[0]].price : 0;
     const defaultDuration = priceKeys.length > 0 ? ser.prices[priceKeys[0]].duration : 60;
 
+    const localNewService: Service = {
+      id: Math.random().toString(),
+      title: ser.title,
+      category: ser.category || 'Grooming',
+      description: ser.description || '',
+      icon: ser.icon || 'grooming',
+      targetSpecies: ser.targetSpecies || 'Dog',
+      prices: ser.prices || {
+        'Standard': { price: defaultPrice, duration: defaultDuration }
+      },
+      isActive: ser.isActive !== false,
+      coatType: ser.coatType || undefined
+    };
+
+    // อัปเดต Local State ทันทีเพื่อความรวดเร็วและป้องกันข้อมูลหาย
+    set(s => ({ services: [...s.services, localNewService] }));
+
     try {
       const { data, error } = await supabase
         .from('services')
@@ -651,7 +705,7 @@ export const useStore = create<AppState>()((set, get) => ({
           duration_minutes: defaultDuration,
           category: ser.category || 'Grooming',
           icon: ser.icon || 'grooming',
-          target_species: ser.targetSpecies || ser.target_species || 'Dog',
+          target_species: ser.targetSpecies || 'Dog',
           prices: ser.prices || {},
           is_active: ser.isActive !== false,
           coat_type: ser.coatType || null,
@@ -676,13 +730,17 @@ export const useStore = create<AppState>()((set, get) => ({
           isActive: data.is_active !== false,
           coatType: data.coat_type || undefined
         };
-        set(s => ({ services: [...s.services, newService] }));
+        // แทนที่บริการจำลองด้วยข้อมูลจริงจาก Supabase
+        set(s => ({ services: [...s.services.filter(item => item.id !== localNewService.id), newService] }));
       }
     } catch (err) {
-      console.error("Supabase insert failed:", err);
+      console.error("Supabase insert failed, using local fallback:", err);
     }
   },
   updateService: async (id, ser) => {
+    // อัปเดต Local State ทันที
+    set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser, targetSpecies: ser.targetSpecies || 'Dog' } : item) }));
+
     const priceKeys = Object.keys(ser.prices);
     const defaultPrice = priceKeys.length > 0 ? ser.prices[priceKeys[0]].price : 0;
     const defaultDuration = priceKeys.length > 0 ? ser.prices[priceKeys[0]].duration : 60;
@@ -697,20 +755,22 @@ export const useStore = create<AppState>()((set, get) => ({
           duration_minutes: defaultDuration,
           category: ser.category || 'Grooming',
           icon: ser.icon || 'grooming',
-          target_species: ser.targetSpecies || ser.target_species || 'Dog',
+          target_species: ser.targetSpecies || 'Dog',
           prices: ser.prices || {},
           is_active: ser.isActive !== false,
-          coat_type: ser.coat_type || null
+          coat_type: ser.coatType || null
         })
         .eq('id', id);
 
       if (error) throw error;
-      set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser, targetSpecies: ser.targetSpecies || ser.target_species || 'Dog' } : item) }));
     } catch (err) {
-      console.error("Supabase update failed:", err);
+      console.error("Supabase update failed, local state preserved:", err);
     }
   },
   deleteService: async (id) => {
+    // อัปเดต Local State ทันที
+    set(s => ({ services: s.services.filter(item => item.id !== id) }));
+
     try {
       const { error } = await supabase
         .from('services')
@@ -718,15 +778,17 @@ export const useStore = create<AppState>()((set, get) => ({
         .eq('id', id);
 
       if (error) throw error;
-      set(s => ({ services: s.services.filter(item => item.id !== id) }));
     } catch (err) {
-      console.error("Supabase delete failed:", err);
+      console.error("Supabase delete failed, local state preserved:", err);
     }
   },
   toggleServiceActive: async (id) => {
     const service = get().services.find(s => s.id === id);
     if (!service) return;
     const nextActive = !service.isActive;
+
+    // อัปเดต Local State ทันที
+    set(s => ({ services: s.services.map(item => item.id === id ? { ...item, isActive: nextActive } : item) }));
 
     try {
       const { error } = await supabase
@@ -735,13 +797,22 @@ export const useStore = create<AppState>()((set, get) => ({
         .eq('id', id);
 
       if (error) throw error;
-      set(s => ({ services: s.services.map(item => item.id === id ? { ...item, isActive: nextActive } : item) }));
     } catch (err) {
-      console.error("Supabase toggle active failed:", err);
+      console.error("Supabase toggle active failed, local state preserved:", err);
     }
   },
 
   addAddon: async (ad) => {
+    const localNewAddon: AddonItem = {
+      id: Math.random().toString(),
+      name: ad.name,
+      price: ad.price || 0,
+      icon: ad.icon || 'nail'
+    };
+
+    // อัปเดต Local State ทันที
+    set(s => ({ addons: [...s.addons, localNewAddon] }));
+
     try {
       const { data, error } = await supabase
         .from('services')
@@ -764,13 +835,17 @@ export const useStore = create<AppState>()((set, get) => ({
           price: Number(data.price || 0),
           icon: (data.icon || 'nail') as any
         };
-        set(s => ({ addons: [...s.addons, newAddon] }));
+        // แทนที่ด้วยข้อมูลจริงจาก Supabase
+        set(s => ({ addons: [...s.addons.filter(a => a.id !== localNewAddon.id), newAddon] }));
       }
     } catch (err) {
-      console.error("Supabase add addon failed:", err);
+      console.error("Supabase add addon failed, using local fallback:", err);
     }
   },
   updateAddon: async (id, ad) => {
+    // อัปเดต Local State ทันที
+    set(s => ({ addons: s.addons.map(a => a.id === id ? { ...a, ...ad } : a) }));
+
     try {
       const { error } = await supabase
         .from('services')
@@ -782,12 +857,14 @@ export const useStore = create<AppState>()((set, get) => ({
         .eq('id', id);
 
       if (error) throw error;
-      set(s => ({ addons: s.addons.map(a => a.id === id ? { ...a, ...ad } : a) }));
     } catch (err) {
-      console.error("Supabase update addon failed:", err);
+      console.error("Supabase update addon failed, local state preserved:", err);
     }
   },
   deleteAddon: async (id) => {
+    // อัปเดต Local State ทันที
+    set(s => ({ addons: s.addons.filter(a => a.id !== id) }));
+
     try {
       const { error } = await supabase
         .from('services')
@@ -795,9 +872,8 @@ export const useStore = create<AppState>()((set, get) => ({
         .eq('id', id);
 
       if (error) throw error;
-      set(s => ({ addons: s.addons.filter(a => a.id !== id) }));
     } catch (err) {
-      console.error("Supabase delete addon failed:", err);
+      console.error("Supabase delete addon failed, local state preserved:", err);
     }
   },
 
@@ -1015,90 +1091,9 @@ export const useStore = create<AppState>()((set, get) => ({
   updateStaff: (id, st) => set(s => ({ staff: s.staff.map(mem => mem.id === id ? { ...mem, ...st } : mem) })),
   deleteStaff: (id) => set(s => ({ staff: s.staff.filter(mem => mem.id !== id) })),
 
-  addPackageTemplate: async (pkg) => {
-    try {
-      const { data, error } = await supabase
-        .from('package_templates')
-        .insert([{
-          name: pkg.name,
-          service_id: pkg.serviceId,
-          paid_slots: pkg.paidSlots,
-          free_slots: pkg.freeSlots,
-          price: pkg.price,
-          bonus_type: pkg.bonusType || 'none',
-          bonus_name: pkg.bonusName || '',
-          bonus_count: pkg.bonusCount || 1
-        }])
-        .select()
-        .single();
-
-      if (!error && data) {
-        set(s => ({
-          packageTemplates: [...s.packageTemplates, {
-            id: data.id,
-            name: data.name,
-            serviceId: data.service_id,
-            paidSlots: data.paid_slots,
-            freeSlots: data.free_slots,
-            price: Number(data.price),
-            bonusType: data.bonus_type,
-            bonusName: data.bonus_name,
-            bonusCount: data.bonus_count
-          }]
-        }));
-        return;
-      }
-    } catch (e) {
-      console.warn("Failed to save package template to Supabase, falling back to local:", e);
-    }
-    // Fallback
-    set(s => ({ packageTemplates: [...s.packageTemplates, { ...pkg, id: Math.random().toString() }] }));
-  },
-  updatePackageTemplate: async (id, pkg) => {
-    try {
-      const { error } = await supabase
-        .from('package_templates')
-        .update({
-          name: pkg.name,
-          service_id: pkg.serviceId,
-          paid_slots: pkg.paidSlots,
-          free_slots: pkg.freeSlots,
-          price: pkg.price,
-          bonus_type: pkg.bonusType,
-          bonus_name: pkg.bonusName,
-          bonus_count: pkg.bonusCount
-        })
-        .eq('id', id);
-
-      if (!error) {
-        set(s => ({
-          packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p)
-        }));
-        return;
-      }
-    } catch (e) {
-      console.warn("Failed to update package template in Supabase, falling back to local:", e);
-    }
-    // Fallback
-    set(s => ({ packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p) }));
-  },
-  deletePackageTemplate: async (id) => {
-    try {
-      const { error } = await supabase
-        .from('package_templates')
-        .delete()
-        .eq('id', id);
-
-      if (!error) {
-        set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) }));
-        return;
-      }
-    } catch (e) {
-      console.warn("Failed to delete package template from Supabase, falling back to local:", e);
-    }
-    // Fallback
-    set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) }));
-  },
+  addPackageTemplate: (pkg) => set(s => ({ packageTemplates: [...s.packageTemplates, { ...pkg, id: Math.random().toString() }] })),
+  updatePackageTemplate: (id, pkg) => set(s => ({ packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p) })),
+  deletePackageTemplate: (id) => set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) })),
   
   assignPackageToCustomer: (cid, tid) => {
     const template = get().packageTemplates.find(t => t.id === tid);
@@ -1134,75 +1129,9 @@ export const useStore = create<AppState>()((set, get) => ({
     });
   },
 
-  addCreditPackage: async (pkg) => {
-    try {
-      const { data, error } = await supabase
-        .from('credit_packages')
-        .insert([{
-          name: pkg.name,
-          price: pkg.price,
-          credit_value: pkg.creditValue
-        }])
-        .select()
-        .single();
-
-      if (!error && data) {
-        set(s => ({
-          creditPackages: [...s.creditPackages, {
-            id: data.id,
-            name: data.name,
-            price: Number(data.price),
-            creditValue: Number(data.credit_value)
-          }]
-        }));
-        return;
-      }
-    } catch (e) {
-      console.warn("Failed to save credit package to Supabase, falling back to local:", e);
-    }
-    // Fallback
-    set(s => ({ creditPackages: [...s.creditPackages, { ...pkg, id: Math.random().toString() }] }));
-  },
-  updateCreditPackage: async (id, pkg) => {
-    try {
-      const { error } = await supabase
-        .from('credit_packages')
-        .update({
-          name: pkg.name,
-          price: pkg.price,
-          credit_value: pkg.creditValue
-        })
-        .eq('id', id);
-
-      if (!error) {
-        set(s => ({
-          creditPackages: s.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p)
-        }));
-        return;
-      }
-    } catch (e) {
-      console.warn("Failed to update credit package in Supabase, falling back to local:", e);
-    }
-    // Fallback
-    set(s => ({ creditPackages: s.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p) }));
-  },
-  deleteCreditPackage: async (id) => {
-    try {
-      const { error } = await supabase
-        .from('credit_packages')
-        .delete()
-        .eq('id', id);
-
-      if (!error) {
-        set(s => ({ creditPackages: s.creditPackages.filter(p => p.id !== id) }));
-        return;
-      }
-    } catch (e) {
-      console.warn("Failed to delete credit package from Supabase, falling back to local:", e);
-    }
-    // Fallback
-    set(s => ({ creditPackages: s.creditPackages.filter(p => p.id !== id) }));
-  },
+  addCreditPackage: (pkg) => set(s => ({ creditPackages: [...s.creditPackages, { ...pkg, id: Math.random().toString() }] })),
+  updateCreditPackage: (id, pkg) => set(s => ({ creditPackages: s.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p) })),
+  deleteCreditPackage: (id) => set(s => ({ creditPackages: s.creditPackages.filter(p => p.id !== id) })),
   
   buyCreditPackage: (cid, pid) => {
     const pkg = get().creditPackages.find(p => p.id === pid);
