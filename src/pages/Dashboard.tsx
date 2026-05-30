@@ -349,75 +349,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Interactive Hotel Rooms Grid */}
-          <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-xl font-black text-[#1A1F3D] flex items-center gap-2">
-                  <Home className="text-indigo-500" size={22} />
-                  {language === 'th' ? 'ตารางห้องพักโรงแรมสัตว์เลี้ยง' : 'Hotel Rooms Grid'}
-                </h3>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
-                  {language === 'th' ? 'คลิกห้องว่างเพื่อจองคิว หรือดูสัตว์เลี้ยงที่เข้าพักอยู่' : 'Click empty room to book or view occupied status'}
-                </p>
-              </div>
-              <span className="text-xs font-black text-gray-400 bg-gray-50 px-3 py-1.5 rounded-xl">
-                {occupiedKennels} / {kennelCapacity} {language === 'th' ? 'ห้องไม่ว่าง' : 'Occupied'}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {hotelRooms.map((room) => (
-                <button
-                  key={room.roomNo}
-                  onClick={() => handleRoomClick(room)}
-                  className={cn(
-                    "p-5 rounded-[32px] border-2 transition-all text-center flex flex-col items-center justify-between h-40 relative overflow-hidden group",
-                    room.occupiedBy 
-                      ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-lg" 
-                      : "bg-white border-gray-100 hover:border-indigo-500 hover:shadow-md text-gray-600"
-                  )}
-                >
-                  <div className="flex justify-between items-center w-full">
-                    <span className={cn("text-xs font-black", room.occupiedBy ? "text-[#D9ED5F]" : "text-gray-400")}>
-                      Room {room.roomNo}
-                    </span>
-                    {room.occupiedBy ? (
-                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                    ) : (
-                      <DoorOpen size={14} className="text-green-500" />
-                    )}
-                  </div>
-
-                  {room.occupiedBy ? (
-                    <div className="flex flex-col items-center gap-2 my-2">
-                      <img 
-                        src={room.occupiedBy.image} 
-                        alt={room.occupiedBy.petName} 
-                        className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm"
-                      />
-                      <p className="text-xs font-black truncate max-w-[110px]">{room.occupiedBy.petName}</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-1 my-2 opacity-40 group-hover:opacity-100 transition-opacity">
-                      <Plus size={20} className="text-indigo-500" />
-                      <span className="text-[9px] font-black uppercase tracking-wider">Book Room</span>
-                    </div>
-                  )}
-
-                  <div className="w-full">
-                    <span className={cn(
-                      "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md block text-center",
-                      room.occupiedBy ? "bg-white/10 text-white" : "bg-green-50 text-green-600"
-                    )}>
-                      {room.occupiedBy ? room.occupiedBy.status : "Available"}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Charts & Analytics Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Busy Hours Bar Chart */}
@@ -643,19 +574,29 @@ const Dashboard = () => {
                   </div>
                   <span className="text-xs font-black text-gray-400">{occupiedKennels}/{kennelCapacity}</span>
                 </div>
-                <div className="grid grid-cols-4 gap-3">
-                  {Array.from({ length: kennelCapacity }).map((_, i) => (
-                    <div 
-                      key={i} 
+                <div className="grid grid-cols-4 gap-2.5">
+                  {hotelRooms.map((room) => (
+                    <button
+                      key={room.roomNo}
+                      onClick={() => handleRoomClick(room)}
                       className={cn(
-                        "aspect-square rounded-2xl border-2 transition-all", 
-                        i < occupiedKennels 
-                          ? "bg-[#1A1F3D] border-[#1A1F3D] shadow-sm shadow-[#1A1F3D]/10" 
-                          : "bg-[#F5F6FA] border-transparent"
-                      )} 
-                    />
+                        "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-[10px] font-black relative group",
+                        room.occupiedBy 
+                          ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-sm shadow-[#1A1F3D]/10" 
+                          : "bg-[#F5F6FA] border-transparent text-gray-400 hover:border-indigo-500 hover:bg-white"
+                      )}
+                      title={room.occupiedBy ? `${room.occupiedBy.petName} (${room.occupiedBy.ownerName})` : `Room ${room.roomNo} (Available)`}
+                    >
+                      <span>{room.roomNo.toString().slice(1)}</span>
+                      {room.occupiedBy && (
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                      )}
+                    </button>
                   ))}
                 </div>
+                <p className="text-[8px] text-gray-400 font-bold uppercase tracking-wider mt-4 text-center">
+                  * คลิกที่ห้องเพื่อจองคิว หรือดูสถานะ
+                </p>
               </div>
 
               {/* Special Care Alerts */}
