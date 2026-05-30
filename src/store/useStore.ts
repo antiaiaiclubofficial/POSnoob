@@ -509,8 +509,87 @@ export const useStore = create<AppState>()((set, get) => ({
 
   addPet: (cid, pet) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: [...c.pets, { ...pet, id: Math.random().toString() }] } : c) })),
   updatePet: (cid, pid, data) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: c.pets.map(p => p.id === pid ? { ...p, ...data } : p) } : c) })),
-  updatePetWeight: (cid, pid, w) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: c.pets.map(p => p.id === pid ? { ...p, weightHistory: [...p.weightHistory, { date: new Date().toISOString().split('T')[0], value: w }] } : p) } : c) })),
-  saveIntakeRecord: (cid, pid, rec) => {},
+  updatePetWeight: async (customerId, petId, weight) => {
+    // Update pet current weight
+    await supabase
+      .from('pets')
+      .update({ weight: weight })
+      .eq('id', petId);
+
+    // Insert into weight history table
+    const { data, error } = await supabase
+      .from('pet_weight_history')
+      .insert([{
+        pet_id: petId,
+        weight: weight,
+        date: new Date().toISOString().split('T')[0]
+      }])
+      .select()
+      .single();
+
+    if (!error) {
+      set((state) => ({
+        customers: state.customers.map(c => c.id === customerId ? {
+          ...c,
+          pets: c.pets.map(p => p.id === petId ? { 
+            ...p, 
+            weightHistory: [...(p.weightHistory || []), { date: data.date, value: Number(data.weight) }] 
+          } : p)
+        } : c)
+      }));
+    }
+  },
+  saveIntakeRecord: async (customerId, petId, record) => {
+    try {
+      const { data, error } = await supabase
+        .from('pet_health_logs')
+        .insert([{
+          pet_id: petId,
+          type: 'intake',
+          title: 'Grooming Intake Form',
+          description: JSON.stringify({
+            details: record.details,
+            signature: record.signature,
+            weight: record.weight,
+            staffName: record.staffName,
+            queueItemId: record.queueItemId
+          }),
+          date: new Date().toISOString().split('T')[0],
+          status: 'completed'
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        set((state) => ({
+          customers: state.customers.map(c => {
+            if (c.id !== customerId) return c;
+            return {
+              ...c,
+              pets: c.pets.map(p => {
+                if (p.id !== petId) return p;
+                const newIntake = {
+                  id: data.id,
+                  queueItemId: record.queueItemId,
+                  date: data.date,
+                  weight: record.weight,
+                  details: record.details,
+                  signature: record.signature,
+                  staffName: record.staffName
+                };
+                return {
+                  ...p,
+                  intakeHistory: [...(p.intakeHistory || []), newIntake]
+                };
+              })
+            };
+          })
+        }));
+      }
+    } catch (e) {
+      console.error("Failed to save intake record:", e);
+    }
+  },
 
   addBooking: (b) => set(s => ({ queue: [...s.queue, { ...b, id: Math.random().toString() }] })),
   updateQueueStatus: (id, status) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, status } : q) })),

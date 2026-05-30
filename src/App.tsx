@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
-import Queue from "./pages/Queue";
+import Queue import Queue from "./pages/Queue";
 import Services from "./pages/Services";
 import Customers from "./pages/Customers";
 import Inventory from "./pages/Inventory";
@@ -121,6 +121,58 @@ const App = () => {
             }
           });
         }
+
+        // Fetch weight history
+        const { data: weightHistoryData } = await supabase
+          .from('pet_weight_history')
+          .select('*')
+          .order('date', { ascending: true });
+
+        const weightHistoryMap: Record<string, any[]> = {};
+        if (weightHistoryData) {
+          weightHistoryData.forEach(wh => {
+            if (wh.pet_id) {
+              if (!weightHistoryMap[wh.pet_id]) {
+                weightHistoryMap[wh.pet_id] = [];
+              }
+              weightHistoryMap[wh.pet_id].push({
+                date: wh.date,
+                value: Number(wh.weight)
+              });
+            }
+          });
+        }
+
+        // Fetch intake history (pet_health_logs)
+        const { data: healthLogsData } = await supabase
+          .from('pet_health_logs')
+          .select('*')
+          .eq('type', 'intake');
+
+        const intakeHistoryMap: Record<string, any[]> = {};
+        if (healthLogsData) {
+          healthLogsData.forEach(log => {
+            if (log.pet_id) {
+              if (!intakeHistoryMap[log.pet_id]) {
+                intakeHistoryMap[log.pet_id] = [];
+              }
+              try {
+                const parsed = JSON.parse(log.description || '{}');
+                intakeHistoryMap[log.pet_id].push({
+                  id: log.id,
+                  queueItemId: parsed.queueItemId,
+                  date: log.date,
+                  weight: parsed.weight,
+                  details: parsed.details,
+                  signature: parsed.signature,
+                  staffName: parsed.staffName
+                });
+              } catch (e) {
+                console.error("Failed to parse intake log description:", e);
+              }
+            }
+          });
+        }
         
         if (customersData && customersData.length > 0) {
           const formattedCustomers = customersData.map(c => {
@@ -155,8 +207,9 @@ const App = () => {
                 species: p.type || 'Dog',
                 breed: p.breed || '-',
                 birthday: p.birth_date || '',
-                weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
+                weightHistory: weightHistoryMap[p.id] || (p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : []),
                 serviceHistory: serviceHistoryMap[p.id] || [],
+                intakeHistory: intakeHistoryMap[p.id] || [],
                 notes: p.medical_condition || '',
                 image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
               }))
