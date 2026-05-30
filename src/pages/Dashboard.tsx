@@ -237,7 +237,7 @@ const Dashboard = () => {
     
     setHotelBookings(prevBookings => {
       const bookingToCheckOut = prevBookings.find(b => 
-        b.roomName.trim().toLowerCase() === roomName.trim().toLowerCase()
+        b && b.roomName && b.roomName.toString().trim().toLowerCase() === roomName.toString().trim().toLowerCase()
       );
       
       if (bookingToCheckOut) {
@@ -259,7 +259,7 @@ const Dashboard = () => {
       }
 
       const updated = prevBookings.filter(b => 
-        b.roomName.trim().toLowerCase() !== roomName.trim().toLowerCase()
+        b && b.roomName && b.roomName.toString().trim().toLowerCase() !== roomName.toString().trim().toLowerCase()
       );
       localStorage.setItem('hotel_bookings', JSON.stringify(updated));
       return updated;
@@ -322,7 +322,7 @@ const Dashboard = () => {
     return roomsConfig.map((room, idx) => {
       // ค้นหาข้อมูลการจองโรงแรมสัตว์เลี้ยงที่ตรงกับห้องนี้โดยใช้ชื่อห้องพักเป็นหลักเพื่อความแม่นยำสูงสุด
       const occupiedBy = hotelBookings.find(b => 
-        b.roomName.trim().toLowerCase() === room.name.trim().toLowerCase()
+        b && b.roomName && b.roomName.toString().trim().toLowerCase() === room.name.toString().trim().toLowerCase()
       ) || null;
       return {
         ...room,
