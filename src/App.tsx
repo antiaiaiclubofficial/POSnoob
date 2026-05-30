@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useStore, BookingType } from "@/store/useStore";
+import { useStore, BookingType, MembershipLevel } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -286,6 +286,67 @@ const App = () => {
           }));
           useStore.setState({ transactions: formattedTx });
         }
+
+        // 7. Fetch Package Templates
+        try {
+          const { data: packagesData } = await supabase
+            .from('package_templates')
+            .select('*');
+
+          if (packagesData) {
+            const formattedPackages = packagesData.map(p => ({
+              id: p.id,
+              name: p.name,
+              serviceId: p.service_id,
+              paidSlots: p.paid_slots || 0,
+              freeSlots: p.free_slots || 0,
+              price: Number(p.price || 0),
+              bonusType: p.bonus_type || 'none',
+              bonusName: p.bonus_name || '',
+              bonusCount: p.bonus_count || 1
+            }));
+            useStore.setState({ packageTemplates: formattedPackages });
+          }
+        } catch (e) {
+          console.warn("package_templates table might not exist yet:", e);
+        }
+
+        // 8. Fetch Credit Packages
+        try {
+          const { data: creditsData } = await supabase
+            .from('credit_packages')
+            .select('*');
+          if (creditsData) {
+            const formattedCredits = creditsData.map(c => ({
+              id: c.id,
+              name: c.name,
+              price: Number(c.price || 0),
+              creditValue: Number(c.credit_value || 0)
+            }));
+            useStore.setState({ creditPackages: formattedCredits });
+          }
+        } catch (e) {
+          console.warn("credit_packages table might not exist yet:", e);
+        }
+
+        // 9. Fetch Tier Rules
+        try {
+          const { data: tiersData } = await supabase
+            .from('tier_rules')
+            .select('*');
+          if (tiersData && tiersData.length > 0) {
+            const formattedTiers = tiersData.map(t => ({
+              level: t.level as MembershipLevel,
+              label: t.label,
+              minSpent: Number(t.min_spent || 0),
+              discount: Number(t.discount || 0)
+            }));
+            useStore.setState({ tierRules: formattedTiers });
+          }
+        } catch (e) {
+          console.warn("tier_rules table might not exist yet:", e);
+        }
+
       } catch (err) {
         console.warn("Failed to fetch initial data from Supabase:", err);
       }

@@ -435,7 +435,25 @@ export const useStore = create<AppState>()((set, get) => ({
 
   updateBusinessProfile: (profile) => set(s => ({ ...s, ...profile })),
   updateBookingSettings: (settings) => set(s => ({ ...s, ...settings })),
-  updateTierRules: (rules) => set({ tierRules: rules }),
+  
+  updateTierRules: async (rules) => {
+    try {
+      for (const rule of rules) {
+        await supabase
+          .from('tier_rules')
+          .upsert({
+            level: rule.level,
+            label: rule.label,
+            min_spent: rule.minSpent,
+            discount: rule.discount
+          }, { onConflict: 'level' });
+      }
+    } catch (e) {
+      console.warn("Failed to save tier rules to Supabase, falling back to local:", e);
+    }
+    set({ tierRules: rules });
+  },
+
   updateRolePermissions: (role, permissions) => set(s => ({
     rolePermissions: {
       ...s.rolePermissions,
@@ -997,9 +1015,90 @@ export const useStore = create<AppState>()((set, get) => ({
   updateStaff: (id, st) => set(s => ({ staff: s.staff.map(mem => mem.id === id ? { ...mem, ...st } : mem) })),
   deleteStaff: (id) => set(s => ({ staff: s.staff.filter(mem => mem.id !== id) })),
 
-  addPackageTemplate: (pkg) => set(s => ({ packageTemplates: [...s.packageTemplates, { ...pkg, id: Math.random().toString() }] })),
-  updatePackageTemplate: (id, pkg) => set(s => ({ packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p) })),
-  deletePackageTemplate: (id) => set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) })),
+  addPackageTemplate: async (pkg) => {
+    try {
+      const { data, error } = await supabase
+        .from('package_templates')
+        .insert([{
+          name: pkg.name,
+          service_id: pkg.serviceId,
+          paid_slots: pkg.paidSlots,
+          free_slots: pkg.freeSlots,
+          price: pkg.price,
+          bonus_type: pkg.bonusType || 'none',
+          bonus_name: pkg.bonusName || '',
+          bonus_count: pkg.bonusCount || 1
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        set(s => ({
+          packageTemplates: [...s.packageTemplates, {
+            id: data.id,
+            name: data.name,
+            serviceId: data.service_id,
+            paidSlots: data.paid_slots,
+            freeSlots: data.free_slots,
+            price: Number(data.price),
+            bonusType: data.bonus_type,
+            bonusName: data.bonus_name,
+            bonusCount: data.bonus_count
+          }]
+        }));
+        return;
+      }
+    } catch (e) {
+      console.warn("Failed to save package template to Supabase, falling back to local:", e);
+    }
+    // Fallback
+    set(s => ({ packageTemplates: [...s.packageTemplates, { ...pkg, id: Math.random().toString() }] }));
+  },
+  updatePackageTemplate: async (id, pkg) => {
+    try {
+      const { error } = await supabase
+        .from('package_templates')
+        .update({
+          name: pkg.name,
+          service_id: pkg.serviceId,
+          paid_slots: pkg.paidSlots,
+          free_slots: pkg.freeSlots,
+          price: pkg.price,
+          bonus_type: pkg.bonusType,
+          bonus_name: pkg.bonusName,
+          bonus_count: pkg.bonusCount
+        })
+        .eq('id', id);
+
+      if (!error) {
+        set(s => ({
+          packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p)
+        }));
+        return;
+      }
+    } catch (e) {
+      console.warn("Failed to update package template in Supabase, falling back to local:", e);
+    }
+    // Fallback
+    set(s => ({ packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p) }));
+  },
+  deletePackageTemplate: async (id) => {
+    try {
+      const { error } = await supabase
+        .from('package_templates')
+        .delete()
+        .eq('id', id);
+
+      if (!error) {
+        set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) }));
+        return;
+      }
+    } catch (e) {
+      console.warn("Failed to delete package template from Supabase, falling back to local:", e);
+    }
+    // Fallback
+    set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) }));
+  },
   
   assignPackageToCustomer: (cid, tid) => {
     const template = get().packageTemplates.find(t => t.id === tid);
@@ -1035,9 +1134,75 @@ export const useStore = create<AppState>()((set, get) => ({
     });
   },
 
-  addCreditPackage: (pkg) => set(s => ({ creditPackages: [...s.creditPackages, { ...pkg, id: Math.random().toString() }] })),
-  updateCreditPackage: (id, pkg) => set(s => ({ creditPackages: s.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p) })),
-  deleteCreditPackage: (id) => set(s => ({ creditPackages: s.creditPackages.filter(p => p.id !== id) })),
+  addCreditPackage: async (pkg) => {
+    try {
+      const { data, error } = await supabase
+        .from('credit_packages')
+        .insert([{
+          name: pkg.name,
+          price: pkg.price,
+          credit_value: pkg.creditValue
+        }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        set(s => ({
+          creditPackages: [...s.creditPackages, {
+            id: data.id,
+            name: data.name,
+            price: Number(data.price),
+            creditValue: Number(data.credit_value)
+          }]
+        }));
+        return;
+      }
+    } catch (e) {
+      console.warn("Failed to save credit package to Supabase, falling back to local:", e);
+    }
+    // Fallback
+    set(s => ({ creditPackages: [...s.creditPackages, { ...pkg, id: Math.random().toString() }] }));
+  },
+  updateCreditPackage: async (id, pkg) => {
+    try {
+      const { error } = await supabase
+        .from('credit_packages')
+        .update({
+          name: pkg.name,
+          price: pkg.price,
+          credit_value: pkg.creditValue
+        })
+        .eq('id', id);
+
+      if (!error) {
+        set(s => ({
+          creditPackages: s.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p)
+        }));
+        return;
+      }
+    } catch (e) {
+      console.warn("Failed to update credit package in Supabase, falling back to local:", e);
+    }
+    // Fallback
+    set(s => ({ creditPackages: s.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p) }));
+  },
+  deleteCreditPackage: async (id) => {
+    try {
+      const { error } = await supabase
+        .from('credit_packages')
+        .delete()
+        .eq('id', id);
+
+      if (!error) {
+        set(s => ({ creditPackages: s.creditPackages.filter(p => p.id !== id) }));
+        return;
+      }
+    } catch (e) {
+      console.warn("Failed to delete credit package from Supabase, falling back to local:", e);
+    }
+    // Fallback
+    set(s => ({ creditPackages: s.creditPackages.filter(p => p.id !== id) }));
+  },
   
   buyCreditPackage: (cid, pid) => {
     const pkg = get().creditPackages.find(p => p.id === pid);
