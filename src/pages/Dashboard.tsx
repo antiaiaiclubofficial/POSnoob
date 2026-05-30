@@ -217,54 +217,40 @@ const Dashboard = () => {
 
   // บันทึกการจองโรงแรมสัตว์เลี้ยง
   const handleSaveHotelBooking = (bookingData: any) => {
-    setHotelBookings(prev => {
-      const updatedBookings = [...prev, bookingData];
-      localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
-      return updatedBookings;
-    });
+    const updatedBookings = [...hotelBookings, bookingData];
+    setHotelBookings(updatedBookings);
+    localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
     setIsHotelBookingOpen(false);
     setSelectedRoomForBooking(null);
     toast.success(`จองห้องพัก ${bookingData.roomName} ให้กับ ${bookingData.petName} เรียบร้อยแล้ว!`);
   };
 
   // เช็คเอาท์ / คืนห้องพักโรงแรมสัตว์เลี้ยง
-  const handleCheckOutRoom = (roomIndex: number, roomName: string) => {
-    if (!roomName) {
-      toast.error("ไม่พบชื่อห้องพักสำหรับการ Check-out");
-      return;
-    }
-    if (!window.confirm(`คุณต้องการทำรายการ Check-out และคืนห้องพัก "${roomName}" ใช่หรือไม่?`)) return;
+  const handleCheckOutRoom = (roomIndex: number) => {
+    if (!window.confirm("คุณต้องการทำรายการ Check-out และคืนห้องพักนี้ใช่หรือไม่?")) return;
     
-    setHotelBookings(prevBookings => {
-      const bookingToCheckOut = prevBookings.find(b => 
-        b && b.roomName && b.roomName.toString().trim().toLowerCase() === roomName.toString().trim().toLowerCase()
-      );
-      
-      if (bookingToCheckOut) {
-        // บันทึกประวัติการเข้าพักลงใน hotel_stay_history
-        const historySaved = localStorage.getItem('hotel_stay_history');
-        let history = [];
-        if (historySaved) {
-          try {
-            history = JSON.parse(historySaved);
-          } catch (e) {
-            history = [];
-          }
+    const bookingToCheckOut = hotelBookings.find(b => b.roomIndex === roomIndex);
+    if (bookingToCheckOut) {
+      // บันทึกประวัติการเข้าพักลงใน hotel_stay_history
+      const historySaved = localStorage.getItem('hotel_stay_history');
+      let history = [];
+      if (historySaved) {
+        try {
+          history = JSON.parse(historySaved);
+        } catch (e) {
+          history = [];
         }
-        history.push({
-          ...bookingToCheckOut,
-          checkOutActualDate: format(new Date(), 'yyyy-MM-dd HH:mm')
-        });
-        localStorage.setItem('hotel_stay_history', JSON.stringify(history));
       }
+      history.push({
+        ...bookingToCheckOut,
+        checkOutActualDate: format(new Date(), 'yyyy-MM-dd HH:mm')
+      });
+      localStorage.setItem('hotel_stay_history', JSON.stringify(history));
+    }
 
-      const updated = prevBookings.filter(b => 
-        b && b.roomName && b.roomName.toString().trim().toLowerCase() !== roomName.toString().trim().toLowerCase()
-      );
-      localStorage.setItem('hotel_bookings', JSON.stringify(updated));
-      return updated;
-    });
-
+    const updatedBookings = hotelBookings.filter(b => b.roomIndex !== roomIndex);
+    setHotelBookings(updatedBookings);
+    localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
     setSelectedOccupiedRoom(null);
     toast.success("ทำรายการ Check-out และคืนห้องพักเรียบร้อยแล้ว");
   };
@@ -320,10 +306,8 @@ const Dashboard = () => {
   const hotelRooms = useMemo(() => {
     if (roomsConfig.length === 0) return [];
     return roomsConfig.map((room, idx) => {
-      // ค้นหาข้อมูลการจองโรงแรมสัตว์เลี้ยงที่ตรงกับห้องนี้โดยใช้ชื่อห้องพักเป็นหลักเพื่อความแม่นยำสูงสุด
-      const occupiedBy = hotelBookings.find(b => 
-        b && b.roomName && b.roomName.toString().trim().toLowerCase() === room.name.toString().trim().toLowerCase()
-      ) || null;
+      // ค้นหาข้อมูลการจองโรงแรมสัตว์เลี้ยงที่ตรงกับห้องนี้
+      const occupiedBy = hotelBookings.find(b => b.roomIndex === idx) || null;
       return {
         ...room,
         occupiedBy
@@ -966,7 +950,7 @@ const Dashboard = () => {
 
               {/* Check-out Button */}
               <button 
-                onClick={() => handleCheckOutRoom(selectedOccupiedRoom.roomIndex, selectedOccupiedRoom.roomName)}
+                onClick={() => handleCheckOutRoom(selectedOccupiedRoom.roomIndex)}
                 className="w-full bg-red-500 hover:bg-red-600 text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/10 active:scale-95 transition-all"
               >
                 <LogOut size={16} /> Check-out / คืนห้องพัก
