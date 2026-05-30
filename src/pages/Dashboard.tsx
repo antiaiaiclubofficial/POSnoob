@@ -30,7 +30,8 @@ import {
   DoorOpen,
   Settings as SettingsIcon,
   Check,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -55,6 +56,7 @@ import {
 } from "@/components/ui/popover";
 import BookingModal from '@/components/BookingModal';
 import CustomerModal from '@/components/CustomerModal';
+import HotelBookingModal from '@/components/HotelBookingModal';
 import { toast } from 'sonner';
 
 interface RoomConfig {
@@ -111,6 +113,12 @@ const Dashboard = () => {
   // Modals State
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
+  
+  // Hotel Booking States
+  const [isHotelBookingOpen, setIsHotelBookingOpen] = useState(false);
+  const [selectedRoomForBooking, setSelectedRoomForBooking] = useState<{ name: string; index: number } | null>(null);
+  const [selectedOccupiedRoom, setSelectedOccupiedRoom] = useState<any | null>(null);
+  const [hotelBookings, setHotelBookings] = useState<any[]>([]);
 
   // Kennel Customization States
   const [isEditRoomsMode, setIsEditRoomsMode] = useState(false);
@@ -130,6 +138,16 @@ const Dashboard = () => {
       }
     } else {
       initializeDefaultRooms();
+    }
+
+    // Load Hotel Bookings
+    const savedBookings = localStorage.getItem('hotel_bookings');
+    if (savedBookings) {
+      try {
+        setHotelBookings(JSON.parse(savedBookings));
+      } catch (e) {
+        setHotelBookings([]);
+      }
     }
   }, [kennelCapacity]);
 
@@ -197,6 +215,27 @@ const Dashboard = () => {
     toast.success(`ลดห้องพักเหลือ ${newCapacity} ห้องเรียบร้อยแล้ว`);
   };
 
+  // บันทึกการจองโรงแรมสัตว์เลี้ยง
+  const handleSaveHotelBooking = (bookingData: any) => {
+    const updatedBookings = [...hotelBookings, bookingData];
+    setHotelBookings(updatedBookings);
+    localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
+    setIsHotelBookingOpen(false);
+    setSelectedRoomForBooking(null);
+    toast.success(`จองห้องพัก ${bookingData.roomName} ให้กับ ${bookingData.petName} เรียบร้อยแล้ว!`);
+  };
+
+  // เช็คเอาท์ / คืนห้องพักโรงแรมสัตว์เลี้ยง
+  const handleCheckOutRoom = (roomIndex: number) => {
+    if (!window.confirm("คุณต้องการทำรายการ Check-out และคืนห้องพักนี้ใช่หรือไม่?")) return;
+    
+    const updatedBookings = hotelBookings.filter(b => b.roomIndex !== roomIndex);
+    setHotelBookings(updatedBookings);
+    localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
+    setSelectedOccupiedRoom(null);
+    toast.success("ทำรายการ Check-out และคืนห้องพักเรียบร้อยแล้ว");
+  };
+
   const todayQueue = queue.filter(q => q.date === today);
   const todayTransactions = transactions.filter(t => t.date === today);
   
@@ -245,20 +284,19 @@ const Dashboard = () => {
   }, [customers, transactions]);
 
   // 3. ตารางห้องพักโรงแรมสัตว์เลี้ยงแบบโต้ตอบได้ (Interactive Hotel Rooms Grid)
-  const activeQueueItems = useMemo(() => {
-    return todayQueue.filter(q => q.status === 'Checked-in' || q.status === 'In Progress');
-  }, [todayQueue]);
-
   const hotelRooms = useMemo(() => {
     if (roomsConfig.length === 0) return [];
     return roomsConfig.map((room, idx) => {
-      const occupiedBy = activeQueueItems[idx] || null;
+      // ค้นหาข้อมูลการจองโรงแรมสัตว์เลี้ยงที่ตรงกับห้องนี้
+      const occupiedBy = hotelBookings.find(b => b.roomIndex === idx) || null;
       return {
         ...room,
         occupiedBy
       };
     });
-  }, [roomsConfig, activeQueueItems]);
+  }, [roomsConfig, hotelBookings]);
+
+  const occupiedKennels = hotelBookings.length;
 
   const handleRoomClick = (room: any, idx: number) => {
     if (isEditRoomsMode) {
@@ -269,10 +307,10 @@ const Dashboard = () => {
     }
 
     if (room.occupiedBy) {
-      toast.info(`ห้อง ${room.name} กำลังให้บริการสัตว์เลี้ยง: ${room.occupiedBy.petName} (${room.occupiedBy.ownerName})`);
+      setSelectedOccupiedRoom(room.occupiedBy);
     } else {
-      setIsBookingOpen(true);
-      toast.success(`กำลังเปิดหน้าต่างจองคิวสำหรับห้องพัก ${room.name}`);
+      setSelectedRoomForBooking({ name: room.name, index: idx });
+      setIsHotelBookingOpen(true);
     }
   };
 
@@ -324,7 +362,6 @@ const Dashboard = () => {
     };
   }, [customers, transactions]);
 
-  const occupiedKennels = activeQueueItems.length;
   const lowStockItems = inventory.filter(i => i.stock <= i.minStock);
   const specialCarePets = useMemo(() => {
     const todayPetIds = todayQueue.map(q => q.petId);
@@ -822,6 +859,87 @@ const Dashboard = () => {
       {/* Modals */}
       {isBookingOpen && <BookingModal onClose={() => setIsBookingOpen(false)} />}
       {isCustomerOpen && <CustomerModal onClose={() => setIsCustomerOpen(false)} />}
+      
+      {/* Dedicated Hotel Booking Modal */}
+      {isHotelBookingOpen && selectedRoomForBooking && (
+        <HotelBookingModal 
+          roomName={selectedRoomForBooking.name}
+          roomIndex={selectedRoomForBooking.index}
+          onClose={() => {
+            setIsHotelBookingOpen(false);
+            setSelectedRoomForBooking(null);
+          }}
+          onSave={handleSaveHotelBooking}
+        />
+      )}
+
+      {/* Occupied Room Details Modal */}
+      {selectedOccupiedRoom && (
+        <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
+          <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-[#1A1F3D] rounded-2xl flex items-center justify-center text-[#D9ED5F]">
+                  <Home size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[#1A1F3D]">รายละเอียดการเข้าพัก</h3>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ห้องพักหมายเลข: {selectedOccupiedRoom.roomName}</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedOccupiedRoom(null)} className="p-2 hover:bg-white rounded-xl transition-all">
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6">
+              {/* Pet Info */}
+              <div className="flex items-center gap-4 bg-[#F5F6FA] p-4 rounded-2xl">
+                <img src={selectedOccupiedRoom.petImage} className="w-16 h-16 rounded-xl object-cover shadow-sm" alt={selectedOccupiedRoom.petName} />
+                <div>
+                  <h4 className="text-base font-black text-[#1A1F3D]">{selectedOccupiedRoom.petName}</h4>
+                  <p className="text-xs text-gray-400 font-bold uppercase">{selectedOccupiedRoom.petSpecies} • {selectedOccupiedRoom.petBreed}</p>
+                </div>
+              </div>
+
+              {/* Owner Info */}
+              <div className="space-y-1">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">เจ้าของสัตว์เลี้ยง (Owner)</span>
+                <p className="text-sm font-bold text-[#1A1F3D]">{selectedOccupiedRoom.customerName}</p>
+                <p className="text-xs text-gray-400 font-medium">เบอร์โทร: {selectedOccupiedRoom.customerPhone}</p>
+              </div>
+
+              {/* Stay Dates */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-50">
+                <div>
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Check-in</span>
+                  <p className="text-xs font-bold text-[#1A1F3D] mt-1">{selectedOccupiedRoom.checkInDate}</p>
+                  <p className="text-[10px] text-gray-400 font-medium">เวลา {selectedOccupiedRoom.checkInTime} น.</p>
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Check-out</span>
+                  <p className="text-xs font-bold text-[#1A1F3D] mt-1">{selectedOccupiedRoom.checkOutDate}</p>
+                  <p className="text-[10px] text-gray-400 font-medium">เวลา {selectedOccupiedRoom.checkOutTime} น.</p>
+                </div>
+              </div>
+
+              {/* Stay Duration */}
+              <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex justify-between items-center">
+                <span className="text-xs font-black text-indigo-600 uppercase">ระยะเวลาเข้าพัก</span>
+                <span className="text-sm font-black text-[#1A1F3D]">{selectedOccupiedRoom.stayDays} คืน</span>
+              </div>
+
+              {/* Check-out Button */}
+              <button 
+                onClick={() => handleCheckOutRoom(selectedOccupiedRoom.roomIndex)}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/10 active:scale-95 transition-all"
+              >
+                <LogOut size={16} /> Check-out / คืนห้องพัก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Room Customization Modal */}
       {editingRoomIndex !== null && (
