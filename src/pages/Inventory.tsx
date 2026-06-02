@@ -295,7 +295,7 @@ const Inventory = () => {
         shapeThai('SKU', usePUA), 
         shapeThai('จำนวนที่ขาย', usePUA), 
         shapeThai('ราคาสินค้า', usePUA), 
-        shapeThai('ราคาหลังหักGP', usePUA), 
+        shapeThai('ราคาหลังหัก GP', usePUA), 
         shapeThai('รวม', usePUA)
       ]],
       body: itemsToExport.map((i) => {
