@@ -193,12 +193,12 @@ const Inventory = () => {
     const doc = new jsPDF();
     
     // Load Thai Font dynamically
-    const thaiFont = await fetchThaiFontBase64();
-    const fontName = thaiFont ? "ThaiFont" : "helvetica";
-    const usePUA = true; // Enable PUA to fix overlapping vowels and tone marks
+    const fontResult = await fetchThaiFontBase64();
+    const fontName = fontResult.data ? "ThaiFont" : "helvetica";
+    const usePUA = fontResult.isPUA; // Only use PUA if the loaded font supports it!
 
-    if (thaiFont) {
-      doc.addFileToVFS("ThaiFont.ttf", thaiFont);
+    if (fontResult.data) {
+      doc.addFileToVFS("ThaiFont.ttf", fontResult.data);
       doc.addFont("ThaiFont.ttf", "ThaiFont", "normal");
       doc.setFont("ThaiFont", "normal");
     }

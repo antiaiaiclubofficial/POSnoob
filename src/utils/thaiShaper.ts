@@ -81,12 +81,8 @@ export const shapeThai = (text: string, usePUA: boolean = true): string => {
             else if (code === 0x0E4B) result.push(String.fromCharCode(0xF71C)); // ๋
             else result.push(c);
           } else {
-            // ลดระดับลงมาเล็กน้อยเมื่อไม่มีสระบน เพื่อไม่ให้ลอยสูงเกินไป
-            if (code === 0x0E48) result.push(String.fromCharCode(0xF70A)); // ่
-            else if (code === 0x0E49) result.push(String.fromCharCode(0xF70B)); // ้
-            else if (code === 0x0E4A) result.push(String.fromCharCode(0xF70C)); // ๊
-            else if (code === 0x0E4B) result.push(String.fromCharCode(0xF70D)); // ๋
-            else result.push(c);
+            // ไม่มีสระบนและไม่มีหางพยัญชนะขึ้นบน ให้ใช้ตัวอักษรมาตรฐานเพื่อความปลอดภัยและคมชัดสูงสุด
+            result.push(c);
           }
         }
       } else if (isLowerVowel) {
