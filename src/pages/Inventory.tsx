@@ -195,7 +195,7 @@ const Inventory = () => {
     // Load Thai Font dynamically
     const thaiFont = await fetchThaiFontBase64();
     const fontName = thaiFont ? "ThaiFont" : "helvetica";
-    const usePUA = false; // Disable PUA since we use standard Sarabun
+    const usePUA = true; // Enable PUA to fix overlapping vowels and tone marks
 
     if (thaiFont) {
       doc.addFileToVFS("ThaiFont.ttf", thaiFont);
