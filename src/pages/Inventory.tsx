@@ -182,12 +182,12 @@ const Inventory = () => {
       const tableRows = [
         new TableRow({
           children: [
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ชื่อสินค้า", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "SKU", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "จำนวนที่ขาย", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ราคาสินค้า", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ราคาหลังหัก GP", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "รวม", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ชื่อสินค้า", bold: true, color: "FFFFFF", size: 20 })] })], shading: { fill: "1A1F3D" } }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "SKU", bold: true, color: "FFFFFF", size: 20 })] })], shading: { fill: "1A1F3D" } }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "จำนวนที่ขาย", bold: true, color: "FFFFFF", size: 20 })] })], shading: { fill: "1A1F3D" } }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ราคาสินค้า", bold: true, color: "FFFFFF", size: 20 })] })], shading: { fill: "1A1F3D" } }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ราคาหลังหัก GP", bold: true, color: "FFFFFF", size: 20 })] })], shading: { fill: "1A1F3D" } }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "รวม", bold: true, color: "FFFFFF", size: 20 })] })], shading: { fill: "1A1F3D" } }),
           ]
         })
       ];
