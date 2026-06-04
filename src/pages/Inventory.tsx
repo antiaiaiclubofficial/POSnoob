@@ -12,10 +12,7 @@ import { useStore, InventoryItem, Partner } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { format, subDays, startOfMonth } from 'date-fns';
 import { toast } from 'sonner';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { fetchThaiFontBase64 } from '@/utils/pdfThaiFont';
-import { shapeThai } from '@/utils/thaiShaper';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } from 'docx';
 import InventoryModal from '@/components/InventoryModal';
 import VendorModal from '@/components/VendorModal';
 import VendorInventoryView from '@/components/VendorInventoryView';
@@ -23,31 +20,9 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 
 
 type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashboard';
 
-// Helper function to normalize image orientation using HTML5 Canvas
-const normalizeImageOrientation = (src: string): Promise<string> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/jpeg', 0.95));
-      } else {
-        resolve(src);
-      }
-    };
-    img.onerror = () => resolve(src);
-    img.src = src;
-  });
-};
-
 const Inventory = () => {
   const { 
-    inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLogo, shopLineId,
+    inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLineId,
     adjustStock, deletePartner, currency, currentUser, addReportLog, transactions
   } = useStore();
   
@@ -55,7 +30,6 @@ const Inventory = () => {
   const [repPartnerFilter, setRepPartnerFilter] = useState('All');
   const [repCategoryFilter, setRepCategoryFilter] = useState('All');
   const [repStatusFilter, setRepStatusFilter] = useState('All');
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,7 +59,7 @@ const Inventory = () => {
     { id: 'master', label: 'สินค้าทั้งหมด', icon: LayoutGrid },
     { id: 'check', label: 'เช็คสต็อก/แจ้งเตือน', icon: AlertTriangle },
     { id: 'adjust', label: 'เติม/ปรับยอด', icon: PlusCircle },
-    { id: 'report', label: 'รายงาน PDF', icon: FileText },
+    { id: 'report', label: 'รายงาน Word', icon: FileText },
     { id: 'consignment', label: 'คู่ค้าฝากขาย', icon: Users },
   ];
 
@@ -188,235 +162,227 @@ const Inventory = () => {
     }
   };
 
-  // Logic: PDF Generation - Sales Report Format (Supports Thai)
-  const createReportDoc = async () => {
-    const doc = new jsPDF();
-    
-    // Load Thai Font dynamically
-    const fontResult = await fetchThaiFontBase64();
-    const fontName = fontResult.data ? "ThaiFont" : "helvetica";
-    const usePUA = fontResult.isPUA; // Only use PUA if the loaded font supports it!
+  // Logic: Word Document (.docx) Generation
+  const handleDownloadWordReport = async () => {
+    const toastId = toast.loading("กำลังสร้างเอกสาร Word (.docx) ภาษาไทย...");
+    try {
+      const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
+      const mockTaxId = "0-1055-64000-12-3";
 
-    if (fontResult.data) {
-      doc.addFileToVFS("ThaiFont.ttf", fontResult.data);
-      doc.addFont("ThaiFont.ttf", "ThaiFont", "normal");
-      doc.setFont("ThaiFont", "normal");
-    }
+      // Apply Filters
+      let itemsToExport = [...inventory];
+      if (repPartnerFilter !== 'All') itemsToExport = itemsToExport.filter(i => i.partnerId === repPartnerFilter);
+      if (repCategoryFilter !== 'All') itemsToExport = itemsToExport.filter(i => i.category === repCategoryFilter);
+      if (repStatusFilter === 'Low') itemsToExport = itemsToExport.filter(i => i.stock > 0 && i.stock <= i.minStock);
+      if (repStatusFilter === 'Out') itemsToExport = itemsToExport.filter(i => i.stock === 0);
 
-    const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
-    const mockTaxId = "0-1055-64000-12-3";
+      const selectedPartner = partners.find(p => p.id === repPartnerFilter);
 
-    // Apply Filters
-    let itemsToExport = [...inventory];
-    if (repPartnerFilter !== 'All') itemsToExport = itemsToExport.filter(i => i.partnerId === repPartnerFilter);
-    if (repCategoryFilter !== 'All') itemsToExport = itemsToExport.filter(i => i.category === repCategoryFilter);
-    if (repStatusFilter === 'Low') itemsToExport = itemsToExport.filter(i => i.stock > 0 && i.stock <= i.minStock);
-    if (repStatusFilter === 'Out') itemsToExport = itemsToExport.filter(i => i.stock === 0);
+      // Build Table Rows
+      const tableRows = [
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ชื่อสินค้า", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "SKU", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "จำนวนที่ขาย", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ราคาสินค้า", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ราคาหลังหัก GP", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "รวม", bold: true, color: "FFFFFF", size: 20 })] })], backgroundColor: "1A1F3D" }),
+          ]
+        })
+      ];
 
-    const selectedPartner = partners.find(p => p.id === repPartnerFilter);
-
-    // Header Left: Company Info
-    doc.setFontSize(14);
-    doc.setTextColor(26, 31, 61);
-    doc.text(shapeThai(shopName, usePUA), 15, 20);
-    
-    doc.setFontSize(9);
-    doc.setTextColor(80);
-    doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี: ${mockTaxId}`, usePUA), 15, 26);
-    doc.text(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 15, 31);
-    doc.text(shapeThai(`โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`, usePUA), 15, 36);
-
-    // Header Right: Logo & Title (Dynamic Format Detection to prevent auto-rotation)
-    if (shopLogo) {
-      try {
-        // Normalize image orientation using canvas before adding to PDF
-        const normalizedLogo = await normalizeImageOrientation(shopLogo);
-        const imgFormat = normalizedLogo.toLowerCase().includes('png') ? 'PNG' : 'JPEG';
-        doc.addImage(normalizedLogo, imgFormat, 160, 10, 35, 35);
-      } catch (e) { console.error(e); }
-    }
-
-    doc.setFontSize(18);
-    doc.setTextColor(26, 31, 61);
-    doc.text("Sales Report", 195, 52, { align: 'right' });
-    doc.setFontSize(11);
-    doc.text(shapeThai("เอกสารแจ้งยอดฝากขาย", usePUA), 195, 58, { align: 'right' });
-
-    // Customer / Partner Box
-    doc.setDrawColor(230);
-    doc.line(15, 65, 195, 65);
-
-    let currentY = 73;
-    doc.setFontSize(10);
-    doc.setTextColor(26, 31, 61);
-
-    if (selectedPartner) {
-      doc.setFont(fontName, "normal");
-      doc.text(shapeThai(`ข้อมูลคู่ค้า: ${selectedPartner.companyName}`, usePUA), 15, currentY);
-      doc.setFontSize(9);
-      doc.setTextColor(80);
-      
-      currentY += 5;
-      doc.text(shapeThai(`เลขประจำตัวผู้เสียภาษี: ${selectedPartner.taxId || '-'}`, usePUA), 15, currentY);
-      
-      currentY += 5;
-      doc.text(shapeThai(`เบอร์โทร: ${selectedPartner.phone || '-'}`, usePUA), 15, currentY);
-      
-      currentY += 5;
-      doc.text(shapeThai(`อีเมล: ${selectedPartner.email || '-'}`, usePUA), 15, currentY);
-      
-      currentY += 5;
-      const partnerAddress = selectedPartner.address || '-';
-      const splitPartnerAddress = doc.splitTextToSize(shapeThai(`ที่อยู่: ${partnerAddress}`, usePUA), 170);
-      doc.text(splitPartnerAddress, 15, currentY);
-      
-      currentY += (splitPartnerAddress.length * 4) + 2;
-      doc.setDrawColor(230);
-      doc.line(15, currentY, 195, currentY);
-      currentY += 6;
-    } else {
-      doc.setFont(fontName, "normal");
-      doc.text(shapeThai(`คู่ค้า: คู่ค้าทั้งหมด`, usePUA), 15, currentY);
-      currentY += 8;
-    }
-
-    // Date of document
-    doc.setFontSize(9);
-    doc.setTextColor(80);
-    doc.text(shapeThai(`วันที่ออกเอกสาร: ${dateNow}`, usePUA), 130, 73);
-
-    const tableStartY = selectedPartner ? currentY : 85;
-
-    // Table
-    autoTable(doc, {
-      startY: tableStartY,
-      head: [[
-        shapeThai('ชื่อสินค้า', usePUA), 
-        shapeThai('SKU', usePUA), 
-        shapeThai('จำนวนที่ขาย', usePUA), 
-        shapeThai('ราคาสินค้า', usePUA), 
-        shapeThai('ราคาหลังหัก GP', usePUA), 
-        shapeThai('รวม', usePUA)
-      ]],
-      body: itemsToExport.map((i) => {
+      itemsToExport.forEach(i => {
         const gp = selectedPartner?.gpRate || 0;
         const priceAfterGP = i.price * (1 - gp / 100);
         const total = priceAfterGP * i.stock;
-        return [
-          shapeThai(i.name, usePUA),
-          shapeThai(i.barcode || '-', usePUA),
-          i.stock.toLocaleString(),
-          i.price.toLocaleString(),
-          priceAfterGP.toLocaleString(),
-          total.toLocaleString()
-        ];
-      }),
-      styles: { 
-        font: fontName, 
-        fontSize: 9, 
-        cellPadding: { top: 10, bottom: 6, left: 4, right: 4 },
-        valign: 'middle'
-      },
-      headStyles: { 
-        fillColor: [26, 31, 61], 
-        textColor: [255, 255, 255], 
-        halign: 'center',
-        font: fontName,
-        fontStyle: fontName === 'ThaiFont' ? 'normal' : 'bold', // Prevent fallback to Helvetica-Bold
-        fontSize: 9,
-        cellPadding: { top: 10, bottom: 6, left: 4, right: 4 }
-      },
-      columnStyles: {
-        0: { halign: 'left' },
-        1: { halign: 'center' },
-        2: { halign: 'center' },
-        3: { halign: 'right' },
-        4: { halign: 'right' },
-        5: { halign: 'right' }
-      }
-    });
 
-    const tableEndY = (doc as any).lastAutoTable.finalY;
-    
-    // หากตารางยาวจนเกือบเต็มหน้าแรก (เกิน 180 มม.) ให้ขึ้นหน้าใหม่เพื่อความสวยงามและป้องกันการทับซ้อน
-    if (tableEndY > 180) {
-      doc.addPage();
-    }
+        tableRows.push(new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: i.name, size: 18 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: i.barcode || '-', size: 18 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: i.stock.toLocaleString(), size: 18 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: i.price.toLocaleString(), size: 18 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: priceAfterGP.toLocaleString(), size: 18 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: total.toLocaleString(), size: 18 })] })] }),
+          ]
+        }));
+      });
 
-    // 1. ตรึงช่องลายเซ็นไว้ที่ด้านบนของส่วนท้ายกระดาษ (y = 210 มม.)
-    const sigY = 210;
-    doc.setDrawColor(200);
-    doc.line(20, sigY, 80, sigY);
-    doc.setFontSize(9);
-    doc.setTextColor(80);
-    doc.text(shapeThai("ผู้จัดทำ (Prepared By)", usePUA), 50, sigY + 5, { align: 'center' });
-    
-    doc.line(130, sigY, 190, sigY);
-    doc.text(shapeThai("ผู้อนุมัติ (Authorized By)", usePUA), 160, sigY + 5, { align: 'center' });
+      const itemsTable = new Table({
+        rows: tableRows,
+        width: {
+          size: 100,
+          type: WidthType.PERCENTAGE,
+        }
+      });
 
-    // 2. เงื่อนไขการวางบิล (ขยับลงมาเกือบติดขอบล่างที่ y = 240 มม.)
-    const footerStartY = 240;
+      // Signatures Table
+      const sigTable = new Table({
+        borders: {
+          top: { style: BorderStyle.NONE, size: 0, color: "auto" },
+          bottom: { style: BorderStyle.NONE, size: 0, color: "auto" },
+          left: { style: BorderStyle.NONE, size: 0, color: "auto" },
+          right: { style: BorderStyle.NONE, size: 0, color: "auto" },
+          insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "auto" },
+          insideVertical: { style: BorderStyle.NONE, size: 0, color: "auto" },
+        },
+        width: {
+          size: 100,
+          type: WidthType.PERCENTAGE,
+        },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({ text: "" }),
+                  new Paragraph({ text: "__________________________________", alignment: AlignmentType.CENTER }),
+                  new Paragraph({ children: [new TextRun({ text: "ผู้จัดทำ (Prepared By)", bold: true, size: 18 })], alignment: AlignmentType.CENTER }),
+                ]
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({ text: "" }),
+                  new Paragraph({ text: "__________________________________", alignment: AlignmentType.CENTER }),
+                  new Paragraph({ children: [new TextRun({ text: "ผู้อนุมัติ (Authorized By)", bold: true, size: 18 })], alignment: AlignmentType.CENTER }),
+                ]
+              }),
+            ]
+          })
+        ]
+      });
 
-    // *เงื่อนไขการวางบิล :
-    doc.setFontSize(10);
-    doc.setTextColor(26, 31, 61);
-    doc.text(shapeThai("*เงื่อนไขการวางบิล :", usePUA), 15, footerStartY);
-    
-    doc.setFontSize(9);
-    doc.setTextColor(80);
-    const conditionText = "ผู้ขายสามารถวางบิลได้ตั้งแต่วันที่ได้รับรายงานยอดขาย จนถึงภายในวันที่ 20 ของเดือน ในกรณีที่วางบิลไม่ตรงรอบหรือเอกสารไม่ครบ จะมีการดำเนินการชำระค่าสินค้าให้ในรอบถัดไป";
-    const splitCondition = doc.splitTextToSize(shapeThai(conditionText, usePUA), 180);
-    doc.text(splitCondition, 15, footerStartY + 5);
+      // Construct Document
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            // Shop Header
+            new Paragraph({
+              children: [
+                new TextRun({ text: shopName, bold: true, size: 32, color: "1A1F3D" }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `เลขประจำตัวผู้เสียภาษี: ${mockTaxId}`, size: 18, color: "555555" }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `ที่อยู่: ${shopAddress}`, size: 18, color: "555555" }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`, size: 18, color: "555555" }),
+              ],
+            }),
 
-    // 3. ที่อยู่สำหรับจัดส่งเอกสาร (ขยับลงมาเกือบติดขอบล่างสุดที่ y = 260 มม.)
-    const nextY = 260;
+            // Title
+            new Paragraph({
+              alignment: AlignmentType.RIGHT,
+              spacing: { before: 200 },
+              children: [
+                new TextRun({ text: "Sales Report", bold: true, size: 36, color: "1A1F3D" }),
+              ]
+            }),
+            new Paragraph({
+              alignment: AlignmentType.RIGHT,
+              children: [
+                new TextRun({ text: "เอกสารแจ้งยอดฝากขาย", size: 22, color: "555555" }),
+              ]
+            }),
 
-    // วางบิลและส่งเอกสารมาที่
-    doc.setFontSize(10);
-    doc.setTextColor(26, 31, 61);
-    doc.text(shapeThai("วางบิลและส่งเอกสารมาที่ :", usePUA), 15, nextY);
+            // Divider
+            new Paragraph({ text: "_________________________________________________________________________________", spacing: { before: 100, after: 200 } }),
 
-    doc.setFontSize(9);
-    doc.setTextColor(80);
-    doc.text(shapeThai(`${shopName}`, usePUA), 15, nextY + 5);
-    
-    const splitAddress = doc.splitTextToSize(shapeThai(`ที่อยู่: ${shopAddress}`, usePUA), 180);
-    doc.text(splitAddress, 15, nextY + 10);
-    
-    const contactY = nextY + 10 + (splitAddress.length * 5);
-    doc.text(shapeThai(`ติดต่อ: ${shopPhone} ${shopLineId ? `| LINE: ${shopLineId}` : ''}`, usePUA), 15, contactY);
+            // Partner Info
+            new Paragraph({
+              children: [
+                new TextRun({ text: selectedPartner ? `ข้อมูลคู่ค้า: ${selectedPartner.companyName}` : "คู่ค้า: คู่ค้าทั้งหมด", bold: true, size: 22, color: "1A1F3D" }),
+              ]
+            }),
+            ...(selectedPartner ? [
+              new Paragraph({ children: [new TextRun({ text: `เลขประจำตัวผู้เสียภาษี: ${selectedPartner.taxId || '-'}`, size: 18, color: "555555" })] }),
+              new Paragraph({ children: [new TextRun({ text: `เบอร์โทร: ${selectedPartner.phone || '-'}`, size: 18, color: "555555" })] }),
+              new Paragraph({ children: [new TextRun({ text: `อีเมล: ${selectedPartner.email || '-'}`, size: 18, color: "555555" })] }),
+              new Paragraph({ children: [new TextRun({ text: `ที่อยู่: ${selectedPartner.address || '-'}`, size: 18, color: "555555" })] }),
+            ] : []),
 
-    return doc;
-  };
+            new Paragraph({
+              children: [
+                new TextRun({ text: `วันที่ออกเอกสาร: ${dateNow}`, size: 18, color: "555555" }),
+              ],
+              spacing: { before: 100, after: 300 }
+            }),
 
-  const handleDownloadReport = async () => {
-    const toastId = toast.loading("กำลังเตรียมเอกสาร PDF ภาษาไทย...");
-    try {
-      const doc = await createReportDoc();
+            // Table
+            itemsTable,
+
+            // Signatures
+            new Paragraph({ text: "", spacing: { before: 400, after: 200 } }),
+            sigTable,
+
+            // Billing Conditions
+            new Paragraph({
+              spacing: { before: 400 },
+              children: [
+                new TextRun({ text: "*เงื่อนไขการวางบิล :", bold: true, size: 22, color: "1A1F3D" }),
+              ]
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: "ผู้ขายสามารถวางบิลได้ตั้งแต่วันที่ได้รับรายงานยอดขาย จนถึงภายในวันที่ 20 ของเดือน ในกรณีที่วางบิลไม่ตรงรอบหรือเอกสารไม่ครบ จะมีการดำเนินการชำระค่าสินค้าให้ในรอบถัดไป", size: 18, color: "555555" }),
+              ]
+            }),
+
+            // Billing Address
+            new Paragraph({
+              spacing: { before: 300 },
+              children: [
+                new TextRun({ text: "วางบิลและส่งเอกสารมาที่ :", bold: true, size: 22, color: "1A1F3D" }),
+              ]
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: shopName, bold: true, size: 18, color: "1A1F3D" }),
+              ]
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `ที่อยู่: ${shopAddress}`, size: 18, color: "555555" }),
+              ]
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `ติดต่อ: ${shopPhone} ${shopLineId ? `| LINE: ${shopLineId}` : ''}`, size: 18, color: "555555" }),
+              ]
+            }),
+          ]
+        }]
+      });
+
+      // Generate and Download
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Sales_Report_${format(new Date(), 'yyyyMMdd')}.docx`;
+      a.click();
+
       const partnerName = repPartnerFilter === 'All' ? 'All' : partners.find(p => p.id === repPartnerFilter)?.companyName;
       addReportLog({
         reportName: "Sales Report (Consignment)",
         filters: `Partner: ${partnerName}, Cat: ${repCategoryFilter}`,
         staffName: currentUser?.name || 'Admin'
       });
-      doc.save(`Sales_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
-      toast.success("ดาวน์โหลดรายงานเรียบร้อยแล้ว", { id: toastId });
-    } catch (error) {
-      console.error(error);
-      toast.error("เกิดข้อผิดพลาดในการสร้าง PDF", { id: toastId });
-    }
-  };
 
-  const handlePreviewReport = async () => {
-    const toastId = toast.loading("กำลังเตรียมตัวอย่างเอกสาร...");
-    try {
-      const doc = await createReportDoc();
-      const blob = doc.output('blob');
-      setPdfPreviewUrl(URL.createObjectURL(blob));
-      toast.success("โหลดตัวอย่างเรียบร้อย", { id: toastId });
-    } catch (error) {
+      toast.success("ดาวน์โหลดรายงาน Word (.docx) เรียบร้อยแล้ว! คุณสามารถเปิดใน Microsoft Word หรือ Google Docs เพื่อบันทึกเป็น PDF ได้อย่างสมบูรณ์แบบ", { id: toastId });
+    } catch (error: any) {
       console.error(error);
-      toast.error("เกิดข้อผิดพลาดในการโหลดตัวอย่าง", { id: toastId });
+      toast.error("เกิดข้อผิดพลาดในการสร้างเอกสาร Word: " + error.message, { id: toastId });
     }
   };
 
@@ -728,11 +694,8 @@ const Inventory = () => {
                        </div>
 
                        <div className="space-y-3 pt-2">
-                          <button onClick={handlePreviewReport} className="w-full bg-blue-50 text-blue-600 py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 active:scale-95 transition-all">
-                             <Eye size={18} /> Preview Report
-                          </button>
-                          <button onClick={handleDownloadReport} className="w-full bg-[#1A1F3D] text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-                             <Download size={18} /> Download PDF
+                          <button onClick={handleDownloadWordReport} className="w-full bg-[#1A1F3D] text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
+                             <Download size={18} /> Download Word Report (.docx)
                           </button>
                        </div>
                     </div>
@@ -826,20 +789,6 @@ const Inventory = () => {
            </div>
         )}
       </div>
-
-      {/* PDF Preview Modal */}
-      {pdfPreviewUrl && (
-        <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[300] flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-5xl h-[90vh] rounded-[48px] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-               <h3 className="text-sm font-black text-[#1A1F3D]">Sales Report Preview (รองรับภาษาไทย)</h3>
-               <button onClick={() => setPdfPreviewUrl(null)}><X size={20} /></button>
-            </div>
-            <iframe src={pdfPreviewUrl} className="flex-1 w-full" title="PDF Preview" />
-            <div className="p-6 flex justify-end gap-4"><button onClick={handleDownloadReport} className="bg-[#1A1F3D] text-white px-10 py-3 rounded-xl font-black text-sm">Download PDF</button></div>
-          </div>
-        </div>
-      )}
 
       {isItemModalOpen && <InventoryModal item={editingItem} onClose={() => setIsItemModalOpen(false)} />}
       {isVendorModalOpen && <VendorModal partner={editingPartner} onClose={() => setIsVendorModalOpen(false)} />}
