@@ -43,7 +43,6 @@ export interface Customer {
   creditBalance: number;
   points?: number;
   lineId?: string;
-  avatarUrl?: string;
   packages?: any[];
   creditHistory?: any[];
   taxId?: string;
@@ -56,6 +55,166 @@ export interface Customer {
   district?: string;
   province?: string;
   postalCode?: string;
+}
+
+export interface QueueItem {
+  id: string;
+  petId: string;
+  petName: string;
+  ownerName: string;
+  serviceName: string;
+  date: string;
+  time: string;
+  status: QueueStatus;
+  image: string;
+  isPaid?: boolean;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface ServicePriceInfo {
+  price: number;
+  duration: number;
+}
+
+export interface SubService {
+  name: string;
+  price: number;
+}
+
+export interface Service {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  icon: ServiceIcon;
+  targetSpecies: 'Dog' | 'Cat';
+  prices: Record<string, ServicePriceInfo>;
+  isActive: boolean;
+  isPopular?: boolean;
+  subServices?: SubService[];
+  coatType?: 'Short' | 'Long';
+}
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  barcode?: string;
+  stock: number;
+  minStock: number;
+  price: number;
+  costPrice: number;
+  unit: string;
+  category: string;
+  image?: string;
+  isConsignment: boolean;
+  partnerId?: string;
+  consignmentRate?: number;
+}
+
+export interface Partner {
+  id: string;
+  companyName: string;
+  taxId?: string;
+  address?: string;
+  phone: string;
+  email: string;
+  contactPerson: string;
+  notes: string;
+  mainCategory?: string;
+  gpRate: number;
+}
+
+export interface StockLog {
+  id: string;
+  productId: string;
+  productName: string;
+  action: 'Add' | 'Adjust' | 'Sale' | 'Consignment' | 'In' | 'Out';
+  oldQty: number;
+  newQty: number;
+  reason: string;
+  staffName: string;
+  timestamp: string;
+}
+
+export interface ReportHistory {
+  id: string;
+  reportName: string;
+  filters: string;
+  staffName: string;
+  timestamp: string;
+}
+
+export interface Transaction {
+  id: string;
+  date: string;
+  amount: number;
+  discountAmount: number;
+  customerId: string;
+  customerName: string;
+  items: any[];
+  paymentMethod: PaymentMethod;
+  staffName: string;
+  staffId?: string;
+  species: string[];
+  actualDuration?: number;
+  bookingType: BookingType;
+}
+
+export interface Staff {
+  id: string;
+  name: string;
+  role: StaffRole;
+  phone: string;
+  status: 'Active' | 'Inactive';
+  avatar: string;
+  username?: string;
+  password?: string;
+  commissionRate?: number;
+}
+
+export interface ActivityLog {
+  id: string;
+  timestamp: string;
+  staffName: string;
+  action: string;
+  details: string;
+  type: 'info' | 'success' | 'warning' | 'danger';
+}
+
+export interface TierRule {
+  level: MembershipLevel;
+  label: string;
+  minSpent: number;
+  discount: number;
+}
+
+export interface AddonItem {
+  id: string;
+  name: string;
+  price: number;
+  icon: ServiceIcon;
+}
+
+export interface PackageTemplate {
+  id: string;
+  name: string;
+  serviceId: string;
+  paidSlots: number;
+  freeSlots: number;
+  price: number;
+  recurringFreebie?: string;
+  oneTimeFreebie?: string;
+  bonusType?: 'none' | 'recurring' | 'limited';
+  bonusName?: string;
+  bonusCount?: number;
+}
+
+export interface CreditPackageTemplate {
+  id: string;
+  name: string;
+  price: number;
+  creditValue: number;
 }
 
 // App State Interface
