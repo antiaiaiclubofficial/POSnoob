@@ -43,6 +43,7 @@ export interface Customer {
   creditBalance: number;
   points?: number;
   lineId?: string;
+  avatarUrl?: string;
   packages?: any[];
   creditHistory?: any[];
   taxId?: string;

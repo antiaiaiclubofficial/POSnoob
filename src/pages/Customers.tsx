@@ -44,6 +44,7 @@ const Customers = () => {
           phone,
           email,
           line_user_id,
+          avatar_url,
           gender,
           age,
           house_no,
@@ -108,6 +109,7 @@ const Customers = () => {
           phone: item.phone || '-',
           email: item.email || '-',
           lineId: item.line_user_id || '',
+          avatarUrl: item.avatar_url || '',
           membership: (storeCustomer.tier || 'Standard') as MembershipLevel,
           points: storeCustomer.points || 0,
           totalSpent: 0,
@@ -201,11 +203,23 @@ const Customers = () => {
                 selectedCustomerId === customer.id ? "bg-[#1A1F3D] text-white shadow-lg" : "hover:bg-gray-50"
               )}
             >
-              <div>
-                <p className="font-bold text-sm">{customer.name}</p>
-                <p className={cn("text-[10px]", selectedCustomerId === customer.id ? "text-white/60" : "text-gray-400")}>
-                  {customer.pets.length} {language === 'th' ? 'ตัว' : 'Pets'} • {customer.membership}
-                </p>
+              <div className="flex items-center gap-3">
+                {customer.avatarUrl ? (
+                  <img src={customer.avatarUrl} alt={customer.name} className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                ) : (
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0",
+                    selectedCustomerId === customer.id ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-600"
+                  )}>
+                    {customer.name.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <p className="font-bold text-sm">{customer.name}</p>
+                  <p className={cn("text-[10px]", selectedCustomerId === customer.id ? "text-white/60" : "text-gray-400")}>
+                    {customer.pets.length} {language === 'th' ? 'ตัว' : 'Pets'} • {customer.membership}
+                  </p>
+                </div>
               </div>
               <ChevronRight size={14} className={cn(selectedCustomerId === customer.id ? "text-white/40" : "text-gray-300")} />
             </button>
@@ -236,9 +250,13 @@ const Customers = () => {
 
             <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 mb-8 flex flex-col sm:flex-row justify-between items-start gap-6 group">
               <div className="flex gap-6">
-                <div className="w-20 h-20 bg-indigo-500 rounded-[28px] flex items-center justify-center text-2xl font-black text-white shrink-0 shadow-lg shadow-indigo-500/20">
-                  {selectedCustomer.name.charAt(0)}
-                </div>
+                {selectedCustomer.avatarUrl ? (
+                  <img src={selectedCustomer.avatarUrl} alt={selectedCustomer.name} className="w-20 h-20 rounded-[28px] object-cover shrink-0 shadow-lg" />
+                ) : (
+                  <div className="w-20 h-20 bg-indigo-500 rounded-[28px] flex items-center justify-center text-2xl font-black text-white shrink-0 shadow-lg shadow-indigo-500/20">
+                    {selectedCustomer.name.charAt(0)}
+                  </div>
+                )}
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <h2 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">{selectedCustomer.name}</h2>
