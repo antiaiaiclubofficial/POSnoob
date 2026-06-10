@@ -55,9 +55,6 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
               className="w-32 h-32 rounded-[28px] object-cover border-4 border-white shadow-lg" 
               alt={pet.name}
             />
-            <div className="absolute -bottom-2 -right-2 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
-               {pet.species === 'Dog' ? <span className="text-lg">🐶</span> : pet.species === 'Cat' ? <span className="text-lg">🐱</span> : <span className="text-lg">🐰</span>}
-            </div>
           </div>
           <div className="text-center">
             <h4 className="text-2xl font-black text-[#1A1F3D] mb-1">{pet.name}</h4>

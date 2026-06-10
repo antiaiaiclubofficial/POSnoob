@@ -207,7 +207,7 @@ const Index = () => {
                             : "text-gray-400 hover:text-gray-600"
                         )}
                       >
-                        {pet.species === 'Dog' ? '🐶' : '🐱'} {pet.name}
+                        {pet.name}
                       </button>
                     ))}
                   </div>
