@@ -478,8 +478,51 @@ export const useStore = create<AppState>()((set, get) => ({
     reportHistory: [{ ...log, id: `REP-${Math.random().toString(36).substr(2, 5).toUpperCase()}`, timestamp: new Date().toISOString() }, ...s.reportHistory]
   })),
 
-  updateBusinessProfile: (profile) => set(s => ({ ...s, ...profile })),
-  updateBookingSettings: (settings) => set(s => ({ ...s, ...settings })),
+  updateBusinessProfile: async (profile) => {
+    set(s => ({ ...s, ...profile }));
+    const storeId = get().storeId;
+    if (storeId && storeId !== 'default-store') {
+      try {
+        const { error } = await supabase
+          .from('stores')
+          .update({
+            name: profile.shopName !== undefined ? profile.shopName : undefined,
+            logo_url: profile.shopLogo !== undefined ? profile.shopLogo : undefined,
+            address: profile.shopAddress !== undefined ? profile.shopAddress : undefined,
+            phone: profile.shopPhone !== undefined ? profile.shopPhone : undefined,
+            line_id: profile.shopLineId !== undefined ? profile.shopLineId : undefined,
+            receipt_header: profile.receiptHeader !== undefined ? profile.receiptHeader : undefined,
+            receipt_footer: profile.receiptFooter !== undefined ? profile.receiptFooter : undefined,
+            receipt_paper_size: profile.receiptPaperSize !== undefined ? profile.receiptPaperSize : undefined,
+          })
+          .eq('id', storeId);
+        if (error) throw error;
+      } catch (err) {
+        console.error("Failed to update store profile in Supabase:", err);
+      }
+    }
+  },
+
+  updateBookingSettings: async (settings) => {
+    set(s => ({ ...s, ...settings }));
+    const storeId = get().storeId;
+    if (storeId && storeId !== 'default-store') {
+      try {
+        const { error } = await supabase
+          .from('stores')
+          .update({
+            slot_duration: settings.slotDuration !== undefined ? settings.slotDuration : undefined,
+            max_capacity: settings.maxCapacity !== undefined ? settings.maxCapacity : undefined,
+            open_time: settings.openTime !== undefined ? settings.openTime : undefined,
+            close_time: settings.closeTime !== undefined ? settings.closeTime : undefined,
+          })
+          .eq('id', storeId);
+        if (error) throw error;
+      } catch (err) {
+        console.error("Failed to update store booking settings in Supabase:", err);
+      }
+    }
+  },
   
   updateTierRules: async (rules) => {
     try {

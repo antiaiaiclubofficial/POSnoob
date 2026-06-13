@@ -36,7 +36,7 @@ const HomeRedirect = () => {
 };
 
 const App = () => {
-  const { language, isAuthenticated, setSession, setCustomers, setServices } = useStore();
+  const { language, isAuthenticated, setSession, setCustomers, setServices, storeId } = useStore();
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -59,6 +59,38 @@ const App = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       if (!isAuthenticated) return;
+
+      // 0. Fetch Store Settings
+      if (storeId && storeId !== 'default-store') {
+        try {
+          const { data: storeData, error: storeError } = await supabase
+            .from('stores')
+            .select('*')
+            .eq('id', storeId)
+            .single();
+          
+          if (storeError) throw storeError;
+          if (storeData) {
+            useStore.setState({
+              shopName: storeData.name || 'Mellow Fellow Sanctuary',
+              shopLogo: storeData.logo_url || null,
+              shopAddress: storeData.address || '',
+              shopPhone: storeData.phone || '',
+              shopLineId: storeData.line_id || '',
+              receiptHeader: storeData.receipt_header || 'Tax Invoice / Receipt',
+              receiptFooter: storeData.receipt_footer || 'Thank you for your visit!',
+              receiptPaperSize: (storeData.receipt_paper_size || '80mm') as '58mm' | '80mm',
+              slotDuration: storeData.slot_duration || 60,
+              maxCapacity: storeData.max_capacity || 3,
+              openTime: storeData.open_time || '09:00',
+              closeTime: storeData.close_time || '19:00',
+              shopIsOpen: !storeData.is_suspended
+            });
+          }
+        } catch (err) {
+          console.warn("Failed to fetch store settings from Supabase:", err);
+        }
+      }
 
       // 1. Fetch Customers & Service History
       try {
@@ -441,7 +473,7 @@ const App = () => {
     if (isAuthenticated) {
       fetchInitialData();
     }
-  }, [isAuthenticated, setCustomers, setServices]);
+  }, [isAuthenticated, setCustomers, setServices, storeId]);
 
   return (
     <QueryClientProvider client={queryClient}>
