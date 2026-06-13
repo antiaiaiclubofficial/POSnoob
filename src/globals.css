@@ -81,7 +81,7 @@
   transition: border-color 0.5s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
 }
 
-/* Sharp Border Layer */
+/* Soft Inner Glow Layer (Slightly Blurry) */
 .google-border-btn::before {
   content: "";
   position: absolute;
@@ -100,17 +100,18 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: 0;
+  filter: blur(2px); /* ปรับขอบคมให้เบลอเล็กน้อยเพื่อความนุ่มนวล */
   transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
 }
 
-/* Fuzzy Glow Stroke Layer */
+/* Super Fuzzy Outer Glow Layer (Highly Blurry) */
 .google-border-btn::after {
   content: "";
   position: absolute;
-  inset: -2px;
+  inset: -4px; /* ขยายพื้นที่เรืองแสงออกไปด้านนอก */
   border-radius: inherit;
-  padding: 2px;
+  padding: 4px;
   background: radial-gradient(
     220px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
     #4285F4 0%,
@@ -123,7 +124,7 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: 0;
-  filter: blur(4px); /* เพิ่มความฟุ้งกระจายให้กับเส้นขอบ */
+  filter: blur(10px); /* เพิ่มความเบลอเป็น 10px เพื่อให้ฟุ้งกระจายแบบนีออน */
   transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
   z-index: 1;
