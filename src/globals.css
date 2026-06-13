@@ -73,43 +73,71 @@
   scrollbar-width: none;
 }
 
-/* Google Interactive Border Button */
+/* Google Interactive Liquid Glass Button (iPhone Style) */
 .google-border-btn {
   position: relative;
-  background-color: #0d0e15;
-  border: 1px solid #3a3f50;
-  transition: border-color 0.5s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
+  background: rgba(15, 17, 26, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, 0.18); /* เพิ่มขนาดเส้นขอบเป็น 2px และเพิ่มความเข้ม */
+  overflow: hidden;
+  /* ปรับเงาพื้นฐานให้ฟุ้งกระจายและมีมิติความลึกมากขึ้น */
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.3),
+    inset 0 1.5px 1.5px rgba(255, 255, 255, 0.3),
+    inset 0 -1.5px 3px rgba(0, 0, 0, 0.5);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ไฮไลท์สะท้อนแสงโค้งมนครึ่งบนของปุ่มแบบกระจก iPhone */
+.google-border-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* แสงของเหลวเรืองแสงสีแบรนด์ Google ด้านหลังกระจก (Linear Gradient หมุนตามเมาส์) */
 .google-border-btn::before {
   content: "";
   position: absolute;
-  inset: -1px; /* คลุมทับเส้นขอบเดิม */
-  border-radius: inherit;
-  padding: 1px; /* ความหนาของเส้นขอบ */
-  background: radial-gradient(
-    180px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    #4285F4 0%,
-    #EA4335 30%,
-    #FBBC05 65%,
-    #34A853 90%,
-    transparent 100%
+  inset: 0;
+  background: linear-gradient(
+    var(--gradient-angle, 135deg),
+    rgba(66, 133, 244, 0.35) 0%,
+    rgba(234, 67, 53, 0.3) 33%,
+    rgba(251, 188, 5, 0.25) 66%,
+    rgba(52, 168, 83, 0.2) 100%
   );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
   opacity: 0;
   transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
+  z-index: 1;
 }
 
 .google-border-btn:hover {
-  border-color: transparent;
-  /* ปรับเงาเรืองแสงให้ฟุ้งและนุ่มนวลขึ้นโดยใช้โทนสีแบรนด์ Google */
-  box-shadow: 0 15px 35px -10px rgba(66, 133, 244, 0.2), 0 15px 35px -15px rgba(52, 168, 83, 0.15);
-  transform: translateY(-1.5px);
+  border-color: rgba(255, 255, 255, 0.4); /* เพิ่มความสว่างของเส้นขอบเมื่อโฮเวอร์ */
+  /* ปรับเงาสะท้อนเรืองแสงให้ฟุ้งกระจายตัวกว้างและนุ่มนวลขึ้นอย่างเห็นได้ชัด */
+  box-shadow: 
+    0 30px 70px rgba(66, 133, 244, 0.35),
+    0 15px 50px rgba(234, 67, 53, 0.2),
+    0 5px 15px rgba(0, 0, 0, 0.3),
+    inset 0 1.5px 3px rgba(255, 255, 255, 0.5);
+  transform: translateY(-3px) scale(1.02);
 }
 
 .google-border-btn:hover::before {
   opacity: 1;
+}
+
+.google-border-btn:active {
+  transform: translateY(0) scale(0.985);
+  box-shadow: 
+    0 10px 20px rgba(66, 133, 244, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
