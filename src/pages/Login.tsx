@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { Lock, User, Scissors, Sparkles, ArrowRight, Chrome, AlertCircle } from 'lucide-react';
+import { Lock, User, Scissors, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
@@ -11,10 +11,8 @@ import { cn } from '@/lib/utils';
 const Login = () => {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   
   const { login, language, setLanguage, isAuthenticated, isPendingApproval, isUserSuspended, isStoreSuspended } = useStore();
-  const loginWithGoogle = useStore(state => state.loginWithGoogle) as (redirectTo?: string) => Promise<void>;
   
   const t = translations[language];
   const navigate = useNavigate();
@@ -33,16 +31,6 @@ const Login = () => {
       navigate('/');
     } else {
       toast.error(t.invalidCreds);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setIsGoogleLoading(true);
-    try {
-      await loginWithGoogle(window.location.origin);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign in with Google");
-      setIsGoogleLoading(false);
     }
   };
 
@@ -161,28 +149,6 @@ const Login = () => {
               {t.signIn} <ArrowRight size={18} />
             </button>
           </form>
-
-          <div className="my-8 flex items-center gap-4">
-            <div className="flex-1 h-[1px] bg-gray-100" />
-            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Or continue with</span>
-            <div className="flex-1 h-[1px] bg-gray-100" />
-          </div>
-
-          <button 
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={isGoogleLoading}
-            className="w-full bg-white border-2 border-gray-100 hover:border-gray-200 text-[#1A1F3D] font-black py-4 rounded-[24px] flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
-          >
-            {isGoogleLoading ? (
-              <div className="w-5 h-5 border-2 border-[#1A1F3D]/10 border-t-[#1A1F3D] rounded-full animate-spin" />
-            ) : (
-              <>
-                <Chrome size={20} className="text-blue-500" />
-                Sign in with Google
-              </>
-            )}
-          </button>
           
           <div className="mt-8 text-center">
             <p className="text-[10px] text-gray-300 font-bold uppercase">{t.authorizedOnly}</p>

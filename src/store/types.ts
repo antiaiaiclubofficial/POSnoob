@@ -282,7 +282,6 @@ export interface AppState {
 
   // Actions
   login: (id: string, pass: string) => boolean;
-  loginWithGoogle: (redirectTo?: string) => Promise<void>;
   logout: () => void;
   verifyPassword: (pass: string) => boolean;
   setSession: (user: any) => void;

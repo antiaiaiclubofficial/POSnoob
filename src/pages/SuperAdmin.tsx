@@ -17,9 +17,6 @@ type SuperAdminTab = 'dashboard' | 'stores' | 'users' | 'approvals' | 'explorer'
 const SuperAdmin = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useStore();
-  const loginWithGoogle = useStore(state => state.loginWithGoogle) as (redirectTo?: string) => Promise<void>;
-  
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // SuperAdmin States
   const [activeTab, setActiveTab] = useState<SuperAdminTab>('dashboard');
@@ -90,16 +87,6 @@ const SuperAdmin = () => {
       fetchExplorerData();
     }
   }, [selectedStoreId, selectedTable, activeTab, currentUser]);
-
-  const handleGoogleLogin = async () => {
-    setIsGoogleLoading(true);
-    try {
-      await loginWithGoogle(window.location.origin + '/superadmin');
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign in with Google");
-      setIsGoogleLoading(false);
-    }
-  };
 
   const handleLocalLogout = () => {
     logout();
@@ -443,23 +430,15 @@ const SuperAdmin = () => {
                 </button>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-6 text-center">
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  กรุณาลงชื่อเข้าใช้งานด้วยบัญชี Google ที่ได้รับสิทธิ์เป็นผู้ดูแลระบบสูงสุด (Super Admin) เท่านั้นเพื่อเข้าสู่แผงควบคุมระบบส่วนกลาง
+                  กรุณาลงชื่อเข้าใช้งานด้วยบัญชีผู้ดูแลระบบสูงสุด (Super Admin) เพื่อเข้าสู่แผงควบคุมระบบส่วนกลาง
                 </p>
                 <button 
-                  onClick={handleGoogleLogin}
-                  disabled={isGoogleLoading}
-                  className="w-full bg-white hover:bg-gray-100 text-[#1A1F3D] font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 disabled:opacity-50"
+                  onClick={() => navigate('/login')}
+                  className="w-full bg-white hover:bg-gray-100 text-[#1A1F3D] font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95"
                 >
-                  {isGoogleLoading ? (
-                    <div className="w-5 h-5 border-2 border-[#1A1F3D]/10 border-t-[#1A1F3D] rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Chrome size={20} className="text-blue-500" />
-                      Sign in with Google
-                    </>
-                  )}
+                  ไปหน้าเข้าสู่ระบบปกติ
                 </button>
               </div>
             )}

@@ -3,7 +3,7 @@ import { AppState } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isAuthenticated' | 'isAuthLoading' | 'currentUser' | 'storeId' | 'login' | 'loginWithGoogle' | 'setSession' | 'verifyPassword' | 'logout'>> = (set, get) => ({
+export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isAuthenticated' | 'isAuthLoading' | 'currentUser' | 'storeId' | 'login' | 'setSession' | 'verifyPassword' | 'logout'>> = (set, get) => ({
   isAuthenticated: false,
   isAuthLoading: true,
   currentUser: null,
@@ -30,19 +30,6 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
       return true;
     }
     return false;
-  },
-
-  loginWithGoogle: async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        queryParams: {
-          prompt: 'select_account'
-        },
-        redirectTo: window.location.origin
-      }
-    });
-    if (error) throw error;
   },
 
   setSession: async (user) => {
