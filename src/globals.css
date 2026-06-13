@@ -102,18 +102,17 @@
   z-index: 2;
 }
 
-/* แสงของเหลวเรืองแสงสีแบรนด์ Google ด้านหลังกระจก */
+/* แสงของเหลวเรืองแสงสีแบรนด์ Google ด้านหลังกระจก (Linear Gradient) */
 .google-border-btn::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    160px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+  background: linear-gradient(
+    135deg,
     rgba(66, 133, 244, 0.3) 0%,
-    rgba(234, 67, 53, 0.25) 30%,
-    rgba(251, 188, 5, 0.2) 60%,
-    rgba(52, 168, 83, 0.15) 85%,
-    transparent 100%
+    rgba(234, 67, 53, 0.25) 33%,
+    rgba(251, 188, 5, 0.2) 66%,
+    rgba(52, 168, 83, 0.15) 100%
   );
   opacity: 0;
   transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
