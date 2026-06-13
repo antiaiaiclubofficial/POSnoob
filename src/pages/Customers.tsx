@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 
 const Customers = () => {
   const isMobile = useIsMobile();
-  const { customers, setCustomers, deleteCustomer, currency, language } = useStore();
+  const { customers, setCustomers, deleteCustomer, currency, language, storeId } = useStore();
   const t = translations[language];
   
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -32,9 +32,9 @@ const Customers = () => {
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
 
   const { isLoading, refetch } = useQuery({
-    queryKey: ['customers-list'],
+    queryKey: ['customers-list', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('customers')
         .select(`
           id,
@@ -55,9 +55,10 @@ const Customers = () => {
           district,
           province,
           postal_code,
-          store_customers (
+          store_customers!inner (
             points,
-            tier
+            tier,
+            store_id
           ),
           pets (
             id,
@@ -71,6 +72,12 @@ const Customers = () => {
           )
         `);
       
+      if (storeId && storeId !== 'default-store') {
+        query = query.eq('store_customers.store_id', storeId);
+      }
+
+      const { data, error } = await query;
+      
       if (error) {
         console.error("Supabase error:", error);
         toast.error("Failed to fetch customers");
@@ -78,9 +85,11 @@ const Customers = () => {
       }
 
       // ดึงข้อมูลประวัติการใช้บริการ (service_history)
-      const { data: serviceHistoryData } = await supabase
-        .from('service_history')
-        .select('*');
+      let serviceHistoryQuery = supabase.from('service_history').select('*');
+      if (storeId && storeId !== 'default-store') {
+        serviceHistoryQuery = serviceHistoryQuery.eq('store_id', storeId);
+      }
+      const { data: serviceHistoryData } = await serviceHistoryQuery;
       
       const serviceHistoryMap: Record<string, any[]> = {};
       if (serviceHistoryData) {

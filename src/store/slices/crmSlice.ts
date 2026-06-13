@@ -15,9 +15,11 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
 
   addBooking: async (booking) => {
+    const currentStoreId = get().storeId;
     const { data, error } = await supabase
       .from('appointments')
       .insert([{ 
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
         customer_id: get().selectedOwner?.id,
         pet_id: booking.petId,
         status: 'pending',
@@ -73,6 +75,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   addCustomer: async (customerData) => {
+    const currentStoreId = get().storeId;
     const { data, error } = await supabase
       .from('customers')
       .insert([{ 
@@ -96,9 +99,10 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       .single();
 
     if (!error && data) {
-      // Create store_customer entry
+      // Create store_customer entry with explicit store_id
       await supabase.from('store_customers').insert([{
         customer_id: data.id,
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
         points: 0,
         tier: 'Standard'
       }]);
@@ -253,18 +257,28 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   updatePetWeight: async (customerId, petId, weight) => {
-    const { error } = await supabase
+    await supabase
       .from('pets')
       .update({ weight: weight })
       .eq('id', petId);
-    
+
+    const { data, error } = await supabase
+      .from('pet_weight_history')
+      .insert([{
+        pet_id: petId,
+        weight: weight,
+        date: new Date().toISOString().split('T')[0]
+      }])
+      .select()
+      .single();
+
     if (!error) {
       set((state) => ({
         customers: state.customers.map(c => c.id === customerId ? {
           ...c,
           pets: c.pets.map(p => p.id === petId ? { 
             ...p, 
-            weightHistory: [...p.weightHistory, { date: new Date().toISOString().split('T')[0], value: weight }] 
+            weightHistory: [...(p.weightHistory || []), { date: data.date, value: Number(data.weight) }] 
           } : p)
         } : c)
       }));

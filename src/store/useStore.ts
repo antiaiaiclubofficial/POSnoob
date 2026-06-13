@@ -653,10 +653,12 @@ export const useStore = create<AppState>()((set, get) => ({
   clearCart: () => set({ cart: [] }),
   processPayment: async (cid, total, disc, items, method, details, isTaxInvoice) => {
     const customerName = cid === 'walk-in' ? 'ลูกค้าทั่วไป (Walk-in)' : (get().customers.find(c => c.id === cid)?.name || 'Walk-in');
+    const currentStoreId = get().storeId;
     
     const { data, error } = await supabase
       .from('sales_transactions')
       .insert([{
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
         customer_id: cid === 'walk-in' ? null : cid,
         customer_name: customerName,
         amount: total,
@@ -727,7 +729,7 @@ export const useStore = create<AppState>()((set, get) => ({
             const { data: historyData, error: historyError } = await supabase
               .from('service_history')
               .insert([{
-                store_id: data.store_id,
+                store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
                 customer_id: cid === 'walk-in' ? null : cid,
                 pet_id: item.petId,
                 price: item.price * item.quantity,
@@ -795,6 +797,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   setServices: (services) => set({ services }),
   addService: async (ser) => {
+    const currentStoreId = get().storeId;
     const priceKeys = Object.keys(ser.prices);
     const defaultPrice = priceKeys.length > 0 ? ser.prices[priceKeys[0]].price : 0;
     const defaultDuration = priceKeys.length > 0 ? ser.prices[priceKeys[0]].duration : 60;
@@ -819,6 +822,7 @@ export const useStore = create<AppState>()((set, get) => ({
       const { data, error } = await supabase
         .from('services')
         .insert([{
+          store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
           name: ser.title,
           description: ser.description,
           price: defaultPrice,
@@ -919,6 +923,7 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   addAddon: async (ad) => {
+    const currentStoreId = get().storeId;
     const localNewAddon: AddonItem = {
       id: Math.random().toString(),
       name: ad.name,
@@ -932,6 +937,7 @@ export const useStore = create<AppState>()((set, get) => ({
       const { data, error } = await supabase
         .from('services')
         .insert([{
+          store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
           name: ad.name,
           price: ad.price || 0,
           icon: ad.icon || 'nail',
@@ -990,9 +996,11 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   addInventoryItem: async (item) => {
+    const currentStoreId = get().storeId;
     const { data, error } = await supabase
       .from('products')
       .insert([{
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
         name: item.name,
         barcode: item.barcode,
         stock: item.stock || 0,
@@ -1074,6 +1082,7 @@ export const useStore = create<AppState>()((set, get) => ({
     if (!item) return;
     const oldQty = item.stock;
     const newQty = mode === 'Add' || mode === 'In' ? oldQty + qty : mode === 'Out' ? oldQty - qty : qty;
+    const currentStoreId = get().storeId;
 
     const { error: updateError } = await supabase
       .from('products')
@@ -1089,6 +1098,7 @@ export const useStore = create<AppState>()((set, get) => ({
     const { data: logData, error: logError } = await supabase
       .from('stock_logs')
       .insert([{
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
         product_id: id,
         action: mode,
         old_qty: oldQty,
@@ -1125,9 +1135,11 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   addPartner: async (v) => {
+    const currentStoreId = get().storeId;
     const { data, error } = await supabase
       .from('partners')
       .insert([{
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
         company_name: v.companyName,
         tax_id: v.taxId,
         address: v.address,

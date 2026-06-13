@@ -94,7 +94,7 @@ const App = () => {
 
       // 1. Fetch Customers & Service History
       try {
-        const { data: customersData, error: customersError } = await supabase
+        let customersQuery = supabase
           .from('customers')
           .select(`
             id,
@@ -115,9 +115,10 @@ const App = () => {
             district,
             province,
             postal_code,
-            store_customers (
+            store_customers!inner (
               points,
-              tier
+              tier,
+              store_id
             ),
             pets (
               id,
@@ -131,12 +132,20 @@ const App = () => {
             )
           `);
 
+        if (storeId && storeId !== 'default-store') {
+          customersQuery = customersQuery.eq('store_customers.store_id', storeId);
+        }
+
+        const { data: customersData, error: customersError } = await customersQuery;
+
         if (customersError) throw customersError;
 
         // Fetch service history
-        const { data: serviceHistoryData } = await supabase
-          .from('service_history')
-          .select('*');
+        let serviceHistoryQuery = supabase.from('service_history').select('*');
+        if (storeId && storeId !== 'default-store') {
+          serviceHistoryQuery = serviceHistoryQuery.eq('store_id', storeId);
+        }
+        const { data: serviceHistoryData } = await serviceHistoryQuery;
         
         const serviceHistoryMap: Record<string, any[]> = {};
         if (serviceHistoryData) {
@@ -250,6 +259,8 @@ const App = () => {
             };
           });
           setCustomers(formattedCustomers);
+        } else {
+          setCustomers([]);
         }
       } catch (err) {
         console.warn("Failed to fetch customers from Supabase:", err);
@@ -257,9 +268,11 @@ const App = () => {
 
       // 2. Fetch Services & Add-ons
       try {
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select('*');
+        let servicesQuery = supabase.from('services').select('*');
+        if (storeId && storeId !== 'default-store') {
+          servicesQuery = servicesQuery.eq('store_id', storeId);
+        }
+        const { data: servicesData, error: servicesError } = await servicesQuery;
 
         if (servicesError) throw servicesError;
 
@@ -292,6 +305,9 @@ const App = () => {
               icon: (s.icon || 'nail') as any
             }));
           useStore.setState({ addons: addonsList });
+        } else {
+          setServices([]);
+          useStore.setState({ addons: [] });
         }
       } catch (err) {
         console.warn("Failed to fetch services from Supabase:", err);
@@ -299,9 +315,11 @@ const App = () => {
 
       // 3. Fetch Partners
       try {
-        const { data: partnersData, error: partnersError } = await supabase
-          .from('partners')
-          .select('*');
+        let partnersQuery = supabase.from('partners').select('*');
+        if (storeId && storeId !== 'default-store') {
+          partnersQuery = partnersQuery.eq('store_id', storeId);
+        }
+        const { data: partnersData, error: partnersError } = await partnersQuery;
 
         if (partnersError) throw partnersError;
 
@@ -319,6 +337,8 @@ const App = () => {
             gpRate: Number(p.gp_rate || 0)
           }));
           useStore.setState({ partners: formattedPartners });
+        } else {
+          useStore.setState({ partners: [] });
         }
       } catch (err) {
         console.warn("Failed to fetch partners from Supabase:", err);
@@ -326,9 +346,11 @@ const App = () => {
 
       // 4. Fetch Products (Inventory)
       try {
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('*');
+        let productsQuery = supabase.from('products').select('*');
+        if (storeId && storeId !== 'default-store') {
+          productsQuery = productsQuery.eq('store_id', storeId);
+        }
+        const { data: productsData, error: productsError } = await productsQuery;
 
         if (productsError) throw productsError;
 
@@ -349,6 +371,8 @@ const App = () => {
             consignmentRate: Number(p.consignment_rate || 0)
           }));
           useStore.setState({ inventory: formattedInventory });
+        } else {
+          useStore.setState({ inventory: [] });
         }
       } catch (err) {
         console.warn("Failed to fetch products from Supabase:", err);
@@ -356,9 +380,11 @@ const App = () => {
 
       // 5. Fetch Stock Logs
       try {
-        const { data: logsData, error: logsError } = await supabase
-          .from('stock_logs')
-          .select('*, products(name)');
+        let logsQuery = supabase.from('stock_logs').select('*, products(name)');
+        if (storeId && storeId !== 'default-store') {
+          logsQuery = logsQuery.eq('store_id', storeId);
+        }
+        const { data: logsData, error: logsError } = await logsQuery;
 
         if (logsError) throw logsError;
 
@@ -375,6 +401,8 @@ const App = () => {
             timestamp: l.created_at
           }));
           useStore.setState({ stockLogs: formattedLogs });
+        } else {
+          useStore.setState({ stockLogs: [] });
         }
       } catch (err) {
         console.warn("Failed to fetch stock logs from Supabase:", err);
@@ -382,10 +410,11 @@ const App = () => {
 
       // 6. Fetch Sales Transactions
       try {
-        const { data: txData, error: txError } = await supabase
-          .from('sales_transactions')
-          .select('*')
-          .order('created_at', { ascending: false });
+        let txQuery = supabase.from('sales_transactions').select('*').order('created_at', { ascending: false });
+        if (storeId && storeId !== 'default-store') {
+          txQuery = txQuery.eq('store_id', storeId);
+        }
+        const { data: txData, error: txError } = await txQuery;
 
         if (txError) throw txError;
 
@@ -404,6 +433,8 @@ const App = () => {
             bookingType: 'Walk-in' as BookingType
           }));
           useStore.setState({ transactions: formattedTx });
+        } else {
+          useStore.setState({ transactions: [] });
         }
       } catch (err) {
         console.warn("Failed to fetch transactions from Supabase:", err);
@@ -411,9 +442,11 @@ const App = () => {
 
       // 7. Fetch Package Templates
       try {
-        const { data: packagesData } = await supabase
-          .from('package_templates')
-          .select('*');
+        let packagesQuery = supabase.from('package_templates').select('*');
+        if (storeId && storeId !== 'default-store') {
+          packagesQuery = packagesQuery.eq('store_id', storeId);
+        }
+        const { data: packagesData } = await packagesQuery;
 
         if (packagesData) {
           const formattedPackages = packagesData.map(p => ({
@@ -428,6 +461,8 @@ const App = () => {
             bonusCount: p.bonus_count || 1
           }));
           useStore.setState({ packageTemplates: formattedPackages });
+        } else {
+          useStore.setState({ packageTemplates: [] });
         }
       } catch (e) {
         console.warn("package_templates table might not exist yet:", e);
@@ -435,9 +470,11 @@ const App = () => {
 
       // 8. Fetch Credit Packages
       try {
-        const { data: creditsData } = await supabase
-          .from('credit_packages')
-          .select('*');
+        let creditsQuery = supabase.from('credit_packages').select('*');
+        if (storeId && storeId !== 'default-store') {
+          creditsQuery = creditsQuery.eq('store_id', storeId);
+        }
+        const { data: creditsData } = await creditsQuery;
         if (creditsData) {
           const formattedCredits = creditsData.map(c => ({
             id: c.id,
@@ -446,6 +483,8 @@ const App = () => {
             creditValue: Number(c.credit_value || 0)
           }));
           useStore.setState({ creditPackages: formattedCredits });
+        } else {
+          useStore.setState({ creditPackages: [] });
         }
       } catch (e) {
         console.warn("credit_packages table might not exist yet:", e);
