@@ -46,8 +46,15 @@ const Login = () => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+    
+    // คำนวณมุมองศาจากจุดศูนย์กลางของปุ่มไปยังตำแหน่งเมาส์
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const angle = Math.atan2(y - centerY, x - centerX) * (180 / Math.PI) + 90;
+
     e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+    e.currentTarget.style.setProperty('--gradient-angle', `${angle}deg`);
   };
 
   return (
