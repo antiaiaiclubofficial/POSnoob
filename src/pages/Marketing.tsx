@@ -21,7 +21,7 @@ const Marketing = () => {
   const queryClient = useQueryClient();
   const { 
     language, creditPackages, deleteCreditPackage, currency, tierRules, updateTierRules,
-    services, toggleServiceActive, deleteService, addons, deleteAddon, packageTemplates, deletePackageTemplate
+    services, toggleServiceActive, deleteService, addons, deleteAddon, packageTemplates, deletePackageTemplate, storeId
   } = useStore();
   const t = translations[language];
   
@@ -49,11 +49,17 @@ const Marketing = () => {
 
   // Fetch Promotions
   const { data: promotions, isLoading: promosLoading } = useQuery({
-    queryKey: ['deal_templates'],
+    queryKey: ['deal_templates', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('deal_templates')
-        .select('*')
+        .select('*');
+      
+      if (storeId && storeId !== 'default-store') {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .order('id', { ascending: true });
       if (error) throw error;
@@ -63,11 +69,17 @@ const Marketing = () => {
 
   // Fetch Coupons
   const { data: coupons, isLoading: couponsLoading } = useQuery({
-    queryKey: ['coupon_templates'],
+    queryKey: ['coupon_templates', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('coupon_templates')
-        .select('*')
+        .select('*');
+      
+      if (storeId && storeId !== 'default-store') {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .order('id', { ascending: true });
       if (error) throw error;

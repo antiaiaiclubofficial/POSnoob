@@ -15,7 +15,7 @@ interface PromotionModalProps {
 
 const PromotionModal = ({ promotion, onClose }: PromotionModalProps) => {
   const queryClient = useQueryClient();
-  const { language } = useStore();
+  const { language, storeId } = useStore();
   const t = translations[language];
 
   const [formData, setFormData] = useState({
@@ -44,7 +44,11 @@ const PromotionModal = ({ promotion, onClose }: PromotionModalProps) => {
         const { error } = await supabase.from('deal_templates').update(data).eq('id', promotion.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('deal_templates').insert([data]);
+        const payload = {
+          ...data,
+          store_id: storeId && storeId !== 'default-store' ? storeId : null
+        };
+        const { error } = await supabase.from('deal_templates').insert([payload]);
         if (error) throw error;
       }
     },

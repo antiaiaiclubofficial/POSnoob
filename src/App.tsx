@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useStore, BookingType, MembershipLevel } from "@/store/useStore";
+import { useStore, BookingType, MembershipLevel, QueueStatus } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -264,6 +264,68 @@ const App = () => {
         }
       } catch (err) {
         console.warn("Failed to fetch customers from Supabase:", err);
+      }
+
+      // 1.5 Fetch Appointments (Queue)
+      try {
+        let appointmentsQuery = supabase
+          .from('appointments')
+          .select(`
+            id,
+            pet_id,
+            status,
+            start_time,
+            notes,
+            pets (
+              name,
+              image_url,
+              customers (
+                display_name,
+                first_name,
+                last_name
+              )
+            )
+          `);
+
+        if (storeId && storeId !== 'default-store') {
+          appointmentsQuery = appointmentsQuery.eq('store_id', storeId);
+        }
+
+        const { data: appointmentsData, error: appointmentsError } = await appointmentsQuery;
+
+        if (appointmentsError) throw appointmentsError;
+
+        if (appointmentsData) {
+          const formattedQueue = appointmentsData.map((app: any) => {
+            const pet = app.pets || {};
+            const customer = pet.customers || {};
+            const ownerName = customer.display_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Walk-in';
+            
+            const dateObj = new Date(app.start_time);
+            const date = dateObj.toISOString().split('T')[0];
+            const time = dateObj.toTimeString().slice(0, 5);
+            
+            let status: QueueStatus = 'Waiting';
+            if (app.status === 'confirmed') status = 'Checked-in';
+            else if (app.status === 'completed') status = 'Completed';
+            
+            return {
+              id: app.id,
+              petId: app.pet_id,
+              petName: pet.name || 'Unknown',
+              ownerName: ownerName,
+              serviceName: app.notes || 'Grooming',
+              date: date,
+              time: time,
+              status: status,
+              image: pet.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop',
+              isPaid: app.status === 'completed'
+            };
+          });
+          useStore.setState({ queue: formattedQueue });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch appointments from Supabase:", err);
       }
 
       // 2. Fetch Services & Add-ons

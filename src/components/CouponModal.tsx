@@ -25,7 +25,7 @@ const ICONS = [
 
 const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
   const queryClient = useQueryClient();
-  const { language } = useStore();
+  const { language, storeId } = useStore();
   const t = translations[language];
 
   const [formData, setFormData] = useState({
@@ -58,7 +58,11 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
         const { error } = await supabase.from('coupon_templates').update(data).eq('id', coupon.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('coupon_templates').insert([data]);
+        const payload = {
+          ...data,
+          store_id: storeId && storeId !== 'default-store' ? storeId : null
+        };
+        const { error } = await supabase.from('coupon_templates').insert([payload]);
         if (error) throw error;
       }
     },
