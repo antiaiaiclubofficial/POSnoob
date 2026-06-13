@@ -109,9 +109,9 @@
 .google-border-btn::after {
   content: "";
   position: absolute;
-  inset: -4px; /* ขยายพื้นที่เรืองแสงออกไปด้านนอก */
+  inset: -2px; /* ขยายพื้นที่เรืองแสงออกไปด้านนอก */
   border-radius: inherit;
-  padding: 4px;
+  padding: 2px;
   background: radial-gradient(
     280px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
     #4285F4 25%,
