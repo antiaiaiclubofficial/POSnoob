@@ -109,7 +109,7 @@
 .google-border-btn::after {
   content: "";
   position: absolute;
-  inset: -4px; /* ขยายพื้นที่เรืองแสงออกไปด้านนอก */
+  inset: -9px; /* ขยายพื้นที่เรืองแสงออกไปด้านนอก */
   border-radius: inherit;
   padding: 4px;
   background: radial-gradient(
