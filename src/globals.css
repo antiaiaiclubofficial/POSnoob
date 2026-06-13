@@ -89,7 +89,7 @@
   border-radius: inherit;
   padding: 2px; /* ความหนาของเส้นขอบไล่เฉดสี 2px */
   background: radial-gradient(
-    200px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    250px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
     #4285F4 25%,
     #EA4335 50%,
     #FBBC05 75%,
@@ -113,7 +113,7 @@
   border-radius: inherit;
   padding: 4px;
   background: radial-gradient(
-    200px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    250px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
     #4285F4 25%,
     #EA4335 50%,
     #FBBC05 75%,
