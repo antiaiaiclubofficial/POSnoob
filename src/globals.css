@@ -111,7 +111,7 @@
   position: absolute;
   inset: -9px; /* ขยายพื้นที่เรืองแสงออกไปด้านนอก */
   border-radius: inherit;
-  padding: 4px;
+  padding: 9px;
   background: radial-gradient(
     220px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
     #4285F4 25%,
