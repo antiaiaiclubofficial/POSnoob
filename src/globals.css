@@ -73,25 +73,26 @@
   scrollbar-width: none;
 }
 
-/* Gemini Interactive Border Button */
-.gemini-border-btn {
+/* Google Interactive Border Button */
+.google-border-btn {
   position: relative;
   background-color: #0d0e15;
   border: 1px solid #3a3f50;
   transition: border-color 0.5s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease;
 }
 
-.gemini-border-btn::before {
+.google-border-btn::before {
   content: "";
   position: absolute;
   inset: -1px; /* คลุมทับเส้นขอบเดิม */
   border-radius: inherit;
   padding: 1px; /* ความหนาของเส้นขอบ */
   background: radial-gradient(
-    120px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    #246bfd 0%,
-    #c259ff 40%,
-    #ef51a7 80%,
+    180px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    #4285F4 0%,
+    #EA4335 30%,
+    #FBBC05 65%,
+    #34A853 90%,
     transparent 100%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -102,12 +103,13 @@
   pointer-events: none;
 }
 
-.gemini-border-btn:hover {
+.google-border-btn:hover {
   border-color: transparent;
-  box-shadow: 0 12px 30px -10px rgba(194, 89, 255, 0.25);
+  /* ปรับเงาเรืองแสงให้ฟุ้งและนุ่มนวลขึ้นโดยใช้โทนสีแบรนด์ Google */
+  box-shadow: 0 15px 35px -10px rgba(66, 133, 244, 0.2), 0 15px 35px -15px rgba(52, 168, 83, 0.15);
   transform: translateY(-1.5px);
 }
 
-.gemini-border-btn:hover::before {
+.google-border-btn:hover::before {
   opacity: 1;
 }
