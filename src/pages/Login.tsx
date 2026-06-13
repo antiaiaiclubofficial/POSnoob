@@ -42,6 +42,14 @@ const Login = () => {
     }
   };
 
+  const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
+    e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+  };
+
   return (
     <div className="min-h-screen bg-[#F8F9FD] flex items-center justify-center p-6 relative">
       {/* Language Toggle in Corner */}
@@ -166,7 +174,8 @@ const Login = () => {
 
           <button 
             onClick={handleGoogleLogin}
-            className="w-full bg-[#0d0e15] hover-gemini text-white border border-[#3a3f50] font-bold py-4 rounded-full flex items-center justify-center gap-3 shadow-sm active:scale-95"
+            onMouseMove={handleMouseMove}
+            className="w-full bg-[#0d0e15] gemini-border-btn text-white font-bold py-4 rounded-full flex items-center justify-center gap-3 shadow-sm active:scale-95"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
