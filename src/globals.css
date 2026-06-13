@@ -100,7 +100,7 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: 0;
-  filter: blur(2px); /* ปรับขอบคมให้เบลอเล็กน้อยเพื่อความนุ่มนวล */
+  filter: blur(6px); /* ปรับขอบคมให้เบลอเล็กน้อยเพื่อความนุ่มนวล */
   transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
 }
