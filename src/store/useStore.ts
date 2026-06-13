@@ -317,7 +317,7 @@ export const useStore = create<AppState>()((set, get) => ({
         .from('profiles')
         .select('role, store_id, is_approved, is_suspended')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       // หากไม่มีโปรไฟล์ในฐานข้อมูล หรือเกิดข้อผิดพลาด
       if (error || !profile) {
@@ -330,7 +330,7 @@ export const useStore = create<AppState>()((set, get) => ({
           email: user.email,
           role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
           store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-          is_approved: shouldBeSuperAdmin ? true : false, // ผู้ใช้ทั่วไปที่สมัครใหม่จะยังไม่ได้รับการอนุมัติ
+          is_approved: shouldBeSuperAdmin ? true : false, // ผู้ใช้ทั่วไปที่สมัครใหม่จะยังไม่ได้รับการอนุมัติ (ต้องรออนุมัติ)
           is_suspended: false
         };
 
@@ -382,8 +382,15 @@ export const useStore = create<AppState>()((set, get) => ({
       }
 
       // แยกแยะบทบาทตามหน้าเว็บที่ล็อกอินเข้ามา
-      let userRole = profile.role || 'staff';
+      let userRole = profile.role || 'Assistant';
       let storeIdFromMetadata = profile.store_id || 'default-store';
+
+      // แปลงบทบาทตัวพิมพ์เล็กให้ตรงกับระบบสิทธิ์ (เช่น admin -> Admin, staff -> Assistant)
+      if (userRole === 'admin') {
+        userRole = 'Admin';
+      } else if (userRole === 'staff') {
+        userRole = 'Assistant';
+      }
 
       if (isSuperAdminEmail) {
         if (shouldBeSuperAdmin) {

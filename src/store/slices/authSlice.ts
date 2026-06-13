@@ -76,7 +76,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
             email: user.email,
             role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
             store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-            is_approved: true, // อนุมัติอัตโนมัติเพื่อความสะดวกในการใช้งานตามที่ระบุในระบบหลังบ้าน
+            is_approved: shouldBeSuperAdmin ? true : false, // ผู้ใช้ทั่วไปที่สมัครใหม่จะยังไม่ได้รับการอนุมัติ (ต้องรออนุมัติ)
             is_suspended: false
           };
 
@@ -124,7 +124,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
       }
 
       // ปรับแต่งบทบาทและร้านค้าให้ถูกต้อง
-      let userRole = profile.role || 'staff';
+      let userRole = profile.role || 'Assistant';
       let storeIdFromMetadata = profile.store_id || 'default-store';
       
       // แปลงบทบาทตัวพิมพ์เล็กให้ตรงกับระบบสิทธิ์ (เช่น admin -> Admin, staff -> Assistant)
