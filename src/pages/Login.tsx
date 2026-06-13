@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { Lock, User, Scissors, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, User, Scissors, Sparkles, ArrowRight, AlertCircle, Chrome } from 'lucide-react';
 import { toast } from 'sonner';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,7 @@ const Login = () => {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   
-  const { login, language, setLanguage, isAuthenticated, isPendingApproval, isUserSuspended, isStoreSuspended } = useStore();
+  const { login, loginWithGoogle, language, setLanguage, isAuthenticated, isPendingApproval, isUserSuspended, isStoreSuspended } = useStore();
   
   const t = translations[language];
   const navigate = useNavigate();
@@ -31,6 +31,14 @@ const Login = () => {
       navigate('/');
     } else {
       toast.error(t.invalidCreds);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle(window.location.origin);
+    } catch (error) {
+      toast.error("Google Login failed");
     }
   };
 
@@ -149,6 +157,19 @@ const Login = () => {
               {t.signIn} <ArrowRight size={18} />
             </button>
           </form>
+
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-gray-100"></div>
+            <span className="flex-shrink mx-4 text-gray-300 text-[10px] font-black uppercase tracking-widest">Or</span>
+            <div className="flex-grow border-t border-gray-100"></div>
+          </div>
+
+          <button 
+            onClick={handleGoogleLogin}
+            className="w-full bg-white hover:bg-gray-50 text-[#1A1F3D] border border-gray-200 font-black py-4 rounded-[24px] flex items-center justify-center gap-3 shadow-sm transition-all active:scale-95"
+          >
+            <Chrome size={18} className="text-red-500" /> Sign in with Google
+          </button>
           
           <div className="mt-8 text-center">
             <p className="text-[10px] text-gray-300 font-bold uppercase">{t.authorizedOnly}</p>

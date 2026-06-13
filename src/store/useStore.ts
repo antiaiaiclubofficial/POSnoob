@@ -294,6 +294,18 @@ export const useStore = create<AppState>()((set, get) => ({
     return false;
   },
 
+  loginWithGoogle: async (redirectTo) => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectTo || window.location.origin,
+      },
+    });
+    if (error) {
+      toast.error(error.message);
+    }
+  },
+
   setSession: async (user) => {
     if (user) {
       const isSuperAdminPath = window.location.pathname.startsWith('/superadmin');

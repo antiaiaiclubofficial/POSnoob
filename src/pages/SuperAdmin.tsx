@@ -16,7 +16,7 @@ type SuperAdminTab = 'dashboard' | 'stores' | 'users' | 'approvals' | 'explorer'
 
 const SuperAdmin = () => {
   const navigate = useNavigate();
-  const { currentUser, logout } = useStore();
+  const { currentUser, loginWithGoogle, logout } = useStore();
 
   // SuperAdmin States
   const [activeTab, setActiveTab] = useState<SuperAdminTab>('dashboard');
@@ -92,6 +92,14 @@ const SuperAdmin = () => {
     logout();
     toast.info("ออกจากระบบ Super Admin เรียบร้อยแล้ว");
     navigate('/login');
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle(window.location.origin + '/superadmin');
+    } catch (error) {
+      toast.error("Google Login failed");
+    }
   };
 
   const fetchInitialData = async () => {
@@ -435,10 +443,10 @@ const SuperAdmin = () => {
                   กรุณาลงชื่อเข้าใช้งานด้วยบัญชีผู้ดูแลระบบสูงสุด (Super Admin) เพื่อเข้าสู่แผงควบคุมระบบส่วนกลาง
                 </p>
                 <button 
-                  onClick={() => navigate('/login')}
+                  onClick={handleGoogleLogin}
                   className="w-full bg-white hover:bg-gray-100 text-[#1A1F3D] font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95"
                 >
-                  ไปหน้าเข้าสู่ระบบปกติ
+                  <Chrome size={18} className="text-red-500" /> Sign in with Google (Super Admin)
                 </button>
               </div>
             )}
