@@ -312,16 +312,23 @@ export const useStore = create<AppState>()((set, get) => ({
       const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
       const shouldBeSuperAdmin = isSuperAdminEmail && isSuperAdminPath;
 
-      // ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase เพื่อตรวจสอบสิทธิ์และบทบาทจริง
+      // 1. ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase
       let { data: profile, error } = await supabase
         .from('profiles')
         .select('role, store_id, is_approved, is_suspended')
         .eq('id', user.id)
         .maybeSingle();
 
-      // หากไม่มีโปรไฟล์ในฐานข้อมูล หรือเกิดข้อผิดพลาด
-      if (error || !profile) {
-        // ดึง ID ของร้านค้าแรกในระบบ
+      // 2. หากเกิดข้อผิดพลาดในการดึงข้อมูล (เช่น ปัญหาเครือข่าย) ให้หยุดทำงานเพื่อความปลอดภัย ห้ามเขียนทับหรือล้างเซสชัน
+      if (error) {
+        console.error("Error fetching profile:", error);
+        set({ isAuthLoading: false });
+        return;
+      }
+
+      // 3. หากไม่มีโปรไฟล์ในฐานข้อมูลจริงๆ (profile เป็น null และไม่มี error)
+      if (!profile) {
+        // ดึง ID ของร้านค้าแรกในระบบเพื่อเป็นค่าเริ่มต้น
         const { data: stores } = await supabase.from('stores').select('id').limit(1);
         const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
 
@@ -330,29 +337,33 @@ export const useStore = create<AppState>()((set, get) => ({
           email: user.email,
           role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
           store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-          is_approved: shouldBeSuperAdmin ? true : false, // ผู้ใช้ทั่วไปที่สมัครใหม่จะยังไม่ได้รับการอนุมัติ (ต้องรออนุมัติ)
+          is_approved: shouldBeSuperAdmin ? true : false, // ผู้ใช้ทั่วไปต้องรออนุมัติ
           is_suspended: false
         };
 
-        // ใช้ upsert เพื่อป้องกันข้อผิดพลาด duplicate key และอัปเดตบทบาทให้ถูกต้องเสมอ
-        const { error: upsertError } = await supabase
+        // ใช้ insert แทน upsert เพื่อป้องกันการเขียนทับข้อมูลเดิมโดยเด็ดขาด
+        const { error: insertError } = await supabase
           .from('profiles')
-          .upsert(newProfile, { onConflict: 'id' });
+          .insert([newProfile]);
 
-        if (!upsertError) {
+        if (!insertError) {
           profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false };
         } else {
-          console.error("Failed to upsert profile:", upsertError);
-          if (shouldBeSuperAdmin) {
-            profile = { role: 'superadmin', store_id: null, is_approved: true, is_suspended: false };
-          } else {
-            profile = { role: 'Admin', store_id: defaultStoreId, is_approved: false, is_suspended: false };
-          }
+          console.error("Failed to insert profile:", insertError);
+          // หาก insert ไม่สำเร็จ ให้ถือว่ายังไม่ได้รับการอนุมัติเพื่อความปลอดภัย
+          set({ 
+            isAuthenticated: false, 
+            isAuthLoading: false, 
+            currentUser: null, 
+            storeId: null,
+            isPendingApproval: true
+          });
+          return;
         }
       }
 
-      // 1. ตรวจสอบการพักสิทธิ์ผู้ใช้ (is_suspended)
-      if (profile && profile.is_suspended && !isSuperAdminEmail) {
+      // 4. ตรวจสอบการพักสิทธิ์ผู้ใช้ (is_suspended)
+      if (profile.is_suspended && !isSuperAdminEmail) {
         await supabase.auth.signOut();
         set({ 
           isAuthenticated: false, 
@@ -366,8 +377,8 @@ export const useStore = create<AppState>()((set, get) => ({
         return;
       }
 
-      // 2. ตรวจสอบสถานะการอนุมัติ (is_approved)
-      if (profile && !profile.is_approved && !isSuperAdminEmail) {
+      // 5. ตรวจสอบสถานะการอนุมัติ (is_approved)
+      if (!profile.is_approved && !isSuperAdminEmail) {
         await supabase.auth.signOut();
         set({ 
           isAuthenticated: false, 
@@ -381,11 +392,11 @@ export const useStore = create<AppState>()((set, get) => ({
         return;
       }
 
-      // แยกแยะบทบาทตามหน้าเว็บที่ล็อกอินเข้ามา
+      // 6. จัดการบทบาทและร้านค้าให้ถูกต้อง
       let userRole = profile.role || 'Assistant';
       let storeIdFromMetadata = profile.store_id || 'default-store';
 
-      // แปลงบทบาทตัวพิมพ์เล็กให้ตรงกับระบบสิทธิ์ (เช่น admin -> Admin, staff -> Assistant)
+      // แปลงบทบาทตัวพิมพ์เล็กให้ตรงกับระบบสิทธิ์
       if (userRole === 'admin') {
         userRole = 'Admin';
       } else if (userRole === 'staff') {
@@ -406,7 +417,7 @@ export const useStore = create<AppState>()((set, get) => ({
         }
       }
 
-      // 3. ตรวจสอบการพักสิทธิ์ร้านค้า (is_suspended ของ stores)
+      // 7. ตรวจสอบการพักสิทธิ์ร้านค้า
       if (storeIdFromMetadata && storeIdFromMetadata !== 'default-store' && userRole !== 'superadmin') {
         const { data: storeData } = await supabase
           .from('stores')
