@@ -15,10 +15,6 @@ export type {
   PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory 
 };
 
-// ตรวจสอบว่าเส้นทางปัจจุบันเป็นหน้าล็อกอินหรือหน้า Super Admin หรือไม่
-const isAuthOrSuperAdminPath = typeof window !== 'undefined' && 
-  (window.location.pathname === '/login' || window.location.pathname.startsWith('/superadmin'));
-
 const DEFAULT_MOCK_CUSTOMERS: Customer[] = [
   {
     id: 'mock-cust-1',
@@ -161,7 +157,6 @@ export const useStore = create<AppState>()((set, get) => ({
   setLanguage: (lang) => set({ language: lang }),
   currency: '฿',
   
-  // เริ่มต้นด้วยการตรวจสอบสิทธิ์จริงจาก Supabase
   isAuthenticated: false,
   isAuthLoading: true,
   isPendingApproval: false,
@@ -182,7 +177,6 @@ export const useStore = create<AppState>()((set, get) => ({
   receiptPaperSize: '80mm',
   vatEnabled: true,
 
-  // LINE LIFF Default Settings
   liffId: '2001234567-AbCdEfGh',
   liffChannelId: '1657483920',
   liffChannelSecret: '••••••••••••••••••••••••••••••••',
@@ -263,9 +257,8 @@ export const useStore = create<AppState>()((set, get) => ({
     { level: 'VIP', label: 'VIP Member', minSpent: 50000, discount: 15 },
   ],
 
-  // Role Permissions: แยกสิทธิ์ของร้านค้าและเจ้าของระบบ (superadmin) ออกจากกันอย่างเด็ดขาด
   rolePermissions: {
-    superadmin: ['/superadmin'], // Superadmin จัดการเฉพาะระบบส่วนกลาง (ร้านค้า, ผู้ใช้, ตารางข้อมูล)
+    superadmin: ['/superadmin'],
     Admin: ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings'],
     Groomer: ['/', '/queue', '/customers'],
     Assistant: ['/', '/pos', '/queue', '/customers']
@@ -332,12 +325,21 @@ export const useStore = create<AppState>()((set, get) => ({
         const { data: stores } = await supabase.from('stores').select('id').limit(1);
         const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
 
+        // ตรวจสอบว่ามีโปรไฟล์อื่นที่ได้รับการอนุมัติแล้วหรือไม่
+        // หากไม่มีเลย (เช่น หลังย้ายฐานข้อมูล) ให้เปิดใช้งานบัญชีแรกนี้ทันทีเพื่อป้องกันการล็อกเอาท์
+        const { count: approvedCount } = await supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_approved', true);
+
+        const shouldAutoApprove = shouldBeSuperAdmin || !approvedCount || approvedCount === 0;
+
         const newProfile = {
           id: user.id,
           email: user.email,
           role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
           store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-          is_approved: shouldBeSuperAdmin ? true : false, // ผู้ใช้ทั่วไปต้องรออนุมัติ
+          is_approved: shouldAutoApprove, // อนุมัติอัตโนมัติหากเป็นบัญชีแรกหลังย้ายฐานข้อมูล
           is_suspended: false
         };
 
@@ -350,7 +352,6 @@ export const useStore = create<AppState>()((set, get) => ({
           profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false };
         } else {
           console.error("Failed to insert profile:", insertError);
-          // หาก insert ไม่สำเร็จ ให้ถือว่ายังไม่ได้รับการอนุมัติเพื่อความปลอดภัย
           set({ 
             isAuthenticated: false, 
             isAuthLoading: false, 
@@ -396,7 +397,6 @@ export const useStore = create<AppState>()((set, get) => ({
       let userRole = profile.role || 'Assistant';
       let storeIdFromMetadata = profile.store_id || 'default-store';
 
-      // แปลงบทบาทตัวพิมพ์เล็กให้ตรงกับระบบสิทธิ์
       if (userRole === 'admin') {
         userRole = 'Admin';
       } else if (userRole === 'staff') {
@@ -408,7 +408,6 @@ export const useStore = create<AppState>()((set, get) => ({
           userRole = 'superadmin';
           storeIdFromMetadata = null;
         } else {
-          // หากล็อกอินผ่านหน้าปกติ ให้เป็น Admin ของร้านค้า
           userRole = 'Admin';
           if (!storeIdFromMetadata || storeIdFromMetadata === 'default-store') {
             const { data: stores } = await supabase.from('stores').select('id').limit(1);
@@ -456,7 +455,6 @@ export const useStore = create<AppState>()((set, get) => ({
         storeId: userRole === 'superadmin' ? null : storeIdFromMetadata
       });
     } else {
-      // ป้องกันไม่ให้เซสชันของ Local Login โดนล้างเมื่อ Supabase session เป็น null
       const current = get().currentUser;
       if (current && (current.id === 'superadmin' || current.id === 'admin' || get().staff.some(s => s.id === current.id))) {
         set({ isAuthLoading: false });
@@ -527,13 +525,11 @@ export const useStore = create<AppState>()((set, get) => ({
   addPet: (cid, pet) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: [...c.pets, { ...pet, id: Math.random().toString() }] } : c) })),
   updatePet: (cid, pid, data) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: c.pets.map(p => p.id === pid ? { ...p, ...data } : p) } : c) })),
   updatePetWeight: async (customerId, petId, weight) => {
-    // Update pet current weight
     await supabase
       .from('pets')
       .update({ weight: weight })
       .eq('id', petId);
 
-    // Insert into weight history table
     const { data, error } = await supabase
       .from('pet_weight_history')
       .insert([{
@@ -622,7 +618,6 @@ export const useStore = create<AppState>()((set, get) => ({
   processPayment: async (cid, total, disc, items, method, details, isTaxInvoice) => {
     const customerName = cid === 'walk-in' ? 'ลูกค้าทั่วไป (Walk-in)' : (get().customers.find(c => c.id === cid)?.name || 'Walk-in');
     
-    // 1. บันทึกธุรกรรมลงใน Supabase
     const { data, error } = await supabase
       .from('sales_transactions')
       .insert([{
@@ -658,17 +653,14 @@ export const useStore = create<AppState>()((set, get) => ({
         bookingType: 'Walk-in'
       };
 
-      // 2. ตัดสต็อกสินค้าอัตโนมัติ
       items.forEach(item => {
         if (item.type === 'Product') {
           get().adjustStock(item.id, item.quantity, 'Out', `ขายสินค้าผ่านบิล ${data.id}`);
         }
       });
 
-      // 3. อัปเดตสถานะในแอปพลิเคชัน
       set(s => ({ transactions: [tx as any, ...s.transactions] }));
 
-      // 4. หักเครดิตสะสมหากชำระด้วย Store Credit
       if (cid && cid !== 'walk-in') {
         if (method === 'Store Credit') {
           set(s => ({
@@ -693,14 +685,13 @@ export const useStore = create<AppState>()((set, get) => ({
           }));
         }
 
-        // 5. บันทึกประวัติการใช้บริการลง Supabase ตาราง service_history และอัปเดต local state
         const serviceItems = items.filter(item => item.type === 'Service');
         for (const item of serviceItems) {
           if (item.petId) {
             const { data: historyData, error: historyError } = await supabase
               .from('service_history')
               .insert([{
-                store_id: data.store_id, // ส่งค่า store_id ที่ได้จากธุรกรรมการขาย
+                store_id: data.store_id,
                 customer_id: cid === 'walk-in' ? null : cid,
                 pet_id: item.petId,
                 price: item.price * item.quantity,
@@ -710,7 +701,6 @@ export const useStore = create<AppState>()((set, get) => ({
               .single();
 
             if (!historyError && historyData) {
-              // อัปเดตประวัติใน local state ของลูกค้าและสัตว์เลี้ยง
               set(s => ({
                 customers: s.customers.map(c => {
                   if (c.id !== cid) return c;
@@ -740,7 +730,6 @@ export const useStore = create<AppState>()((set, get) => ({
           }
         }
 
-        // จัดการแพ็กเกจและเครดิต
         items.forEach(item => {
           if (item.type === 'Package') {
             const templateId = item.id.replace('package-', '');
@@ -788,7 +777,6 @@ export const useStore = create<AppState>()((set, get) => ({
       coatType: ser.coatType || undefined
     };
 
-    // อัปเดต Local State ทันทีเพื่อความรวดเร็วและป้องกันข้อมูลหาย
     set(s => ({ services: [...s.services, localNewService] }));
 
     try {
@@ -826,7 +814,6 @@ export const useStore = create<AppState>()((set, get) => ({
           isActive: data.is_active !== false,
           coatType: data.coat_type || undefined
         };
-        // แทนที่บริการจำลองด้วยข้อมูลจริงจาก Supabase
         set(s => ({ services: [...s.services.filter(item => item.id !== localNewService.id), newService] }));
       }
     } catch (err) {
@@ -834,7 +821,6 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
   updateService: async (id, ser) => {
-    // อัปเดต Local State ทันที
     set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser, targetSpecies: ser.targetSpecies || 'Dog' } : item) }));
 
     const priceKeys = Object.keys(ser.prices);
@@ -864,7 +850,6 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
   deleteService: async (id) => {
-    // อัปเดต Local State ทันที
     set(s => ({ services: s.services.filter(item => item.id !== id) }));
 
     try {
@@ -883,7 +868,6 @@ export const useStore = create<AppState>()((set, get) => ({
     if (!service) return;
     const nextActive = !service.isActive;
 
-    // อัปเดต Local State ทันที
     set(s => ({ services: s.services.map(item => item.id === id ? { ...item, isActive: nextActive } : item) }));
 
     try {
@@ -906,7 +890,6 @@ export const useStore = create<AppState>()((set, get) => ({
       icon: ad.icon || 'nail'
     };
 
-    // อัปเดต Local State ทันที
     set(s => ({ addons: [...s.addons, localNewAddon] }));
 
     try {
@@ -931,7 +914,6 @@ export const useStore = create<AppState>()((set, get) => ({
           price: Number(data.price || 0),
           icon: (data.icon || 'nail') as any
         };
-        // แทนที่ด้วยข้อมูลจริงจาก Supabase
         set(s => ({ addons: [...s.addons.filter(a => a.id !== localNewAddon.id), newAddon] }));
       }
     } catch (err) {
@@ -939,7 +921,6 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
   updateAddon: async (id, ad) => {
-    // อัปเดต Local State ทันที
     set(s => ({ addons: s.addons.map(a => a.id === id ? { ...a, ...ad } : a) }));
 
     try {
@@ -958,7 +939,6 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
   deleteAddon: async (id) => {
-    // อัปเดต Local State ทันที
     set(s => ({ addons: s.addons.filter(a => a.id !== id) }));
 
     try {
@@ -1059,7 +1039,6 @@ export const useStore = create<AppState>()((set, get) => ({
     const oldQty = item.stock;
     const newQty = mode === 'Add' || mode === 'In' ? oldQty + qty : mode === 'Out' ? oldQty - qty : qty;
 
-    // 1. Update product stock in Supabase
     const { error: updateError } = await supabase
       .from('products')
       .update({ stock: newQty })
@@ -1070,7 +1049,6 @@ export const useStore = create<AppState>()((set, get) => ({
       return;
     }
 
-    // 2. Insert stock log in Supabase
     const staffName = get().currentUser?.name || 'System';
     const { data: logData, error: logError } = await supabase
       .from('stock_logs')
@@ -1104,7 +1082,6 @@ export const useStore = create<AppState>()((set, get) => ({
       }));
     } else {
       console.error("Error inserting stock log:", logError);
-      // Fallback local update even if log fails
       set(s => ({
         inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i)
       }));

@@ -70,12 +70,21 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         const { data: stores } = await supabase.from('stores').select('id').limit(1);
         const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
 
+        // ตรวจสอบว่ามีโปรไฟล์อื่นที่ได้รับการอนุมัติแล้วหรือไม่
+        // หากไม่มีเลย (เช่น หลังย้ายฐานข้อมูล) ให้เปิดใช้งานบัญชีแรกนี้ทันทีเพื่อป้องกันการล็อกเอาท์
+        const { count: approvedCount } = await supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_approved', true);
+
+        const shouldAutoApprove = shouldBeSuperAdmin || !approvedCount || approvedCount === 0;
+
         const newProfile = {
           id: user.id,
           email: user.email,
           role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
           store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-          is_approved: shouldBeSuperAdmin ? true : false, // ผู้ใช้ทั่วไปต้องรออนุมัติ
+          is_approved: shouldAutoApprove, // อนุมัติอัตโนมัติหากเป็นบัญชีแรกหลังย้ายฐานข้อมูล
           is_suspended: false
         };
 
@@ -88,7 +97,6 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
           profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false };
         } else {
           console.error("Failed to insert profile:", insertError);
-          // หาก insert ไม่สำเร็จ ให้ถือว่ายังไม่ได้รับการอนุมัติเพื่อความปลอดภัย
           set({ 
             isAuthenticated: false, 
             isAuthLoading: false, 
@@ -134,7 +142,6 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
       let userRole = profile.role || 'Assistant';
       let storeIdFromMetadata = profile.store_id || 'default-store';
       
-      // แปลงบทบาทตัวพิมพ์เล็กให้ตรงกับระบบสิทธิ์
       if (userRole === 'admin') {
         userRole = 'Admin';
       } else if (userRole === 'staff') {
