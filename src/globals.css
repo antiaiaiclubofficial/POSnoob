@@ -134,7 +134,7 @@
   border-color: transparent;
   /* ปรับเงาเรืองแสงให้ฟุ้งกระจายและนุ่มนวลขึ้นอย่างมหาศาลด้วยการซ้อนเลเยอร์สีแบรนด์ Google */
   box-shadow: 
-    0 25px 60px -10px rgba(83, 125, 205, 0.6), 
+    0 25px 60px -10px rgba(83, 125, 205, 0.4), 
     0 25px 60px -15px rgba(65, 156, 89, 0.4),
     0 0 40px 5px rgba(249, 217, 120, 0.3);
   transform: translateY(-2px);
