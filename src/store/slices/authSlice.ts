@@ -57,38 +57,31 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         .eq('id', user.id)
         .maybeSingle();
 
-      // 2. หากเกิดข้อผิดพลาดในการดึงข้อมูล (เช่น ปัญหาเครือข่าย) ให้หยุดทำงานเพื่อความปลอดภัย ห้ามเขียนทับหรือล้างเซสชัน
+      // 2. หากเกิดข้อผิดพลาดในการดึงข้อมูล ให้หยุดทำงานเพื่อความปลอดภัย
       if (error) {
         console.error("Error fetching profile:", error);
         set({ isAuthLoading: false });
         return;
       }
 
-      // 3. หากไม่มีโปรไฟล์ในฐานข้อมูลจริงๆ (profile เป็น null และไม่มี error)
+      // 3. หากไม่มีโปรไฟล์ในฐานข้อมูลจริงๆ (profile เป็น null)
       if (!profile) {
         // ดึง ID ของร้านค้าแรกในระบบเพื่อเป็นค่าเริ่มต้น
         const { data: stores } = await supabase.from('stores').select('id').limit(1);
         const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
 
-        // ตรวจสอบว่ามีโปรไฟล์อื่นที่ได้รับการอนุมัติแล้วหรือไม่
-        // หากไม่มีเลย (เช่น หลังย้ายฐานข้อมูล) ให้เปิดใช้งานบัญชีแรกนี้ทันทีเพื่อป้องกันการล็อกเอาท์
-        const { count: approvedCount } = await supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('is_approved', true);
-
-        const shouldAutoApprove = shouldBeSuperAdmin || !approvedCount || approvedCount === 0;
+        // กำหนดให้ผู้ใช้ใหม่ทุกคนต้องรออนุมัติ (is_approved = false) ยกเว้น Super Admin เท่านั้น
+        const shouldAutoApprove = shouldBeSuperAdmin;
 
         const newProfile = {
           id: user.id,
           email: user.email,
           role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
           store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-          is_approved: shouldAutoApprove, // อนุมัติอัตโนมัติหากเป็นบัญชีแรกหลังย้ายฐานข้อมูล
+          is_approved: shouldAutoApprove,
           is_suspended: false
         };
 
-        // ใช้ insert แทน upsert เพื่อป้องกันการเขียนทับข้อมูลเดิมโดยเด็ดขาด
         const { error: insertError } = await supabase
           .from('profiles')
           .insert([newProfile]);
