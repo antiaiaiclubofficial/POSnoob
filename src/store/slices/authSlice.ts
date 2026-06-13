@@ -50,38 +50,45 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
       const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
       const shouldBeSuperAdmin = isSuperAdminEmail && isSuperAdminPath;
 
-      // ดึงข้อมูลโปรไฟล์จากฐานข้อมูลเพื่อตรวจสอบบทบาทจริง (เช่น superadmin)
+      // ดึงข้อมูลโปรไฟล์จากฐานข้อมูลเพื่อตรวจสอบบทบาทจริง
       let { data: profile, error } = await supabase
         .from('profiles')
         .select('role, store_id, is_approved, is_suspended')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error || !profile) {
-        const { data: stores } = await supabase.from('stores').select('id').limit(1);
-        const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
-
-        const newProfile = {
-          id: user.id,
-          email: user.email,
-          role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
-          store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-          is_approved: shouldBeSuperAdmin ? true : false,
-          is_suspended: false
-        };
-
-        const { error: upsertError } = await supabase
+        // ตรวจสอบอีกครั้งเพื่อความปลอดภัย ป้องกันการเขียนทับโปรไฟล์เดิมที่มีอยู่แล้ว
+        const { data: existingProfile } = await supabase
           .from('profiles')
-          .upsert(newProfile, { onConflict: 'id' });
+          .select('role, store_id, is_approved, is_suspended')
+          .eq('id', user.id)
+          .maybeSingle();
 
-        if (!upsertError) {
-          profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false };
+        if (existingProfile) {
+          profile = existingProfile;
         } else {
-          console.error("Failed to upsert profile:", upsertError);
-          if (shouldBeSuperAdmin) {
-            profile = { role: 'superadmin', store_id: null, is_approved: true, is_suspended: false };
+          const { data: stores } = await supabase.from('stores').select('id').limit(1);
+          const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
+
+          const newProfile = {
+            id: user.id,
+            email: user.email,
+            role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
+            store_id: shouldBeSuperAdmin ? null : defaultStoreId,
+            is_approved: true, // อนุมัติอัตโนมัติเพื่อความสะดวกในการใช้งานตามที่ระบุในระบบหลังบ้าน
+            is_suspended: false
+          };
+
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert([newProfile]);
+
+          if (!insertError) {
+            profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false };
           } else {
-            profile = { role: 'Admin', store_id: defaultStoreId, is_approved: false, is_suspended: false };
+            console.error("Failed to insert profile:", insertError);
+            profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false };
           }
         }
       }
@@ -116,20 +123,26 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         return;
       }
 
-      // แยกแยะบทบาทตามหน้าเว็บที่ล็อกอินเข้ามา
+      // ปรับแต่งบทบาทและร้านค้าให้ถูกต้อง
       let userRole = profile.role || 'staff';
       let storeIdFromMetadata = profile.store_id || 'default-store';
       
+      // แปลงบทบาทตัวพิมพ์เล็กให้ตรงกับระบบสิทธิ์ (เช่น admin -> Admin, staff -> Assistant)
+      if (userRole === 'admin') {
+        userRole = 'Admin';
+      } else if (userRole === 'staff') {
+        userRole = 'Assistant';
+      }
+
       if (isSuperAdminEmail) {
         if (shouldBeSuperAdmin) {
           userRole = 'superadmin';
           storeIdFromMetadata = null;
         } else {
-          // หากล็อกอินผ่านหน้าปกติ ให้เป็น Admin ของร้านค้า
           userRole = 'Admin';
           if (!storeIdFromMetadata || storeIdFromMetadata === 'default-store') {
-            const { data: stores } = await supabase.from('stores').select('id').limit(1);
-            storeIdFromMetadata = stores && stores.length > 0 ? stores[0].id : 'default-store';
+            const { data: storesData } = await supabase.from('stores').select('id').limit(1);
+            storeIdFromMetadata = storesData && storesData.length > 0 ? storesData[0].id : 'default-store';
           }
         }
       }
