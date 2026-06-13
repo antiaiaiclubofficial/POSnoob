@@ -90,10 +90,10 @@
   padding: 2px; /* ความหนาของเส้นขอบไล่เฉดสี 2px */
   background: radial-gradient(
     220px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    #4285F4 0%,
-    #EA4335 25%,
-    #FBBC05 50%,
-    #34A853 75%,
+    #4285F4 25%,
+    #EA4335 50%,
+    #FBBC05 75%,
+    #34A853 100%,
     transparent 100%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
