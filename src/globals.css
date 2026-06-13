@@ -85,9 +85,9 @@
 .google-border-btn::before {
   content: "";
   position: absolute;
-  inset: -4px; /* คลุมทับเส้นขอบเดิมขนาด 2px */
+  inset: -2px; /* คลุมทับเส้นขอบเดิมขนาด 2px */
   border-radius: inherit;
-  padding: 4px; /* ความหนาของเส้นขอบไล่เฉดสี 2px */
+  padding: 2px; /* ความหนาของเส้นขอบไล่เฉดสี 2px */
   background: radial-gradient(
     280px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
     #4285F4 25%,
