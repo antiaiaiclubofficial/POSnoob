@@ -166,7 +166,7 @@ const Login = () => {
 
           <button 
             onClick={handleGoogleLogin}
-            className="w-full bg-[#0d0e15] hover:bg-[#151722] text-white border border-[#3a3f50] font-bold py-4 rounded-full flex items-center justify-center gap-3 shadow-sm transition-all active:scale-95"
+            className="w-full bg-[#0d0e15] hover:bg-gradient-to-r hover:from-[#4285F4] hover:via-[#EA4335] hover:to-[#34A853] hover:border-transparent text-white border border-[#3a3f50] font-bold py-4 rounded-full flex items-center justify-center gap-3 shadow-sm transition-all active:scale-95"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
