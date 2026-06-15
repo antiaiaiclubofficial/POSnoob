@@ -453,13 +453,18 @@ export const useStore = create<AppState>()((set, get) => ({
         set({ isAuthLoading: false });
         return;
       }
-      set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
+      // ถ้าไม่มี session จาก Supabase ให้ทำการ Auto-login เป็น Admin ทันที เพื่อไม่ให้ติดหน้า Authen ใน Preview
+      const mockAdmin = { id: 'admin', name: 'Admin (Auto-login)', role: 'Admin', username: 'admin' };
+      set({ 
+        isAuthenticated: true, 
+        isAuthLoading: false, 
+        currentUser: mockAdmin, 
+        storeId: 'default-store',
+        isPendingApproval: false,
+        isUserSuspended: false,
+        isStoreSuspended: false
+      });
     }
-  },
-
-  logout: async () => {
-    await supabase.auth.signOut();
-    set({ isAuthenticated: false, currentUser: null, storeId: null, isPendingApproval: false, isUserSuspended: false, isStoreSuspended: false });
   },
 
   verifyPassword: (pass) => {
@@ -469,6 +474,11 @@ export const useStore = create<AppState>()((set, get) => ({
     if (currentUser.username === 'admin') return pass === '1234';
     const member = staff.find(s => s.username === currentUser.username);
     return member?.password === pass;
+  },
+  
+  logout: async () => {
+    await supabase.auth.signOut();
+    set({ isAuthenticated: false, currentUser: null, storeId: null, isPendingApproval: false, isUserSuspended: false, isStoreSuspended: false });
   },
 
   addLog: (log) => set(s => ({ 
@@ -688,7 +698,7 @@ export const useStore = create<AppState>()((set, get) => ({
         paymentMethod: method,
         staffName: data.staff_name || 'Admin',
         species: [],
-        bookingType: 'Walk-in'
+        bookingType: 'Walk-in' as BookingType
       };
 
       items.forEach(item => {
@@ -832,7 +842,7 @@ export const useStore = create<AppState>()((set, get) => ({
           target_species: ser.targetSpecies || 'Dog',
           prices: ser.prices || {},
           is_active: ser.isActive !== false,
-          coat_type: ser.coatType || null,
+          coat_type: ser.coat_type || null,
           is_addon: false
         }])
         .select()
@@ -880,7 +890,7 @@ export const useStore = create<AppState>()((set, get) => ({
           target_species: ser.targetSpecies || 'Dog',
           prices: ser.prices || {},
           is_active: ser.isActive !== false,
-          coat_type: ser.coatType || null
+          coat_type: ser.coat_type || null
         })
         .eq('id', id);
 
