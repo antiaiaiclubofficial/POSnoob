@@ -242,6 +242,10 @@ export interface AppState {
   receiptFooter: string;
   receiptPaperSize: '58mm' | '80mm';
   vatEnabled: boolean;
+  companyName?: string;
+  companyAddress?: string;
+  companyTaxId?: string;
+  vatRate?: number;
 
   // LINE LIFF Settings
   liffId: string;
