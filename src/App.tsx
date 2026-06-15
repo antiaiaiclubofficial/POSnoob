@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
-import Queue import Queue from "./pages/Queue";
+import Queue from "./pages/Queue";
 import Services from "./pages/Services";
 import Customers from "./pages/Customers";
 import Inventory from "./pages/Inventory";
@@ -492,7 +492,7 @@ const App = () => {
             id: t.id,
             date: t.created_at.split('T')[0],
             amount: Number(t.amount),
-            discount_amount: Number(t.discount_amount),
+            discountAmount: Number(t.discount_amount),
             customerId: t.customer_id || 'walk-in',
             customerName: t.customer_name,
             items: t.items,

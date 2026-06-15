@@ -253,6 +253,7 @@ const Settings = () => {
                          <div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2 w-full max-w-sm">
                             {(['58mm', '80mm'] as const).map(size => (
                               <button key={size} onClick={() => setLocalReceiptPaperSize(size)} className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all", localReceiptPaperSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{size} Thermal</button>
+                            ))}
                          </div>
                       </div>
                       <div className="space-y-2">
