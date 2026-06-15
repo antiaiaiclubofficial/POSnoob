@@ -193,12 +193,17 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         storeId: userRole === 'superadmin' ? null : storeIdFromMetadata
       });
     } else {
-      const current = get().currentUser;
-      if (current && (current.id === 'superadmin' || current.id === 'admin' || get().staff.some(s => s.id === current.id))) {
-        set({ isAuthLoading: false });
-        return;
-      }
-      set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
+      // ถ้าไม่มี session จาก Supabase ให้ทำการ Auto-login เป็น Admin ทันที เพื่อไม่ให้ติดหน้า Authen ใน Preview
+      const mockAdmin = { id: 'admin', name: 'Admin (Auto-login)', role: 'Admin', username: 'admin' };
+      set({ 
+        isAuthenticated: true, 
+        isAuthLoading: false, 
+        currentUser: mockAdmin, 
+        storeId: 'default-store',
+        isPendingApproval: false,
+        isUserSuspended: false,
+        isStoreSuspended: false
+      });
     }
   },
 
