@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { 
-  Store, Save, Clock, Phone, MessageSquare, Calendar, AlertCircle, Send, Camera, Eye, Globe, ChevronRight, Copy, ShieldCheck, ExternalLink
+  Store, Save, Clock, Phone, MessageSquare, Calendar, AlertCircle, Send, Camera, Eye, Globe, ChevronRight, Copy, ShieldCheck, ExternalLink, Building2, Percent
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -14,13 +14,14 @@ import StoreHolidaysConfig from '@/components/StoreHolidaysConfig';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 
-type SettingTab = 'profile' | 'operations' | 'integrations' | 'system';
+type SettingTab = 'profile' | 'company' | 'operations' | 'integrations' | 'system';
 
 const Settings = () => {
   const { 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
     receiptHeader, receiptFooter, receiptPaperSize,
     liffId, liffChannelId, liffChannelSecret, liffEnabled,
+    companyName, companyAddress, companyTaxId, vatEnabled, vatRate,
     updateBusinessProfile,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings,
     recurringHolidays, specificHolidays,
@@ -50,6 +51,13 @@ const Settings = () => {
   const [localRecurringHolidays, setLocalRecurringHolidays] = useState<number[]>(recurringHolidays);
   const [localSpecificHolidays, setLocalSpecificHolidays] = useState<string[]>(specificHolidays);
 
+  // Company Profile Local States
+  const [localCompanyName, setLocalCompanyName] = useState(companyName || '');
+  const [localCompanyAddress, setLocalCompanyAddress] = useState(companyAddress || '');
+  const [localCompanyTaxId, setLocalCompanyTaxId] = useState(companyTaxId || '');
+  const [localVatEnabled, setLocalVatEnabled] = useState(vatEnabled);
+  const [localVatRate, setLocalVatRate] = useState(vatRate || 7);
+
   // LINE LIFF Local States
   const [localLiffId, setLocalLiffId] = useState(liffId);
   const [localLiffChannelId, setLocalLiffChannelId] = useState(liffChannelId);
@@ -76,6 +84,11 @@ const Settings = () => {
       liffChannelId: localLiffChannelId,
       liffChannelSecret: localLiffChannelSecret,
       liffEnabled: localLiffEnabled,
+      companyName: localCompanyName,
+      companyAddress: localCompanyAddress,
+      companyTaxId: localCompanyTaxId,
+      vatEnabled: localVatEnabled,
+      vatRate: localVatRate,
     });
     updateBookingSettings({
       slotDuration: localSlotDuration,
@@ -96,6 +109,7 @@ const Settings = () => {
 
   const navItems = [
     { id: 'profile', label: 'Store Profile', icon: Store, desc: 'Identity & Contacts' },
+    { id: 'company', label: 'Company Profile', icon: Building2, desc: 'Legal & Tax Settings' },
     { id: 'operations', label: 'Operations', icon: Clock, desc: 'Hours & Booking Rules' },
     { id: 'integrations', label: 'LINE Integrations', icon: MessageSquare, desc: 'LIFF & Messaging' },
     { id: 'system', label: 'System', icon: Globe, desc: 'Language & Preferences' },
@@ -253,6 +267,78 @@ const Settings = () => {
                    </div>
                 </section>
               </div>
+            )}
+
+            {/* Tab: Company Profile */}
+            {activeTab === 'company' && (
+              <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-10">
+                <div>
+                  <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Company Profile & Tax Settings</h3>
+                  <p className="text-xs text-gray-400 font-medium">Configure your legal company details and VAT settings for invoicing.</p>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Legal Company Name</label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                        value={localCompanyName} 
+                        onChange={e => setLocalCompanyName(e.target.value)} 
+                        placeholder="e.g. Mellow Fellow Co., Ltd."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Tax ID (เลขประจำตัวผู้เสียภาษี)</label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                        value={localCompanyTaxId} 
+                        onChange={e => setLocalCompanyTaxId(e.target.value)} 
+                        placeholder="e.g. 0105564000123"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Company Address</label>
+                    <textarea 
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                      value={localCompanyAddress} 
+                      onChange={e => setLocalCompanyAddress(e.target.value)} 
+                      placeholder="Legal registered address..."
+                    />
+                  </div>
+
+                  <div className="border-t border-gray-100 pt-6 space-y-6">
+                    <div className="flex items-center justify-between bg-[#F8F9FD] p-6 rounded-3xl border border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <Percent size={18} className="text-indigo-500" />
+                        <div>
+                          <span className="text-sm font-black text-[#1A1F3D]">Enable VAT (ภาษีมูลค่าเพิ่ม)</span>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">Apply VAT to sales transactions</p>
+                        </div>
+                      </div>
+                      <Switch checked={localVatEnabled} onCheckedChange={setLocalVatEnabled} className="data-[state=checked]:bg-indigo-600" />
+                    </div>
+
+                    {localVatEnabled && (
+                      <div className="space-y-2 max-w-xs animate-in slide-in-from-top-2 duration-200">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">VAT Rate (%)</label>
+                        <div className="relative">
+                          <Percent className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                          <input 
+                            type="number"
+                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                            value={localVatRate} 
+                            onChange={e => setLocalVatRate(Number(e.target.value))} 
+                            placeholder="7"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
             )}
 
             {/* Tab: Operations */}
