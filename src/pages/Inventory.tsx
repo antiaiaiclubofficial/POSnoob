@@ -23,6 +23,7 @@ type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashbo
 const Inventory = () => {
   const { 
     inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLineId,
+    companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
     adjustStock, deletePartner, currency, currentUser, addReportLog, transactions
   } = useStore();
   
@@ -182,7 +183,6 @@ const Inventory = () => {
     const toastId = toast.loading("กำลังสร้างเอกสาร Word (.docx) ภาษาไทย...");
     try {
       const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
-      const mockTaxId = "0-1055-64000-12-3";
 
       // Build Table Rows
       const tableRows = [
@@ -264,25 +264,25 @@ const Inventory = () => {
         sections: [{
           properties: {},
           children: [
-            // Shop Header
+            // Company Header (from Company Profile & Tax Settings)
             new Paragraph({
               children: [
-                new TextRun({ text: shopName, bold: true, size: 32, color: "1A1F3D" }),
+                new TextRun({ text: companyName || shopName, bold: true, size: 32, color: "1A1F3D" }),
               ],
             }),
             new Paragraph({
               children: [
-                new TextRun({ text: `เลขประจำตัวผู้เสียภาษี: ${mockTaxId}`, size: 18, color: "555555" }),
+                new TextRun({ text: `เลขประจำตัวผู้เสียภาษี: ${companyTaxId || '-'}`, size: 18, color: "555555" }),
               ],
             }),
             new Paragraph({
               children: [
-                new TextRun({ text: `ที่อยู่: ${shopAddress}`, size: 18, color: "555555" }),
+                new TextRun({ text: `ที่อยู่: ${companyAddress || shopAddress}`, size: 18, color: "555555" }),
               ],
             }),
             new Paragraph({
               children: [
-                new TextRun({ text: `โทร: ${shopPhone} | LINE: ${shopLineId || '-'}`, size: 18, color: "555555" }),
+                new TextRun({ text: `โทร: ${companyPhone || shopPhone} ${companyEmail ? `| อีเมล: ${companyEmail}` : ''}`, size: 18, color: "555555" }),
               ],
             }),
 
@@ -353,17 +353,17 @@ const Inventory = () => {
             }),
             new Paragraph({
               children: [
-                new TextRun({ text: shopName, bold: true, size: 18, color: "1A1F3D" }),
+                new TextRun({ text: companyName || shopName, bold: true, size: 18, color: "1A1F3D" }),
               ]
             }),
             new Paragraph({
               children: [
-                new TextRun({ text: `ที่อยู่: ${shopAddress}`, size: 18, color: "555555" }),
+                new TextRun({ text: `ที่อยู่: ${companyAddress || shopAddress}`, size: 18, color: "555555" }),
               ]
             }),
             new Paragraph({
               children: [
-                new TextRun({ text: `ติดต่อ: ${shopPhone} ${shopLineId ? `| LINE: ${shopLineId}` : ''}`, size: 18, color: "555555" }),
+                new TextRun({ text: `ติดต่อ: ${companyPhone || shopPhone} ${companyEmail ? `| อีเมล: ${companyEmail}` : ''}`, size: 18, color: "555555" }),
               ]
             }),
           ]
@@ -834,12 +834,12 @@ const Inventory = () => {
             {/* Document Body (A4 Styled Sheet) */}
             <div className="flex-1 overflow-y-auto p-10 bg-gray-100 flex justify-center scrollbar-hide">
               <div className="bg-white w-[210mm] min-h-[297mm] p-[20mm] shadow-xl font-sans text-[#1A1F3D] text-xs space-y-8 relative">
-                {/* Shop Header */}
+                {/* Shop Header (from Company Profile & Tax Settings) */}
                 <div className="space-y-1">
-                  <h2 className="text-xl font-black text-[#1A1F3D]">{shopName}</h2>
-                  <p className="text-gray-500">เลขประจำตัวผู้เสียภาษี: 0-1055-64000-12-3</p>
-                  <p className="text-gray-500">ที่อยู่: {shopAddress}</p>
-                  <p className="text-gray-500">โทร: {shopPhone} | LINE: {shopLineId || '-'}</p>
+                  <h2 className="text-xl font-black text-[#1A1F3D]">{companyName || shopName}</h2>
+                  <p className="text-gray-500">เลขประจำตัวผู้เสียภาษี: {companyTaxId || '-'}</p>
+                  <p className="text-gray-500">ที่อยู่: {companyAddress || shopAddress}</p>
+                  <p className="text-gray-500">โทร: {companyPhone || shopPhone} {companyEmail ? `| อีเมล: ${companyEmail}` : ''}</p>
                 </div>
 
                 {/* Document Title */}
@@ -930,9 +930,9 @@ const Inventory = () => {
 
                   <div className="space-y-1">
                     <h4 className="font-black text-[#1A1F3D]">วางบิลและส่งเอกสารมาที่ :</h4>
-                    <p className="font-bold text-gray-800">{shopName}</p>
-                    <p className="text-gray-500">ที่อยู่: {shopAddress}</p>
-                    <p className="text-gray-500">ติดต่อ: {shopPhone} {shopLineId ? `| LINE: ${shopLineId}` : ''}</p>
+                    <p className="font-bold text-gray-800">{companyName || shopName}</p>
+                    <p className="text-gray-500">ที่อยู่: {companyAddress || shopAddress}</p>
+                    <p className="text-gray-500">ติดต่อ: {companyPhone || shopPhone} {companyEmail ? `| อีเมล: ${companyEmail}` : ''}</p>
                   </div>
                 </div>
               </div>
