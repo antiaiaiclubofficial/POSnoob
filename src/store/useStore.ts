@@ -175,10 +175,12 @@ export const useStore = create<AppState>()((set, get) => ({
   receiptHeader: 'Tax Invoice / Receipt',
   receiptFooter: 'Thank you for your visit!',
   receiptPaperSize: '80mm',
-  vatEnabled: typeof window !== 'undefined' ? (localStorage.getItem('vat_enabled') === 'false' ? false : true) : true,
+  vatEnabled: typeof window !== 'undefined' ? (localStorage.getItem('vat_enabled') === 'true') : false,
   companyName: typeof window !== 'undefined' ? localStorage.getItem('company_name') || 'Mellow Fellow Co., Ltd.' : 'Mellow Fellow Co., Ltd.',
   companyAddress: typeof window !== 'undefined' ? localStorage.getItem('company_address') || '123 Sukhumvit, Bangkok 10110' : '123 Sukhumvit, Bangkok 10110',
   companyTaxId: typeof window !== 'undefined' ? localStorage.getItem('company_tax_id') || '0105564000123' : '0105564000123',
+  companyPhone: typeof window !== 'undefined' ? localStorage.getItem('company_phone') || '02-999-9999' : '02-999-9999',
+  companyEmail: typeof window !== 'undefined' ? localStorage.getItem('company_email') || 'contact@mellowfellow.com' : 'contact@mellowfellow.com',
   vatRate: typeof window !== 'undefined' ? Number(localStorage.getItem('vat_rate') || '7') : 7,
 
   liffId: '2001234567-AbCdEfGh',
@@ -498,6 +500,8 @@ export const useStore = create<AppState>()((set, get) => ({
       if (profile.companyName !== undefined) localStorage.setItem('company_name', profile.companyName);
       if (profile.companyAddress !== undefined) localStorage.setItem('company_address', profile.companyAddress);
       if (profile.companyTaxId !== undefined) localStorage.setItem('company_tax_id', profile.companyTaxId);
+      if (profile.companyPhone !== undefined) localStorage.setItem('company_phone', profile.companyPhone);
+      if (profile.companyEmail !== undefined) localStorage.setItem('company_email', profile.companyEmail);
       if (profile.vatEnabled !== undefined) localStorage.setItem('vat_enabled', String(profile.vatEnabled));
       if (profile.vatRate !== undefined) localStorage.setItem('vat_rate', String(profile.vatRate));
     }
@@ -515,6 +519,13 @@ export const useStore = create<AppState>()((set, get) => ({
             receipt_header: profile.receiptHeader !== undefined ? profile.receiptHeader : undefined,
             receipt_footer: profile.receiptFooter !== undefined ? profile.receiptFooter : undefined,
             receipt_paper_size: profile.receiptPaperSize !== undefined ? profile.receiptPaperSize : undefined,
+            company_name: profile.companyName !== undefined ? profile.companyName : undefined,
+            company_address: profile.companyAddress !== undefined ? profile.companyAddress : undefined,
+            company_tax_id: profile.companyTaxId !== undefined ? profile.companyTaxId : undefined,
+            company_phone: profile.companyPhone !== undefined ? profile.companyPhone : undefined,
+            company_email: profile.companyEmail !== undefined ? profile.companyEmail : undefined,
+            vat_enabled: profile.vatEnabled !== undefined ? profile.vatEnabled : undefined,
+            vat_rate: profile.vatRate !== undefined ? profile.vatRate : undefined,
           })
           .eq('id', storeId);
         if (error) throw error;
@@ -898,7 +909,7 @@ export const useStore = create<AppState>()((set, get) => ({
           duration_minutes: defaultDuration,
           category: ser.category || 'Grooming',
           icon: ser.icon || 'grooming',
-          target_species: ser.targetSpecies || 'Dog',
+          target_species: ser.target_species || 'Dog',
           prices: ser.prices || {},
           is_active: ser.isActive !== false,
           coat_type: ser.coat_type || null

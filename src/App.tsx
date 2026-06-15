@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
-import Queue from "./pages/Queue";
+import Queue import Queue from "./pages/Queue";
 import Services from "./pages/Services";
 import Customers from "./pages/Customers";
 import Inventory from "./pages/Inventory";
@@ -84,7 +84,14 @@ const App = () => {
               maxCapacity: storeData.max_capacity || 3,
               openTime: storeData.open_time || '09:00',
               closeTime: storeData.close_time || '19:00',
-              shopIsOpen: !storeData.is_suspended
+              shopIsOpen: !storeData.is_suspended,
+              companyName: storeData.company_name || 'Mellow Fellow Co., Ltd.',
+              companyAddress: storeData.company_address || '',
+              companyTaxId: storeData.company_tax_id || '',
+              companyPhone: storeData.company_phone || '',
+              companyEmail: storeData.company_email || '',
+              vatEnabled: storeData.vat_enabled || false,
+              vatRate: storeData.vat_rate || 7
             });
           }
         } catch (err) {
@@ -485,7 +492,7 @@ const App = () => {
             id: t.id,
             date: t.created_at.split('T')[0],
             amount: Number(t.amount),
-            discountAmount: Number(t.discount_amount),
+            discount_amount: Number(t.discount_amount),
             customerId: t.customer_id || 'walk-in',
             customerName: t.customer_name,
             items: t.items,

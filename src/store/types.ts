@@ -245,6 +245,8 @@ export interface AppState {
   companyName?: string;
   companyAddress?: string;
   companyTaxId?: string;
+  companyPhone?: string;
+  companyEmail?: string;
   vatRate?: number;
 
   // LINE LIFF Settings

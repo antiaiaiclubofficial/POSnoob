@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { 
-  Store, Save, Clock, Phone, MessageSquare, Calendar, AlertCircle, Send, Camera, Eye, Globe, ChevronRight, Copy, ShieldCheck, ExternalLink, Building2, Percent
+  Store, Save, Clock, Phone, MessageSquare, Calendar, AlertCircle, Send, Camera, Eye, Globe, ChevronRight, Copy, ShieldCheck, ExternalLink, Building2, Percent, Mail
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -21,7 +21,7 @@ const Settings = () => {
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
     receiptHeader, receiptFooter, receiptPaperSize,
     liffId, liffChannelId, liffChannelSecret, liffEnabled,
-    companyName, companyAddress, companyTaxId, vatEnabled, vatRate,
+    companyName, companyAddress, companyTaxId, companyPhone, companyEmail, vatEnabled, vatRate,
     updateBusinessProfile,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings,
     recurringHolidays, specificHolidays,
@@ -55,6 +55,8 @@ const Settings = () => {
   const [localCompanyName, setLocalCompanyName] = useState(companyName || '');
   const [localCompanyAddress, setLocalCompanyAddress] = useState(companyAddress || '');
   const [localCompanyTaxId, setLocalCompanyTaxId] = useState(companyTaxId || '');
+  const [localCompanyPhone, setLocalCompanyPhone] = useState(companyPhone || '');
+  const [localCompanyEmail, setLocalCompanyEmail] = useState(companyEmail || '');
   const [localVatEnabled, setLocalVatEnabled] = useState(vatEnabled);
   const [localVatRate, setLocalVatRate] = useState(vatRate || 7);
 
@@ -87,6 +89,8 @@ const Settings = () => {
       companyName: localCompanyName,
       companyAddress: localCompanyAddress,
       companyTaxId: localCompanyTaxId,
+      companyPhone: localCompanyPhone,
+      companyEmail: localCompanyEmail,
       vatEnabled: localVatEnabled,
       vatRate: localVatRate,
     });
@@ -249,7 +253,6 @@ const Settings = () => {
                          <div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2 w-full max-w-sm">
                             {(['58mm', '80mm'] as const).map(size => (
                               <button key={size} onClick={() => setLocalReceiptPaperSize(size)} className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all", localReceiptPaperSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{size} Thermal</button>
-                            ))}
                          </div>
                       </div>
                       <div className="space-y-2">
@@ -296,6 +299,34 @@ const Settings = () => {
                         onChange={e => setLocalCompanyTaxId(e.target.value)} 
                         placeholder="e.g. 0105564000123"
                       />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Company Phone</label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                        <input 
+                          className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                          value={localCompanyPhone} 
+                          onChange={e => setLocalCompanyPhone(e.target.value)} 
+                          placeholder="e.g. 02-999-9999"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Company Email</label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                        <input 
+                          type="email"
+                          className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                          value={localCompanyEmail} 
+                          onChange={e => setLocalCompanyEmail(e.target.value)} 
+                          placeholder="e.g. contact@mellowfellow.com"
+                        />
+                      </div>
                     </div>
                   </div>
 
