@@ -304,7 +304,7 @@ const Inventory = () => {
             // Divider
             new Paragraph({ text: "_________________________________________________________________________________", spacing: { before: 100, after: 200 } }),
 
-            // Partner Info
+            // Partner Info (จัดวางเหมือนหัวกระดาษบริษัท)
             new Paragraph({
               children: [
                 new TextRun({ text: selectedReportPartner ? `ข้อมูลคู่ค้า: ${selectedReportPartner.companyName}` : "คู่ค้า: คู่ค้าทั้งหมด", bold: true, size: 22, color: "1A1F3D" }),
@@ -312,9 +312,8 @@ const Inventory = () => {
             }),
             ...(selectedReportPartner ? [
               new Paragraph({ children: [new TextRun({ text: `เลขประจำตัวผู้เสียภาษี: ${selectedReportPartner.taxId || '-'}`, size: 18, color: "555555" })] }),
-              new Paragraph({ children: [new TextRun({ text: `เบอร์โทร: ${selectedReportPartner.phone || '-'}`, size: 18, color: "555555" })] }),
-              new Paragraph({ children: [new TextRun({ text: `อีเมล: ${selectedReportPartner.email || '-'}`, size: 18, color: "555555" })] }),
               new Paragraph({ children: [new TextRun({ text: `ที่อยู่: ${selectedReportPartner.address || '-'}`, size: 18, color: "555555" })] }),
+              new Paragraph({ children: [new TextRun({ text: `โทร: ${selectedReportPartner.phone || '-'} ${selectedReportPartner.email ? `| อีเมล: ${selectedReportPartner.email}` : ''}`, size: 18, color: "555555" })] }),
             ] : []),
 
             new Paragraph({
@@ -850,20 +849,19 @@ const Inventory = () => {
 
                 <div className="border-t border-gray-200 my-6" />
 
-                {/* Partner Info */}
-                <div className="space-y-2">
+                {/* Partner Info (ปรับการจัดวางให้เหมือนกับหัวกระดาษบริษัท) */}
+                <div className="space-y-1">
                   <h3 className="text-sm font-black text-[#1A1F3D]">
                     {selectedReportPartner ? `ข้อมูลคู่ค้า: ${selectedReportPartner.companyName}` : "คู่ค้า: คู่ค้าทั้งหมด"}
                   </h3>
                   {selectedReportPartner && (
-                    <div className="grid grid-cols-2 gap-4 text-gray-500">
+                    <div className="text-gray-500 space-y-0.5">
                       <p>เลขประจำตัวผู้เสียภาษี: {selectedReportPartner.taxId || '-'}</p>
-                      <p>เบอร์โทร: {selectedReportPartner.phone || '-'}</p>
-                      <p>อีเมล: {selectedReportPartner.email || '-'}</p>
                       <p>ที่อยู่: {selectedReportPartner.address || '-'}</p>
+                      <p>โทร: {selectedReportPartner.phone || '-'} {selectedReportPartner.email ? `| อีเมล: ${selectedReportPartner.email}` : ''}</p>
                     </div>
                   )}
-                  <p className="text-gray-400 text-[10px] font-bold uppercase">วันที่ออกเอกสาร: {format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
+                  <p className="text-gray-400 text-[10px] font-bold uppercase pt-1">วันที่ออกเอกสาร: {format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
                 </div>
 
                 {/* Items Table */}
