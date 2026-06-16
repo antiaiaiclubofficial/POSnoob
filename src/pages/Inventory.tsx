@@ -602,14 +602,14 @@ const Inventory = () => {
                 <div className="flex-1 w-full relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold shadow-inner" placeholder="ค้นหาสินค้าเพื่อเช็คสต็อก..." value={checkSearch} onChange={e => setCheckSearch(e.target.value)} /></div>
                 <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1 shrink-0">{(['All', 'Low', 'Out'] as const).map(status => (<button key={status} onClick={() => setCheckStatusFilter(status)} className={cn("px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", checkStatusFilter === status ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{status === 'All' ? 'ทั้งหมด' : status === 'Low' ? 'สต็อกต่ำ' : 'สินค้าหมด'}</button>))}</div>
              </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredCheckItems.map(item => {
                   const status = item.stock === 0 ? 'Out' : item.stock <= item.minStock ? 'Low' : 'OK';
                   return (
                     <div 
                       key={item.id} 
                       className={cn(
-                        "p-8 rounded-[40px] border transition-all group hover:shadow-xl relative overflow-hidden",
+                        "p-5 rounded-[24px] border transition-all group hover:shadow-xl relative overflow-hidden",
                         status === 'Out' ? "bg-red-50/40 border-red-100/80 hover:border-red-200" : 
                         status === 'Low' ? "bg-amber-50/40 border-amber-100/80 hover:border-amber-200" : 
                         "bg-emerald-50/20 border-emerald-100/60 hover:border-emerald-200"
@@ -623,17 +623,17 @@ const Inventory = () => {
                          "bg-emerald-500"
                        )} />
                        
-                       <div className="flex justify-between items-start mb-6 relative z-10">
+                       <div className="flex justify-between items-start mb-4 relative z-10">
                          <div className={cn(
-                           "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm",
+                           "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
                            status === 'Out' ? "bg-red-100 text-red-700" :
                            status === 'Low' ? "bg-amber-100 text-amber-700" :
                            "bg-emerald-100 text-emerald-700"
                          )}>
-                           <Package size={24} />
+                           <Package size={20} />
                          </div>
                          <div className={cn(
-                           "px-3 py-1 rounded-lg text-[9px] font-black uppercase shadow-sm", 
+                           "px-2.5 py-0.5 rounded-md text-[8px] font-black uppercase shadow-sm", 
                            status === 'Out' ? "bg-red-500 text-white" : 
                            status === 'Low' ? "bg-amber-500 text-white" : 
                            "bg-emerald-600 text-white"
@@ -642,10 +642,10 @@ const Inventory = () => {
                          </div>
                        </div>
 
-                       <h3 className="text-lg font-black text-[#1A1F3D] mb-1 line-clamp-1 relative z-10">{item.name}</h3>
+                       <h3 className="text-sm font-black text-[#1A1F3D] mb-0.5 line-clamp-1 relative z-10">{item.name}</h3>
                        
                        <p className={cn(
-                         "text-[10px] font-black uppercase tracking-widest mb-6 relative z-10",
+                         "text-[9px] font-black uppercase tracking-widest mb-4 relative z-10",
                          status === 'Out' ? "text-red-600/80" :
                          status === 'Low' ? "text-amber-700/80" :
                          "text-emerald-700/80"
@@ -653,11 +653,11 @@ const Inventory = () => {
                          {item.category}
                        </p>
 
-                       <div className="space-y-4 relative z-10">
+                       <div className="space-y-3 relative z-10">
                           <div className="flex justify-between items-end">
                             <div>
                               <p className={cn(
-                                "text-[10px] font-black uppercase mb-1 tracking-wider",
+                                "text-[9px] font-black uppercase mb-0.5 tracking-wider",
                                 status === 'Out' ? "text-red-900/50" :
                                 status === 'Low' ? "text-amber-900/50" :
                                 "text-emerald-900/50"
@@ -665,17 +665,17 @@ const Inventory = () => {
                                 Current Balance
                               </p>
                               <p className={cn(
-                                "text-2xl font-black",
+                                "text-xl font-black",
                                 status === 'Out' ? "text-red-950" :
                                 status === 'Low' ? "text-amber-950" :
                                 "text-emerald-950"
                               )}>
-                                {item.stock} <span className="text-xs opacity-60">{item.unit}</span>
+                                {item.stock} <span className="text-[10px] opacity-60">{item.unit}</span>
                               </p>
                             </div>
                             <div className="text-right">
                               <p className={cn(
-                                "text-[10px] font-black uppercase mb-1 tracking-wider",
+                                "text-[9px] font-black uppercase mb-0.5 tracking-wider",
                                 status === 'Out' ? "text-red-900/50" :
                                 status === 'Low' ? "text-amber-900/50" :
                                 "text-emerald-900/50"
@@ -683,7 +683,7 @@ const Inventory = () => {
                                 Min. Required
                               </p>
                               <p className={cn(
-                                "text-sm font-black",
+                                "text-xs font-black",
                                 status === 'Out' ? "text-red-900" :
                                 status === 'Low' ? "text-amber-900" :
                                 "text-emerald-900"
@@ -694,7 +694,7 @@ const Inventory = () => {
                           </div>
 
                           <div className={cn(
-                            "pt-4 border-t flex gap-2",
+                            "pt-3 border-t flex gap-2",
                             status === 'Out' ? "border-red-100" :
                             status === 'Low' ? "border-amber-100" :
                             "border-emerald-100"
@@ -702,13 +702,13 @@ const Inventory = () => {
                             <button 
                               onClick={() => handleQuickAdjust(item.id)} 
                               className={cn(
-                                "flex-1 font-black text-[10px] uppercase py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm",
+                                "flex-1 font-black text-[9px] uppercase py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm",
                                 status === 'Out' ? "bg-white hover:bg-red-500 hover:text-white text-red-600 border border-red-200" :
                                 status === 'Low' ? "bg-white hover:bg-amber-500 hover:text-white text-amber-600 border border-amber-200" :
                                 "bg-white hover:bg-emerald-600 hover:text-white text-emerald-600 border border-emerald-200"
                               )}
                             >
-                              <RotateCcw size={14} /> ปรับยอด
+                              <RotateCcw size={12} /> ปรับยอด
                             </button>
                           </div>
                        </div>
