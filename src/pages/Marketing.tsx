@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet, Crown, Gem, Percent, Save, Scissors, Package } from 'lucide-react';
+import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet, Crown, Gem, Percent, Save, Scissors, Package, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useStore, TierRule, Service, AddonItem } from '@/store/useStore';
@@ -97,6 +97,62 @@ const Marketing = () => {
     }
   });
 
+  // Fetch Membership Tiers directly from DB
+  const { data: dbTiers, isLoading: tiersLoading, refetch: refetchTiers } = useQuery({
+    queryKey: ['membership_tiers_marketing', storeId],
+    queryFn: async () => {
+      let query = supabase
+        .from('membership_tiers')
+        .select('*');
+      
+      if (storeId && storeId !== 'default-store') {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Sort by min_points ascending
+      return (data || []).sort((a, b) => a.min_points - b.min_points);
+    }
+  });
+
+  const [localDbTiers, setLocalDbTiers] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (dbTiers) {
+      setLocalDbTiers(dbTiers);
+    }
+  }, [dbTiers]);
+
+  // Mutation for saving membership tiers
+  const saveTiersMutation = useMutation({
+    mutationFn: async (updatedTiers: any[]) => {
+      for (const tier of updatedTiers) {
+        const { error } = await supabase
+          .from('membership_tiers')
+          .update({
+            name: tier.name,
+            min_points: Number(tier.min_points),
+            color_class: tier.color_class,
+            icon_name: tier.icon_name,
+            description: tier.description
+          })
+          .eq('id', tier.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['membership_tiers_marketing'] });
+      queryClient.invalidateQueries({ queryKey: ['membership_tiers'] });
+      toast.success(language === 'th' ? "บันทึกระดับสมาชิกเรียบร้อยแล้ว" : "Membership tiers saved successfully");
+      refetchTiers();
+    },
+    onError: (error: any) => {
+      toast.error(language === 'th' ? "เกิดข้อผิดพลาด: " + error.message : "Error: " + error.message);
+    }
+  });
+
   // Mutation for Toggle Switch
   const toggleMutation = useMutation({
     mutationFn: async ({ table, id, is_active }: { table: string, id: string, is_active: boolean }) => {
@@ -161,11 +217,6 @@ const Marketing = () => {
   const handleEditService = (s: Service) => {
     setSelectedService(s);
     setIsServiceModalOpen(true);
-  };
-
-  const handleSaveTiers = () => {
-    updateTierRules(localTierRules);
-    toast.success(language === 'th' ? "บันทึกเกณฑ์ระดับสมาชิกเรียบร้อย" : "Membership tiers updated successfully");
   };
 
   const handleSavePointsSettings = () => {
@@ -418,38 +469,162 @@ const Marketing = () => {
                     <p className="text-xs text-gray-400 font-medium">{t.membershipDesc}</p>
                   </div>
                   <button 
-                    onClick={handleSaveTiers} 
-                    className="bg-[#1A1F3D] text-white px-8 py-3 rounded-xl font-black text-xs flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-all"
+                    onClick={() => {
+                      // Sort by min_points before saving
+                      const sorted = [...localDbTiers].sort((a, b) => Number(a.min_points) - Number(b.min_points));
+                      saveTiersMutation.mutate(sorted);
+                    }} 
+                    disabled={saveTiersMutation.isPending}
+                    className="bg-[#1A1F3D] text-white px-8 py-3 rounded-xl font-black text-xs flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
                   >
-                    <Save size={16} /> {t.saveChanges}
+                    <Save size={16} /> {saveTiersMutation.isPending ? "Saving..." : t.saveChanges}
                   </button>
                </div>
-               <div className="space-y-6">
-                  {localTierRules.map((rule, idx) => (
-                    <div key={rule.level} className="flex flex-col lg:flex-row items-center gap-8 p-8 bg-[#F5F6FA] rounded-[40px] relative overflow-hidden transition-all hover:shadow-md border border-transparent hover:border-gray-200">
-                       <div className="w-16 h-16 bg-white rounded-[24px] flex items-center justify-center shadow-sm shrink-0">
-                          {rule.level === 'VIP' ? <Gem className="text-purple-500" size={32} /> : rule.level === 'Gold' ? <Crown className="text-amber-500" size={32} /> : rule.level === 'Silver' ? <Star className="text-blue-500" size={32} /> : <Award className="text-gray-400" size={32} />}
-                       </div>
-                       <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-                          <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Label</label>
-                             <input className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" value={rule.label} onChange={e => { const r = [...localTierRules]; r[idx].label = e.target.value; setLocalTierRules(r); }} />
-                          </div>
-                          <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Min. Spent ({currency})</label>
-                             <input type="number" className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" value={rule.minSpent} onChange={e => { const r = [...localTierRules]; r[idx].minSpent = Number(e.target.value); setLocalTierRules(r); }} />
-                          </div>
-                          <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Discount (%)</label>
-                             <div className="relative">
-                                <Percent className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-                                <input type="number" className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" value={rule.discount} onChange={e => { const r = [...localTierRules]; r[idx].discount = Number(e.target.value); setLocalTierRules(r); }} />
+
+               {tiersLoading ? (
+                 <div className="py-20 flex flex-col items-center justify-center gap-4">
+                   <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Loading Tiers...</p>
+                 </div>
+               ) : (
+                 <div className="space-y-6">
+                    {localDbTiers.map((tier, idx) => {
+                      const IconComponent = (() => {
+                        switch (tier.icon_name) {
+                          case 'Crown': return Crown;
+                          case 'Gem': return Gem;
+                          case 'Star': return Star;
+                          case 'Award': return Award;
+                          case 'Heart': return Heart;
+                          case 'Zap': return Zap;
+                          default: return Award;
+                        }
+                      })();
+
+                      return (
+                        <div key={tier.id} className="flex flex-col lg:flex-row items-start lg:items-center gap-8 p-8 bg-[#F5F6FA] rounded-[40px] relative overflow-hidden transition-all hover:shadow-md border border-transparent hover:border-gray-200">
+                           {/* Left: Icon & Color Preview */}
+                           <div className={cn("w-16 h-16 rounded-[24px] flex items-center justify-center shadow-sm shrink-0", tier.color_class)}>
+                              <IconComponent size={32} />
+                           </div>
+
+                           {/* Middle: Inputs */}
+                           <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Tier Name</label>
+                                 <input 
+                                   className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" 
+                                   value={tier.name} 
+                                   onChange={e => {
+                                     const updated = [...localDbTiers];
+                                     updated[idx].name = e.target.value;
+                                     setLocalDbTiers(updated);
+                                   }} 
+                                 />
+                              </div>
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Min. Spent ({currency})</label>
+                                 <input 
+                                   type="number" 
+                                   className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" 
+                                   value={tier.min_points} 
+                                   onChange={e => {
+                                     const updated = [...localDbTiers];
+                                     updated[idx].min_points = Number(e.target.value);
+                                     setLocalDbTiers(updated);
+                                   }} 
+                                 />
+                              </div>
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Description</label>
+                                 <input 
+                                   className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" 
+                                   value={tier.description || ''} 
+                                   onChange={e => {
+                                     const updated = [...localDbTiers];
+                                     updated[idx].description = e.target.value;
+                                     setLocalDbTiers(updated);
+                                   }} 
+                                   placeholder="e.g. 10% discount on all services"
+                                 />
+                              </div>
+                           </div>
+
+                           {/* Right: Color & Icon Selectors */}
+                           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto shrink-0">
+                             {/* Icon Selector */}
+                             <div className="space-y-1.5">
+                               <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block px-1">Icon</span>
+                               <div className="flex gap-1 bg-white p-1 rounded-xl shadow-sm">
+                                 {['Crown', 'Gem', 'Star', 'Award', 'Heart', 'Zap'].map(iconName => {
+                                   const IconBtn = (() => {
+                                     switch (iconName) {
+                                       case 'Crown': return Crown;
+                                       case 'Gem': return Gem;
+                                       case 'Star': return Star;
+                                       case 'Award': return Award;
+                                       case 'Heart': return Heart;
+                                       case 'Zap': return Zap;
+                                       default: return Award;
+                                     }
+                                   })();
+                                   return (
+                                     <button
+                                       key={iconName}
+                                       type="button"
+                                       onClick={() => {
+                                         const updated = [...localDbTiers];
+                                         updated[idx].icon_name = iconName;
+                                         setLocalDbTiers(updated);
+                                       }}
+                                       className={cn(
+                                         "p-1.5 rounded-lg transition-all",
+                                         tier.icon_name === iconName ? "bg-[#1A1F3D] text-white" : "text-gray-400 hover:bg-gray-50"
+                                       )}
+                                     >
+                                       <IconBtn size={14} />
+                                     </button>
+                                   );
+                                 })}
+                               </div>
                              </div>
-                          </div>
-                       </div>
-                    </div>
-                  ))}
-               </div>
+
+                             {/* Color Selector */}
+                             <div className="space-y-1.5">
+                               <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block px-1">Color Theme</span>
+                               <div className="flex gap-1 bg-white p-1 rounded-xl shadow-sm">
+                                 {[
+                                   { class: 'bg-gray-100 text-gray-600', label: 'Gray' },
+                                   { class: 'bg-blue-100 text-blue-700', label: 'Blue' },
+                                   { class: 'bg-amber-100 text-amber-700', label: 'Gold' },
+                                   { class: 'bg-purple-100 text-purple-700', label: 'Purple' },
+                                   { class: 'bg-indigo-100 text-indigo-700', label: 'Indigo' },
+                                   { class: 'bg-rose-100 text-rose-700', label: 'Rose' }
+                                 ].map(colorOpt => (
+                                   <button
+                                     key={colorOpt.class}
+                                     type="button"
+                                     onClick={() => {
+                                       const updated = [...localDbTiers];
+                                       updated[idx].color_class = colorOpt.class;
+                                       setLocalDbTiers(updated);
+                                     }}
+                                     className={cn(
+                                       "w-5 h-5 rounded-full border transition-all",
+                                       colorOpt.class.split(' ')[0],
+                                       tier.color_class === colorOpt.class ? "border-[#1A1F3D] scale-110 ring-2 ring-offset-1 ring-[#1A1F3D]/20" : "border-transparent"
+                                     )}
+                                     title={colorOpt.label}
+                                   />
+                                 ))}
+                               </div>
+                             </div>
+                           </div>
+                        </div>
+                      );
+                    })}
+                 </div>
+               )}
             </div>
           </TabsContent>
 
