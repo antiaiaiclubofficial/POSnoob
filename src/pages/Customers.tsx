@@ -295,7 +295,10 @@ const Customers = () => {
                   {selectedCustomer.membership} MEMBER
                 </span>
                 <p className="text-[10px] text-gray-400 font-black uppercase mb-1">Credit Balance</p>
-                <p className="text-2xl font-black text-[#1A1F3D]">{currency}{selectedCustomer.creditBalance.toLocaleString()}</p>
+                <p className="text-2xl font-black text-[#1A1F3D] mb-3">{currency}{selectedCustomer.creditBalance.toLocaleString()}</p>
+                
+                <p className="text-[10px] text-gray-400 font-black uppercase mb-1">Point Balance</p>
+                <p className="text-2xl font-black text-indigo-600">{(selectedCustomer.points || 0).toLocaleString()} <span className="text-xs text-gray-400 font-bold">PTS</span></p>
               </div>
             </div>
 
