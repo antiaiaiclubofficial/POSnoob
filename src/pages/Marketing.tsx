@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet, Crown, Gem, Percent, Save, Scissors, Package, ShieldCheck } from 'lucide-react';
+import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet, Crown, Gem, Percent, Save, Scissors, Package, ShieldCheck, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useStore, TierRule, Service, AddonItem } from '@/store/useStore';
@@ -16,6 +16,7 @@ import CreditPackageModal from '@/components/CreditPackageModal';
 import ServiceModal from '@/components/ServiceModal';
 import PackageModal from '@/components/PackageModal';
 import AddonSettingsModal from '@/components/AddonSettingsModal';
+import TierEditModal from '@/components/TierEditModal';
 
 const Marketing = () => {
   const queryClient = useQueryClient();
@@ -36,10 +37,12 @@ const Marketing = () => {
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isAddonModalOpen, setIsAddonModalOpen] = useState(false);
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+  const [isTierEditModalOpen, setIsTierEditModalOpen] = useState(false);
   
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedAddon, setSelectedAddon] = useState<AddonItem | null>(null);
+  const [selectedTierForEdit, setSelectedTierForEdit] = useState<any>(null);
 
   // Local state for editing tier rules
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
@@ -136,7 +139,8 @@ const Marketing = () => {
             min_points: Number(tier.min_points),
             color_class: tier.color_class,
             icon_name: tier.icon_name,
-            description: tier.description
+            description: tier.description,
+            benefits: tier.benefits // บันทึกสิทธิประโยชน์ลงฟิลด์ JSONB
           })
           .eq('id', tier.id);
         if (error) throw error;
@@ -238,6 +242,22 @@ const Marketing = () => {
       s.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [services, speciesTab, coatFilter, searchQuery]);
+
+  const handleOpenTierEditModal = (tier: any, index: number) => {
+    setSelectedTierForEdit({ ...tier, index });
+    setIsTierEditModalOpen(true);
+  };
+
+  const handleSaveTierText = (description: string, benefits: string[]) => {
+    if (selectedTierForEdit === null) return;
+    const updated = [...localDbTiers];
+    updated[selectedTierForEdit.index] = {
+      ...updated[selectedTierForEdit.index],
+      description,
+      benefits
+    };
+    setLocalDbTiers(updated);
+  };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
@@ -536,17 +556,17 @@ const Marketing = () => {
                                  />
                               </div>
                               <div className="space-y-2">
-                                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Description</label>
-                                 <input 
-                                   className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm" 
-                                   value={tier.description || ''} 
-                                   onChange={e => {
-                                     const updated = [...localDbTiers];
-                                     updated[idx].description = e.target.value;
-                                     setLocalDbTiers(updated);
-                                   }} 
-                                   placeholder="e.g. 10% discount on all services"
-                                 />
+                                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Description & Benefits</label>
+                                 <button
+                                   type="button"
+                                   onClick={() => handleOpenTierEditModal(tier, idx)}
+                                   className="w-full bg-white border-none rounded-2xl px-5 py-3 text-sm font-bold shadow-sm text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                                 >
+                                   <span className="truncate text-gray-700">
+                                     {tier.description || "คลิกเพื่อแก้ไขคำอธิบายและสิทธิประโยชน์..."}
+                                   </span>
+                                   <Edit3 size={14} className="text-gray-400 shrink-0 ml-2" />
+                                 </button>
                               </div>
                            </div>
 
@@ -819,6 +839,17 @@ const Marketing = () => {
       {isServiceModalOpen && <ServiceModal service={selectedService} defaultSpecies={speciesTab} onClose={() => setIsServiceModalOpen(false)} />}
       {isAddonModalOpen && <AddonSettingsModal addon={selectedAddon} onClose={() => setIsAddonModalOpen(false)} />}
       {isPackageModalOpen && <PackageModal onClose={() => setIsPackageModalOpen(false)} />}
+      
+      {isTierEditModalOpen && selectedTierForEdit && (
+        <TierEditModal 
+          tier={selectedTierForEdit} 
+          onClose={() => {
+            setIsTierEditModalOpen(false);
+            setSelectedTierForEdit(null);
+          }} 
+          onSave={handleSaveTierText}
+        />
+      )}
     </div>
   );
 };
