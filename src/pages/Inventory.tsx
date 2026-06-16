@@ -600,27 +600,117 @@ const Inventory = () => {
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="flex-1 w-full relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold shadow-inner" placeholder="ค้นหาสินค้าเพื่อเช็คสต็อก..." value={checkSearch} onChange={e => setCheckSearch(e.target.value)} /></div>
-                <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1 shrink-0">{(['All', 'Low', 'Out'] as const).map(status => (<button key={status} onClick={() => setCheckStatusFilter(status)} className={cn("px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all", checkStatusFilter === status ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{status === 'All' ? 'ทั้งหมด' : status === 'Low' ? 'สต็อกต่ำ' : 'สินค้าหมด'}</button>))}</div>
+                <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1 shrink-0">{(['All', 'Low', 'Out'] as const).map(status => (<button key={status} onClick={() => setCheckStatusFilter(status)} className={cn("px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", checkStatusFilter === status ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{status === 'All' ? 'ทั้งหมด' : status === 'Low' ? 'สต็อกต่ำ' : 'สินค้าหมด'}</button>))}</div>
              </div>
              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredCheckItems.map(item => {
                   const status = item.stock === 0 ? 'Out' : item.stock <= item.minStock ? 'Low' : 'OK';
                   return (
-                    <div key={item.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all relative overflow-hidden">
-                       {/* Gradient Status Bar - ปรับให้เข้มขึ้นที่ด้านล่าง */}
+                    <div 
+                      key={item.id} 
+                      className={cn(
+                        "p-8 rounded-[40px] border transition-all group hover:shadow-xl relative overflow-hidden",
+                        status === 'Out' ? "bg-red-50/40 border-red-100/80 hover:border-red-200" : 
+                        status === 'Low' ? "bg-amber-50/40 border-amber-100/80 hover:border-amber-200" : 
+                        "bg-emerald-50/20 border-emerald-100/60 hover:border-emerald-200"
+                      )}
+                    >
+                       {/* Top Accent Line */}
                        <div className={cn(
-                         "absolute bottom-0 left-0 w-full h-full opacity-20",
-                         status === 'Out' ? "bg-gradient-to-t from-red-700 via-red-500 to-transparent" : 
-                         status === 'Low' ? "bg-gradient-to-t from-orange-700 via-orange-500 to-transparent" : 
-                         "bg-gradient-to-t from-green-700 via-green-500 to-transparent"
+                         "absolute top-0 left-0 right-0 h-1.5",
+                         status === 'Out' ? "bg-red-500" : 
+                         status === 'Low' ? "bg-amber-500" : 
+                         "bg-emerald-500"
                        )} />
                        
-                       <div className="flex justify-between items-start mb-6 relative z-10"><div className="w-12 h-12 bg-[#F5F6FA] rounded-2xl flex items-center justify-center text-[#1A1F3D]"><Package size={24} /></div><div className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase shadow-sm", status === 'Out' ? "bg-red-50 text-red-600" : status === 'Low' ? "bg-orange-50 text-orange-600" : "bg-green-50 text-green-600")}>{status === 'Out' ? 'Out of Stock' : status === 'Low' ? 'Low Stock' : 'Optimal'}</div></div>
+                       <div className="flex justify-between items-start mb-6 relative z-10">
+                         <div className={cn(
+                           "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm",
+                           status === 'Out' ? "bg-red-100 text-red-700" :
+                           status === 'Low' ? "bg-amber-100 text-amber-700" :
+                           "bg-emerald-100 text-emerald-700"
+                         )}>
+                           <Package size={24} />
+                         </div>
+                         <div className={cn(
+                           "px-3 py-1 rounded-lg text-[9px] font-black uppercase shadow-sm", 
+                           status === 'Out' ? "bg-red-500 text-white" : 
+                           status === 'Low' ? "bg-amber-500 text-white" : 
+                           "bg-emerald-600 text-white"
+                         )}>
+                           {status === 'Out' ? 'Out of Stock' : status === 'Low' ? 'Low Stock' : 'Optimal'}
+                         </div>
+                       </div>
+
                        <h3 className="text-lg font-black text-[#1A1F3D] mb-1 line-clamp-1 relative z-10">{item.name}</h3>
-                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6 relative z-10">{item.category}</p>
+                       
+                       <p className={cn(
+                         "text-[10px] font-black uppercase tracking-widest mb-6 relative z-10",
+                         status === 'Out' ? "text-red-600/80" :
+                         status === 'Low' ? "text-amber-700/80" :
+                         "text-emerald-700/80"
+                       )}>
+                         {item.category}
+                       </p>
+
                        <div className="space-y-4 relative z-10">
-                          <div className="flex justify-between items-end"><div><p className="text-[9px] font-black text-gray-300 uppercase mb-1">Current Balance</p><p className="text-2xl font-black text-[#1A1F3D]">{item.stock} <span className="text-xs text-gray-400">{item.unit}</span></p></div><div className="text-right"><p className="text-[9px] font-black text-gray-300 uppercase mb-1">Min. Required</p><p className="text-sm font-bold text-gray-400">{item.minStock}</p></div></div>
-                          <div className="pt-4 border-t border-gray-50 flex gap-2"><button onClick={() => handleQuickAdjust(item.id)} className="flex-1 bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black text-[10px] uppercase py-3 rounded-xl transition-all flex items-center justify-center gap-2"><RotateCcw size={14} /> ปรับยอด</button></div>
+                          <div className="flex justify-between items-end">
+                            <div>
+                              <p className={cn(
+                                "text-[10px] font-black uppercase mb-1 tracking-wider",
+                                status === 'Out' ? "text-red-900/50" :
+                                status === 'Low' ? "text-amber-900/50" :
+                                "text-emerald-900/50"
+                              )}>
+                                Current Balance
+                              </p>
+                              <p className={cn(
+                                "text-2xl font-black",
+                                status === 'Out' ? "text-red-950" :
+                                status === 'Low' ? "text-amber-950" :
+                                "text-emerald-950"
+                              )}>
+                                {item.stock} <span className="text-xs opacity-60">{item.unit}</span>
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className={cn(
+                                "text-[10px] font-black uppercase mb-1 tracking-wider",
+                                status === 'Out' ? "text-red-900/50" :
+                                status === 'Low' ? "text-amber-900/50" :
+                                "text-emerald-900/50"
+                              )}>
+                                Min. Required
+                              </p>
+                              <p className={cn(
+                                "text-sm font-black",
+                                status === 'Out' ? "text-red-900" :
+                                status === 'Low' ? "text-amber-900" :
+                                "text-emerald-900"
+                              )}>
+                                {item.minStock}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className={cn(
+                            "pt-4 border-t flex gap-2",
+                            status === 'Out' ? "border-red-100" :
+                            status === 'Low' ? "border-amber-100" :
+                            "border-emerald-100"
+                          )}>
+                            <button 
+                              onClick={() => handleQuickAdjust(item.id)} 
+                              className={cn(
+                                "flex-1 font-black text-[10px] uppercase py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm",
+                                status === 'Out' ? "bg-white hover:bg-red-500 hover:text-white text-red-600 border border-red-200" :
+                                status === 'Low' ? "bg-white hover:bg-amber-500 hover:text-white text-amber-600 border border-amber-200" :
+                                "bg-white hover:bg-emerald-600 hover:text-white text-emerald-600 border border-emerald-200"
+                              )}
+                            >
+                              <RotateCcw size={14} /> ปรับยอด
+                            </button>
+                          </div>
                        </div>
                     </div>
                   );
