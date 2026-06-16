@@ -257,7 +257,7 @@ const Customers = () => {
               </button>
             )}
 
-            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 mb-8 flex flex-col sm:flex-row justify-between items-start gap-6 group">
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 mb-8 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 group">
               <div className="flex gap-6">
                 {selectedCustomer.avatarUrl ? (
                   <img src={selectedCustomer.avatarUrl} alt={selectedCustomer.name} className="w-20 h-20 rounded-[28px] object-cover shrink-0 shadow-lg" />
@@ -290,15 +290,24 @@ const Customers = () => {
                   )}
                 </div>
               </div>
-              <div className="text-left sm:text-right bg-[#F5F6FA] p-6 rounded-[32px] min-w-[160px]">
-                <span className="bg-[#1A1F3D] text-[#D9ED5F] px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest inline-block mb-3">
-                  {selectedCustomer.membership} MEMBER
-                </span>
-                <p className="text-[10px] text-gray-400 font-black uppercase mb-1">Credit Balance</p>
-                <p className="text-2xl font-black text-[#1A1F3D] mb-3">{currency}{selectedCustomer.creditBalance.toLocaleString()}</p>
-                
-                <p className="text-[10px] text-gray-400 font-black uppercase mb-1">Point Balance</p>
-                <p className="text-2xl font-black text-indigo-600">{(selectedCustomer.points || 0).toLocaleString()} <span className="text-xs text-gray-400 font-bold">PTS</span></p>
+              
+              {/* Horizontal Layout for Membership, Credit, and Points */}
+              <div className="flex flex-wrap items-center gap-6 bg-[#F5F6FA] p-6 rounded-[32px] w-full xl:w-auto">
+                <div className="text-center sm:text-left">
+                  <span className="bg-[#1A1F3D] text-[#D9ED5F] px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-block">
+                    {selectedCustomer.membership} MEMBER
+                  </span>
+                </div>
+                <div className="h-8 w-px bg-gray-200 hidden sm:block" />
+                <div>
+                  <p className="text-[10px] text-gray-400 font-black uppercase mb-0.5">Credit Balance</p>
+                  <p className="text-xl font-black text-[#1A1F3D]">{currency}{selectedCustomer.creditBalance.toLocaleString()}</p>
+                </div>
+                <div className="h-8 w-px bg-gray-200 hidden sm:block" />
+                <div>
+                  <p className="text-[10px] text-gray-400 font-black uppercase mb-0.5">Point Balance</p>
+                  <p className="text-xl font-black text-indigo-600">{(selectedCustomer.points || 0).toLocaleString()} <span className="text-xs text-gray-400 font-bold">PTS</span></p>
+                </div>
               </div>
             </div>
 
