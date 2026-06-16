@@ -17,6 +17,7 @@ import InventoryModal from '@/components/InventoryModal';
 import VendorModal from '@/components/VendorModal';
 import VendorInventoryView from '@/components/VendorInventoryView';
 import InventoryReportLivePreview from '@/components/InventoryReportLivePreview';
+import QuickAdjustModal from '@/components/QuickAdjustModal';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 
 type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashboard';
@@ -52,6 +53,9 @@ const Inventory = () => {
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
   const [selectedVendorForView, setSelectedVendorForView] = useState<Partner | null>(null);
+  
+  // Quick Adjust Modal State
+  const [quickAdjustItem, setQuickAdjustItem] = useState<InventoryItem | null>(null);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -373,9 +377,15 @@ const Inventory = () => {
   };
 
   const handleQuickAdjust = (id: string) => {
-    const newQty = prompt("ระบุจำนวนสต็อกที่ถูกต้อง:");
-    if (newQty !== null && !isNaN(Number(newQty))) {
-      adjustStock(id, Number(newQty), 'Set', 'Physical Audit');
+    const item = inventory.find(i => i.id === id);
+    if (item) {
+      setQuickAdjustItem(item);
+    }
+  };
+
+  const handleSaveQuickAdjust = (qty: number, reason: string) => {
+    if (quickAdjustItem) {
+      adjustStock(quickAdjustItem.id, qty, 'Set', reason);
       toast.success("อัปเดตสต็อกเรียบร้อย");
     }
   };
@@ -874,6 +884,15 @@ const Inventory = () => {
       {isItemModalOpen && <InventoryModal item={editingItem} onClose={() => setIsItemModalOpen(false)} />}
       {isVendorModalOpen && <VendorModal partner={editingPartner} onClose={() => setIsVendorModalOpen(false)} />}
       {selectedVendorForView && <VendorInventoryView vendor={selectedVendorForView} onClose={() => setSelectedVendorForView(null)} />}
+      
+      {/* Quick Adjust Modal */}
+      {quickAdjustItem && (
+        <QuickAdjustModal 
+          item={quickAdjustItem} 
+          onClose={() => setQuickAdjustItem(null)} 
+          onSave={handleSaveQuickAdjust} 
+        />
+      )}
     </div>
   );
 };
