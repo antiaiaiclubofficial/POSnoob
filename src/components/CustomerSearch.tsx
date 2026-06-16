@@ -16,6 +16,16 @@ const CustomerSearch = () => {
     c.pets.some(p => p.name.toLowerCase().includes(query.toLowerCase()))
   );
 
+  const getTierColorClass = (tier: string) => {
+    switch (tier?.toLowerCase()) {
+      case 'vip': return 'bg-purple-100 text-purple-700';
+      case 'platinum': return 'bg-indigo-100 text-indigo-700';
+      case 'gold': return 'bg-amber-100 text-amber-700';
+      case 'silver': return 'bg-blue-100 text-blue-700';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+
   return (
     <div className="relative flex-1">
       <div className="relative">
@@ -57,7 +67,7 @@ const CustomerSearch = () => {
                       <p className="font-bold text-[#1A1F3D]">{customer.name}</p>
                       <span className={cn(
                         "text-[9px] font-bold px-2 py-0.5 rounded-full uppercase",
-                        customer.membership === 'Gold' ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-500"
+                        getTierColorClass(customer.membership)
                       )}>
                         {customer.membership}
                       </span>

@@ -494,7 +494,7 @@ const App = () => {
             id: t.id,
             date: t.created_at.split('T')[0],
             amount: Number(t.amount),
-            discount_amount: Number(t.discount_amount),
+            discountAmount: Number(t.discount_amount),
             customerId: t.customer_id || 'walk-in',
             customerName: t.customer_name,
             items: t.items,

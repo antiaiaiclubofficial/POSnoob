@@ -171,6 +171,16 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
     toast.info("Discount removed");
   };
 
+  const getTierColorClass = (tier: string) => {
+    switch (tier?.toLowerCase()) {
+      case 'vip': return 'bg-purple-100 text-purple-700';
+      case 'platinum': return 'bg-indigo-100 text-indigo-700';
+      case 'gold': return 'bg-amber-100 text-amber-700';
+      case 'silver': return 'bg-blue-100 text-blue-700';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+
   return (
     <div className={cn(
       "bg-white h-full flex flex-col shrink-0",
@@ -181,7 +191,10 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
           <h2 className="text-2xl font-bold text-[#1A1F3D]">{t.orderSummary}</h2>
           {selectedOwner && (
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[8px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
+              <span className={cn(
+                "text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter",
+                getTierColorClass(selectedOwner.membership)
+              )}>
                 {selectedOwner.membership} MEMBER
               </span>
               <span className="text-[8px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">

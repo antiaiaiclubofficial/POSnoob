@@ -378,6 +378,16 @@ const Dashboard = () => {
 
   const hasAlerts = lowStockItems.length > 0 || specialCarePets.length > 0;
 
+  const getTierColorClass = (tier: string) => {
+    switch (tier?.toLowerCase()) {
+      case 'vip': return 'bg-purple-100 text-purple-700';
+      case 'platinum': return 'bg-indigo-100 text-indigo-700';
+      case 'gold': return 'bg-amber-100 text-amber-700';
+      case 'silver': return 'bg-blue-100 text-blue-700';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
       {/* Header Section */}
@@ -628,7 +638,10 @@ const Dashboard = () => {
                       </div>
                       <div>
                         <p className="text-sm font-black text-[#1A1F3D]">{customer.name}</p>
-                        <span className="text-[8px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-black uppercase tracking-wider">
+                        <span className={cn(
+                          "text-[8px] px-2 py-0.5 rounded-md font-black uppercase tracking-wider",
+                          getTierColorClass(customer.membership)
+                        )}>
                           {customer.membership}
                         </span>
                       </div>
@@ -669,7 +682,10 @@ const Dashboard = () => {
                       </div>
                       <div>
                         <p className="text-sm font-black text-[#1A1F3D]">{customer.name}</p>
-                        <span className="text-[8px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-black uppercase tracking-wider">
+                        <span className={cn(
+                          "text-[8px] px-2 py-0.5 rounded-md font-black uppercase tracking-wider",
+                          getTierColorClass(customer.membership)
+                        )}>
                           {customer.membership}
                         </span>
                       </div>
