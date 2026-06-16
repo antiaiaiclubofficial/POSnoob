@@ -328,7 +328,7 @@ export interface AppState {
   updateCartQuantity: (index: number, delta: number) => void;
   updateCartItemDiscount: (index: number, discountType: 'percent' | 'amount' | null, discountValue: number) => void;
   clearCart: () => void;
-  processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean) => void;
+  processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean, redeemedPoints?: number) => void;
   deleteTransaction: (id: string) => void;
 
   setServices: (services: Service[]) => void;
