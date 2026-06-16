@@ -607,12 +607,12 @@ const Inventory = () => {
                   const status = item.stock === 0 ? 'Out' : item.stock <= item.minStock ? 'Low' : 'OK';
                   return (
                     <div key={item.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all relative overflow-hidden">
-                       {/* Gradient Status Bar */}
+                       {/* Gradient Status Bar - ปรับให้เข้มขึ้นที่ด้านล่าง */}
                        <div className={cn(
-                         "absolute bottom-0 left-0 w-full h-full opacity-10",
-                         status === 'Out' ? "bg-gradient-to-t from-red-600 to-transparent" : 
-                         status === 'Low' ? "bg-gradient-to-t from-orange-500 to-transparent" : 
-                         "bg-gradient-to-t from-green-500 to-transparent"
+                         "absolute bottom-0 left-0 w-full h-full opacity-20",
+                         status === 'Out' ? "bg-gradient-to-t from-red-700 via-red-500 to-transparent" : 
+                         status === 'Low' ? "bg-gradient-to-t from-orange-700 via-orange-500 to-transparent" : 
+                         "bg-gradient-to-t from-green-700 via-green-500 to-transparent"
                        )} />
                        
                        <div className="flex justify-between items-start mb-6 relative z-10"><div className="w-12 h-12 bg-[#F5F6FA] rounded-2xl flex items-center justify-center text-[#1A1F3D]"><Package size={24} /></div><div className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase shadow-sm", status === 'Out' ? "bg-red-50 text-red-600" : status === 'Low' ? "bg-orange-50 text-orange-600" : "bg-green-50 text-green-600")}>{status === 'Out' ? 'Out of Stock' : status === 'Low' ? 'Low Stock' : 'Optimal'}</div></div>
