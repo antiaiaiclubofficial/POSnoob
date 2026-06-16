@@ -172,6 +172,19 @@ const Customers = () => {
     if (isMobile) setShowDetailOnMobile(true);
   };
 
+  const getTierColorClass = (tier: MembershipLevel) => {
+    switch (tier) {
+      case 'VIP':
+        return 'bg-purple-100 text-purple-700';
+      case 'Gold':
+        return 'bg-amber-100 text-amber-700';
+      case 'Silver':
+        return 'bg-blue-100 text-blue-700';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
+
   if (isLoading && customers.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#F8F9FD]">
@@ -257,7 +270,7 @@ const Customers = () => {
               </button>
             )}
 
-            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 mb-8 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 group">
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 mb-8 flex flex-col sm:flex-row justify-between items-start gap-6 group">
               <div className="flex gap-6">
                 {selectedCustomer.avatarUrl ? (
                   <img src={selectedCustomer.avatarUrl} alt={selectedCustomer.name} className="w-20 h-20 rounded-[28px] object-cover shrink-0 shadow-lg" />
@@ -294,7 +307,10 @@ const Customers = () => {
               {/* Horizontal Layout for Membership, Credit, and Points */}
               <div className="flex flex-wrap items-center gap-6 bg-[#F5F6FA] p-6 rounded-[32px] w-full xl:w-auto">
                 <div className="text-center sm:text-left">
-                  <span className="bg-[#1A1F3D] text-[#D9ED5F] px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-block">
+                  <span className={cn(
+                    "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-block",
+                    getTierColorClass(selectedCustomer.membership)
+                  )}>
                     {selectedCustomer.membership} MEMBER
                   </span>
                 </div>
