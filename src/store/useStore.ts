@@ -53,7 +53,7 @@ const DEFAULT_MOCK_CUSTOMERS: Customer[] = [
           { date: '2024-05-20', value: 30.1 }
         ],
         serviceHistory: [
-          { id: 'sh-1', serviceName: 'อาบน้ำตัดขนสุนัขใหญ่', date: '2024-05-20', price: 1200 }
+          { id: 'sh-1', serviceName: 'อาบน้ำตัดขนสุนัsขใหญ่', date: '2024-05-20', price: 1200 }
         ],
         notes: 'แพ้แชมพูสูตรเย็น, กลัวเสียงไดร์เป่าผมแรงๆ',
         image: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=400&h=400&fit=crop',
@@ -492,9 +492,36 @@ export const useStore = create<AppState>()((set, get) => ({
   addLog: (log) => set(s => ({ 
     logs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() } as ActivityLog, ...s.logs] 
   })),
-  addReportLog: (log) => set(s => ({
-    reportHistory: [{ ...log, id: `REP-${Math.random().toString(36).substr(2, 5).toUpperCase()}`, timestamp: new Date().toISOString() }, ...s.reportHistory]
-  })),
+  addReportLog: async (log) => {
+    const currentStoreId = get().storeId;
+    const { data, error } = await supabase
+      .from('report_history')
+      .insert([{
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+        report_name: log.reportName,
+        filters: log.filters,
+        staff_name: log.staffName
+      }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      const newLog: ReportHistory = {
+        id: data.id,
+        reportName: data.report_name,
+        filters: data.filters || '',
+        staffName: data.staff_name,
+        timestamp: data.created_at
+      };
+      set(s => ({ reportHistory: [newLog, ...s.reportHistory] }));
+    } else {
+      console.error("Error adding report log to Supabase:", error);
+      // Fallback to local state if Supabase fails
+      set(s => ({
+        reportHistory: [{ ...log, id: `REP-${Math.random().toString(36).substr(2, 5).toUpperCase()}`, timestamp: new Date().toISOString() }, ...s.reportHistory]
+      }));
+    }
+  },
 
   updateBusinessProfile: async (profile) => {
     set(s => ({ ...s, ...profile }));
@@ -564,7 +591,7 @@ export const useStore = create<AppState>()((set, get) => ({
     try {
       for (const rule of rules) {
         await supabase
-          .from('tier_rules')
+          .from('membership_tiers')
           .upsert({
             level: rule.level,
             label: rule.label,

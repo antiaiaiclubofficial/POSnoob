@@ -578,6 +578,32 @@ const App = () => {
       } catch (e) {
         console.warn("Failed to fetch membership tiers:", e);
       }
+
+      // 10. Fetch Report History
+      try {
+        let reportHistoryQuery = supabase.from('report_history').select('*').order('created_at', { ascending: false });
+        if (storeId && storeId !== 'default-store') {
+          reportHistoryQuery = reportHistoryQuery.eq('store_id', storeId);
+        }
+        const { data: reportData, error: reportError } = await reportHistoryQuery;
+
+        if (reportError) throw reportError;
+
+        if (reportData) {
+          const formattedReports = reportData.map(r => ({
+            id: r.id,
+            reportName: r.report_name,
+            filters: r.filters || '',
+            staffName: r.staff_name || 'System',
+            timestamp: r.created_at
+          }));
+          useStore.setState({ reportHistory: formattedReports });
+        } else {
+          useStore.setState({ reportHistory: [] });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch report history from Supabase:", err);
+      }
     };
 
     if (isAuthenticated) {
