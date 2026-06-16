@@ -31,6 +31,18 @@ const Customers = () => {
   const [isLineModalOpen, setIsLineModalOpen] = useState(false);
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
 
+  // ดึงข้อมูลระดับสมาชิกจากฐานข้อมูลโดยตรงเพื่อนำสีมาใช้
+  const { data: membershipTiers } = useQuery({
+    queryKey: ['membership_tiers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('membership_tiers')
+        .select('tier_key, name, color_class');
+      if (error) return [];
+      return data;
+    }
+  });
+
   const { isLoading, refetch } = useQuery({
     queryKey: ['customers-list', storeId],
     queryFn: async () => {
@@ -172,17 +184,21 @@ const Customers = () => {
     if (isMobile) setShowDetailOnMobile(true);
   };
 
-  const getTierColorClass = (tier: MembershipLevel) => {
-    switch (tier) {
-      case 'VIP':
-        return 'bg-purple-100 text-purple-700';
-      case 'Gold':
-        return 'bg-amber-100 text-amber-700';
-      case 'Silver':
-        return 'bg-blue-100 text-blue-700';
-      default:
-        return 'bg-gray-100 text-gray-600';
+  const getTierColorClass = (tier: string) => {
+    if (!membershipTiers || membershipTiers.length === 0) {
+      // Fallback สีมาตรฐานหากยังโหลดข้อมูลไม่เสร็จ
+      switch (tier.toLowerCase()) {
+        case 'vip': return 'bg-purple-100 text-purple-700';
+        case 'platinum': return 'bg-indigo-100 text-indigo-700';
+        case 'gold': return 'bg-amber-100 text-amber-700';
+        case 'silver': return 'bg-blue-100 text-blue-700';
+        default: return 'bg-gray-100 text-gray-600';
+      }
     }
+    const found = membershipTiers.find(
+      t => t.tier_key.toLowerCase() === tier.toLowerCase() || t.name.toLowerCase() === tier.toLowerCase()
+    );
+    return found?.color_class || 'bg-gray-100 text-gray-600';
   };
 
   if (isLoading && customers.length === 0) {

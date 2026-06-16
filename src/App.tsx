@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -492,7 +494,7 @@ const App = () => {
             id: t.id,
             date: t.created_at.split('T')[0],
             amount: Number(t.amount),
-            discountAmount: Number(t.discount_amount),
+            discount_amount: Number(t.discount_amount),
             customerId: t.customer_id || 'walk-in',
             customerName: t.customer_name,
             items: t.items,
@@ -562,19 +564,19 @@ const App = () => {
       // 9. Fetch Tier Rules
       try {
         const { data: tiersData } = await supabase
-          .from('tier_rules')
+          .from('membership_tiers')
           .select('*');
         if (tiersData && tiersData.length > 0) {
           const formattedTiers = tiersData.map(t => ({
-            level: t.level as MembershipLevel,
-            label: t.label,
-            minSpent: Number(t.min_spent || 0),
-            discount: Number(t.discount || 0)
+            level: (t.tier_key.charAt(0).toUpperCase() + t.tier_key.slice(1)) as MembershipLevel,
+            label: t.name,
+            minSpent: Number(t.min_points || 0),
+            discount: 0
           }));
           useStore.setState({ tierRules: formattedTiers });
         }
       } catch (e) {
-        console.warn("tier_rules table might not exist yet:", e);
+        console.warn("Failed to fetch membership tiers:", e);
       }
     };
 
