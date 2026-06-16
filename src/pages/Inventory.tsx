@@ -609,16 +609,16 @@ const Inventory = () => {
                     <div key={item.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all relative overflow-hidden">
                        {/* Gradient Status Bar */}
                        <div className={cn(
-                         "absolute bottom-0 left-0 w-full h-2",
-                         status === 'Out' ? "bg-gradient-to-t from-red-500 to-red-500/20" : 
-                         status === 'Low' ? "bg-gradient-to-t from-orange-500 to-orange-500/20" : 
-                         "bg-gradient-to-t from-green-500 to-green-500/20"
+                         "absolute bottom-0 left-0 w-full h-full opacity-10",
+                         status === 'Out' ? "bg-gradient-to-t from-red-600 to-transparent" : 
+                         status === 'Low' ? "bg-gradient-to-t from-orange-500 to-transparent" : 
+                         "bg-gradient-to-t from-green-500 to-transparent"
                        )} />
                        
-                       <div className="flex justify-between items-start mb-6"><div className="w-12 h-12 bg-[#F5F6FA] rounded-2xl flex items-center justify-center text-[#1A1F3D]"><Package size={24} /></div><div className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase shadow-sm", status === 'Out' ? "bg-red-50 text-red-600" : status === 'Low' ? "bg-orange-50 text-orange-600" : "bg-green-50 text-green-600")}>{status === 'Out' ? 'Out of Stock' : status === 'Low' ? 'Low Stock' : 'Optimal'}</div></div>
-                       <h3 className="text-lg font-black text-[#1A1F3D] mb-1 line-clamp-1">{item.name}</h3>
-                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">{item.category}</p>
-                       <div className="space-y-4">
+                       <div className="flex justify-between items-start mb-6 relative z-10"><div className="w-12 h-12 bg-[#F5F6FA] rounded-2xl flex items-center justify-center text-[#1A1F3D]"><Package size={24} /></div><div className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase shadow-sm", status === 'Out' ? "bg-red-50 text-red-600" : status === 'Low' ? "bg-orange-50 text-orange-600" : "bg-green-50 text-green-600")}>{status === 'Out' ? 'Out of Stock' : status === 'Low' ? 'Low Stock' : 'Optimal'}</div></div>
+                       <h3 className="text-lg font-black text-[#1A1F3D] mb-1 line-clamp-1 relative z-10">{item.name}</h3>
+                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6 relative z-10">{item.category}</p>
+                       <div className="space-y-4 relative z-10">
                           <div className="flex justify-between items-end"><div><p className="text-[9px] font-black text-gray-300 uppercase mb-1">Current Balance</p><p className="text-2xl font-black text-[#1A1F3D]">{item.stock} <span className="text-xs text-gray-400">{item.unit}</span></p></div><div className="text-right"><p className="text-[9px] font-black text-gray-300 uppercase mb-1">Min. Required</p><p className="text-sm font-bold text-gray-400">{item.minStock}</p></div></div>
                           <div className="pt-4 border-t border-gray-50 flex gap-2"><button onClick={() => handleQuickAdjust(item.id)} className="flex-1 bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black text-[10px] uppercase py-3 rounded-xl transition-all flex items-center justify-center gap-2"><RotateCcw size={14} /> ปรับยอด</button></div>
                        </div>
@@ -695,7 +695,7 @@ const Inventory = () => {
               </div>
               <div className="lg:col-span-3">
                 <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                   <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/20">
+                   <div className="p-8 border-b border-gray-50 bg-gray-50/20 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><History size={20} /></div>
                          <div>
