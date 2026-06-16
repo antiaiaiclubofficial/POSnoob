@@ -10,6 +10,7 @@ interface InventoryReportLivePreviewProps {
   reportItems: InventoryItem[];
   selectedReportPartner: Partner | null;
   shopName: string;
+  shopAddress: string;
   companyName?: string;
   companyAddress?: string;
   companyTaxId?: string;
@@ -22,6 +23,7 @@ const InventoryReportLivePreview = ({
   reportItems,
   selectedReportPartner,
   shopName,
+  shopAddress,
   companyName,
   companyAddress,
   companyTaxId,

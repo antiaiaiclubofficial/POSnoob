@@ -16,7 +16,7 @@ import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Width
 import InventoryModal from '@/components/InventoryModal';
 import VendorModal from '@/components/VendorModal';
 import VendorInventoryView from '@/components/VendorInventoryView';
-import InventoryReportLivePreview from '@/components/InventoryReportLivePreview'; // Import the new component
+import InventoryReportLivePreview from '@/components/InventoryReportLivePreview';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 
 type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashboard';
@@ -55,7 +55,6 @@ const Inventory = () => {
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
   const [selectedVendorForView, setSelectedVendorForView] = useState<Partner | null>(null);
-  // const [isReportPreviewOpen, setIsReportPreviewOpen] = useState(false); // Removed
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -699,26 +698,26 @@ const Inventory = () => {
                     </div>
 
                     <div className="space-y-3 pt-2">
-                       {/* Removed Preview Report button as it's now live */}
                        <button onClick={handleDownloadWordReport} className="w-full bg-[#1A1F3D] text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
                           <Download size={18} /> Download Word Report (.docx)
                        </button>
                     </div>
                  </div>
-                 {/* Live Preview Section */}
-                 <div className="lg:col-span-2">
-                    <InventoryReportLivePreview
-                      reportItems={reportItems}
-                      selectedReportPartner={selectedReportPartner}
-                      shopName={shopName}
-                      companyName={companyName}
-                      companyAddress={companyAddress}
-                      companyTaxId={companyTaxId}
-                      companyPhone={companyPhone}
-                      companyEmail={companyEmail}
-                      currency={currency}
-                    />
-                 </div>
+              </div>
+              {/* Live Preview Section */}
+              <div className="lg:col-span-2">
+                 <InventoryReportLivePreview
+                   reportItems={reportItems}
+                   selectedReportPartner={selectedReportPartner}
+                   shopName={shopName}
+                   shopAddress={shopAddress}
+                   companyName={companyName}
+                   companyAddress={companyAddress}
+                   companyTaxId={companyTaxId}
+                   companyPhone={companyPhone}
+                   companyEmail={companyEmail}
+                   currency={currency}
+                 />
               </div>
               {/* Report History below the live preview */}
               <div className="lg:col-span-3">
@@ -812,8 +811,6 @@ const Inventory = () => {
       {isItemModalOpen && <InventoryModal item={editingItem} onClose={() => setIsItemModalOpen(false)} />}
       {isVendorModalOpen && <VendorModal partner={editingPartner} onClose={() => setIsVendorModalOpen(false)} />}
       {selectedVendorForView && <VendorInventoryView vendor={selectedVendorForView} onClose={() => setSelectedVendorForView(null)} />}
-
-      {/* Removed Report Preview Modal */}
     </div>
   );
 };
