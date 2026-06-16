@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet, Crown, Gem, Percent, Save, Scissors, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -21,7 +21,8 @@ const Marketing = () => {
   const queryClient = useQueryClient();
   const { 
     language, creditPackages, deleteCreditPackage, currency, tierRules, updateTierRules,
-    services, toggleServiceActive, deleteService, addons, deleteAddon, packageTemplates, deletePackageTemplate, storeId
+    services, toggleServiceActive, deleteService, addons, deleteAddon, packageTemplates, deletePackageTemplate, storeId,
+    pointsEarnRate, pointsRedeemRate, updateBusinessProfile
   } = useStore();
   const t = translations[language];
   
@@ -42,6 +43,15 @@ const Marketing = () => {
 
   // Local state for editing tier rules
   const [localTierRules, setLocalTierRules] = useState<TierRule[]>(tierRules);
+
+  // Local state for points settings
+  const [localPointsEarnRate, setLocalPointsEarnRate] = useState(pointsEarnRate || 10);
+  const [localPointsRedeemRate, setLocalPointsRedeemRate] = useState(pointsRedeemRate || 1);
+
+  useEffect(() => {
+    if (pointsEarnRate !== undefined) setLocalPointsEarnRate(pointsEarnRate);
+    if (pointsRedeemRate !== undefined) setLocalPointsRedeemRate(pointsRedeemRate);
+  }, [pointsEarnRate, pointsRedeemRate]);
 
   // Service Filter States
   const [speciesTab, setSpeciesTab] = useState<'Dog' | 'Cat'>('Dog');
@@ -158,6 +168,14 @@ const Marketing = () => {
     toast.success(language === 'th' ? "บันทึกเกณฑ์ระดับสมาชิกเรียบร้อย" : "Membership tiers updated successfully");
   };
 
+  const handleSavePointsSettings = () => {
+    updateBusinessProfile({
+      pointsEarnRate: localPointsEarnRate,
+      pointsRedeemRate: localPointsRedeemRate
+    });
+    toast.success(language === 'th' ? "บันทึกการตั้งค่าคะแนนสะสมเรียบร้อย" : "Points settings updated successfully");
+  };
+
   const filteredPromos = promotions?.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredCoupons = coupons?.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredCredits = creditPackages.filter(pkg => pkg.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -180,7 +198,7 @@ const Marketing = () => {
           </div>
           <h1 className="text-4xl font-black text-[#1A1F3D]">{t.marketing}</h1>
         </div>
-        {activeTab !== 'tiers' && (
+        {activeTab !== 'tiers' && activeTab !== 'points' && (
           <button 
             onClick={handleAdd}
             className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all"
@@ -211,6 +229,9 @@ const Marketing = () => {
             <TabsTrigger value="tiers" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Crown size={16} className="mr-2" /> {t.membershipTierLogic}
             </TabsTrigger>
+            <TabsTrigger value="points" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
+              <Star size={16} className="mr-2" /> ตั้งค่าคะแนนสะสม
+            </TabsTrigger>
             <TabsTrigger value="services" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Scissors size={16} className="mr-2" /> บริการและบริการเสริม
             </TabsTrigger>
@@ -220,7 +241,7 @@ const Marketing = () => {
           </TabsList>
         </Tabs>
 
-        {activeTab !== 'tiers' && (
+        {activeTab !== 'tiers' && activeTab !== 'points' && (
           <div className="relative w-full lg:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
             <input 
@@ -428,6 +449,76 @@ const Marketing = () => {
                        </div>
                     </div>
                   ))}
+               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="points" className="m-0">
+            <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-10">
+               <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-xl font-black text-[#1A1F3D] mb-1">ตั้งค่าคะแนนสะสม (Points Settings)</h3>
+                    <p className="text-xs text-gray-400 font-medium">กำหนดอัตราการได้รับคะแนนสะสมและการแลกคะแนนสะสมของร้านค้า</p>
+                  </div>
+                  <button 
+                    onClick={handleSavePointsSettings} 
+                    className="bg-[#1A1F3D] text-white px-8 py-3 rounded-xl font-black text-xs flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <Save size={16} /> {t.saveChanges}
+                  </button>
+               </div>
+               
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4 bg-[#F5F6FA] p-8 rounded-[32px] border border-gray-100">
+                     <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+                           <Plus size={20} />
+                        </div>
+                        <h4 className="text-sm font-black text-[#1A1F3D]">อัตราการได้รับคะแนน (Earning Rate)</h4>
+                     </div>
+                     <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">จำนวนยอดใช้จ่ายเพื่อรับ 1 คะแนน (บาท)</label>
+                        <div className="relative">
+                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">{currency}</span>
+                           <input 
+                              type="number" 
+                              className="w-full bg-white border-none rounded-2xl pl-10 pr-6 py-4 text-sm font-bold shadow-sm" 
+                              value={localPointsEarnRate} 
+                              onChange={e => setLocalPointsEarnRate(Number(e.target.value))} 
+                              placeholder="เช่น 10"
+                           />
+                        </div>
+                        <p className="text-[10px] text-gray-400 font-medium px-2 mt-1">
+                           * ตัวอย่าง: หากตั้งค่าเป็น 10 บาท เมื่อลูกค้าใช้จ่ายครบทุกๆ 10 บาท จะได้รับ 1 คะแนนสะสม
+                        </p>
+                     </div>
+                  </div>
+
+                  <div className="space-y-4 bg-[#F5F6FA] p-8 rounded-[32px] border border-gray-100">
+                     <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+                           <Percent size={20} />
+                        </div>
+                        <h4 className="text-sm font-black text-[#1A1F3D]">มูลค่าคะแนนสะสม (Redemption Rate)</h4>
+                     </div>
+                     <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">มูลค่าของ 1 คะแนนเมื่อนำมาแลกส่วนลด (บาท)</label>
+                        <div className="relative">
+                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">{currency}</span>
+                           <input 
+                              type="number" 
+                              step="0.1"
+                              className="w-full bg-white border-none rounded-2xl pl-10 pr-6 py-4 text-sm font-bold shadow-sm" 
+                              value={localPointsRedeemRate} 
+                              onChange={e => setLocalPointsRedeemRate(Number(e.target.value))} 
+                              placeholder="เช่น 1"
+                           />
+                        </div>
+                        <p className="text-[10px] text-gray-400 font-medium px-2 mt-1">
+                           * ตัวอย่าง: หากตั้งค่าเป็น 1 บาท เมื่อลูกค้านำคะแนนมาแลกส่วนลด 1 คะแนนจะมีมูลค่าเท่ากับ 1 บาท
+                        </p>
+                     </div>
+                  </div>
                </div>
             </div>
           </TabsContent>

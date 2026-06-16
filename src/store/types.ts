@@ -248,6 +248,8 @@ export interface AppState {
   companyPhone?: string;
   companyEmail?: string;
   vatRate?: number;
+  pointsEarnRate?: number;
+  pointsRedeemRate?: number;
 
   // LINE LIFF Settings
   liffId: string;
