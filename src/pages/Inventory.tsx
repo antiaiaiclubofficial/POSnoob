@@ -16,6 +16,7 @@ import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Width
 import InventoryModal from '@/components/InventoryModal';
 import VendorModal from '@/components/VendorModal';
 import VendorInventoryView from '@/components/VendorInventoryView';
+import InventoryReportLivePreview from '@/components/InventoryReportLivePreview'; // Import the new component
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 
 type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashboard';
@@ -54,7 +55,7 @@ const Inventory = () => {
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
   const [selectedVendorForView, setSelectedVendorForView] = useState<Partner | null>(null);
-  const [isReportPreviewOpen, setIsReportPreviewOpen] = useState(false);
+  // const [isReportPreviewOpen, setIsReportPreviewOpen] = useState(false); // Removed
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -662,95 +663,105 @@ const Inventory = () => {
         )}
 
         {activeTab === 'report' && (
-           <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                 <div className="lg:col-span-1 space-y-6">
-                    <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                       <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-                             <Filter size={20} />
-                          </div>
-                          <h3 className="text-lg font-black text-[#1A1F3D]">Report Filters</h3>
+           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
+              <div className="lg:col-span-1 space-y-6">
+                 <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                          <Filter size={20} />
                        </div>
+                       <h3 className="text-lg font-black text-[#1A1F3D]">Report Filters</h3>
+                    </div>
 
-                       <div className="space-y-4">
-                          <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase text-gray-400 px-1">Partner / Vendor</label>
-                             <select className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold" value={repPartnerFilter} onChange={e => setRepPartnerFilter(e.target.value)}>
-                                <option value="All">ทั้งหมด (All Partners)</option>
-                                {partners.map(p => <option key={p.id} value={p.id}>{p.companyName}</option>)}
-                             </select>
-                          </div>
-                          <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase text-gray-400 px-1">Category</label>
-                             <select className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold" value={repCategoryFilter} onChange={e => setRepCategoryFilter(e.target.value)}>
-                                <option value="All">ทั้งหมด (All Categories)</option>
-                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                             </select>
-                          </div>
-                          <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase text-gray-400 px-1">Stock Status</label>
-                             <select className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold" value={repStatusFilter} onChange={e => setRepStatusFilter(e.target.value)}>
-                                <option value="All">ทั้งหมด (All Items)</option>
-                                <option value="Low">ใกล้หมด (Low Stock Only)</option>
-                                <option value="Out">สินค้าหมด (Out of Stock Only)</option>
-                             </select>
-                          </div>
+                    <div className="space-y-4">
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-gray-400 px-1">Partner / Vendor</label>
+                          <select className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold" value={repPartnerFilter} onChange={e => setRepPartnerFilter(e.target.value)}>
+                             <option value="All">ทั้งหมด (All Partners)</option>
+                             {partners.map(p => <option key={p.id} value={p.id}>{p.companyName}</option>)}
+                          </select>
                        </div>
-
-                       <div className="space-y-3 pt-2">
-                          <button onClick={() => setIsReportPreviewOpen(true)} className="w-full bg-white border border-gray-200 text-[#1A1F3D] py-4 rounded-2xl font-black text-sm shadow-sm flex items-center justify-center gap-3 active:scale-95 transition-all">
-                             <Eye size={18} /> Preview Report
-                          </button>
-                          <button onClick={handleDownloadWordReport} className="w-full bg-[#1A1F3D] text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-                             <Download size={18} /> Download Word Report (.docx)
-                          </button>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-gray-400 px-1">Category</label>
+                          <select className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold" value={repCategoryFilter} onChange={e => setRepCategoryFilter(e.target.value)}>
+                             <option value="All">ทั้งหมด (All Categories)</option>
+                             {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-gray-400 px-1">Stock Status</label>
+                          <select className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold" value={repStatusFilter} onChange={e => setRepStatusFilter(e.target.value)}>
+                             <option value="All">ทั้งหมด (All Items)</option>
+                             <option value="Low">ใกล้หมด (Low Stock Only)</option>
+                             <option value="Out">สินค้าหมด (Out of Stock Only)</option>
+                          </select>
                        </div>
                     </div>
-                 </div>
 
+                    <div className="space-y-3 pt-2">
+                       {/* Removed Preview Report button as it's now live */}
+                       <button onClick={handleDownloadWordReport} className="w-full bg-[#1A1F3D] text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
+                          <Download size={18} /> Download Word Report (.docx)
+                       </button>
+                    </div>
+                 </div>
+                 {/* Live Preview Section */}
                  <div className="lg:col-span-2">
-                    <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
-                       <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/20">
-                          <div className="flex items-center gap-3">
-                             <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><History size={20} /></div>
-                             <div>
-                                <h3 className="text-xl font-black text-[#1A1F3D]">Report History</h3>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Recent exports</p>
-                             </div>
-                          </div>
-                       </div>
-                       
-                       <div className="flex-1 overflow-y-auto scrollbar-hide max-h-[500px]">
-                          <table className="w-full">
-                             <thead>
-                                <tr className="bg-white border-b border-gray-50">
-                                   <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Timestamp</th>
-                                   <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Filters Applied</th>
-                                   <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Staff</th>
-                                </tr>
-                             </thead>
-                             <tbody className="divide-y divide-gray-50">
-                                {reportHistory.map((rep) => (
-                                   <tr key={rep.id} className="hover:bg-gray-50/50">
-                                      <td className="px-8 py-6">
-                                         <p className="text-xs font-black text-[#1A1F3D]">{format(new Date(rep.timestamp), 'dd MMM yyyy')}</p>
-                                         <p className="text-[9px] text-gray-400 font-bold">{format(new Date(rep.timestamp), 'HH:mm')}</p>
-                                      </td>
-                                      <td className="px-8 py-6">
-                                         <p className="text-[10px] font-medium text-gray-500 line-clamp-1">{rep.filters}</p>
-                                      </td>
-                                      <td className="px-8 py-6 text-right font-black text-[10px] text-[#1A1F3D] uppercase">{rep.staffName}</td>
-                                   </tr>
-                                ))}
-                                {reportHistory.length === 0 && (
-                                   <tr><td colSpan={3} className="py-20 text-center opacity-20 font-black">No export history found</td></tr>
-                                )}
-                             </tbody>
-                          </table>
-                       </div>
-                    </div>
+                    <InventoryReportLivePreview
+                      reportItems={reportItems}
+                      selectedReportPartner={selectedReportPartner}
+                      shopName={shopName}
+                      companyName={companyName}
+                      companyAddress={companyAddress}
+                      companyTaxId={companyTaxId}
+                      companyPhone={companyPhone}
+                      companyEmail={companyEmail}
+                      currency={currency}
+                    />
                  </div>
+              </div>
+              {/* Report History below the live preview */}
+              <div className="lg:col-span-3">
+                <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                   <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/20">
+                      <div className="flex items-center gap-3">
+                         <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><History size={20} /></div>
+                         <div>
+                            <h3 className="text-xl font-black text-[#1A1F3D]">Report History</h3>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Recent exports</p>
+                         </div>
+                      </div>
+                   </div>
+                   
+                   <div className="flex-1 overflow-y-auto scrollbar-hide max-h-[500px]">
+                      <table className="w-full">
+                         <thead>
+                            <tr className="bg-white border-b border-gray-50">
+                               <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Timestamp</th>
+                               <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Filters Applied</th>
+                               <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Staff</th>
+                            </tr>
+                         </thead>
+                         <tbody className="divide-y divide-gray-50">
+                            {reportHistory.map((rep) => (
+                               <tr key={rep.id} className="hover:bg-gray-50/50">
+                                  <td className="px-8 py-6">
+                                     <p className="text-xs font-black text-[#1A1F3D]">{format(new Date(rep.timestamp), 'dd MMM yyyy')}</p>
+                                     <p className="text-[9px] text-gray-400 font-bold">{format(new Date(rep.timestamp), 'HH:mm')}</p>
+                                  </td>
+                                  <td className="px-8 py-6">
+                                     <p className="text-[10px] font-medium text-gray-500 line-clamp-1">{rep.filters}</p>
+                                  </td>
+                                  <td className="px-8 py-6 text-right font-black text-[10px] text-[#1A1F3D] uppercase">{rep.staffName}</td>
+                               </tr>
+                            ))}
+                            {reportHistory.length === 0 && (
+                               <tr><td colSpan={3} className="py-20 text-center opacity-20 font-black">No export history found</td></tr>
+                            )}
+                         </tbody>
+                      </table>
+                   </div>
+                </div>
               </div>
            </div>
         )}
@@ -802,142 +813,7 @@ const Inventory = () => {
       {isVendorModalOpen && <VendorModal partner={editingPartner} onClose={() => setIsVendorModalOpen(false)} />}
       {selectedVendorForView && <VendorInventoryView vendor={selectedVendorForView} onClose={() => setSelectedVendorForView(null)} />}
 
-      {/* Report Preview Modal */}
-      {isReportPreviewOpen && (
-        <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[250] flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-4xl rounded-[48px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
-            {/* Header */}
-            <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-[#1A1F3D] rounded-2xl flex items-center justify-center text-white shadow-lg">
-                  <FileText size={24} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-[#1A1F3D]">ตัวอย่างรายงาน (Report Preview)</h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Sales Report & Consignment Statement</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={handleDownloadWordReport}
-                  className="bg-[#1A1F3D] text-white px-6 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 hover:bg-[#2A3152] transition-all"
-                >
-                  <Download size={14} /> Download Word
-                </button>
-                <button onClick={() => setIsReportPreviewOpen(false)} className="p-2 hover:bg-white rounded-xl transition-all">
-                  <X size={20} className="text-gray-400" />
-                </button>
-              </div>
-            </div>
-
-            {/* Document Body (A4 Styled Sheet) */}
-            <div className="flex-1 overflow-y-auto p-10 bg-gray-100 flex justify-center scrollbar-hide">
-              <div className="bg-white w-[210mm] min-h-[297mm] p-[20mm] shadow-xl font-sans text-[#1A1F3D] text-xs space-y-8 relative">
-                {/* Shop Header (from Company Profile & Tax Settings) */}
-                <div className="space-y-1">
-                  <h2 className="text-xl font-black text-[#1A1F3D]">{companyName || shopName}</h2>
-                  <p className="text-gray-500">เลขประจำตัวผู้เสียภาษี: {companyTaxId || '-'}</p>
-                  <p className="text-gray-500">ที่อยู่: {companyAddress || shopAddress}</p>
-                  <p className="text-gray-500">โทร: {companyPhone || shopPhone} {companyEmail ? `| อีเมล: ${companyEmail}` : ''}</p>
-                </div>
-
-                {/* Document Title */}
-                <div className="text-right space-y-1">
-                  <h1 className="text-2xl font-black text-[#1A1F3D] uppercase tracking-tight">Sales Report</h1>
-                  <p className="text-sm font-bold text-gray-400">เอกสารแจ้งยอดฝากขาย</p>
-                </div>
-
-                <div className="border-t border-gray-200 my-6" />
-
-                {/* Partner Info (ปรับการจัดวางให้เหมือนกับหัวกระดาษบริษัท) */}
-                <div className="space-y-1">
-                  <h3 className="text-sm font-black text-[#1A1F3D]">
-                    {selectedReportPartner ? `ข้อมูลคู่ค้า: ${selectedReportPartner.companyName}` : "คู่ค้า: คู่ค้าทั้งหมด"}
-                  </h3>
-                  {selectedReportPartner && (
-                    <div className="text-gray-500 space-y-0.5">
-                      <p>เลขประจำตัวผู้เสียภาษี: {selectedReportPartner.taxId || '-'}</p>
-                      <p>ที่อยู่: {selectedReportPartner.address || '-'}</p>
-                      <p>โทร: {selectedReportPartner.phone || '-'} {selectedReportPartner.email ? `| อีเมล: ${selectedReportPartner.email}` : ''}</p>
-                    </div>
-                  )}
-                  <p className="text-gray-400 text-[10px] font-bold uppercase pt-1">วันที่ออกเอกสาร: {format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
-                </div>
-
-                {/* Items Table */}
-                <div className="border border-gray-200 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-[#1A1F3D] text-white">
-                        <th className="px-4 py-3 font-black text-[10px] uppercase">ชื่อสินค้า</th>
-                        <th className="px-4 py-3 font-black text-[10px] uppercase text-center">SKU</th>
-                        <th className="px-4 py-3 font-black text-[10px] uppercase text-center">จำนวนที่ขาย</th>
-                        <th className="px-4 py-3 font-black text-[10px] uppercase text-right">ราคาสินค้า</th>
-                        <th className="px-4 py-3 font-black text-[10px] uppercase text-right">ราคาหลังหัก GP</th>
-                        <th className="px-4 py-3 font-black text-[10px] uppercase text-right">รวม</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {reportItems.map((item, idx) => {
-                        const gp = selectedReportPartner?.gpRate || 0;
-                        const priceAfterGP = item.price * (1 - gp / 100);
-                        const total = priceAfterGP * item.stock;
-
-                        return (
-                          <tr key={item.id || idx} className="hover:bg-gray-50/50">
-                            <td className="px-4 py-3 font-bold text-gray-800">{item.name}</td>
-                            <td className="px-4 py-3 text-center text-gray-500">{item.barcode || '-'}</td>
-                            <td className="px-4 py-3 text-center font-bold text-gray-600">{item.stock.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-right text-gray-600">฿{item.price.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-right text-gray-600">฿{priceAfterGP.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-right font-black text-[#1A1F3D]">฿{total.toLocaleString()}</td>
-                          </tr>
-                        );
-                      })}
-                      {reportItems.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="py-10 text-center text-gray-400 font-bold">
-                            ไม่มีรายการสินค้าที่ตรงตามเงื่อนไขตัวกรอง
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Signatures */}
-                <div className="grid grid-cols-2 gap-12 pt-12">
-                  <div className="text-center space-y-8">
-                    <div className="border-b border-gray-300 w-48 mx-auto" />
-                    <p className="font-black text-gray-500">ผู้จัดทำ (Prepared By)</p>
-                  </div>
-                  <div className="text-center space-y-8">
-                    <div className="border-b border-gray-300 w-48 mx-auto" />
-                    <p className="font-black text-gray-500">ผู้อนุมัติ (Authorized By)</p>
-                  </div>
-                </div>
-
-                {/* Billing Conditions */}
-                <div className="space-y-4 pt-8 border-t border-gray-100">
-                  <div className="space-y-1">
-                    <h4 className="font-black text-[#1A1F3D]">*เงื่อนไขการวางบิล :</h4>
-                    <p className="text-gray-500 leading-relaxed">
-                      ผู้ขายสามารถวางบิลได้ตั้งแต่วันที่ได้รับรายงานยอดขาย จนถึงภายในวันที่ 20 ของเดือน ในกรณีที่วางบิลไม่ตรงรอบหรือเอกสารไม่ครบ จะมีการดำเนินการชำระค่าสินค้าให้ในรอบถัดไป
-                    </p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <h4 className="font-black text-[#1A1F3D]">วางบิลและส่งเอกสารมาที่ :</h4>
-                    <p className="font-bold text-gray-800">{companyName || shopName}</p>
-                    <p className="text-gray-500">ที่อยู่: {companyAddress || shopAddress}</p>
-                    <p className="text-gray-500">ติดต่อ: {companyPhone || shopPhone} {companyEmail ? `| อีเมล: ${companyEmail}` : ''}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Removed Report Preview Modal */}
     </div>
   );
 };
