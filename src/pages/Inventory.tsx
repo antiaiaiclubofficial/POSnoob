@@ -33,7 +33,6 @@ const Inventory = () => {
   const [repCategoryFilter, setRepCategoryFilter] = useState('All');
   const [repStatusFilter, setRepStatusFilter] = useState('All');
 
-  // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
@@ -45,11 +44,9 @@ const Inventory = () => {
   const [adjustQty, setAdjustQty] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
 
-  // Dashboard Date Filter States
   const [dashStartDate, setDashStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [dashEndDate, setDashEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
-  // Modals
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
@@ -92,7 +89,6 @@ const Inventory = () => {
 
   const selectedItemForAdjust = inventory.find(i => i.id === selectedAdjustId);
 
-  // Dashboard Calculations
   const filteredTransactions = useMemo(() => {
     return transactions.filter(tx => tx.date >= dashStartDate && tx.date <= dashEndDate);
   }, [transactions, dashStartDate, dashEndDate]);
@@ -151,7 +147,6 @@ const Inventory = () => {
     return productSales.reduce((acc, s) => acc + s.quantity, 0);
   }, [productSales]);
 
-  // Partner Actions
   const handleEditPartner = (partner: Partner) => {
     setEditingPartner(partner);
     setIsVendorModalOpen(true);
@@ -164,7 +159,6 @@ const Inventory = () => {
     }
   };
 
-  // Filtered items for report generation and preview
   const reportItems = useMemo(() => {
     let itemsToExport = [...inventory];
     if (repPartnerFilter !== 'All') itemsToExport = itemsToExport.filter(i => i.partnerId === repPartnerFilter);
@@ -178,13 +172,11 @@ const Inventory = () => {
     return partners.find(p => p.id === repPartnerFilter);
   }, [partners, repPartnerFilter]);
 
-  // Logic: Word Document (.docx) Generation
   const handleDownloadWordReport = async () => {
     const toastId = toast.loading("กำลังสร้างเอกสาร Word (.docx) ภาษาไทย...");
     try {
       const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
 
-      // Build Table Rows
       const tableRows = [
         new TableRow({
           children: [
@@ -223,7 +215,6 @@ const Inventory = () => {
         }
       });
 
-      // Signatures Table
       const sigTable = new Table({
         borders: {
           top: { style: BorderStyle.NONE, size: 0, color: "auto" },
@@ -259,12 +250,10 @@ const Inventory = () => {
         ]
       });
 
-      // Construct Document
       const doc = new Document({
         sections: [{
           properties: {},
           children: [
-            // Company Header (from Company Profile & Tax Settings)
             new Paragraph({
               children: [
                 new TextRun({ text: companyName || shopName, bold: true, size: 32, color: "1A1F3D" }),
@@ -285,8 +274,6 @@ const Inventory = () => {
                 new TextRun({ text: `โทร: ${companyPhone || shopPhone} ${companyEmail ? `| อีเมล: ${companyEmail}` : ''}`, size: 18, color: "555555" }),
               ],
             }),
-
-            // Title
             new Paragraph({
               alignment: AlignmentType.RIGHT,
               spacing: { before: 200 },
@@ -300,11 +287,7 @@ const Inventory = () => {
                 new TextRun({ text: "เอกสารแจ้งยอดฝากขาย", size: 22, color: "555555" }),
               ]
             }),
-
-            // Divider
             new Paragraph({ text: "_________________________________________________________________________________", spacing: { before: 100, after: 200 } }),
-
-            // Partner Info (จัดวางเหมือนหัวกระดาษบริษัท)
             new Paragraph({
               children: [
                 new TextRun({ text: selectedReportPartner ? `ข้อมูลคู่ค้า: ${selectedReportPartner.companyName}` : "คู่ค้า: คู่ค้าทั้งหมด", bold: true, size: 22, color: "1A1F3D" }),
@@ -315,22 +298,15 @@ const Inventory = () => {
               new Paragraph({ children: [new TextRun({ text: `ที่อยู่: ${selectedReportPartner.address || '-'}`, size: 18, color: "555555" })] }),
               new Paragraph({ children: [new TextRun({ text: `โทร: ${selectedReportPartner.phone || '-'} ${selectedReportPartner.email ? `| อีเมล: ${selectedReportPartner.email}` : ''}`, size: 18, color: "555555" })] }),
             ] : []),
-
             new Paragraph({
               children: [
                 new TextRun({ text: `วันที่ออกเอกสาร: ${dateNow}`, size: 18, color: "555555" }),
               ],
               spacing: { before: 100, after: 300 }
             }),
-
-            // Table
             itemsTable,
-
-            // Signatures
             new Paragraph({ text: "", spacing: { before: 400, after: 200 } }),
             sigTable,
-
-            // Billing Conditions
             new Paragraph({
               spacing: { before: 400 },
               children: [
@@ -342,8 +318,6 @@ const Inventory = () => {
                 new TextRun({ text: "ผู้ขายสามารถวางบิลได้ตั้งแต่วันที่ได้รับรายงานยอดขาย จนถึงภายในวันที่ 20 ของเดือน ในกรณีที่วางบิลไม่ตรงรอบหรือเอกสารไม่ครบ จะมีการดำเนินการชำระค่าสินค้าให้ในรอบถัดไป", size: 18, color: "555555" }),
               ]
             }),
-
-            // Billing Address
             new Paragraph({
               spacing: { before: 300 },
               children: [
@@ -369,7 +343,6 @@ const Inventory = () => {
         }]
       });
 
-      // Generate and Download
       const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -384,7 +357,7 @@ const Inventory = () => {
         staffName: currentUser?.name || 'Admin'
       });
 
-      toast.success("ดาวน์โหลดรายงาน Word (.docx) เรียบร้อยแล้ว! คุณสามารถเปิดใน Microsoft Word หรือ Google Docs เพื่อบันทึกเป็น PDF ได้อย่างสมบูรณ์แบบ", { id: toastId });
+      toast.success("ดาวน์โหลดรายงาน Word (.docx) เรียบร้อยแล้ว!", { id: toastId });
     } catch (error: any) {
       console.error(error);
       toast.error("เกิดข้อผิดพลาดในการสร้างเอกสาร Word: " + error.message, { id: toastId });
@@ -426,7 +399,6 @@ const Inventory = () => {
       <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
         {activeTab === 'dashboard' && (
           <div className="space-y-10 animate-in fade-in duration-500">
-            {/* Date Filter Row */}
             <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-2">
                 <Calendar size={18} className="text-indigo-500" />
@@ -480,7 +452,6 @@ const Inventory = () => {
               </div>
             </div>
 
-            {/* Metric Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                 <Package size={24} className="text-blue-500 mb-6"/>
@@ -504,9 +475,7 @@ const Inventory = () => {
               </div>
             </div>
 
-            {/* Chart & Sales List Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Chart Section */}
               <div className="lg:col-span-1 bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col">
                 <div className="mb-6">
                   <h3 className="text-lg font-black text-[#1A1F3D]">ยอดขายแยกตามสินค้า</h3>
@@ -535,7 +504,6 @@ const Inventory = () => {
                 </div>
               </div>
 
-              {/* Sales List Section */}
               <div className="lg:col-span-2 bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
                 <div className="p-8 border-b border-gray-50 bg-gray-50/30 flex justify-between items-center">
                   <div>
@@ -639,7 +607,14 @@ const Inventory = () => {
                   const status = item.stock === 0 ? 'Out' : item.stock <= item.minStock ? 'Low' : 'OK';
                   return (
                     <div key={item.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all relative overflow-hidden">
-                       <div className={cn("absolute top-0 left-0 w-2 h-full", status === 'Out' ? "bg-red-500" : status === 'Low' ? "bg-orange-500" : "bg-green-500")} />
+                       {/* Gradient Status Bar */}
+                       <div className={cn(
+                         "absolute bottom-0 left-0 w-full h-2",
+                         status === 'Out' ? "bg-gradient-to-t from-red-500 to-red-500/20" : 
+                         status === 'Low' ? "bg-gradient-to-t from-orange-500 to-orange-500/20" : 
+                         "bg-gradient-to-t from-green-500 to-green-500/20"
+                       )} />
+                       
                        <div className="flex justify-between items-start mb-6"><div className="w-12 h-12 bg-[#F5F6FA] rounded-2xl flex items-center justify-center text-[#1A1F3D]"><Package size={24} /></div><div className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase shadow-sm", status === 'Out' ? "bg-red-50 text-red-600" : status === 'Low' ? "bg-orange-50 text-orange-600" : "bg-green-50 text-green-600")}>{status === 'Out' ? 'Out of Stock' : status === 'Low' ? 'Low Stock' : 'Optimal'}</div></div>
                        <h3 className="text-lg font-black text-[#1A1F3D] mb-1 line-clamp-1">{item.name}</h3>
                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">{item.category}</p>
@@ -704,7 +679,6 @@ const Inventory = () => {
                     </div>
                  </div>
               </div>
-              {/* Live Preview Section */}
               <div className="lg:col-span-2">
                  <InventoryReportLivePreview
                    reportItems={reportItems}
@@ -719,7 +693,6 @@ const Inventory = () => {
                    currency={currency}
                  />
               </div>
-              {/* Report History below the live preview */}
               <div className="lg:col-span-3">
                 <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
                    <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/20">
