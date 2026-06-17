@@ -210,17 +210,35 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         return;
       }
 
-      // ถ้าไม่มี session จาก Supabase ให้ทำการ Auto-login เป็น Admin ทันที เพื่อไม่ให้ติดหน้า Authen ใน Preview
-      const mockAdmin = { id: 'admin', name: 'Admin (Auto-login)', role: 'Admin', username: 'admin' };
-      set({ 
-        isAuthenticated: true, 
-        isAuthLoading: false, 
-        currentUser: mockAdmin, 
-        storeId: 'default-store',
-        isPendingApproval: false,
-        isUserSuspended: false,
-        isStoreSuspended: false
-      });
+      // ตรวจสอบว่าเป็น localhost หรือไม่
+      const isLocalhost = typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' || 
+         window.location.hostname.startsWith('192.168.'));
+
+      if (isLocalhost) {
+        // ถ้าไม่มี session จาก Supabase ให้ทำการ Auto-login เป็น Admin ทันที เพื่อไม่ให้ติดหน้า Authen ใน Preview
+        const mockAdmin = { id: 'admin', name: 'Admin (Auto-login)', role: 'Admin', username: 'admin' };
+        set({ 
+          isAuthenticated: true, 
+          isAuthLoading: false, 
+          currentUser: mockAdmin, 
+          storeId: 'default-store',
+          isPendingApproval: false,
+          isUserSuspended: false,
+          isStoreSuspended: false
+        });
+      } else {
+        set({ 
+          isAuthenticated: false, 
+          isAuthLoading: false, 
+          currentUser: null, 
+          storeId: null,
+          isPendingApproval: false,
+          isUserSuspended: false,
+          isStoreSuspended: false
+        });
+      }
     }
   },
 

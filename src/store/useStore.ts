@@ -461,17 +461,36 @@ export const useStore = create<AppState>()((set, get) => ({
         set({ isAuthLoading: false });
         return;
       }
-      // ถ้าไม่มี session จาก Supabase ให้ทำการ Auto-login เป็น Admin ทันที เพื่อไม่ให้ติดหน้า Authen ใน Preview
-      const mockAdmin = { id: 'admin', name: 'Admin (Auto-login)', role: 'Admin', username: 'admin' };
-      set({ 
-        isAuthenticated: true, 
-        isAuthLoading: false, 
-        currentUser: mockAdmin, 
-        storeId: 'default-store',
-        isPendingApproval: false,
-        isUserSuspended: false,
-        isStoreSuspended: false
-      });
+
+      // ตรวจสอบว่าเป็น localhost หรือไม่
+      const isLocalhost = typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' || 
+         window.location.hostname.startsWith('192.168.'));
+
+      if (isLocalhost) {
+        // ถ้าไม่มี session จาก Supabase ให้ทำการ Auto-login เป็น Admin ทันที เพื่อไม่ให้ติดหน้า Authen ใน Preview
+        const mockAdmin = { id: 'admin', name: 'Admin (Auto-login)', role: 'Admin', username: 'admin' };
+        set({ 
+          isAuthenticated: true, 
+          isAuthLoading: false, 
+          currentUser: mockAdmin, 
+          storeId: 'default-store',
+          isPendingApproval: false,
+          isUserSuspended: false,
+          isStoreSuspended: false
+        });
+      } else {
+        set({ 
+          isAuthenticated: false, 
+          isAuthLoading: false, 
+          currentUser: null, 
+          storeId: null,
+          isPendingApproval: false,
+          isUserSuspended: false,
+          isStoreSuspended: false
+        });
+      }
     }
   },
 
@@ -641,13 +660,19 @@ export const useStore = create<AppState>()((set, get) => ({
 
     if (!error) {
       set((state) => ({
-        customers: state.customers.map(c => c.id === customerId ? {
-          ...c,
-          pets: c.pets.map(p => p.id === petId ? { 
-            ...p, 
-            weightHistory: [...(p.weightHistory || []), { date: data.date, value: Number(data.weight) }] 
-          } : p)
-        } : c)
+        customers: state.customers.map(c => {
+          if (c.id !== customerId) return c;
+          return {
+            ...c,
+            pets: c.pets.map(p => {
+              if (p.id !== petId) return p;
+              return {
+                ...p,
+                weightHistory: [...(p.weightHistory || []), { date: data.date, value: Number(data.weight) }]
+              };
+            })
+          };
+        })
       }));
     }
   },
@@ -936,7 +961,7 @@ export const useStore = create<AppState>()((set, get) => ({
           duration_minutes: defaultDuration,
           category: ser.category || 'Grooming',
           icon: ser.icon || 'grooming',
-          target_species: ser.targetSpecies || 'Dog',
+          target_species: ser.target_species || 'Dog',
           prices: ser.prices || {},
           is_active: ser.isActive !== false,
           coat_type: ser.coat_type || null,
