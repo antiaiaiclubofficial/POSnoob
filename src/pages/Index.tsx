@@ -8,6 +8,7 @@ import CustomerSearch from '@/components/CustomerSearch';
 import CustomerModal from '@/components/CustomerModal';
 import GroomingServiceModal from '@/components/GroomingServiceModal';
 import AddOnModal from '@/components/AddOnModal';
+import ManageServicesModal from '@/components/ManageServicesModal';
 import { 
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
   CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath, Wallet, Plus, AlertCircle, ArrowRight
@@ -102,6 +103,7 @@ const Index = () => {
   const [coatFilter, setCoatFilter] = useState<'All' | 'Short' | 'Long'>('Short');
   const [productSearch, setProductQuery] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isManageServicesOpen, setIsManageServicesOpen] = useState(false);
   const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
   const [selectedAddOn, setSelectedAddOn] = useState<any>(null);
 
@@ -157,6 +159,13 @@ const Index = () => {
             <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">{t.pos}</h1>
           </div>
           <div className="flex gap-3">
+            <button 
+              onClick={() => setIsManageServicesOpen(true)}
+              className="flex items-center gap-2 bg-white border border-gray-100 text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
+            >
+              <Scissors size={16} />
+              {language === 'th' ? 'จัดการบริการ' : 'Manage Services'}
+            </button>
             <button 
               onClick={handleQuickSale}
               className="flex items-center gap-2 bg-[#1A1F3D] text-[#D9ED5F] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
@@ -522,6 +531,10 @@ const Index = () => {
 
       {isCustomerModalOpen && (
         <CustomerModal onClose={() => setIsCustomerModalOpen(false)} />
+      )}
+
+      {isManageServicesOpen && (
+        <ManageServicesModal onClose={() => setIsManageServicesOpen(false)} />
       )}
 
       {intakeItem && (
