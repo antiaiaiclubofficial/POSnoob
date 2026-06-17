@@ -53,7 +53,8 @@ const SuperAdmin = () => {
     slug: '',
     primary_color: '#1A1F3D',
     secondary_color: '#D9ED5F',
-    logo_url: ''
+    logo_url: '',
+    max_users: 5
   });
 
   // Form States - User
@@ -72,7 +73,7 @@ const SuperAdmin = () => {
   useEffect(() => {
     if (currentUser && currentUser.role !== 'superadmin') {
       if (currentUser.id === 'admin') {
-        // If it's the auto-logged in mock admin, log them out so they can access the superadmin gate
+        // If it's the auto-logged in mock admin, let them log out so they can log in with other accounts
         logout();
       } else {
         toast.info("เข้าสู่ระบบร้านค้าปกติเรียบร้อยแล้ว");
@@ -254,6 +255,28 @@ const SuperAdmin = () => {
     e.preventDefault();
     try {
       if (editingUser) {
+        // Check store's max_users limit if store is being changed or set
+        if (userForm.store_id) {
+          const store = stores.find(s => s.id === userForm.store_id);
+          if (store) {
+            const maxUsers = store.max_users || 5;
+            // Count approved users in this store (excluding the current user being edited)
+            const { count, error: countError } = await supabase
+              .from('profiles')
+              .select('*', { count: 'exact', head: true })
+              .eq('store_id', userForm.store_id)
+              .eq('is_approved', true)
+              .neq('id', editingUser.id);
+
+            if (countError) throw countError;
+
+            if (count !== null && count >= maxUsers) {
+              toast.error(`ไม่สามารถบันทึกได้: ร้านค้า "${store.name}" จำกัดจำนวนผู้ใช้งานสูงสุดไว้ที่ ${maxUsers} บัญชี (ปัจจุบันมี ${count} บัญชี)`);
+              return;
+            }
+          }
+        }
+
         const { error } = await supabase
           .from('profiles')
           .update({
@@ -264,6 +287,26 @@ const SuperAdmin = () => {
         if (error) throw error;
         toast.success("อัปเดตสิทธิ์ผู้ใช้งานเรียบร้อยแล้ว");
       } else {
+        // Check store's max_users limit for new user
+        if (userForm.store_id) {
+          const store = stores.find(s => s.id === userForm.store_id);
+          if (store) {
+            const maxUsers = store.max_users || 5;
+            const { count, error: countError } = await supabase
+              .from('profiles')
+              .select('*', { count: 'exact', head: true })
+              .eq('store_id', userForm.store_id)
+              .eq('is_approved', true);
+
+            if (countError) throw countError;
+
+            if (count !== null && count >= maxUsers) {
+              toast.error(`ไม่สามารถบันทึกได้: ร้านค้า "${store.name}" จำกัดจำนวนผู้ใช้งานสูงสุดไว้ที่ ${maxUsers} บัญชี (ปัจจุบันมี ${count} บัญชี)`);
+              return;
+            }
+          }
+        }
+
         const { error } = await supabase
           .from('profiles')
           .insert([{
@@ -325,6 +368,25 @@ const SuperAdmin = () => {
     }
 
     try {
+      // Check store's max_users limit
+      const store = stores.find(s => s.id === assignedStoreId);
+      if (store) {
+        const maxUsers = store.max_users || 5;
+        // Count approved users in this store
+        const { count, error: countError } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('store_id', assignedStoreId)
+          .eq('is_approved', true);
+
+        if (countError) throw countError;
+
+        if (count !== null && count >= maxUsers) {
+          toast.error(`ไม่สามารถอนุมัติได้: ร้านค้า "${store.name}" จำกัดจำนวนผู้ใช้งานสูงสุดไว้ที่ ${maxUsers} บัญชี (ปัจจุบันมี ${count} บัญชี)`);
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -366,7 +428,8 @@ const SuperAdmin = () => {
         slug: store.slug,
         primary_color: store.primary_color || '#1A1F3D',
         secondary_color: store.secondary_color || '#D9ED5F',
-        logo_url: store.logo_url || ''
+        logo_url: store.logo_url || '',
+        max_users: store.max_users || 5
       });
     } else {
       setEditingStore(null);
@@ -375,7 +438,8 @@ const SuperAdmin = () => {
         slug: '',
         primary_color: '#1A1F3D',
         secondary_color: '#D9ED5F',
-        logo_url: ''
+        logo_url: '',
+        max_users: 5
       });
     }
     setIsStoreModalOpen(true);
@@ -632,6 +696,7 @@ const SuperAdmin = () => {
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">โลโก้ / ชื่อร้าน</th>
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Slug (URL)</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สีหลัก / สีรอง</th>
+                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">จำกัดผู้ใช้ (Max Users)</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
                           <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
                         </tr>
@@ -658,6 +723,9 @@ const SuperAdmin = () => {
                                 <span className="w-6 h-6 rounded-full border border-gray-200 inline-block" style={{ backgroundColor: store.primary_color }} title="Primary Color" />
                                 <span className="w-6 h-6 rounded-full border border-gray-200 inline-block" style={{ backgroundColor: store.secondary_color }} title="Secondary Color" />
                               </div>
+                            </td>
+                            <td className="px-8 py-5 text-center text-sm font-black text-indigo-600">
+                              {store.max_users || 5} บัญชี
                             </td>
                             <td className="px-8 py-5 text-center">
                               <span className={cn(
@@ -697,7 +765,7 @@ const SuperAdmin = () => {
                         ))}
                         {filteredStores.length === 0 && (
                           <tr>
-                            <td colSpan={5} className="py-20 text-center opacity-20 font-black">ไม่พบข้อมูลร้านค้า</td>
+                            <td colSpan={6} className="py-20 text-center opacity-20 font-black">ไม่พบข้อมูลร้านค้า</td>
                           </tr>
                         )}
                       </tbody>
@@ -1059,6 +1127,19 @@ const SuperAdmin = () => {
                       onChange={e => setStoreForm({ ...storeForm, secondary_color: e.target.value })}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">จำกัดจำนวนผู้ใช้งานสูงสุด (Max Users)</label>
+                  <input 
+                    type="number"
+                    min={1}
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
+                    value={storeForm.max_users}
+                    onChange={e => setStoreForm({ ...storeForm, max_users: Number(e.target.value) })}
+                    placeholder="5"
+                    required
+                  />
                 </div>
 
                 <div>
