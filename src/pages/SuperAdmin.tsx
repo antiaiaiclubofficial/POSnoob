@@ -46,6 +46,7 @@ const SuperAdmin = () => {
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingStore, setEditingStore] = useState<any>(null);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [viewingStoreUsers, setViewingStoreUsers] = useState<any | null>(null);
 
   // Form States - Store
   const [storeForm, setStoreForm] = useState({
@@ -696,73 +697,81 @@ const SuperAdmin = () => {
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">โลโก้ / ชื่อร้าน</th>
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Slug (URL)</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สีหลัก / สีรอง</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">จำกัดผู้ใช้ (Max Users)</th>
+                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">จำนวนบัญชีผู้ใช้</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
                           <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {filteredStores.map(store => (
-                          <tr key={store.id} className={cn("hover:bg-gray-50/50 transition-colors", store.is_suspended && "bg-red-50/30")}>
-                            <td className="px-8 py-5 flex items-center gap-4">
-                              <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-100 flex items-center justify-center">
-                                {store.logo_url ? (
-                                  <img src={store.logo_url} className="w-full h-full object-cover" alt="Logo" />
-                                ) : (
-                                  <Store className="text-gray-300" size={20} />
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-sm font-black text-[#1A1F3D]">{store.name}</p>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase">ID: {store.id}</p>
-                              </div>
-                            </td>
-                            <td className="px-8 py-5 text-sm font-bold text-gray-600">{store.slug}</td>
-                            <td className="px-8 py-5 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <span className="w-6 h-6 rounded-full border border-gray-200 inline-block" style={{ backgroundColor: store.primary_color }} title="Primary Color" />
-                                <span className="w-6 h-6 rounded-full border border-gray-200 inline-block" style={{ backgroundColor: store.secondary_color }} title="Secondary Color" />
-                              </div>
-                            </td>
-                            <td className="px-8 py-5 text-center text-sm font-black text-indigo-600">
-                              {store.max_users || 5} บัญชี
-                            </td>
-                            <td className="px-8 py-5 text-center">
-                              <span className={cn(
-                                "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
-                                store.is_suspended ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
-                              )}>
-                                {store.is_suspended ? "ถูกระงับ" : "ปกติ"}
-                              </span>
-                            </td>
-                            <td className="px-8 py-5 text-right">
-                              <div className="flex justify-end gap-2">
-                                <button 
-                                  onClick={() => handleToggleStoreSuspension(store.id, store.is_suspended)}
-                                  className={cn(
-                                    "p-2 rounded-xl transition-all",
-                                    store.is_suspended ? "text-green-600 hover:bg-green-50" : "text-amber-600 hover:bg-amber-50"
+                        {filteredStores.map(store => {
+                          const storeUserCount = profiles.filter(p => p.store_id === store.id).length;
+                          return (
+                            <tr key={store.id} className={cn("hover:bg-gray-50/50 transition-colors", store.is_suspended && "bg-red-50/30")}>
+                              <td className="px-8 py-5 flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-100 flex items-center justify-center">
+                                  {store.logo_url ? (
+                                    <img src={store.logo_url} className="w-full h-full object-cover" alt="Logo" />
+                                  ) : (
+                                    <Store className="text-gray-300" size={20} />
                                   )}
-                                  title={store.is_suspended ? "เปิดใช้งานร้านค้า" : "พักสิทธิ์ร้านค้า"}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-black text-[#1A1F3D]">{store.name}</p>
+                                  <p className="text-[9px] text-gray-400 font-bold uppercase">ID: {store.id}</p>
+                                </div>
+                              </td>
+                              <td className="px-8 py-5 text-sm font-bold text-gray-600">{store.slug}</td>
+                              <td className="px-8 py-5 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  <span className="w-6 h-6 rounded-full border border-gray-200 inline-block" style={{ backgroundColor: store.primary_color }} title="Primary Color" />
+                                  <span className="w-6 h-6 rounded-full border border-gray-200 inline-block" style={{ backgroundColor: store.secondary_color }} title="Secondary Color" />
+                                </div>
+                              </td>
+                              <td className="px-8 py-5 text-center">
+                                <button
+                                  onClick={() => setViewingStoreUsers(store)}
+                                  className="text-xs font-black text-indigo-600 hover:underline bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-2xl transition-all"
                                 >
-                                  {store.is_suspended ? <Play size={16} /> : <Ban size={16} />}
+                                  {storeUserCount} / {store.max_users || 5} บัญชี
                                 </button>
-                                <button 
-                                  onClick={() => openStoreModal(store)}
-                                  className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-100 rounded-xl transition-all"
-                                >
-                                  <Edit3 size={16} />
-                                </button>
-                                <button 
-                                  onClick={() => handleDeleteStore(store.id)}
-                                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                              </td>
+                              <td className="px-8 py-5 text-center">
+                                <span className={cn(
+                                  "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
+                                  store.is_suspended ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                                )}>
+                                  {store.is_suspended ? "ถูกระงับ" : "ปกติ"}
+                                </span>
+                              </td>
+                              <td className="px-8 py-5 text-right">
+                                <div className="flex justify-end gap-2">
+                                  <button 
+                                    onClick={() => handleToggleStoreSuspension(store.id, store.is_suspended)}
+                                    className={cn(
+                                      "p-2 rounded-xl transition-all",
+                                      store.is_suspended ? "text-green-600 hover:bg-green-50" : "text-amber-600 hover:bg-amber-50"
+                                    )}
+                                    title={store.is_suspended ? "เปิดใช้งานร้านค้า" : "พักสิทธิ์ร้านค้า"}
+                                  >
+                                    {store.is_suspended ? <Play size={16} /> : <Ban size={16} />}
+                                  </button>
+                                  <button 
+                                    onClick={() => openStoreModal(store)}
+                                    className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-100 rounded-xl transition-all"
+                                  >
+                                    <Edit3 size={16} />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDeleteStore(store.id)}
+                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                         {filteredStores.length === 0 && (
                           <tr>
                             <td colSpan={6} className="py-20 text-center opacity-20 font-black">ไม่พบข้อมูลร้านค้า</td>
@@ -1245,6 +1254,97 @@ const SuperAdmin = () => {
                 บันทึกสิทธิ์ผู้ใช้งาน
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Viewing Store Users */}
+      {viewingStoreUsers && (
+        <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[250] flex items-center justify-center p-6">
+          <div className="bg-white w-full max-w-2xl rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[80vh]">
+            <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-[#1A1F3D] rounded-2xl flex items-center justify-center text-white shadow-lg">
+                  <Users size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[#1A1F3D]">รายชื่อผู้ใช้งาน</h3>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ร้านค้า: {viewingStoreUsers.name}</p>
+                </div>
+              </div>
+              <button onClick={() => setViewingStoreUsers(null)} className="p-2 hover:bg-white rounded-xl transition-all">
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">
+              <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50/50 border-b border-gray-100">
+                      <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-400">อีเมลผู้ใช้</th>
+                      <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-gray-400">บทบาท (Role)</th>
+                      <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-gray-400">ระงับสิทธิ์</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {profiles.filter(p => p.store_id === viewingStoreUsers.id).map(profile => (
+                      <tr key={profile.id} className={cn("hover:bg-gray-50/50 transition-colors", profile.is_suspended && "bg-red-50/30")}>
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-black text-[#1A1F3D]">{profile.email}</p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase">UID: {profile.id}</p>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={cn(
+                            "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
+                            profile.role === 'admin' ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+                          )}>
+                            {profile.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={cn(
+                            "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
+                            profile.is_suspended ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                          )}>
+                            {profile.is_suspended ? "ถูกระงับ" : "ปกติ"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                            onClick={() => handleToggleUserSuspension(profile.id, profile.is_suspended)}
+                            className={cn(
+                              "p-2 rounded-xl transition-all inline-flex items-center justify-center",
+                              profile.is_suspended ? "text-green-600 hover:bg-green-50" : "text-amber-600 hover:bg-amber-50"
+                            )}
+                            title={profile.is_suspended ? "เปิดใช้งานผู้ใช้" : "พักสิทธิ์ผู้ใช้"}
+                          >
+                            {profile.is_suspended ? <Play size={16} /> : <Ban size={16} />}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {profiles.filter(p => p.store_id === viewingStoreUsers.id).length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-12 text-center opacity-20 font-black text-xs">
+                          ยังไม่มีผู้ใช้งานสังกัดร้านค้านี้
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50/50 border-t border-gray-100 flex justify-end shrink-0">
+              <button 
+                onClick={() => setViewingStoreUsers(null)}
+                className="bg-[#1A1F3D] text-white px-8 py-3 rounded-xl font-black text-xs shadow-md hover:bg-[#2A3152] transition-all"
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
           </div>
         </div>
       )}
