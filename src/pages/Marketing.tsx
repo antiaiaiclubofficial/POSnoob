@@ -13,16 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CouponModal from '@/components/CouponModal';
 import PromotionModal from '@/components/PromotionModal';
 import CreditPackageModal from '@/components/CreditPackageModal';
-import ServiceModal from '@/components/ServiceModal';
 import PackageModal from '@/components/PackageModal';
-import AddonSettingsModal from '@/components/AddonSettingsModal';
 import TierEditModal from '@/components/TierEditModal';
 
 const Marketing = () => {
   const queryClient = useQueryClient();
   const { 
     language, creditPackages, deleteCreditPackage, currency, tierRules, updateTierRules,
-    services, toggleServiceActive, deleteService, addons, deleteAddon, packageTemplates, deletePackageTemplate, storeId,
+    services, packageTemplates, deletePackageTemplate, storeId,
     pointsEarnRate, pointsRedeemRate, updateBusinessProfile
   } = useStore();
   const t = translations[language];
@@ -34,14 +32,10 @@ const Marketing = () => {
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
-  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-  const [isAddonModalOpen, setIsAddonModalOpen] = useState(false);
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [isTierEditModalOpen, setIsTierEditModalOpen] = useState(false);
   
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedAddon, setSelectedAddon] = useState<AddonItem | null>(null);
   const [selectedTierForEdit, setSelectedTierForEdit] = useState<any>(null);
 
   // Local state for editing tier rules
@@ -55,10 +49,6 @@ const Marketing = () => {
     if (pointsEarnRate !== undefined) setLocalPointsEarnRate(pointsEarnRate);
     if (pointsRedeemRate !== undefined) setLocalPointsRedeemRate(pointsRedeemRate);
   }, [pointsEarnRate, pointsRedeemRate]);
-
-  // Service Filter States
-  const [speciesTab, setSpeciesTab] = useState<'Dog' | 'Cat'>('Dog');
-  const [coatFilter, setCoatFilter] = useState<'All' | 'Short' | 'Long'>('All');
 
   // Fetch Promotions
   const { data: promotions, isLoading: promosLoading } = useQuery({
@@ -140,7 +130,7 @@ const Marketing = () => {
             color_class: tier.color_class,
             icon_name: tier.icon_name,
             description: tier.description,
-            benefits: tier.benefits // บันทึกสิทธิประโยชน์ลงฟิลด์ JSONB
+            benefits: tier.benefits
           })
           .eq('id', tier.id);
         if (error) throw error;
@@ -211,16 +201,7 @@ const Marketing = () => {
     if (activeTab === 'promotions') setIsPromoModalOpen(true);
     else if (activeTab === 'coupons') setIsCouponModalOpen(true);
     else if (activeTab === 'credits') setIsCreditModalOpen(true);
-    else if (activeTab === 'services') {
-      setSelectedService(null);
-      setIsServiceModalOpen(true);
-    }
     else if (activeTab === 'bundles') setIsPackageModalOpen(true);
-  };
-
-  const handleEditService = (s: Service) => {
-    setSelectedService(s);
-    setIsServiceModalOpen(true);
   };
 
   const handleSavePointsSettings = () => {
@@ -234,14 +215,6 @@ const Marketing = () => {
   const filteredPromos = promotions?.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredCoupons = coupons?.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredCredits = creditPackages.filter(pkg => pkg.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  
-  const filteredServices = useMemo(() => {
-    return services.filter(s => 
-      s.targetSpecies === speciesTab && 
-      (coatFilter === 'All' || s.coatType === coatFilter) &&
-      s.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [services, speciesTab, coatFilter, searchQuery]);
 
   const handleOpenTierEditModal = (tier: any, index: number) => {
     setSelectedTierForEdit({ ...tier, index });
@@ -278,7 +251,6 @@ const Marketing = () => {
               activeTab === 'promotions' ? t.createPromo : 
               activeTab === 'coupons' ? t.createCoupon : 
               activeTab === 'credits' ? 'สร้างแพ็กเกจเครดิต' : 
-              activeTab === 'services' ? 'เพิ่มบริการใหม่' : 
               'สร้างแพ็กเกจบริการ'
             }
           </button>
@@ -302,9 +274,6 @@ const Marketing = () => {
             </TabsTrigger>
             <TabsTrigger value="points" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Star size={16} className="mr-2" /> ตั้งค่าคะแนนสะสม
-            </TabsTrigger>
-            <TabsTrigger value="services" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
-              <Scissors size={16} className="mr-2" /> บริการและบริการเสริม
             </TabsTrigger>
             <TabsTrigger value="bundles" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Package size={16} className="mr-2" /> แพ็กเกจบริการ
@@ -490,7 +459,6 @@ const Marketing = () => {
                   </div>
                   <button 
                     onClick={() => {
-                      // Sort by min_points before saving
                       const sorted = [...localDbTiers].sort((a, b) => Number(a.min_points) - Number(b.min_points));
                       saveTiersMutation.mutate(sorted);
                     }} 
@@ -523,12 +491,10 @@ const Marketing = () => {
 
                       return (
                         <div key={tier.id} className="flex flex-col lg:flex-row items-start lg:items-center gap-8 p-8 bg-[#F5F6FA] rounded-[40px] relative overflow-hidden transition-all hover:shadow-md border border-transparent hover:border-gray-200">
-                           {/* Left: Icon & Color Preview */}
                            <div className={cn("w-16 h-16 rounded-[24px] flex items-center justify-center shadow-sm shrink-0", tier.color_class)}>
                               <IconComponent size={32} />
                            </div>
 
-                           {/* Middle: Inputs */}
                            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
                               <div className="space-y-2">
                                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Tier Name</label>
@@ -570,9 +536,7 @@ const Marketing = () => {
                               </div>
                            </div>
 
-                           {/* Right: Color & Icon Selectors */}
                            <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto shrink-0">
-                             {/* Icon Selector */}
                              <div className="space-y-1.5">
                                <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block px-1">Icon</span>
                                <div className="flex gap-1 bg-white p-1 rounded-xl shadow-sm">
@@ -609,7 +573,6 @@ const Marketing = () => {
                                </div>
                              </div>
 
-                             {/* Color Selector */}
                              <div className="space-y-1.5">
                                <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block px-1">Color Theme</span>
                                <div className="flex gap-1 bg-white p-1 rounded-xl shadow-sm">
@@ -718,93 +681,6 @@ const Marketing = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="services" className="m-0 space-y-12">
-             <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-8">
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
-                   <div>
-                      <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Service Catalog</h3>
-                      <p className="text-xs text-gray-400 font-medium">Define your specialized grooming treatments.</p>
-                   </div>
-                   <div className="flex flex-wrap gap-3">
-                      <div className="bg-[#F5F6FA] p-1 rounded-2xl flex gap-1">
-                         <button onClick={() => setSpeciesTab('Dog')} className={cn("px-4 py-2 rounded-xl text-[10px] font-black transition-all", speciesTab === 'Dog' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>DOG</button>
-                         <button onClick={() => setSpeciesTab('Cat')} className={cn("px-4 py-2 rounded-xl text-[10px] font-black transition-all", speciesTab === 'Cat' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>CAT</button>
-                      </div>
-                      <div className="bg-[#F5F6FA] p-1 rounded-2xl flex gap-1">
-                         {(['All', 'Short', 'Long'] as const).map(type => (
-                           <button
-                             key={type}
-                             onClick={() => setCoatFilter(type)}
-                             className={cn(
-                               "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
-                               coatFilter === type ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400"
-                             )}
-                           >
-                             {type === 'All' ? 'ALL' : type === 'Short' ? 'SHORT' : 'LONG'}
-                           </button>
-                         ))}
-                      </div>
-                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   {filteredServices.map(s => (
-                      <div key={s.id} className="p-5 bg-white border border-gray-100 rounded-[32px] flex items-center justify-between group hover:shadow-lg transition-all">
-                         <div className="flex items-center gap-4">
-                            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm", s.targetSpecies === 'Dog' ? "bg-blue-500" : "bg-pink-500")}><Scissors size={20}/></div>
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <h4 className="font-black text-[#1A1F3D] text-sm">{s.title}</h4>
-                                {s.coatType && (
-                                  <span className={cn(
-                                    "text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase",
-                                    s.coatType === 'Short' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
-                                  )}>
-                                    {s.coatType === 'Short' ? 'Short' : 'Long'}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[10px] text-gray-400 font-bold uppercase">{s.category}</p>
-                            </div>
-                         </div>
-                         <div className="flex items-center gap-3">
-                            <Switch checked={s.isActive} onCheckedChange={() => toggleServiceActive(s.id)} className="data-[state=checked]:bg-[#1A1F3D]" />
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <button onClick={() => handleEditService(s)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-lg"><Edit3 size={16}/></button>
-                               <button onClick={() => { if(confirm('Delete service?')) deleteService(s.id); }} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-lg"><Trash2 size={16}/></button>
-                            </div>
-                         </div>
-                      </div>
-                   ))}
-                </div>
-             </section>
-
-             <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-8">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Global Add-ons</h3>
-                    <p className="text-xs text-gray-400 font-medium">Extra items that can be added to any order.</p>
-                  </div>
-                  <button onClick={() => { setSelectedAddon(null); setIsAddonModalOpen(true); }} className="bg-[#1A1F3D] text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2"><Plus size={16} /> Add Add-on</button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                   {addons.map(addon => (
-                     <div key={addon.id} className="p-6 bg-[#F5F6FA] rounded-[32px] flex justify-between items-center group relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500" />
-                        <div className="flex items-center gap-4">
-                           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-500 shadow-sm"><Zap size={18} /></div>
-                           <div><p className="text-sm font-black text-[#1A1F3D]">{addon.name}</p><p className="text-[10px] text-gray-400 font-bold uppercase">{currency}{addon.price}</p></div>
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <button onClick={() => { setSelectedAddon(addon); setIsAddonModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={16}/></button>
-                           <button onClick={() => deleteAddon(addon.id)} className="p-2 text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
-                        </div>
-                     </div>
-                   ))}
-                </div>
-             </section>
-          </TabsContent>
-
           <TabsContent value="bundles" className="m-0">
              <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-8">
                 <div className="flex justify-between items-center">
@@ -836,8 +712,6 @@ const Marketing = () => {
       {isCouponModalOpen && <CouponModal coupon={selectedItem} onClose={() => setIsCouponModalOpen(false)} />}
       {isPromoModalOpen && <PromotionModal promotion={selectedItem} onClose={() => setIsPromoModalOpen(false)} />}
       {isCreditModalOpen && <CreditPackageModal onClose={() => setIsCreditModalOpen(false)} />}
-      {isServiceModalOpen && <ServiceModal service={selectedService} defaultSpecies={speciesTab} onClose={() => setIsServiceModalOpen(false)} />}
-      {isAddonModalOpen && <AddonSettingsModal addon={selectedAddon} onClose={() => setIsAddonModalOpen(false)} />}
       {isPackageModalOpen && <PackageModal onClose={() => setIsPackageModalOpen(false)} />}
       
       {isTierEditModalOpen && selectedTierForEdit && (
