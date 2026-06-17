@@ -10,7 +10,7 @@ import GroomingServiceModal from '@/components/GroomingServiceModal';
 import AddOnModal from '@/components/AddOnModal';
 import { 
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
-  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath, Wallet, Plus
+  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath, Wallet, Plus, AlertCircle, ArrowRight
 } from 'lucide-react';
 import { useStore, QueueItem, ServiceIcon, Customer } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -307,6 +307,31 @@ const Index = () => {
             )}
           </div>
         </div>
+
+        {/* คำแนะนำการใช้งานเมื่อยังไม่ได้เลือกลูกค้า */}
+        {!selectedOwner && (
+          <div className="mx-6 lg:mx-10 mb-6 p-6 bg-indigo-50 border border-indigo-100 rounded-[32px] flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-4 text-center sm:text-left">
+              <div className="w-12 h-12 bg-indigo-500 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md">
+                <AlertCircle size={24} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-indigo-950">
+                  {language === 'th' ? 'กรุณาเลือกข้อมูลลูกค้าก่อนทำรายการ' : 'Please select a customer to start'}
+                </h3>
+                <p className="text-xs text-indigo-800/70 font-medium mt-0.5">
+                  {language === 'th' ? 'ค้นหาชื่อลูกค้าด้านบน หรือคลิกปุ่ม "ขายด่วน" เพื่อทำรายการให้ลูกค้าทั่วไปทันที' : 'Search for a customer above or click "Quick Sale" for walk-in clients.'}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={handleQuickSale}
+              className="bg-[#1A1F3D] text-white px-6 py-3 rounded-xl text-xs font-black flex items-center gap-2 hover:bg-[#2A3152] transition-all shrink-0 shadow-md"
+            >
+              {language === 'th' ? 'เปิดโหมดขายด่วน' : 'Quick Sale'} <ArrowRight size={14} />
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto px-6 lg:px-10 pb-24 lg:pb-10 scrollbar-hide">
           <Tabs value={posTab} className="h-full">
