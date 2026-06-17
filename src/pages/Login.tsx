@@ -12,16 +12,21 @@ const Login = () => {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   
-  const { login, loginWithGoogle, language, setLanguage, isAuthenticated, isPendingApproval, isUserSuspended, isStoreSuspended } = useStore();
+  const { login, loginWithGoogle, language, setLanguage, isAuthenticated, currentUser, logout, isPendingApproval, isUserSuspended, isStoreSuspended } = useStore();
   
   const t = translations[language];
   const navigate = useNavigate();
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/');
+      if (currentUser?.id === 'admin') {
+        // If it's the auto-logged in mock admin, let them log out so they can log in with other accounts
+        logout();
+      } else {
+        navigate('/');
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, currentUser, navigate, logout]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();

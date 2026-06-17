@@ -71,10 +71,15 @@ const SuperAdmin = () => {
 
   useEffect(() => {
     if (currentUser && currentUser.role !== 'superadmin') {
-      toast.info("เข้าสู่ระบบร้านค้าปกติเรียบร้อยแล้ว");
-      navigate('/');
+      if (currentUser.id === 'admin') {
+        // If it's the auto-logged in mock admin, log them out so they can access the superadmin gate
+        logout();
+      } else {
+        toast.info("เข้าสู่ระบบร้านค้าปกติเรียบร้อยแล้ว");
+        navigate('/');
+      }
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, logout]);
 
   useEffect(() => {
     if (currentUser?.role === 'superadmin') {
@@ -312,7 +317,6 @@ const SuperAdmin = () => {
     }
   };
 
-  // Approval Actions
   const handleAcceptUser = async (userId: string, email: string) => {
     const assignedStoreId = selectedStoreForApproval[userId];
     if (!assignedStoreId) {
@@ -326,7 +330,7 @@ const SuperAdmin = () => {
         .update({
           is_approved: true,
           store_id: assignedStoreId,
-          role: 'Admin' // กำหนดบทบาทเริ่มต้นเป็น Admin ของร้านค้านั้นๆ
+          role: 'Admin'
         })
         .eq('id', userId);
 
