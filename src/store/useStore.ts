@@ -635,13 +635,247 @@ export const useStore = create<AppState>()((set, get) => ({
   selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
   setActivePet: (pet) => set({ activePet: pet }),
   setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
-  addCustomer: (data) => set(s => ({ customers: [...s.customers, { ...data, id: Math.random().toString(), pets: [], totalSpent: 0, creditBalance: 0 }] })),
-  updateCustomer: (id, data) => set(s => ({ customers: s.customers.map(c => c.id === id ? { ...c, ...data } : c) })),
-  deleteCustomer: (id) => set(s => ({ customers: s.customers.filter(c => c.id !== id) })),
-  bindLineToCustomer: (cid, lid) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, lineId: lid } : c) })),
 
-  addPet: (cid, pet) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: [...c.pets, { ...pet, id: Math.random().toString() }] } : c) })),
-  updatePet: (cid, pid, data) => set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, pets: c.pets.map(p => p.id === pid ? { ...p, ...data } : p) } : c) })),
+  addCustomer: async (customerData) => {
+    let activeStoreId = get().storeId;
+    if (!activeStoreId || activeStoreId === 'default-store') {
+      const { data: stores } = await supabase.from('stores').select('id').limit(1);
+      if (stores && stores.length > 0) {
+        activeStoreId = stores[0].id;
+      } else {
+        activeStoreId = null;
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('customers')
+      .insert([{ 
+        first_name: customerData.firstName,
+        last_name: customerData.lastName,
+        display_name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email,
+        gender: customerData.gender,
+        age: customerData.age,
+        house_no: customerData.houseNo,
+        village_no: customerData.villageNo,
+        soi: customerData.soi,
+        road: customerData.road,
+        sub_district: customerData.subDistrict,
+        district: customerData.district,
+        province: customerData.province,
+        postal_code: customerData.postalCode,
+        line_user_id: customerData.lineId || null
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error inserting customer:", error);
+      toast.error("Failed to create customer: " + error.message);
+      throw error;
+    }
+
+    if (data) {
+      const { error: storeCustError } = await supabase
+        .from('store_customers')
+        .insert([{
+          store_id: activeStoreId,
+          customer_id: data.id,
+          points: 0,
+          tier: 'bronze'
+        }]);
+
+      if (storeCustError) {
+        console.error("Error creating store_customer link:", storeCustError);
+      }
+
+      const newCustomer: Customer = {
+        id: data.id,
+        name: data.display_name || `${data.first_name || ''} ${data.last_name || ''}`.trim() || 'Unnamed',
+        firstName: data.first_name || '',
+        lastName: data.last_name || '',
+        phone: data.phone || '-',
+        email: data.email || '-',
+        lineId: data.line_user_id || '',
+        avatarUrl: data.avatar_url || '',
+        membership: 'Standard',
+        points: 0,
+        totalSpent: 0,
+        creditBalance: 0,
+        gender: data.gender || 'Male',
+        age: data.age || '',
+        houseNo: data.house_no || '',
+        villageNo: data.village_no || '',
+        soi: data.soi || '',
+        road: data.road || '',
+        subDistrict: data.sub_district || '',
+        district: data.district || '',
+        province: data.province || '',
+        postalCode: data.postal_code || '',
+        creditHistory: [],
+        packages: [],
+        pets: []
+      };
+
+      set(s => ({ customers: [...s.customers, newCustomer] }));
+    }
+  },
+
+  updateCustomer: async (id, customerData) => {
+    const { error } = await supabase
+      .from('customers')
+      .update({
+        first_name: customerData.firstName,
+        last_name: customerData.lastName,
+        display_name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email,
+        gender: customerData.gender,
+        age: customerData.age,
+        house_no: customerData.houseNo,
+        village_no: customerData.villageNo,
+        soi: customerData.soi,
+        road: customerData.road,
+        sub_district: customerData.subDistrict,
+        district: customerData.district,
+        province: customerData.province,
+        postal_code: customerData.postalCode
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating customer:", error);
+      toast.error("Failed to update customer: " + error.message);
+      throw error;
+    }
+
+    set(s => ({
+      customers: s.customers.map(c => c.id === id ? { ...c, ...customerData, name: customerData.name } : c)
+    }));
+  },
+
+  deleteCustomer: async (id) => {
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (error) {
+      console.error("Error deleting customer:", error);
+      toast.error("Failed to delete customer: " + error.message);
+      throw error;
+    }
+    set(s => ({
+      customers: s.customers.filter(c => c.id !== id),
+      selectedOwner: s.selectedOwner?.id === id ? null : s.selectedOwner,
+      activePet: s.selectedOwner?.id === id ? null : s.activePet
+    }));
+  },
+
+  bindLineToCustomer: async (cid, lid) => {
+    const { error } = await supabase
+      .from('customers')
+      .update({ line_user_id: lid })
+      .eq('id', cid);
+
+    if (error) {
+      console.error("Error binding LINE ID:", error);
+      toast.error("Failed to bind LINE ID: " + error.message);
+      throw error;
+    }
+
+    set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, lineId: lid } : c) }));
+  },
+
+  addPet: async (customerId, petData) => {
+    const initialWeight = petData.weightHistory?.[0]?.value || 0;
+    const { data, error } = await supabase
+      .from('pets')
+      .insert([{ 
+        customer_id: customerId,
+        name: petData.name,
+        type: petData.species,
+        breed: petData.breed,
+        birth_date: petData.birthday,
+        medical_condition: petData.medicalCondition,
+        precautions: petData.precautions,
+        fur_length: petData.coatType,
+        image_url: petData.image,
+        weight: initialWeight,
+        custom_preferences: [
+          { key: 'color', value: petData.color || '' },
+          { key: 'temperament', value: petData.temperament || '' },
+          { key: 'vaccineBookImage', value: petData.vaccineBookImage || '' },
+          { key: 'notes', value: petData.notes || '' }
+        ]
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding pet:", error);
+      toast.error("Failed to add pet: " + error.message);
+      throw error;
+    }
+
+    if (data) {
+      set(s => ({
+        customers: s.customers.map(c => c.id === customerId ? {
+          ...c,
+          pets: [...c.pets, {
+            id: data.id,
+            name: data.name,
+            species: data.type,
+            breed: data.breed || '',
+            birthday: data.birth_date || '',
+            notes: petData.notes || '',
+            image: data.image_url || '',
+            weightHistory: [{ date: new Date().toISOString().split('T')[0], value: Number(data.weight || 0) }],
+            serviceHistory: [],
+            coatType: petData.coatType,
+            color: petData.color,
+            temperament: petData.temperament,
+            vaccineBookImage: petData.vaccineBookImage,
+            precautions: petData.precautions,
+            medicalCondition: petData.medicalCondition
+          }]
+        } : c)
+      }));
+    }
+  },
+
+  updatePet: async (customerId, petId, petData) => {
+    const { error } = await supabase
+      .from('pets')
+      .update({
+        name: petData.name,
+        type: petData.species,
+        breed: petData.breed,
+        birth_date: petData.birthday,
+        medical_condition: petData.medicalCondition,
+        precautions: petData.precautions,
+        fur_length: petData.coatType,
+        image_url: petData.image,
+        custom_preferences: [
+          { key: 'color', value: petData.color || '' },
+          { key: 'temperament', value: petData.temperament || '' },
+          { key: 'vaccineBookImage', value: petData.vaccineBookImage || '' },
+          { key: 'notes', value: petData.notes || '' }
+        ]
+      })
+      .eq('id', petId);
+
+    if (error) {
+      console.error("Error updating pet:", error);
+      toast.error("Failed to update pet: " + error.message);
+      throw error;
+    }
+
+    set(s => ({
+      customers: s.customers.map(c => c.id === customerId ? {
+        ...c,
+        pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
+      } : c)
+    }));
+  },
+
   updatePetWeight: async (customerId, petId, weight) => {
     await supabase
       .from('pets')
@@ -676,6 +910,7 @@ export const useStore = create<AppState>()((set, get) => ({
       }));
     }
   },
+
   saveIntakeRecord: async (customerId, petId, record) => {
     try {
       const { data, error } = await supabase
