@@ -23,6 +23,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import SuperAdmin from "./pages/SuperAdmin";
+import LiffPortal from "./pages/LiffPortal";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -620,6 +621,7 @@ const App = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/superadmin" element={<SuperAdmin />} />
+            <Route path="/liff" element={<LiffPortal />} />
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<HomeRedirect />} />
               <Route path="/pos" element={<Index />} />

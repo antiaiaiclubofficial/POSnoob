@@ -85,7 +85,16 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   addCustomer: async (customerData) => {
-    const currentStoreId = get().storeId;
+    let currentStoreId = get().storeId;
+    
+    // If storeId is default or null, resolve the first available store ID from Supabase
+    if (!currentStoreId || currentStoreId === 'default-store') {
+      const { data: stores } = await supabase.from('stores').select('id').limit(1);
+      if (stores && stores.length > 0) {
+        currentStoreId = stores[0].id;
+      }
+    }
+
     const { data, error } = await supabase
       .from('customers')
       .insert([{ 
