@@ -15,6 +15,7 @@ interface InventoryModalProps {
 const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
   const { addInventoryItem, updateInventoryItem, partners, currency } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -59,21 +60,29 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name) {
       toast.error("กรุณาระบุชื่อสินค้า");
       return;
     }
 
-    if (item) {
-      updateInventoryItem(item.id, formData);
-      toast.success("อัปเดตสินค้าเรียบร้อย");
-    } else {
-      addInventoryItem(formData);
-      toast.success("เพิ่มสินค้าเรียบร้อย");
+    setIsSubmitting(true);
+    try {
+      if (item) {
+        await updateInventoryItem(item.id, formData);
+        toast.success("อัปเดตสินค้าเรียบร้อย");
+      } else {
+        await addInventoryItem(formData);
+        toast.success("เพิ่มสินค้าเรียบร้อย");
+      }
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error("เกิดข้อผิดพลาดในการบันทึกข้อมูลสินค้า");
+    } finally {
+      setIsSubmitting(false);
     }
-    onClose();
   };
 
   const inputClasses = "w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all h-[58px]";
@@ -187,8 +196,12 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
               )}
            </div>
 
-           <button type="submit" className="w-full bg-[#1A1F3D] text-white font-black py-6 rounded-[32px] shadow-xl shadow-[#1A1F3D]/20 flex items-center justify-center gap-3 active:scale-95 transition-all">
-             <Save size={20} /> บันทึกข้อมูลสินค้า
+           <button 
+             type="submit" 
+             disabled={isSubmitting}
+             className="w-full bg-[#1A1F3D] text-white font-black py-6 rounded-[32px] shadow-xl shadow-[#1A1F3D]/20 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50"
+           >
+             <Save size={20} /> {isSubmitting ? "กำลังบันทึก..." : "บันทึกข้อมูลสินค้า"}
            </button>
         </form>
       </div>

@@ -14,6 +14,7 @@ interface CustomerModalProps {
 const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
   const { addCustomer, updateCustomer, language } = useStore();
   const t = translations[language];
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -59,26 +60,34 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
     }
   }, [customer]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.firstName || !formData.phone) {
       toast.error(language === 'th' ? "กรุณากรอกชื่อและเบอร์โทรศัพท์" : "First Name and Phone are required");
       return;
     }
 
+    setIsSubmitting(true);
     const customerPayload = {
       ...formData,
       name: `${formData.firstName} ${formData.lastName}`.trim()
     };
 
-    if (customer) {
-      updateCustomer(customer.id, customerPayload);
-      toast.success(language === 'th' ? "อัปเดตข้อมูลลูกค้าเรียบร้อย" : "Customer updated successfully");
-    } else {
-      addCustomer(customerPayload);
-      toast.success(language === 'th' ? "ลงทะเบียนลูกค้าใหม่เรียบร้อย" : "New customer added");
+    try {
+      if (customer) {
+        await updateCustomer(customer.id, customerPayload);
+        toast.success(language === 'th' ? "อัปเดตข้อมูลลูกค้าเรียบร้อย" : "Customer updated successfully");
+      } else {
+        await addCustomer(customerPayload);
+        toast.success(language === 'th' ? "ลงทะเบียนลูกค้าใหม่เรียบร้อย" : "New customer added");
+      }
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error(language === 'th' ? "เกิดข้อผิดพลาดในการบันทึกข้อมูล" : "Failed to save customer data");
+    } finally {
+      setIsSubmitting(false);
     }
-    onClose();
   };
 
   return (
@@ -136,7 +145,15 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
             </div>
           </div>
 
-          <div className="pt-4 shrink-0"><button className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-4 rounded-2xl shadow-lg">{customer ? t.updateInformation : t.registerCustomer}</button></div>
+          <div className="pt-4 shrink-0">
+            <button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="w-full bg-[#D9ED5F] hover:bg-[#c8db54] text-[#1A1F3D] font-black py-4 rounded-2xl shadow-lg disabled:opacity-50"
+            >
+              {isSubmitting ? (language === 'th' ? "กำลังบันทึก..." : "Saving...") : (customer ? t.updateInformation : t.registerCustomer)}
+            </button>
+          </div>
         </form>
       </div>
     </div>

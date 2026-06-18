@@ -19,6 +19,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
   const t = translations[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const vaccineInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -75,7 +76,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.birthday) {
       toast.error(language === 'th' ? "กรุณากรอกชื่อและวันเกิดสัตว์เลี้ยง" : "Please fill in pet name and birthday");
@@ -88,6 +89,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
       return;
     }
 
+    setIsSubmitting(true);
     const petPayload = {
       name: formData.name,
       species: finalSpecies,
@@ -104,19 +106,25 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
       weightHistory: pet ? undefined : [{ date: new Date().toISOString().split('T')[0], value: Number(formData.initialWeight || 0) }]
     };
 
-    if (pet) {
-      updatePet(customerId, pet.id, petPayload);
-      toast.success(language === 'th' ? `อัปเดตข้อมูลของ ${formData.name} เรียบร้อย!` : `${formData.name}'s profile updated!`);
-    } else {
-      if (!formData.initialWeight) {
-        toast.error(language === 'th' ? "กรุณาระบุน้ำหนักเริ่มต้น" : "Initial weight is required");
-        return;
+    try {
+      if (pet) {
+        await updatePet(customerId, pet.id, petPayload);
+        toast.success(language === 'th' ? `อัปเดตข้อมูลของ ${formData.name} เรียบร้อย!` : `${formData.name}'s profile updated!`);
+      } else {
+        if (!formData.initialWeight) {
+          toast.error(language === 'th' ? "กรุณาระบุน้ำหนักเริ่มต้น" : "Initial weight is required");
+          return;
+        }
+        await addPet(customerId, petPayload);
+        toast.success(language === 'th' ? `ลงทะเบียน ${formData.name} เรียบร้อย!` : `${formData.name} registered successfully!`);
       }
-      addPet(customerId, petPayload);
-      toast.success(language === 'th' ? `ลงทะเบียน ${formData.name} เรียบร้อย!` : `${formData.name} registered successfully!`);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error(language === 'th' ? "เกิดข้อผิดพลาดในการบันทึกข้อมูลสัตว์เลี้ยง" : "Failed to save pet data");
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    onClose();
   };
 
   return (
@@ -370,8 +378,12 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
             </div>
           </div>
 
-          <button className="w-full bg-[#1A1F3D] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all hover:bg-[#2A3152] shadow-xl shadow-[#1A1F3D]/10">
-            {pet ? t.updatePetBtn : t.registerPetBtn}
+          <button 
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-[#1A1F3D] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all hover:bg-[#2A3152] shadow-xl shadow-[#1A1F3D]/10 disabled:opacity-50"
+          >
+            {isSubmitting ? (language === 'th' ? "กำลังบันทึก..." : "Saving...") : (pet ? t.updatePetBtn : t.registerPetBtn)}
           </button>
         </form>
       </div>
