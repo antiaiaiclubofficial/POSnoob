@@ -2,7 +2,7 @@ import { StateCreator } from 'zustand';
 import { AppState, Customer, Pet, QueueStatus, MembershipLevel, QueueItem } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 
-export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'customers' | 'setCustomers' | 'queue' | 'selectedOwner' | 'activePet' | 'activeQueueItemId' | 'selectOwner' | 'setActivePet' | 'setActiveQueueItem' | 'addBooking' | 'updateQueueStatus' | 'removeQueueItem' | 'markAsPaid' | 'addCustomer' | 'updateCustomer' | 'deleteCustomer' | 'bindLineToCustomer' | 'addPet' | 'updatePet' | 'updatePetWeight'>> = (set, get) => ({
+export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'customers' | 'setCustomers' | 'queue' | 'selectedOwner' | 'activePet' | 'activeQueueItemId' | 'selectOwner' | 'setActivePet' | 'setActiveQueueItem' | 'addBooking' | 'updateQueueStatus' | 'removeQueueItem' | 'markAsPaid' | 'addCustomer' | 'updateCustomer' | 'deleteCustomer' | 'bindLineToCustomer' | 'addPet' | 'updatePet' | 'updatePetWeight' | 'saveIntakeRecord'>> = (set, get) => ({
   customers: [],
   setCustomers: (customers) => set({ customers }),
   queue: [],
@@ -52,7 +52,10 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   updateQueueStatus: async (id, status) => {
-    const dbStatus = status === 'Waiting' ? 'pending' : status === 'Checked-in' ? 'confirmed' : status === 'In Progress' ? 'confirmed' : 'completed';
+    let dbStatus = 'pending';
+    if (status === 'Checked-in' || status === 'In Progress') dbStatus = 'confirmed';
+    else if (status === 'Completed') dbStatus = 'completed';
+
     const { error } = await supabase
       .from('appointments')
       .update({ status: dbStatus })
@@ -64,10 +67,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
     }
 
     set((state) => ({
-      queue: state.queue.map(q => {
-        if (q.id !== id) return q;
-        return { ...q, status };
-      })
+      queue: state.queue.map(q => q.id === id ? { ...q, status } : q)
     }));
   },
 
@@ -114,12 +114,11 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
     }
 
     if (data) {
-      // Create store_customer entry with explicit store_id
       const { error: storeCustError } = await supabase.from('store_customers').insert([{
         customer_id: data.id,
         store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
         points: 0,
-        tier: 'bronze' // Use 'bronze' as default to match DB trigger expectations
+        tier: 'bronze'
       }]);
 
       if (storeCustError) {
@@ -180,7 +179,6 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   deleteCustomer: async (id) => {
-    // 1. Get all pet IDs for this customer
     const { data: petsData } = await supabase
       .from('pets')
       .select('id')
@@ -188,47 +186,39 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
     
     const petIds = petsData?.map(p => p.id) || [];
 
-    // 2. Delete related records for those pets
     if (petIds.length > 0) {
       await supabase.from('pet_weight_history').delete().in('pet_id', petIds);
       await supabase.from('pet_health_logs').delete().in('pet_id', petIds);
     }
 
-    // 3. Delete service history
     await supabase.from('service_history').delete().eq('customer_id', id);
     if (petIds.length > 0) {
       await supabase.from('service_history').delete().in('pet_id', petIds);
     }
 
-    // 4. Delete appointments
     await supabase.from('appointments').delete().eq('customer_id', id);
     if (petIds.length > 0) {
       await supabase.from('appointments').delete().in('pet_id', petIds);
     }
 
-    // 5. Delete store_customers
     await supabase.from('store_customers').delete().eq('customer_id', id);
 
-    // 6. Delete points_logs (safely)
     try {
       await supabase.from('points_logs').delete().eq('customer_id', id);
     } catch (e) {
       console.warn("Failed to delete from points_logs:", e);
     }
 
-    // 7. Nullify customer_id in sales_transactions (safely)
     try {
       await supabase.from('sales_transactions').update({ customer_id: null }).eq('customer_id', id);
     } catch (e) {
       console.warn("Failed to nullify customer_id in sales_transactions:", e);
     }
 
-    // 8. Delete pets
     if (petIds.length > 0) {
       await supabase.from('pets').delete().eq('customer_id', id);
     }
 
-    // 9. Finally delete customer
     const { error } = await supabase.from('customers').delete().eq('id', id);
     if (error) {
       console.error("Error deleting customer:", error);
@@ -344,38 +334,98 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   updatePetWeight: async (customerId, petId, weight) => {
     await supabase
       .from('pets')
-      .update({ weight: weight })
+      .update({ weight: Number(weight) })
       .eq('id', petId);
 
-    const { data, error } = await supabase
+    await supabase
       .from('pet_weight_history')
       .insert([{
         pet_id: petId,
-        weight: weight,
+        weight: Number(weight),
         date: new Date().toISOString().split('T')[0]
+      }]);
+
+    set((state) => {
+      const updatedCustomers = state.customers.map(c => {
+        if (c.id === customerId) {
+          const updatedPets = c.pets.map(p => {
+            if (p.id === petId) {
+              const history = p.weightHistory ? [...p.weightHistory] : [];
+              history.push({ date: new Date().toISOString().split('T')[0], value: Number(weight) });
+              return { ...p, weightHistory: history };
+            }
+            return p;
+          });
+          return { ...c, pets: updatedPets };
+        }
+        return c;
+      });
+      return { customers: updatedCustomers };
+    });
+  },
+
+  saveIntakeRecord: async (customerId, petId, record) => {
+    const descriptionObj = {
+      queueItemId: record.queueItemId,
+      weight: record.weight,
+      details: record.details,
+      signature: record.signature,
+      staffName: record.staffName
+    };
+
+    const { data, error } = await supabase
+      .from('pet_health_logs')
+      .insert([{
+        pet_id: petId,
+        type: 'intake',
+        date: new Date().toISOString().split('T')[0],
+        description: JSON.stringify(descriptionObj)
       }])
       .select()
       .single();
 
     if (error) {
-      console.error("Error updating pet weight:", error);
+      console.error("Error saving intake record:", error);
       throw error;
     }
 
-    set((state) => ({
-      customers: state.customers.map(c => {
-        if (c.id !== customerId) return c;
-        return {
-          ...c,
-          pets: c.pets.map(p => {
-            if (p.id !== petId) return p;
-            return {
-              ...p,
-              weightHistory: [...(p.weightHistory || []), { date: data.date, value: Number(data.weight) }]
-            };
-          })
-        };
-      })
-    }));
-  },
+    if (data) {
+      set((state) => ({
+        customers: state.customers.map(c => {
+          if (c.id !== customerId) return c;
+          return {
+            ...c,
+            pets: c.pets.map(p => {
+              if (p.id !== petId) return p;
+              const newIntake = {
+                id: data.id,
+                queueItemId: record.queueItemId,
+                date: data.date,
+                weight: record.weight,
+                details: record.details,
+                signature: record.signature,
+                staffName: record.staffName
+              };
+              return {
+                ...p,
+                intakeHistory: [...(p.intakeHistory || []), newStartIntake(newIntake)]
+              };
+            })
+          };
+        })
+      }));
+    }
+  }
 });
+
+const newStartIntake = (item: any) => {
+  return {
+    id: item.id,
+    queueItemId: item.queueItemId,
+    date: item.date,
+    weight: item.weight,
+    details: item.details,
+    signature: item.signature,
+    staffName: item.staffName
+  };
+};
