@@ -1,3 +1,5 @@
+"use client";
+
 import { StateCreator } from 'zustand';
 import { AppState, Customer, Pet, QueueStatus, MembershipLevel, QueueItem } from '../types';
 import { supabase } from '@/integrations/supabase/client';
@@ -179,57 +181,83 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   deleteCustomer: async (id) => {
-    const { data: petsData } = await supabase
-      .from('pets')
-      .select('id')
-      .eq('customer_id', id);
-    
-    const petIds = petsData?.map(p => p.id) || [];
-
-    if (petIds.length > 0) {
-      await supabase.from('pet_weight_history').delete().in('pet_id', petIds);
-      await supabase.from('pet_health_logs').delete().in('pet_id', petIds);
-    }
-
-    await supabase.from('service_history').delete().eq('customer_id', id);
-    if (petIds.length > 0) {
-      await supabase.from('service_history').delete().in('pet_id', petIds);
-    }
-
-    await supabase.from('appointments').delete().eq('customer_id', id);
-    if (petIds.length > 0) {
-      await supabase.from('appointments').delete().in('pet_id', petIds);
-    }
-
-    await supabase.from('store_customers').delete().eq('customer_id', id);
-
     try {
-      await supabase.from('points_logs').delete().eq('customer_id', id);
-    } catch (e) {
-      console.warn("Failed to delete from points_logs:", e);
-    }
+      // 1. Fetch pets associated with the customer
+      const { data: petsData, error: fetchPetsError } = await supabase
+        .from('pets')
+        .select('id')
+        .eq('customer_id', id);
+      if (fetchPetsError) throw new Error(`Failed to fetch pets: ${fetchPetsError.message}`);
+      
+      const petIds = petsData?.map(p => p.id) || [];
 
-    try {
-      await supabase.from('sales_transactions').update({ customer_id: null }).eq('customer_id', id);
-    } catch (e) {
-      console.warn("Failed to nullify customer_id in sales_transactions:", e);
-    }
+      // 2. Delete pet-related history
+      if (petIds.length > 0) {
+        const { error: deleteWeightHistoryError } = await supabase.from('pet_weight_history').delete().in('pet_id', petIds);
+        if (deleteWeightHistoryError) throw new Error(`Failed to delete pet weight history: ${deleteWeightHistoryError.message}`);
+        
+        const { error: deleteHealthLogsError } = await supabase.from('pet_health_logs').delete().in('pet_id', petIds);
+        if (deleteHealthLogsError) throw new Error(`Failed to delete pet health logs: ${deleteHealthLogsError.message}`);
+      }
 
-    if (petIds.length > 0) {
-      await supabase.from('pets').delete().eq('customer_id', id);
-    }
+      // 3. Delete service history
+      const { error: deleteServiceHistoryByCustomerError } = await supabase.from('service_history').delete().eq('customer_id', id);
+      if (deleteServiceHistoryByCustomerError) throw new Error(`Failed to delete service history by customer: ${deleteServiceHistoryByCustomerError.message}`);
+      
+      if (petIds.length > 0) {
+        const { error: deleteServiceHistoryByPetError } = await supabase.from('service_history').delete().in('pet_id', petIds);
+        if (deleteServiceHistoryByPetError) throw new Error(`Failed to delete service history by pet: ${deleteServiceHistoryByPetError.message}`);
+      }
 
-    const { error } = await supabase.from('customers').delete().eq('id', id);
-    if (error) {
-      console.error("Error deleting customer:", error);
-      throw error;
-    }
+      // 4. Delete appointments
+      const { error: deleteAppointmentsByCustomerError } = await supabase.from('appointments').delete().eq('customer_id', id);
+      if (deleteAppointmentsByCustomerError) throw new Error(`Failed to delete appointments by customer: ${deleteAppointmentsByCustomerError.message}`);
+      
+      if (petIds.length > 0) {
+        const { error: deleteAppointmentsByPetError } = await supabase.from('appointments').delete().in('pet_id', petIds);
+        if (deleteAppointmentsByPetError) throw new Error(`Failed to delete appointments by pet: ${deleteAppointmentsByPetError.message}`);
+      }
 
-    set((state) => ({
-      customers: state.customers.filter(c => c.id !== id),
-      selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
-      activePet: state.selectedOwner?.id === id ? null : state.activePet
-    }));
+      // 5. Delete store_customers entry
+      const { error: deleteStoreCustomersError } = await supabase.from('store_customers').delete().eq('customer_id', id);
+      if (deleteStoreCustomersError) throw new Error(`Failed to delete store customer entry: ${deleteStoreCustomersError.message}`);
+
+      // 6. Delete points_logs (optional, wrapped in try/catch)
+      try {
+        const { error: deletePointsLogsError } = await supabase.from('points_logs').delete().eq('customer_id', id);
+        if (deletePointsLogsError) console.warn("Failed to delete from points_logs:", deletePointsLogsError.message);
+      } catch (e: any) {
+        console.warn("Failed to delete from points_logs (catch block):", e.message);
+      }
+
+      // 7. Nullify customer_id in sales_transactions (optional, wrapped in try/catch)
+      try {
+        const { error: updateSalesTransactionsError } = await supabase.from('sales_transactions').update({ customer_id: null }).eq('customer_id', id);
+        if (updateSalesTransactionsError) console.warn("Failed to nullify customer_id in sales_transactions:", updateSalesTransactionsError.message);
+      } catch (e: any) {
+        console.warn("Failed to nullify customer_id in sales_transactions (catch block):", e.message);
+      }
+
+      // 8. Delete pets
+      if (petIds.length > 0) {
+        const { error: deletePetsError } = await supabase.from('pets').delete().eq('customer_id', id);
+        if (deletePetsError) throw new Error(`Failed to delete pets: ${deletePetsError.message}`);
+      }
+
+      // 9. Delete the customer itself
+      const { error: deleteCustomerError } = await supabase.from('customers').delete().eq('id', id);
+      if (deleteCustomerError) throw new Error(`Failed to delete customer: ${deleteCustomerError.message}`);
+
+      // Update local state
+      set((state) => ({
+        customers: state.customers.filter(c => c.id !== id),
+        selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
+        activePet: state.selectedOwner?.id === id ? null : state.activePet
+      }));
+    } catch (error: any) {
+      console.error("Comprehensive delete customer error:", error.message);
+      throw new Error(`ไม่สามารถลบลูกค้าได้: ${error.message}`); // Re-throw with a user-friendly message
+    }
   },
 
   bindLineToCustomer: async (customerId, lineId) => {
