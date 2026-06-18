@@ -195,76 +195,122 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       const petIds = petsData?.map(p => p.id) || [];
       console.log(`[deleteCustomer] Pet IDs to delete:`, petIds);
 
-      // Helper to perform delete and log count
-      const performDelete = async (table: string, column: string, values: string[], logPrefix: string) => {
+      // Helper to perform delete and verify
+      const performDeleteAndVerify = async (table: string, column: string, values: string[], logPrefix: string) => {
         if (values.length === 0) {
           console.log(`[deleteCustomer] No items to delete in ${table} for ${logPrefix}.`);
           return;
         }
-        const { count, error } = await supabase.from(table).delete().in(column, values).select('count');
-        console.log(`[deleteCustomer] Deleted ${table} for ${logPrefix}: Count: ${count}, Supabase Error:`, error);
-        if (error) throw new Error(`Failed to delete ${table}: ${error.message}`);
-        if (count === 0) console.warn(`[deleteCustomer] WARNING: ${table} delete reported no error but affected 0 rows for ${logPrefix}. Check RLS or foreign key setup.`);
+        const { error: deleteError } = await supabase.from(table).delete().in(column, values);
+        console.log(`[deleteCustomer] Attempted delete on ${table} for ${logPrefix}: Supabase Error:`, deleteError);
+        if (deleteError) throw new Error(`Failed to delete ${table}: ${deleteError.message}`);
+
+        // Verify deletion
+        const { data: checkData, error: checkError } = await supabase.from(table).select('id').in(column, values);
+        if (checkError) {
+          console.error(`[deleteCustomer] Failed to verify ${table} deletion for ${logPrefix}:`, checkError.message);
+        } else if (checkData && checkData.length > 0) {
+          console.warn(`[deleteCustomer] WARNING: ${table} still exists for ${logPrefix} after delete attempt. Check RLS or foreign key setup. Remaining IDs:`, checkData.map(d => d.id));
+        } else {
+          console.log(`[deleteCustomer] Verified ${table} successfully deleted for ${logPrefix}.`);
+        }
       };
 
-      const performDeleteByCustomerId = async (table: string, customerId: string, logPrefix: string) => {
-        const { count, error } = await supabase.from(table).delete().eq('customer_id', customerId).select('count');
-        console.log(`[deleteCustomer] Deleted ${table} for ${logPrefix}: Count: ${count}, Supabase Error:`, error);
-        if (error) throw new Error(`Failed to delete ${table}: ${error.message}`);
-        if (count === 0) console.warn(`[deleteCustomer] WARNING: ${table} delete reported no error but affected 0 rows for ${logPrefix}. Check RLS or foreign key setup.`);
+      const performDeleteAndVerifyByCustomerId = async (table: string, customerId: string, logPrefix: string) => {
+        const { error: deleteError } = await supabase.from(table).delete().eq('customer_id', customerId);
+        console.log(`[deleteCustomer] Attempted delete on ${table} for ${logPrefix}: Supabase Error:`, deleteError);
+        if (deleteError) throw new Error(`Failed to delete ${table}: ${deleteError.message}`);
+
+        // Verify deletion
+        const { data: checkData, error: checkError } = await supabase.from(table).select('id').eq('customer_id', customerId);
+        if (checkError) {
+          console.error(`[deleteCustomer] Failed to verify ${table} deletion for ${logPrefix}:`, checkError.message);
+        } else if (checkData && checkData.length > 0) {
+          console.warn(`[deleteCustomer] WARNING: ${table} still exists for ${logPrefix} after delete attempt. Check RLS or foreign key setup. Remaining IDs:`, checkData.map(d => d.id));
+        } else {
+          console.log(`[deleteCustomer] Verified ${table} successfully deleted for ${logPrefix}.`);
+        }
       };
 
       // 2. Delete pet-related history
       if (petIds.length > 0) {
-        await performDelete('pet_weight_history', 'pet_id', petIds, `pets ${petIds}`);
-        await performDelete('pet_health_logs', 'pet_id', petIds, `pets ${petIds}`);
+        await performDeleteAndVerify('pet_weight_history', 'pet_id', petIds, `pets ${petIds}`);
+        await performDeleteAndVerify('pet_health_logs', 'pet_id', petIds, `pets ${petIds}`);
       }
 
       // 3. Delete service history
-      await performDeleteByCustomerId('service_history', id, `customer ${id}`);
+      await performDeleteAndVerifyByCustomerId('service_history', id, `customer ${id}`);
       if (petIds.length > 0) {
-        await performDelete('service_history', 'pet_id', petIds, `pets ${petIds}`);
+        await performDeleteAndVerify('service_history', 'pet_id', petIds, `pets ${petIds}`);
       }
 
       // 4. Delete appointments
-      await performDeleteByCustomerId('appointments', id, `customer ${id}`);
+      await performDeleteAndVerifyByCustomerId('appointments', id, `customer ${id}`);
       if (petIds.length > 0) {
-        await performDelete('appointments', 'pet_id', petIds, `pets ${petIds}`);
+        await performDeleteAndVerify('appointments', 'pet_id', petIds, `pets ${petIds}`);
       }
 
       // 5. Delete store_customers entry
-      await performDeleteByCustomerId('store_customers', id, `customer ${id}`);
+      await performDeleteAndVerifyByCustomerId('store_customers', id, `customer ${id}`);
 
       // 6. Delete points_logs (optional, wrapped in try/catch)
       try {
-        const { count, error: deletePointsLogsError } = await supabase.from('points_logs').delete().eq('customer_id', id).select('count');
-        console.log(`[deleteCustomer] Deleted points_logs for customer ${id}: Count: ${count}, Supabase Error:`, deletePointsLogsError);
+        const { error: deletePointsLogsError } = await supabase.from('points_logs').delete().eq('customer_id', id);
+        console.log(`[deleteCustomer] Attempted delete on points_logs for customer ${id}: Supabase Error:`, deletePointsLogsError);
         if (deletePointsLogsError) console.warn("Failed to delete from points_logs:", deletePointsLogsError.message);
-        else if (count === 0) console.warn(`[deleteCustomer] WARNING: points_logs delete reported no error but affected 0 rows for customer ${id}. Check RLS or foreign key setup.`);
+        else {
+          const { data: checkData, error: checkError } = await supabase.from('points_logs').select('id').eq('customer_id', id);
+          if (checkError) {
+            console.error(`[deleteCustomer] Failed to verify points_logs deletion for customer ${id}:`, checkError.message);
+          } else if (checkData && checkData.length > 0) {
+            console.warn(`[deleteCustomer] WARNING: points_logs still exists for customer ${id} after delete attempt. Check RLS or foreign key setup. Remaining IDs:`, checkData.map(d => d.id));
+          } else {
+            console.log(`[deleteCustomer] Verified points_logs successfully deleted for customer ${id}.`);
+          }
+        }
       } catch (e: any) {
         console.warn("Failed to delete from points_logs (catch block):", e.message);
       }
 
       // 7. Nullify customer_id in sales_transactions (optional, wrapped in try/catch)
       try {
-        const { count, error: updateSalesTransactionsError } = await supabase.from('sales_transactions').update({ customer_id: null }).eq('customer_id', id).select('count');
-        console.log(`[deleteCustomer] Nullified customer_id in sales_transactions for customer ${id}: Count: ${count}, Supabase Error:`, updateSalesTransactionsError);
+        const { error: updateSalesTransactionsError } = await supabase.from('sales_transactions').update({ customer_id: null }).eq('customer_id', id);
+        console.log(`[deleteCustomer] Attempted nullify customer_id in sales_transactions for customer ${id}: Supabase Error:`, updateSalesTransactionsError);
         if (updateSalesTransactionsError) console.warn("Failed to nullify customer_id in sales_transactions:", updateSalesTransactionsError.message);
-        else if (count === 0) console.warn(`[deleteCustomer] WARNING: sales_transactions update reported no error but affected 0 rows for customer ${id}. Check RLS or foreign key setup.`);
+        else {
+          // Verify update: check if customer_id is still present for this customer
+          const { data: checkData, error: checkError } = await supabase.from('sales_transactions').select('id').eq('customer_id', id);
+          if (checkError) {
+            console.error(`[deleteCustomer] Failed to verify sales_transactions update for customer ${id}:`, checkError.message);
+          } else if (checkData && checkData.length > 0) {
+            console.warn(`[deleteCustomer] WARNING: customer_id still exists in sales_transactions for customer ${id} after update attempt. Check RLS or foreign key setup. Remaining IDs:`, checkData.map(d => d.id));
+          } else {
+            console.log(`[deleteCustomer] Verified sales_transactions successfully updated for customer ${id}.`);
+          }
+        }
       } catch (e: any) {
         console.warn("Failed to nullify customer_id in sales_transactions (catch block):", e.message);
       }
 
       // 8. Delete pets
       if (petIds.length > 0) {
-        await performDelete('pets', 'customer_id', [id], `customer ${id}`); // Delete pets by customer_id
+        await performDeleteAndVerify('pets', 'customer_id', [id], `customer ${id}`); // Delete pets by customer_id
       }
 
       // 9. Delete the customer itself
-      const { count: customerDeleteCount, error: deleteCustomerError } = await supabase.from('customers').delete().eq('id', id).select('count');
-      console.log(`[deleteCustomer] Deleted customer ${id}: Count: ${customerDeleteCount}, Supabase Error:`, deleteCustomerError);
+      const { error: deleteCustomerError } = await supabase.from('customers').delete().eq('id', id);
+      console.log(`[deleteCustomer] Attempted delete on customer ${id}: Supabase Error:`, deleteCustomerError);
       if (deleteCustomerError) throw new Error(`Failed to delete customer: ${deleteCustomerError.message}`);
-      if (customerDeleteCount === 0) console.warn(`[deleteCustomer] WARNING: customer delete reported no error but affected 0 rows for customer ${id}. Check RLS or foreign key setup.`);
+      else {
+        const { data: checkData, error: checkError } = await supabase.from('customers').select('id').eq('id', id);
+        if (checkError) {
+          console.error(`[deleteCustomer] Failed to verify customer deletion for customer ${id}:`, checkError.message);
+        } else if (checkData && checkData.length > 0) {
+          console.warn(`[deleteCustomer] WARNING: customer still exists for customer ${id} after delete attempt. Check RLS or foreign key setup. Remaining IDs:`, checkData.map(d => d.id));
+        } else {
+          console.log(`[deleteCustomer] Verified customer successfully deleted for customer ${id}.`);
+        }
+      }
 
       // Update local state
       set((state) => ({
