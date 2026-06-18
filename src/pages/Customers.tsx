@@ -312,7 +312,8 @@ const Customers = () => {
                               setSelectedCustomerId(null);
                               refetch();
                             } catch (err: any) {
-                              toast.error(language === 'th' ? "เกิดข้อผิดพลาดในการลบข้อมูล" : "Failed to delete customer");
+                              console.error("Error deleting customer:", err); // Log the error for debugging
+                              toast.error(err.message || (language === 'th' ? "เกิดข้อผิดพลาดในการลบข้อมูล" : "Failed to delete customer"));
                             }
                           }
                         }} 
