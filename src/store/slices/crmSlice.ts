@@ -189,79 +189,82 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         .from('pets')
         .select('id')
         .eq('customer_id', id);
-      console.log(`[deleteCustomer] Fetched pets for customer ${id}:`, petsData, "Error:", fetchPetsError);
+      console.log(`[deleteCustomer] Fetched pets for customer ${id}:`, petsData, "Supabase Error:", fetchPetsError);
       if (fetchPetsError) throw new Error(`Failed to fetch pets: ${fetchPetsError.message}`);
       
       const petIds = petsData?.map(p => p.id) || [];
       console.log(`[deleteCustomer] Pet IDs to delete:`, petIds);
 
+      // Helper to perform delete and log count
+      const performDelete = async (table: string, column: string, values: string[], logPrefix: string) => {
+        if (values.length === 0) {
+          console.log(`[deleteCustomer] No items to delete in ${table} for ${logPrefix}.`);
+          return;
+        }
+        const { count, error } = await supabase.from(table).delete().in(column, values).select('count');
+        console.log(`[deleteCustomer] Deleted ${table} for ${logPrefix}: Count: ${count}, Supabase Error:`, error);
+        if (error) throw new Error(`Failed to delete ${table}: ${error.message}`);
+        if (count === 0) console.warn(`[deleteCustomer] WARNING: ${table} delete reported no error but affected 0 rows for ${logPrefix}. Check RLS or foreign key setup.`);
+      };
+
+      const performDeleteByCustomerId = async (table: string, customerId: string, logPrefix: string) => {
+        const { count, error } = await supabase.from(table).delete().eq('customer_id', customerId).select('count');
+        console.log(`[deleteCustomer] Deleted ${table} for ${logPrefix}: Count: ${count}, Supabase Error:`, error);
+        if (error) throw new Error(`Failed to delete ${table}: ${error.message}`);
+        if (count === 0) console.warn(`[deleteCustomer] WARNING: ${table} delete reported no error but affected 0 rows for ${logPrefix}. Check RLS or foreign key setup.`);
+      };
+
       // 2. Delete pet-related history
       if (petIds.length > 0) {
-        const { error: deleteWeightHistoryError } = await supabase.from('pet_weight_history').delete().in('pet_id', petIds);
-        console.log(`[deleteCustomer] Deleted pet_weight_history for pets ${petIds}:`, "Error:", deleteWeightHistoryError);
-        if (deleteWeightHistoryError) throw new Error(`Failed to delete pet weight history: ${deleteWeightHistoryError.message}`);
-        
-        const { error: deleteHealthLogsError } = await supabase.from('pet_health_logs').delete().in('pet_id', petIds);
-        console.log(`[deleteCustomer] Deleted pet_health_logs for pets ${petIds}:`, "Error:", deleteHealthLogsError);
-        if (deleteHealthLogsError) throw new Error(`Failed to delete pet health logs: ${deleteHealthLogsError.message}`);
+        await performDelete('pet_weight_history', 'pet_id', petIds, `pets ${petIds}`);
+        await performDelete('pet_health_logs', 'pet_id', petIds, `pets ${petIds}`);
       }
 
       // 3. Delete service history
-      const { error: deleteServiceHistoryByCustomerError } = await supabase.from('service_history').delete().eq('customer_id', id);
-      console.log(`[deleteCustomer] Deleted service_history by customer ${id}:`, "Error:", deleteServiceHistoryByCustomerError);
-      if (deleteServiceHistoryByCustomerError) throw new Error(`Failed to delete service history by customer: ${deleteServiceHistoryByCustomerError.message}`);
-      
+      await performDeleteByCustomerId('service_history', id, `customer ${id}`);
       if (petIds.length > 0) {
-        const { error: deleteServiceHistoryByPetError } = await supabase.from('service_history').delete().in('pet_id', petIds);
-        console.log(`[deleteCustomer] Deleted service_history by pet IDs ${petIds}:`, "Error:", deleteServiceHistoryByPetError);
-        if (deleteServiceHistoryByPetError) throw new Error(`Failed to delete service history by pet: ${deleteServiceHistoryByPetError.message}`);
+        await performDelete('service_history', 'pet_id', petIds, `pets ${petIds}`);
       }
 
       // 4. Delete appointments
-      const { error: deleteAppointmentsByCustomerError } = await supabase.from('appointments').delete().eq('customer_id', id);
-      console.log(`[deleteCustomer] Deleted appointments by customer ${id}:`, "Error:", deleteAppointmentsByCustomerError);
-      if (deleteAppointmentsByCustomerError) throw new Error(`Failed to delete appointments by customer: ${deleteAppointmentsByCustomerError.message}`);
-      
+      await performDeleteByCustomerId('appointments', id, `customer ${id}`);
       if (petIds.length > 0) {
-        const { error: deleteAppointmentsByPetError } = await supabase.from('appointments').delete().in('pet_id', petIds);
-        console.log(`[deleteCustomer] Deleted appointments by pet IDs ${petIds}:`, "Error:", deleteAppointmentsByPetError);
-        if (deleteAppointmentsByPetError) throw new Error(`Failed to delete appointments by pet: ${deleteAppointmentsByPetError.message}`);
+        await performDelete('appointments', 'pet_id', petIds, `pets ${petIds}`);
       }
 
       // 5. Delete store_customers entry
-      const { error: deleteStoreCustomersError } = await supabase.from('store_customers').delete().eq('customer_id', id);
-      console.log(`[deleteCustomer] Deleted store_customers for customer ${id}:`, "Error:", deleteStoreCustomersError);
-      if (deleteStoreCustomersError) throw new Error(`Failed to delete store customer entry: ${deleteStoreCustomersError.message}`);
+      await performDeleteByCustomerId('store_customers', id, `customer ${id}`);
 
       // 6. Delete points_logs (optional, wrapped in try/catch)
       try {
-        const { error: deletePointsLogsError } = await supabase.from('points_logs').delete().eq('customer_id', id);
+        const { count, error: deletePointsLogsError } = await supabase.from('points_logs').delete().eq('customer_id', id).select('count');
+        console.log(`[deleteCustomer] Deleted points_logs for customer ${id}: Count: ${count}, Supabase Error:`, deletePointsLogsError);
         if (deletePointsLogsError) console.warn("Failed to delete from points_logs:", deletePointsLogsError.message);
-        console.log(`[deleteCustomer] Deleted points_logs for customer ${id}:`, "Error:", deletePointsLogsError);
+        else if (count === 0) console.warn(`[deleteCustomer] WARNING: points_logs delete reported no error but affected 0 rows for customer ${id}. Check RLS or foreign key setup.`);
       } catch (e: any) {
         console.warn("Failed to delete from points_logs (catch block):", e.message);
       }
 
       // 7. Nullify customer_id in sales_transactions (optional, wrapped in try/catch)
       try {
-        const { error: updateSalesTransactionsError } = await supabase.from('sales_transactions').update({ customer_id: null }).eq('customer_id', id);
+        const { count, error: updateSalesTransactionsError } = await supabase.from('sales_transactions').update({ customer_id: null }).eq('customer_id', id).select('count');
+        console.log(`[deleteCustomer] Nullified customer_id in sales_transactions for customer ${id}: Count: ${count}, Supabase Error:`, updateSalesTransactionsError);
         if (updateSalesTransactionsError) console.warn("Failed to nullify customer_id in sales_transactions:", updateSalesTransactionsError.message);
-        console.log(`[deleteCustomer] Nullified customer_id in sales_transactions for customer ${id}:`, "Error:", updateSalesTransactionsError);
+        else if (count === 0) console.warn(`[deleteCustomer] WARNING: sales_transactions update reported no error but affected 0 rows for customer ${id}. Check RLS or foreign key setup.`);
       } catch (e: any) {
         console.warn("Failed to nullify customer_id in sales_transactions (catch block):", e.message);
       }
 
       // 8. Delete pets
       if (petIds.length > 0) {
-        const { error: deletePetsError } = await supabase.from('pets').delete().eq('customer_id', id);
-        console.log(`[deleteCustomer] Deleted pets for customer ${id}:`, "Error:", deletePetsError);
-        if (deletePetsError) throw new Error(`Failed to delete pets: ${deletePetsError.message}`);
+        await performDelete('pets', 'customer_id', [id], `customer ${id}`); // Delete pets by customer_id
       }
 
       // 9. Delete the customer itself
-      const { error: deleteCustomerError } = await supabase.from('customers').delete().eq('id', id);
-      console.log(`[deleteCustomer] Deleted customer ${id}:`, "Error:", deleteCustomerError);
+      const { count: customerDeleteCount, error: deleteCustomerError } = await supabase.from('customers').delete().eq('id', id).select('count');
+      console.log(`[deleteCustomer] Deleted customer ${id}: Count: ${customerDeleteCount}, Supabase Error:`, deleteCustomerError);
       if (deleteCustomerError) throw new Error(`Failed to delete customer: ${deleteCustomerError.message}`);
+      if (customerDeleteCount === 0) console.warn(`[deleteCustomer] WARNING: customer delete reported no error but affected 0 rows for customer ${id}. Check RLS or foreign key setup.`);
 
       // Update local state
       set((state) => ({
