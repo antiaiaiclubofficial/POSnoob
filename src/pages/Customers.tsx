@@ -299,7 +299,28 @@ const Customers = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <h2 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">{selectedCustomer.name}</h2>
                     <div className="flex gap-1">
-                      <button onClick={() => { setEditingCustomer(selectedCustomer); setIsCustomerModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D]"><Edit3 size={18} /></button>
+                      <button onClick={() => { setEditingCustomer(selectedCustomer); setIsCustomerModalOpen(true); }} className="p-2 text-gray-300 hover:text-[#1A1F3D]" title={language === 'th' ? 'แก้ไขข้อมูล' : 'Edit Profile'}><Edit3 size={18} /></button>
+                      <button 
+                        onClick={async () => {
+                          const confirmMsg = language === 'th' 
+                            ? `คุณแน่ใจหรือไม่ว่าต้องการลบลูกค้า "${selectedCustomer.name}"? ข้อมูลสัตว์เลี้ยงและประวัติทั้งหมดจะถูกลบออกด้วย` 
+                            : `Are you sure you want to delete customer "${selectedCustomer.name}"? All registered pets and history will be deleted.`;
+                          if (window.confirm(confirmMsg)) {
+                            try {
+                              await deleteCustomer(selectedCustomer.id);
+                              toast.success(language === 'th' ? "ลบข้อมูลลูกค้าเรียบร้อยแล้ว" : "Customer deleted successfully");
+                              setSelectedCustomerId(null);
+                              refetch();
+                            } catch (err: any) {
+                              toast.error(language === 'th' ? "เกิดข้อผิดพลาดในการลบข้อมูล" : "Failed to delete customer");
+                            }
+                          }
+                        }} 
+                        className="p-2 text-gray-300 hover:text-red-500"
+                        title={language === 'th' ? 'ลบลูกค้า' : 'Delete Customer'}
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-4 mb-4">
