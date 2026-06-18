@@ -182,50 +182,62 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
 
   deleteCustomer: async (id) => {
     try {
+      console.log(`[deleteCustomer] Attempting to delete customer with ID: ${id}`);
+
       // 1. Fetch pets associated with the customer
       const { data: petsData, error: fetchPetsError } = await supabase
         .from('pets')
         .select('id')
         .eq('customer_id', id);
+      console.log(`[deleteCustomer] Fetched pets for customer ${id}:`, petsData, "Error:", fetchPetsError);
       if (fetchPetsError) throw new Error(`Failed to fetch pets: ${fetchPetsError.message}`);
       
       const petIds = petsData?.map(p => p.id) || [];
+      console.log(`[deleteCustomer] Pet IDs to delete:`, petIds);
 
       // 2. Delete pet-related history
       if (petIds.length > 0) {
         const { error: deleteWeightHistoryError } = await supabase.from('pet_weight_history').delete().in('pet_id', petIds);
+        console.log(`[deleteCustomer] Deleted pet_weight_history for pets ${petIds}:`, "Error:", deleteWeightHistoryError);
         if (deleteWeightHistoryError) throw new Error(`Failed to delete pet weight history: ${deleteWeightHistoryError.message}`);
         
         const { error: deleteHealthLogsError } = await supabase.from('pet_health_logs').delete().in('pet_id', petIds);
+        console.log(`[deleteCustomer] Deleted pet_health_logs for pets ${petIds}:`, "Error:", deleteHealthLogsError);
         if (deleteHealthLogsError) throw new Error(`Failed to delete pet health logs: ${deleteHealthLogsError.message}`);
       }
 
       // 3. Delete service history
       const { error: deleteServiceHistoryByCustomerError } = await supabase.from('service_history').delete().eq('customer_id', id);
+      console.log(`[deleteCustomer] Deleted service_history by customer ${id}:`, "Error:", deleteServiceHistoryByCustomerError);
       if (deleteServiceHistoryByCustomerError) throw new Error(`Failed to delete service history by customer: ${deleteServiceHistoryByCustomerError.message}`);
       
       if (petIds.length > 0) {
         const { error: deleteServiceHistoryByPetError } = await supabase.from('service_history').delete().in('pet_id', petIds);
+        console.log(`[deleteCustomer] Deleted service_history by pet IDs ${petIds}:`, "Error:", deleteServiceHistoryByPetError);
         if (deleteServiceHistoryByPetError) throw new Error(`Failed to delete service history by pet: ${deleteServiceHistoryByPetError.message}`);
       }
 
       // 4. Delete appointments
       const { error: deleteAppointmentsByCustomerError } = await supabase.from('appointments').delete().eq('customer_id', id);
+      console.log(`[deleteCustomer] Deleted appointments by customer ${id}:`, "Error:", deleteAppointmentsByCustomerError);
       if (deleteAppointmentsByCustomerError) throw new Error(`Failed to delete appointments by customer: ${deleteAppointmentsByCustomerError.message}`);
       
       if (petIds.length > 0) {
         const { error: deleteAppointmentsByPetError } = await supabase.from('appointments').delete().in('pet_id', petIds);
+        console.log(`[deleteCustomer] Deleted appointments by pet IDs ${petIds}:`, "Error:", deleteAppointmentsByPetError);
         if (deleteAppointmentsByPetError) throw new Error(`Failed to delete appointments by pet: ${deleteAppointmentsByPetError.message}`);
       }
 
       // 5. Delete store_customers entry
       const { error: deleteStoreCustomersError } = await supabase.from('store_customers').delete().eq('customer_id', id);
+      console.log(`[deleteCustomer] Deleted store_customers for customer ${id}:`, "Error:", deleteStoreCustomersError);
       if (deleteStoreCustomersError) throw new Error(`Failed to delete store customer entry: ${deleteStoreCustomersError.message}`);
 
       // 6. Delete points_logs (optional, wrapped in try/catch)
       try {
         const { error: deletePointsLogsError } = await supabase.from('points_logs').delete().eq('customer_id', id);
         if (deletePointsLogsError) console.warn("Failed to delete from points_logs:", deletePointsLogsError.message);
+        console.log(`[deleteCustomer] Deleted points_logs for customer ${id}:`, "Error:", deletePointsLogsError);
       } catch (e: any) {
         console.warn("Failed to delete from points_logs (catch block):", e.message);
       }
@@ -234,6 +246,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       try {
         const { error: updateSalesTransactionsError } = await supabase.from('sales_transactions').update({ customer_id: null }).eq('customer_id', id);
         if (updateSalesTransactionsError) console.warn("Failed to nullify customer_id in sales_transactions:", updateSalesTransactionsError.message);
+        console.log(`[deleteCustomer] Nullified customer_id in sales_transactions for customer ${id}:`, "Error:", updateSalesTransactionsError);
       } catch (e: any) {
         console.warn("Failed to nullify customer_id in sales_transactions (catch block):", e.message);
       }
@@ -241,11 +254,13 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       // 8. Delete pets
       if (petIds.length > 0) {
         const { error: deletePetsError } = await supabase.from('pets').delete().eq('customer_id', id);
+        console.log(`[deleteCustomer] Deleted pets for customer ${id}:`, "Error:", deletePetsError);
         if (deletePetsError) throw new Error(`Failed to delete pets: ${deletePetsError.message}`);
       }
 
       // 9. Delete the customer itself
       const { error: deleteCustomerError } = await supabase.from('customers').delete().eq('id', id);
+      console.log(`[deleteCustomer] Deleted customer ${id}:`, "Error:", deleteCustomerError);
       if (deleteCustomerError) throw new Error(`Failed to delete customer: ${deleteCustomerError.message}`);
 
       // Update local state
@@ -254,6 +269,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
         activePet: state.selectedOwner?.id === id ? null : state.activePet
       }));
+      console.log(`[deleteCustomer] Customer ${id} successfully deleted from local state.`);
     } catch (error: any) {
       console.error("Comprehensive delete customer error:", error.message);
       throw new Error(`ไม่สามารถลบลูกค้าได้: ${error.message}`); // Re-throw with a user-friendly message
@@ -261,35 +277,40 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   bindLineToCustomer: async (customerId, lineId) => {
-    const { error } = await supabase.from('customers').update({ line_user_id: lineId }).eq('id', customerId);
+    const { error } = await supabase
+      .from('customers')
+      .update({ line_user_id: lineId })
+      .eq('id', customerId);
+
     if (error) {
-      console.error("Error binding LINE ID:", error);
+      console.error("Error binding LINE to customer:", error);
       throw error;
     }
-    set((state) => ({ customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c) }));
+
+    set(state => ({
+      customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c)
+    }));
   },
 
   addPet: async (customerId, petData) => {
-    const initialWeight = petData.weightHistory?.[0]?.value || 0;
     const { data, error } = await supabase
       .from('pets')
-      .insert([{ 
+      .insert([{
         customer_id: customerId,
         name: petData.name,
         type: petData.species,
         breed: petData.breed,
         birth_date: petData.birthday,
+        weight: Number(petData.initialWeight),
         medical_condition: petData.medicalCondition,
         precautions: petData.precautions,
         fur_length: petData.coatType,
         image_url: petData.image,
-        weight: initialWeight,
-        custom_preferences: [
-          { key: 'color', value: petData.color || '' },
-          { key: 'temperament', value: petData.temperament || '' },
-          { key: 'vaccineBookImage', value: petData.vaccineBookImage || '' },
-          { key: 'notes', value: petData.notes || '' }
-        ]
+        custom_preferences: {
+          color: petData.color,
+          temperament: petData.temperament,
+          notes: petData.notes
+        }
       }])
       .select()
       .single();
@@ -300,27 +321,35 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
     }
 
     if (data) {
-      set((state) => ({
-        customers: state.customers.map(c => c.id === customerId ? {
-          ...c,
-          pets: [...c.pets, {
-            id: data.id,
-            name: data.name,
-            species: data.type,
-            breed: data.breed || '',
-            birthday: data.birth_date || '',
-            notes: petData.notes || '',
-            image: data.image_url || '',
-            weightHistory: [{ date: new Date().toISOString().split('T')[0], value: Number(data.weight || 0) }],
-            serviceHistory: [],
-            coatType: petData.coatType,
-            color: petData.color,
-            temperament: petData.temperament,
-            vaccineBookImage: petData.vaccineBookImage,
-            precautions: petData.precautions,
-            medicalCondition: petData.medicalCondition
-          }]
-        } : c)
+      if (petData.initialWeight) {
+        await supabase.from('pet_weight_history').insert([{
+          pet_id: data.id,
+          weight: Number(petData.initialWeight),
+          date: new Date().toISOString().split('T')[0]
+        }]);
+      }
+
+      const newPet: Pet = {
+        id: data.id,
+        name: data.name,
+        species: data.type,
+        breed: data.breed,
+        birthday: data.birth_date,
+        weightHistory: data.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(data.weight) }] : [],
+        serviceHistory: [],
+        notes: data.medical_condition || '',
+        image: data.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop',
+        coatType: data.fur_length,
+        color: data.custom_preferences?.color,
+        temperament: data.custom_preferences?.temperament,
+        precautions: data.precautions,
+        medicalCondition: data.medical_condition,
+      };
+
+      set(state => ({
+        customers: state.customers.map(c =>
+          c.id === customerId ? { ...c, pets: [...c.pets, newPet] } : c
+        )
       }));
     }
   },
@@ -337,12 +366,11 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         precautions: petData.precautions,
         fur_length: petData.coatType,
         image_url: petData.image,
-        custom_preferences: [
-          { key: 'color', value: petData.color || '' },
-          { key: 'temperament', value: petData.temperament || '' },
-          { key: 'vaccineBookImage', value: petData.vaccineBookImage || '' },
-          { key: 'notes', value: petData.notes || '' }
-        ]
+        custom_preferences: {
+          color: petData.color,
+          temperament: petData.temperament,
+          notes: petData.notes
+        }
       })
       .eq('id', petId);
 
@@ -351,98 +379,109 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       throw error;
     }
 
-    set((state) => ({
-      customers: state.customers.map(c => c.id === customerId ? {
-        ...c,
-        pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
-      } : c)
+    set(state => ({
+      customers: state.customers.map(c =>
+        c.id === customerId
+          ? {
+              ...c,
+              pets: c.pets.map(p =>
+                p.id === petId ? {
+                  ...p,
+                  name: petData.name,
+                  species: petData.species,
+                  breed: petData.breed,
+                  birthday: petData.birthday,
+                  notes: petData.medicalCondition, // This maps to medical_condition in DB
+                  image: petData.image,
+                  coatType: petData.coatType,
+                  color: petData.color,
+                  temperament: petData.temperament,
+                  precautions: petData.precautions,
+                  medicalCondition: petData.medicalCondition,
+                } : p
+              )
+            }
+          : c
+      )
     }));
   },
 
   updatePetWeight: async (customerId, petId, weight) => {
-    await supabase
-      .from('pets')
-      .update({ weight: Number(weight) })
-      .eq('id', petId);
-
-    await supabase
+    const { error } = await supabase
       .from('pet_weight_history')
       .insert([{
         pet_id: petId,
-        weight: Number(weight),
+        weight: weight,
         date: new Date().toISOString().split('T')[0]
       }]);
 
-    set((state) => {
-      const updatedCustomers = state.customers.map(c => {
-        if (c.id === customerId) {
-          const updatedPets = c.pets.map(p => {
-            if (p.id === petId) {
-              const history = p.weightHistory ? [...p.weightHistory] : [];
-              history.push({ date: new Date().toISOString().split('T')[0], value: Number(weight) });
-              return { ...p, weightHistory: history };
+    if (error) {
+      console.error("Error updating pet weight:", error);
+      throw error;
+    }
+
+    set(state => ({
+      customers: state.customers.map(c =>
+        c.id === customerId
+          ? {
+              ...c,
+              pets: c.pets.map(p =>
+                p.id === petId
+                  ? {
+                      ...p,
+                      weightHistory: [...(p.weightHistory || []), { date: new Date().toISOString().split('T')[0], value: weight }]
+                    }
+                  : p
+              )
             }
-            return p;
-          });
-          return { ...c, pets: updatedPets };
-        }
-        return c;
-      });
-      return { customers: updatedCustomers };
-    });
+          : c
+      )
+    }));
   },
 
   saveIntakeRecord: async (customerId, petId, record) => {
-    const descriptionObj = {
-      queueItemId: record.queueItemId,
-      weight: record.weight,
-      details: record.details,
-      signature: record.signature,
-      staffName: record.staffName
-    };
-
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('pet_health_logs')
       .insert([{
         pet_id: petId,
         type: 'intake',
-        date: new Date().toISOString().split('T')[0],
-        description: JSON.stringify(descriptionObj)
-      }])
-      .select()
-      .single();
+        date: record.date || new Date().toISOString().split('T')[0],
+        description: JSON.stringify(record.details),
+        staff_name: record.staffName,
+        signature_url: record.signature,
+        weight: record.weight
+      }]);
 
     if (error) {
       console.error("Error saving intake record:", error);
       throw error;
     }
 
-    if (data) {
-      set((state) => ({
-        customers: state.customers.map(c => {
-          if (c.id !== customerId) return c;
-          return {
-            ...c,
-            pets: c.pets.map(p => {
-              if (p.id !== petId) return p;
-              const newIntake = {
-                id: data.id,
-                queueItemId: record.queueItemId,
-                date: data.date,
-                weight: record.weight,
-                details: record.details,
-                signature: record.signature,
-                staffName: record.staffName
-              };
-              return {
-                ...p,
-                intakeHistory: [...(p.intakeHistory || []), newStartIntake(newIntake)]
-              };
-            })
-          };
-        })
-      }));
-    }
+    set(state => ({
+      customers: state.customers.map(c =>
+        c.id === customerId
+          ? {
+              ...c,
+              pets: c.pets.map(p =>
+                p.id === petId
+                  ? {
+                      ...p,
+                      intakeHistory: [...(p.intakeHistory || []), {
+                        id: `intake-${Date.now()}`,
+                        queueItemId: record.queueItemId,
+                        date: record.date || new Date().toISOString().split('T')[0],
+                        weight: record.weight,
+                        details: record.details,
+                        signature: record.signature,
+                        staffName: record.staffName
+                      }]
+                    }
+                  : p
+              )
+            }
+          : c
+      )
+    }));
   }
 });
 
