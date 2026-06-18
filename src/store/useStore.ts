@@ -7,6 +7,8 @@ import {
   Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, 
   PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory 
 } from './types';
+import { createAuthSlice } from './slices/authSlice';
+import { createCRMSlice } from './slices/crmSlice';
 
 export type { 
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
@@ -152,19 +154,15 @@ const DEFAULT_MOCK_ADDONS: AddonItem[] = [
   { id: 'addon-3', name: 'สปาโคลนบำรุงผิวหนัง', price: 300, icon: 'spa' }
 ];
 
-export const useStore = create<AppState>()((set, get) => ({
+export const useStore = create<AppState>()((set, get, store) => ({
+  // Spread Slices
+  ...createAuthSlice(set, get, store),
+  ...createCRMSlice(set, get, store),
+
+  // Global State
   language: 'th',
   setLanguage: (lang) => set({ language: lang }),
   currency: '฿',
-  
-  isAuthenticated: false,
-  isAuthLoading: true,
-  isPendingApproval: false,
-  isUserSuspended: false,
-  isStoreSuspended: false,
-  
-  currentUser: null,
-  storeId: 'default-store',
 
   shopName: 'Mellow Fellow Sanctuary',
   shopLogo: null,
@@ -190,11 +188,6 @@ export const useStore = create<AppState>()((set, get) => ({
   liffChannelSecret: '••••••••••••••••••••••••••••••••',
   liffEnabled: true,
 
-  customers: DEFAULT_MOCK_CUSTOMERS,
-  selectedOwner: null,
-  activePet: null,
-  activeQueueItemId: null,
-  queue: [],
   slotDuration: 60,
   openTime: '09:00',
   closeTime: '19:00',
@@ -272,245 +265,11 @@ export const useStore = create<AppState>()((set, get) => ({
     Assistant: ['/', '/pos', '/queue', '/customers']
   },
 
-  login: (id, pass) => {
-    if (id === 'superadmin' && pass === 'superadmin') {
-      const user = { id: 'superadmin', name: 'System Owner', role: 'superadmin', username: 'superadmin' };
-      set({ isAuthenticated: true, currentUser: user, storeId: null, isAuthLoading: false });
-      get().addLog({ staffName: 'System', action: 'Login Success', details: 'Super Administrator logged into the system', type: 'success' });
-      return true;
-    }
-    if (id === 'admin' && pass === '1234') {
-      const user = { id: 'admin', name: 'Admin', role: 'Admin', username: 'admin' };
-      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
-      get().addLog({ staffName: 'System', action: 'Login Success', details: 'Super Admin logged into the system', type: 'success' });
-      return true;
-    }
-    const member = get().staff.find(s => s.username === id && s.password === pass && s.status === 'Active');
-    if (member) {
-      const user = { id: member.id, name: member.name, role: member.role, username: member.username };
-      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
-      get().addLog({ staffName: 'System', action: 'Login Success', details: `Staff member ${member.name} logged in`, type: 'success' });
-      return true;
-    }
-    return false;
-  },
-
-  loginWithGoogle: async (redirectTo) => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectTo || window.location.origin,
-      },
-    });
-    if (error) {
-      toast.error(error.message);
-    }
-  },
-
-  setSession: async (user) => {
-    if (user) {
-      const isSuperAdminPath = window.location.pathname.startsWith('/superadmin');
-      const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
-      const shouldBeSuperAdmin = isSuperAdminEmail && isSuperAdminPath;
-
-      // 1. ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase
-      let { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role, store_id, is_approved, is_suspended')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      // 2. หากเกิดข้อผิดพลาดในการดึงข้อมูล ให้หยุดทำงานเพื่อความปลอดภัย
-      if (error) {
-        console.error("Error fetching profile:", error);
-        set({ isAuthLoading: false });
-        return;
-      }
-
-      // 3. หากไม่มีโปรไฟล์ในฐานข้อมูลจริงๆ (profile เป็น null)
-      if (!profile) {
-        // ดึง ID ของร้านค้าแรกในระบบเพื่อเป็นค่าเริ่มต้น
-        const { data: stores } = await supabase.from('stores').select('id').limit(1);
-        const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
-
-        // กำหนดให้ผู้ใช้ใหม่ทุกคนต้องรออนุมัติ (is_approved = false) ยกเว้น Super Admin เท่านั้น
-        const shouldAutoApprove = shouldBeSuperAdmin;
-
-        const newProfile = {
-          id: user.id,
-          email: user.email,
-          role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
-          store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-          is_approved: shouldAutoApprove,
-          is_suspended: false
-        };
-
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert([newProfile]);
-
-        if (!insertError) {
-          profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false };
-        } else {
-          console.error("Failed to insert profile:", insertError);
-          set({ 
-            isAuthenticated: false, 
-            isAuthLoading: false, 
-            currentUser: null, 
-            storeId: null,
-            isPendingApproval: true
-          });
-          return;
-        }
-      }
-
-      // 4. ตรวจสอบการพักสิทธิ์ผู้ใช้ (is_suspended)
-      if (profile.is_suspended && !isSuperAdminEmail) {
-        await supabase.auth.signOut();
-        set({ 
-          isAuthenticated: false, 
-          isAuthLoading: false, 
-          currentUser: null, 
-          storeId: null,
-          isUserSuspended: true,
-          isStoreSuspended: false,
-          isPendingApproval: false
-        });
-        return;
-      }
-
-      // 5. ตรวจสอบสถานะการอนุมัติ (is_approved)
-      if (!profile.is_approved && !isSuperAdminEmail) {
-        await supabase.auth.signOut();
-        set({ 
-          isAuthenticated: false, 
-          isAuthLoading: false, 
-          currentUser: null, 
-          storeId: null,
-          isPendingApproval: true,
-          isUserSuspended: false,
-          isStoreSuspended: false
-        });
-        return;
-      }
-
-      // ปรับแต่งบทบาทและร้านค้าให้ถูกต้อง
-      let userRole = profile.role || 'Assistant';
-      let storeIdFromMetadata = profile.store_id || 'default-store';
-
-      if (userRole === 'admin') {
-        userRole = 'Admin';
-      } else if (userRole === 'staff') {
-        userRole = 'Assistant';
-      }
-
-      if (isSuperAdminEmail) {
-        if (shouldBeSuperAdmin) {
-          userRole = 'superadmin';
-          storeIdFromMetadata = null;
-        } else {
-          userRole = 'Admin';
-          if (!storeIdFromMetadata || storeIdFromMetadata === 'default-store') {
-            const { data: stores } = await supabase.from('stores').select('id').limit(1);
-            storeIdFromMetadata = stores && stores.length > 0 ? stores[0].id : 'default-store';
-          }
-        }
-      }
-
-      // 6. ตรวจสอบการพักสิทธิ์ร้านค้า
-      if (storeIdFromMetadata && storeIdFromMetadata !== 'default-store' && userRole !== 'superadmin') {
-        const { data: storeData } = await supabase
-          .from('stores')
-          .select('is_suspended')
-          .eq('id', storeIdFromMetadata)
-          .single();
-
-        if (storeData && storeData.is_suspended) {
-          await supabase.auth.signOut();
-          set({ 
-            isAuthenticated: false, 
-            isAuthLoading: false, 
-            currentUser: null, 
-            storeId: null,
-            isStoreSuspended: true,
-            isUserSuspended: false,
-            isPendingApproval: false
-          });
-          return;
-        }
-      }
-
-      set({ 
-        isAuthenticated: true, 
-        isAuthLoading: false,
-        isPendingApproval: false,
-        isUserSuspended: false,
-        isStoreSuspended: false,
-        currentUser: {
-          id: user.id,
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          role: userRole, 
-          email: user.email,
-          avatar: user.user_metadata?.avatar_url || undefined 
-        },
-        storeId: userRole === 'superadmin' ? null : storeIdFromMetadata
-      });
-    } else {
-      const current = get().currentUser;
-      if (current && (current.id === 'superadmin' || current.id === 'admin' || get().staff.some(s => s.id === current.id))) {
-        set({ isAuthLoading: false });
-        return;
-      }
-
-      // ตรวจสอบว่าเป็น localhost หรือไม่
-      const isLocalhost = typeof window !== 'undefined' && 
-        (window.location.hostname === 'localhost' || 
-         window.location.hostname === '127.0.0.1' || 
-         window.location.hostname.startsWith('192.168.'));
-
-      if (isLocalhost) {
-        // ถ้าไม่มี session จาก Supabase ให้ทำการ Auto-login เป็น Admin ทันที เพื่อไม่ให้ติดหน้า Authen ใน Preview
-        const mockAdmin = { id: 'admin', name: 'Admin (Auto-login)', role: 'Admin', username: 'admin' };
-        set({ 
-          isAuthenticated: true, 
-          isAuthLoading: false, 
-          currentUser: mockAdmin, 
-          storeId: 'default-store',
-          isPendingApproval: false,
-          isUserSuspended: false,
-          isStoreSuspended: false
-        });
-      } else {
-        set({ 
-          isAuthenticated: false, 
-          isAuthLoading: false, 
-          currentUser: null, 
-          storeId: null,
-          isPendingApproval: false,
-          isUserSuspended: false,
-          isStoreSuspended: false
-        });
-      }
-    }
-  },
-
-  verifyPassword: (pass) => {
-    const { currentUser, staff } = get();
-    if (!currentUser) return false;
-    if (currentUser.username === 'superadmin') return pass === 'superadmin';
-    if (currentUser.username === 'admin') return pass === '1234';
-    const member = staff.find(s => s.username === currentUser.username);
-    return member?.password === pass;
-  },
-  
-  logout: async () => {
-    await supabase.auth.signOut();
-    set({ isAuthenticated: false, currentUser: null, storeId: null, isPendingApproval: false, isUserSuspended: false, isStoreSuspended: false });
-  },
-
+  // Global Actions
   addLog: (log) => set(s => ({ 
     logs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() } as ActivityLog, ...s.logs] 
   })),
+
   addReportLog: async (log) => {
     const currentStoreId = get().storeId;
     const { data, error } = await supabase
@@ -535,7 +294,6 @@ export const useStore = create<AppState>()((set, get) => ({
       set(s => ({ reportHistory: [newLog, ...s.reportHistory] }));
     } else {
       console.error("Error adding report log to Supabase:", error);
-      // Fallback to local state if Supabase fails
       set(s => ({
         reportHistory: [{ ...log, id: `REP-${Math.random().toString(36).substr(2, 5).toUpperCase()}`, timestamp: new Date().toISOString() }, ...s.reportHistory]
       }));
@@ -631,735 +389,265 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   })),
 
-  setCustomers: (customers) => set({ customers }),
-  selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
-  setActivePet: (pet) => set({ activePet: pet }),
-  setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
+  toggleSlotStatus: (time) => set(s => {
+    const isDisabled = s.disabledSlots.includes(time);
+    return {
+      disabledSlots: isDisabled 
+        ? s.disabledSlots.filter(t => t !== time)
+        : [...s.disabledSlots, time]
+    };
+  }),
 
-  addCustomer: async (customerData) => {
-    let activeStoreId = get().storeId;
-    if (!activeStoreId || activeStoreId === 'default-store') {
-      const { data: stores } = await supabase.from('stores').select('id').limit(1);
-      if (stores && stores.length > 0) {
-        activeStoreId = stores[0].id;
-      } else {
-        activeStoreId = null;
-      }
-    }
-
-    const { data, error } = await supabase
-      .from('customers')
-      .insert([{ 
-        first_name: customerData.firstName,
-        last_name: customerData.lastName,
-        display_name: customerData.name,
-        phone: customerData.phone,
-        email: customerData.email,
-        gender: customerData.gender,
-        age: customerData.age,
-        house_no: customerData.houseNo,
-        village_no: customerData.villageNo,
-        soi: customerData.soi,
-        road: customerData.road,
-        sub_district: customerData.subDistrict,
-        district: customerData.district,
-        province: customerData.province,
-        postal_code: customerData.postalCode,
-        line_user_id: customerData.lineId || null
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error inserting customer:", error);
-      toast.error("Failed to create customer: " + error.message);
-      throw error;
-    }
-
-    if (data) {
-      const { error: storeCustError } = await supabase
-        .from('store_customers')
-        .insert([{
-          store_id: activeStoreId,
-          customer_id: data.id,
-          points: 0,
-          tier: 'bronze'
-        }]);
-
-      if (storeCustError) {
-        console.error("Error creating store_customer link:", storeCustError);
-      }
-
-      const newCustomer: Customer = {
-        id: data.id,
-        name: data.display_name || `${data.first_name || ''} ${data.last_name || ''}`.trim() || 'Unnamed',
-        firstName: data.first_name || '',
-        lastName: data.last_name || '',
-        phone: data.phone || '-',
-        email: data.email || '-',
-        lineId: data.line_user_id || '',
-        avatarUrl: data.avatar_url || '',
-        membership: 'Standard',
-        points: 0,
-        totalSpent: 0,
-        creditBalance: 0,
-        gender: data.gender || 'Male',
-        age: data.age || '',
-        houseNo: data.house_no || '',
-        villageNo: data.village_no || '',
-        soi: data.soi || '',
-        road: data.road || '',
-        subDistrict: data.sub_district || '',
-        district: data.district || '',
-        province: data.province || '',
-        postalCode: data.postal_code || '',
-        creditHistory: [],
-        packages: [],
-        pets: []
-      };
-
-      set(s => ({ customers: [...s.customers, newCustomer] }));
-    }
-  },
-
-  updateCustomer: async (id, customerData) => {
-    const { error } = await supabase
-      .from('customers')
-      .update({
-        first_name: customerData.firstName,
-        last_name: customerData.lastName,
-        display_name: customerData.name,
-        phone: customerData.phone,
-        email: customerData.email,
-        gender: customerData.gender,
-        age: customerData.age,
-        house_no: customerData.houseNo,
-        village_no: customerData.villageNo,
-        soi: customerData.soi,
-        road: customerData.road,
-        sub_district: customerData.subDistrict,
-        district: customerData.district,
-        province: customerData.province,
-        postal_code: customerData.postalCode
-      })
-      .eq('id', id);
-
-    if (error) {
-      console.error("Error updating customer:", error);
-      toast.error("Failed to update customer: " + error.message);
-      throw error;
-    }
-
-    set(s => ({
-      customers: s.customers.map(c => c.id === id ? { ...c, ...customerData, name: customerData.name } : c)
-    }));
-  },
-
-  deleteCustomer: async (id) => {
-    const { error } = await supabase.from('customers').delete().eq('id', id);
-    if (error) {
-      console.error("Error deleting customer:", error);
-      toast.error("Failed to delete customer: " + error.message);
-      throw error;
-    }
-    set(s => ({
-      customers: s.customers.filter(c => c.id !== id),
-      selectedOwner: s.selectedOwner?.id === id ? null : s.selectedOwner,
-      activePet: s.selectedOwner?.id === id ? null : s.activePet
-    }));
-  },
-
-  bindLineToCustomer: async (cid, lid) => {
-    const { error } = await supabase
-      .from('customers')
-      .update({ line_user_id: lid })
-      .eq('id', cid);
-
-    if (error) {
-      console.error("Error binding LINE ID:", error);
-      toast.error("Failed to bind LINE ID: " + error.message);
-      throw error;
-    }
-
-    set(s => ({ customers: s.customers.map(c => c.id === cid ? { ...c, lineId: lid } : c) }));
-  },
-
-  addPet: async (customerId, petData) => {
-    const initialWeight = petData.weightHistory?.[0]?.value || 0;
-    const { data, error } = await supabase
-      .from('pets')
-      .insert([{ 
-        customer_id: customerId,
-        name: petData.name,
-        type: petData.species,
-        breed: petData.breed,
-        birth_date: petData.birthday,
-        medical_condition: petData.medicalCondition,
-        precautions: petData.precautions,
-        fur_length: petData.coatType,
-        image_url: petData.image,
-        weight: initialWeight,
-        custom_preferences: [
-          { key: 'color', value: petData.color || '' },
-          { key: 'temperament', value: petData.temperament || '' },
-          { key: 'vaccineBookImage', value: petData.vaccineBookImage || '' },
-          { key: 'notes', value: petData.notes || '' }
-        ]
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error adding pet:", error);
-      toast.error("Failed to add pet: " + error.message);
-      throw error;
-    }
-
-    if (data) {
-      set(s => ({
-        customers: s.customers.map(c => c.id === customerId ? {
-          ...c,
-          pets: [...c.pets, {
-            id: data.id,
-            name: data.name,
-            species: data.type,
-            breed: data.breed || '',
-            birthday: data.birth_date || '',
-            notes: petData.notes || '',
-            image: data.image_url || '',
-            weightHistory: [{ date: new Date().toISOString().split('T')[0], value: Number(data.weight || 0) }],
-            serviceHistory: [],
-            coatType: petData.coatType,
-            color: petData.color,
-            temperament: petData.temperament,
-            vaccineBookImage: petData.vaccineBookImage,
-            precautions: petData.precautions,
-            medicalCondition: petData.medicalCondition
-          }]
-        } : c)
-      }));
-    }
-  },
-
-  updatePet: async (customerId, petId, petData) => {
-    const { error } = await supabase
-      .from('pets')
-      .update({
-        name: petData.name,
-        type: petData.species,
-        breed: petData.breed,
-        birth_date: petData.birthday,
-        medical_condition: petData.medicalCondition,
-        precautions: petData.precautions,
-        fur_length: petData.coatType,
-        image_url: petData.image,
-        custom_preferences: [
-          { key: 'color', value: petData.color || '' },
-          { key: 'temperament', value: petData.temperament || '' },
-          { key: 'vaccineBookImage', value: petData.vaccineBookImage || '' },
-          { key: 'notes', value: petData.notes || '' }
-        ]
-      })
-      .eq('id', petId);
-
-    if (error) {
-      console.error("Error updating pet:", error);
-      toast.error("Failed to update pet: " + error.message);
-      throw error;
-    }
-
-    set(s => ({
-      customers: s.customers.map(c => c.id === customerId ? {
-        ...c,
-        pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
-      } : c)
-    }));
-  },
-
-  updatePetWeight: async (customerId, petId, weight) => {
-    await supabase
-      .from('pets')
-      .update({ weight: weight })
-      .eq('id', petId);
-
-    const { data, error } = await supabase
-      .from('pet_weight_history')
-      .insert([{
-        pet_id: petId,
-        weight: weight,
-        date: new Date().toISOString().split('T')[0]
-      }])
-      .select()
-      .single();
-
-    if (!error) {
-      set((state) => ({
-        customers: state.customers.map(c => {
-          if (c.id !== customerId) return c;
-          return {
-            ...c,
-            pets: c.pets.map(p => {
-              if (p.id !== petId) return p;
-              return {
-                ...p,
-                weightHistory: [...(p.weightHistory || []), { date: data.date, value: Number(data.weight) }]
-              };
-            })
-          };
-        })
-      }));
-    }
-  },
-
-  saveIntakeRecord: async (customerId, petId, record) => {
-    try {
-      const { data, error } = await supabase
-        .from('pet_health_logs')
-        .insert([{
-          pet_id: petId,
-          type: 'intake',
-          title: 'Grooming Intake Form',
-          description: JSON.stringify({
-            details: record.details,
-            signature: record.signature,
-            weight: record.weight,
-            staffName: record.staffName,
-            queueItemId: record.queueItemId
-          }),
-          date: new Date().toISOString().split('T')[0],
-          status: 'completed'
-        }])
-        .select()
-        .single();
-
-      if (!error && data) {
-        set((state) => ({
-          customers: state.customers.map(c => {
-            if (c.id !== customerId) return c;
-            return {
-              ...c,
-              pets: c.pets.map(p => {
-                if (p.id !== petId) return p;
-                const newIntake = {
-                  id: data.id,
-                  queueItemId: record.queueItemId,
-                  date: data.date,
-                  weight: record.weight,
-                  details: record.details,
-                  signature: record.signature,
-                  staffName: record.staffName
-                };
-                return {
-                  ...p,
-                  intakeHistory: [...(p.intakeHistory || []), newIntake]
-                };
-              })
-            };
-          })
-        }));
-      }
-    } catch (e) {
-      console.error("Failed to save intake record:", e);
-    }
-  },
-
-  addBooking: (b) => set(s => ({ queue: [...s.queue, { ...b, id: Math.random().toString() }] })),
-  updateQueueStatus: (id, status) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, status } : q) })),
-  removeQueueItem: (id) => set(s => ({ queue: s.queue.filter(q => q.id !== id) })),
-  toggleSlotStatus: (time) => set(s => ({ disabledSlots: s.disabledSlots.includes(time) ? s.disabledSlots.filter(t => t !== time) : [...s.disabledSlots, time] })),
-  markAsPaid: (id) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
-
-  addToCart: (item) => set(s => ({ cart: [...s.cart, { ...item, discountType: null, discountValue: 0 }] })),
-  removeFromCart: (idx) => set(s => ({ cart: s.cart.filter((_, i) => i !== idx) })),
-  updateCartQuantity: (idx, delta) => set(s => ({ cart: s.cart.map((item, i) => i === idx ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item) })),
-  updateCartItemDiscount: (idx, type, val) => set(s => ({ cart: s.cart.map((item, i) => i === idx ? { ...item, discountType: type, discountValue: val } : item) })),
+  addToCart: (item) => set(s => ({ cart: [...s.cart, item] })),
+  removeFromCart: (index) => set(s => ({ cart: s.cart.filter((_, i) => i !== index) })),
+  updateCartQuantity: (index, delta) => set(s => ({
+    cart: s.cart.map((item, i) => i === index ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item)
+  })),
+  updateCartItemDiscount: (index, discountType, discountValue) => set(s => ({
+    cart: s.cart.map((item, i) => i === index ? { ...item, discountType, discountValue } : item)
+  })),
   clearCart: () => set({ cart: [] }),
-  processPayment: async (cid, total, disc, items, method, details, isTaxInvoice, redeemedPoints) => {
-    const customerName = cid === 'walk-in' ? 'ลูกค้าทั่วไป (Walk-in)' : (get().customers.find(c => c.id === cid)?.name || 'Walk-in');
+
+  processPayment: async (customerId, total, discount, items, method, details, isTaxInvoice, redeemedPoints) => {
     const currentStoreId = get().storeId;
+    const staffName = get().currentUser?.name || 'Admin';
     
     const { data, error } = await supabase
       .from('sales_transactions')
       .insert([{
         store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
-        customer_id: cid === 'walk-in' ? null : cid,
-        customer_name: customerName,
+        customer_id: customerId === 'walk-in' ? null : customerId,
+        customer_name: customerId === 'walk-in' ? 'Walk-in' : get().customers.find(c => c.id === customerId)?.name || 'Customer',
         amount: total,
-        discount_amount: disc,
-        payment_method: method,
+        discount_amount: discount,
         items: items,
-        staff_name: get().currentUser?.name || 'Admin'
+        payment_method: method,
+        staff_name: staffName,
+        is_tax_invoice: isTaxInvoice
       }])
       .select()
       .single();
 
     if (error) {
       console.error("Error saving transaction:", error);
-      toast.error("ไม่สามารถบันทึกธุรกรรมลงฐานข้อมูลได้");
-      return;
+      throw error;
     }
 
     if (data) {
-      const tx = {
+      const newTx: Transaction = {
         id: data.id,
         date: data.created_at.split('T')[0],
         amount: Number(data.amount),
         discountAmount: Number(data.discount_amount),
-        customerId: cid,
-        customerName: customerName,
-        items: items,
-        paymentMethod: method,
+        customerId: data.customer_id || 'walk-in',
+        customerName: data.customer_name,
+        items: data.items,
+        paymentMethod: data.payment_method as PaymentMethod,
         staffName: data.staff_name || 'Admin',
         species: [],
         bookingType: 'Walk-in' as BookingType
       };
 
-      items.forEach(item => {
-        if (item.type === 'Product') {
-          get().adjustStock(item.id, item.quantity, 'Out', `ขายสินค้าผ่านบิล ${data.id}`);
-        }
+      set(s => {
+        const updatedCustomers = s.customers.map(c => {
+          if (c.id !== customerId) return c;
+          
+          let newCreditBalance = c.creditBalance;
+          if (method === 'Store Credit') {
+            newCreditBalance = Math.max(0, c.creditBalance - total);
+          }
+
+          const pointsEarned = Math.floor(total / (s.pointsEarnRate || 10));
+          const newPoints = (c.points || 0) + pointsEarned - (redeemedPoints || 0);
+
+          return {
+            ...c,
+            creditBalance: newCreditBalance,
+            points: newPoints,
+            totalSpent: c.totalSpent + total
+          };
+        });
+
+        return {
+          transactions: [newTx, ...s.transactions],
+          customers: updatedCustomers
+        };
       });
 
-      set(s => ({ transactions: [tx as any, ...s.transactions] }));
-
-      if (cid && cid !== 'walk-in') {
-        // Update points in store_customers and log in points_logs
-        const customer = get().customers.find(c => c.id === cid);
-        if (customer) {
-          const currentPoints = customer.points || 0;
-          const earnRate = get().pointsEarnRate || 10;
-          const pointsEarned = Math.floor(total / earnRate);
-          const redeemed = redeemedPoints || 0;
-          const newPoints = Math.max(0, currentPoints + pointsEarned - redeemed);
-
-          const { error: pointsError } = await supabase
-            .from('store_customers')
-            .update({ points: newPoints })
-            .eq('customer_id', cid)
-            .eq('store_id', currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null);
-
-          if (!pointsError) {
-            set(s => ({
-              customers: s.customers.map(c => c.id === cid ? { ...c, points: newPoints } : c)
-            }));
-
-            // Log points earned
-            if (pointsEarned > 0) {
-              await supabase.from('points_logs').insert([{
-                store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
-                customer_id: cid,
-                points: pointsEarned,
-                action_type: 'earn',
-                description: `ได้รับคะแนนสะสมจากการซื้อสินค้า/บริการในบิลเลขที่ ${data.id}`
-              }]);
-            }
-
-            // Log points redeemed
-            if (redeemed > 0) {
-              await supabase.from('points_logs').insert([{
-                store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
-                customer_id: cid,
-                points: -redeemed,
-                action_type: 'redeem',
-                description: `ใช้คะแนนสะสมแลกส่วนลดในบิลเลขที่ ${data.id}`
-              }]);
-            }
+      for (const item of items) {
+        if (item.type === 'Product') {
+          const prod = get().inventory.find(i => i.id === item.id);
+          if (prod) {
+            get().adjustStock(prod.id, item.quantity, 'Out', `Sale #${data.id}`);
           }
         }
-
-        if (method === 'Store Credit') {
-          set(s => ({
-            customers: s.customers.map(c => {
-              if (c.id !== cid) return c;
-              const prevBalance = c.creditBalance || 0;
-              return {
-                ...c,
-                creditBalance: Math.max(0, prevBalance - total),
-                creditHistory: [
-                  ...(c.creditHistory || []),
-                  {
-                    id: `cr-use-${Date.now()}`,
-                    date: new Date().toISOString().split('T')[0],
-                    amount: -total,
-                    type: 'Usage',
-                    description: `Paid for order ${tx.id}`
-                  }
-                ]
-              };
-            })
-          }));
-        }
-
-        const serviceItems = items.filter(item => item.type === 'Service');
-        for (const item of serviceItems) {
-          if (item.petId) {
-            const { data: historyData, error: historyError } = await supabase
-              .from('service_history')
-              .insert([{
-                store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
-                customer_id: cid === 'walk-in' ? null : cid,
-                pet_id: item.petId,
-                price: item.price * item.quantity,
-                note: item.title
-              }])
-              .select()
-              .single();
-
-            if (!historyError && historyData) {
-              set(s => ({
-                customers: s.customers.map(c => {
-                  if (c.id !== cid) return c;
-                  return {
-                    ...c,
-                    pets: c.pets.map(p => {
-                      if (p.id !== item.petId) return p;
-                      return {
-                        ...p,
-                        serviceHistory: [
-                          ...(p.serviceHistory || []),
-                          {
-                            id: historyData.id,
-                            serviceName: item.title,
-                            date: historyData.created_at.split('T')[0],
-                            price: Number(historyData.price)
-                          }
-                        ]
-                      };
-                    })
-                  };
-                })
-              }));
-            } else {
-              console.error("Error saving service history:", historyError);
-            }
-          }
-        }
-
-        items.forEach(item => {
-          if (item.type === 'Package') {
-            const templateId = item.id.replace('package-', '');
-            get().assignPackageToCustomer(cid, templateId);
-          } else if (item.type === 'Credit') {
-            const packageId = item.id.replace('credit-', '');
-            get().buyCreditPackage(cid, packageId);
-          }
-        });
       }
     }
   },
-  deleteTransaction: async (id) => {
-    const { error } = await supabase
-      .from('sales_transactions')
-      .delete()
-      .eq('id', id);
 
-    if (!error) {
-      set(s => ({ transactions: s.transactions.filter(t => t.id !== id) }));
-      toast.success("ลบธุรกรรมเรียบร้อยแล้ว");
-    } else {
+  deleteTransaction: async (id) => {
+    const { error } = await supabase.from('sales_transactions').delete().eq('id', id);
+    if (error) {
       console.error("Error deleting transaction:", error);
-      toast.error("ไม่สามารถลบธุรกรรมได้");
+      throw error;
     }
+    set(s => ({ transactions: s.transactions.filter(t => t.id !== id) }));
   },
 
   setServices: (services) => set({ services }),
-  addService: async (ser) => {
+
+  addService: async (service) => {
     const currentStoreId = get().storeId;
-    const priceKeys = Object.keys(ser.prices);
-    const defaultPrice = priceKeys.length > 0 ? ser.prices[priceKeys[0]].price : 0;
-    const defaultDuration = priceKeys.length > 0 ? ser.prices[priceKeys[0]].duration : 60;
+    const { data, error } = await supabase
+      .from('services')
+      .insert([{
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+        name: service.title,
+        category: service.category,
+        description: service.description,
+        icon: service.icon,
+        target_species: service.targetSpecies,
+        prices: service.prices,
+        is_active: service.isActive,
+        coat_type: service.coatType,
+        is_addon: false
+      }])
+      .select()
+      .single();
 
-    const localNewService: Service = {
-      id: Math.random().toString(),
-      title: ser.title,
-      category: ser.category || 'Grooming',
-      description: ser.description || '',
-      icon: ser.icon || 'grooming',
-      targetSpecies: ser.targetSpecies || 'Dog',
-      prices: ser.prices || {
-        'Standard': { price: defaultPrice, duration: defaultDuration }
-      },
-      isActive: ser.isActive !== false,
-      coatType: ser.coatType || undefined
-    };
+    if (error) {
+      console.error("Error adding service:", error);
+      throw error;
+    }
 
-    set(s => ({ services: [...s.services, localNewService] }));
-
-    try {
-      const { data, error } = await supabase
-        .from('services')
-        .insert([{
-          store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
-          name: ser.title,
-          description: ser.description,
-          price: defaultPrice,
-          duration_minutes: defaultDuration,
-          category: ser.category || 'Grooming',
-          icon: ser.icon || 'grooming',
-          target_species: ser.target_species || 'Dog',
-          prices: ser.prices || {},
-          is_active: ser.isActive !== false,
-          coat_type: ser.coat_type || null,
-          is_addon: false
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        const newService: Service = {
-          id: data.id,
-          title: data.name,
-          category: data.category || 'Grooming',
-          description: data.description || '',
-          icon: (data.icon || 'grooming') as any,
-          targetSpecies: (data.target_species || 'Dog') as any,
-          prices: data.prices && Object.keys(data.prices).length > 0 ? data.prices : {
-            'Standard': { price: Number(data.price || 0), duration: data.duration_minutes || 60 }
-          },
-          isActive: data.is_active !== false,
-          coatType: data.coat_type || undefined
-        };
-        set(s => ({ services: [...s.services.filter(item => item.id !== localNewService.id), newService] }));
-      }
-    } catch (err) {
-      console.error("Supabase insert failed, using local fallback:", err);
+    if (data) {
+      const newService: Service = {
+        id: data.id,
+        title: data.name,
+        category: data.category || 'Grooming',
+        description: data.description || '',
+        icon: data.icon as ServiceIcon,
+        targetSpecies: data.target_species as 'Dog' | 'Cat',
+        prices: data.prices,
+        isActive: data.is_active !== false,
+        coatType: data.coat_type
+      };
+      set(s => ({ services: [...s.services, newService] }));
     }
   },
-  updateService: async (id, ser) => {
-    set(s => ({ services: s.services.map(item => item.id === id ? { ...item, ...ser, targetSpecies: ser.targetSpecies || 'Dog' } : item) }));
 
-    const priceKeys = Object.keys(ser.prices);
-    const defaultPrice = priceKeys.length > 0 ? ser.prices[priceKeys[0]].price : 0;
-    const defaultDuration = priceKeys.length > 0 ? ser.prices[priceKeys[0]].duration : 60;
+  updateService: async (id, service) => {
+    const { error } = await supabase
+      .from('services')
+      .update({
+        name: service.title,
+        category: service.category,
+        description: service.description,
+        icon: service.icon,
+        target_species: service.targetSpecies,
+        prices: service.prices,
+        is_active: service.isActive,
+        coat_type: service.coatType
+      })
+      .eq('id', id);
 
-    try {
-      const { error } = await supabase
-        .from('services')
-        .update({
-          name: ser.title,
-          description: ser.description,
-          price: defaultPrice,
-          duration_minutes: defaultDuration,
-          category: ser.category || 'Grooming',
-          icon: ser.icon || 'grooming',
-          target_species: ser.target_species || 'Dog',
-          prices: ser.prices || {},
-          is_active: ser.isActive !== false,
-          coat_type: ser.coat_type || null
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error("Supabase update failed, local state preserved:", err);
+    if (error) {
+      console.error("Error updating service:", error);
+      throw error;
     }
+
+    set(s => ({
+      services: s.services.map(ser => ser.id === id ? { ...ser, ...service } : ser)
+    }));
   },
+
   deleteService: async (id) => {
-    set(s => ({ services: s.services.filter(item => item.id !== id) }));
-
-    try {
-      const { error } = await supabase
-        .from('services')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error("Supabase delete failed, local state preserved:", err);
+    const { error } = await supabase.from('services').delete().eq('id', id);
+    if (error) {
+      console.error("Error deleting service:", error);
+      throw error;
     }
+    set(s => ({ services: s.services.filter(ser => ser.id !== id) }));
   },
+
   toggleServiceActive: async (id) => {
     const service = get().services.find(s => s.id === id);
     if (!service) return;
-    const nextActive = !service.isActive;
+    const newActive = !service.isActive;
 
-    set(s => ({ services: s.services.map(item => item.id === id ? { ...item, isActive: nextActive } : item) }));
+    const { error } = await supabase
+      .from('services')
+      .update({ is_active: newActive })
+      .eq('id', id);
 
-    try {
-      const { error } = await supabase
-        .from('services')
-        .update({ is_active: nextActive })
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error("Supabase toggle active failed, local state preserved:", err);
+    if (error) {
+      console.error("Error toggling service active:", error);
+      throw error;
     }
+
+    set(s => ({
+      services: s.services.map(ser => ser.id === id ? { ...ser, isActive: newActive } : ser)
+    }));
   },
 
-  addAddon: async (ad) => {
+  addAddon: async (addon) => {
     const currentStoreId = get().storeId;
-    const localNewAddon: AddonItem = {
-      id: Math.random().toString(),
-      name: ad.name,
-      price: ad.price || 0,
-      icon: ad.icon || 'nail'
-    };
+    const { data, error } = await supabase
+      .from('services')
+      .insert([{
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+        name: addon.name,
+        price: addon.price,
+        icon: addon.icon,
+        is_addon: true,
+        is_active: true
+      }])
+      .select()
+      .single();
 
-    set(s => ({ addons: [...s.addons, localNewAddon] }));
+    if (error) {
+      console.error("Error adding addon:", error);
+      throw error;
+    }
 
-    try {
-      const { data, error } = await supabase
-        .from('services')
-        .insert([{
-          store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
-          name: ad.name,
-          price: ad.price || 0,
-          icon: ad.icon || 'nail',
-          is_addon: true,
-          is_active: true
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        const newAddon: AddonItem = {
-          id: data.id,
-          name: data.name,
-          price: Number(data.price || 0),
-          icon: (data.icon || 'nail') as any
-        };
-        set(s => ({ addons: [...s.addons.filter(a => a.id !== localNewAddon.id), newAddon] }));
-      }
-    } catch (err) {
-      console.error("Supabase add addon failed, using local fallback:", err);
+    if (data) {
+      const newAddon: AddonItem = {
+        id: data.id,
+        name: data.name,
+        price: Number(data.price || 0),
+        icon: data.icon as ServiceIcon
+      };
+      set(s => ({ addons: [...s.addons, newAddon] }));
     }
   },
-  updateAddon: async (id, ad) => {
-    set(s => ({ addons: s.addons.map(a => a.id === id ? { ...a, ...ad } : a) }));
 
-    try {
-      const { error } = await supabase
-        .from('services')
-        .update({
-          name: ad.name,
-          price: ad.price || 0,
-          icon: ad.icon || 'nail'
-        })
-        .eq('id', id);
+  updateAddon: async (id, addon) => {
+    const { error } = await supabase
+      .from('services')
+      .update({
+        name: addon.name,
+        price: addon.price,
+        icon: addon.icon
+      })
+      .eq('id', id);
 
-      if (error) throw error;
-    } catch (err) {
-      console.error("Supabase update addon failed, local state preserved:", err);
+    if (error) {
+      console.error("Error updating addon:", error);
+      throw error;
     }
+
+    set(s => ({
+      addons: s.addons.map(add => add.id === id ? { ...add, ...addon } : add)
+    }));
   },
+
   deleteAddon: async (id) => {
-    set(s => ({ addons: s.addons.filter(a => a.id !== id) }));
-
-    try {
-      const { error } = await supabase
-        .from('services')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error("Supabase delete addon failed, local state preserved:", err);
+    const { error } = await supabase.from('services').delete().eq('id', id);
+    if (error) {
+      console.error("Error deleting addon:", error);
+      throw error;
     }
+    set(s => ({ addons: s.addons.filter(add => add.id !== id) }));
   },
 
   addInventoryItem: async (item) => {
@@ -1378,8 +666,8 @@ export const useStore = create<AppState>()((set, get) => ({
         category: item.category || 'ทั่วไป',
         image_url: item.image || '',
         is_consignment: item.isConsignment || false,
-        partner_id: item.partner_id || null,
-        consignment_rate: item.consignment_rate || 0
+        partner_id: item.partnerId || null,
+        consignment_rate: item.consignmentRate || 0
       }])
       .select()
       .single();
@@ -1405,6 +693,7 @@ export const useStore = create<AppState>()((set, get) => ({
       console.error("Error adding product:", error);
     }
   },
+
   updateInventoryItem: async (id, item) => {
     const { error } = await supabase
       .from('products')
@@ -1420,7 +709,7 @@ export const useStore = create<AppState>()((set, get) => ({
         image_url: item.image,
         is_consignment: item.isConsignment,
         partner_id: item.partnerId || null,
-        consignment_rate: item.consignment_rate || 0
+        consignment_rate: item.consignmentRate || 0
       })
       .eq('id', id);
 
@@ -1432,6 +721,7 @@ export const useStore = create<AppState>()((set, get) => ({
       console.error("Error updating product:", error);
     }
   },
+
   deleteInventoryItem: async (id) => {
     const { error } = await supabase
       .from('products')
@@ -1444,6 +734,7 @@ export const useStore = create<AppState>()((set, get) => ({
       console.error("Error deleting product:", error);
     }
   },
+
   adjustStock: async (id, qty, mode, reason) => {
     const item = get().inventory.find(i => i.id === id);
     if (!item) return;
@@ -1538,6 +829,7 @@ export const useStore = create<AppState>()((set, get) => ({
       console.error("Error adding partner:", error);
     }
   },
+
   updatePartner: async (id, v) => {
     const { error } = await supabase
       .from('partners')
@@ -1547,7 +839,7 @@ export const useStore = create<AppState>()((set, get) => ({
         address: v.address,
         phone: v.phone,
         email: v.email,
-        contact_person: v.contact_person || '',
+        contact_person: v.contactPerson || '',
         notes: v.notes,
         main_category: v.mainCategory,
         gp_rate: v.gpRate || 0
@@ -1562,6 +854,7 @@ export const useStore = create<AppState>()((set, get) => ({
       console.error("Error updating partner:", error);
     }
   },
+
   deletePartner: async (id) => {
     const { error } = await supabase
       .from('partners')

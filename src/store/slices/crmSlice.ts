@@ -180,11 +180,61 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
   },
 
   deleteCustomer: async (id) => {
+    // 1. Get all pet IDs for this customer
+    const { data: petsData } = await supabase
+      .from('pets')
+      .select('id')
+      .eq('customer_id', id);
+    
+    const petIds = petsData?.map(p => p.id) || [];
+
+    // 2. Delete related records for those pets
+    if (petIds.length > 0) {
+      await supabase.from('pet_weight_history').delete().in('pet_id', petIds);
+      await supabase.from('pet_health_logs').delete().in('pet_id', petIds);
+    }
+
+    // 3. Delete service history
+    await supabase.from('service_history').delete().eq('customer_id', id);
+    if (petIds.length > 0) {
+      await supabase.from('service_history').delete().in('pet_id', petIds);
+    }
+
+    // 4. Delete appointments
+    await supabase.from('appointments').delete().eq('customer_id', id);
+    if (petIds.length > 0) {
+      await supabase.from('appointments').delete().in('pet_id', petIds);
+    }
+
+    // 5. Delete store_customers
+    await supabase.from('store_customers').delete().eq('customer_id', id);
+
+    // 6. Delete points_logs (safely)
+    try {
+      await supabase.from('points_logs').delete().eq('customer_id', id);
+    } catch (e) {
+      console.warn("Failed to delete from points_logs:", e);
+    }
+
+    // 7. Nullify customer_id in sales_transactions (safely)
+    try {
+      await supabase.from('sales_transactions').update({ customer_id: null }).eq('customer_id', id);
+    } catch (e) {
+      console.warn("Failed to nullify customer_id in sales_transactions:", e);
+    }
+
+    // 8. Delete pets
+    if (petIds.length > 0) {
+      await supabase.from('pets').delete().eq('customer_id', id);
+    }
+
+    // 9. Finally delete customer
     const { error } = await supabase.from('customers').delete().eq('id', id);
     if (error) {
       console.error("Error deleting customer:", error);
       throw error;
     }
+
     set((state) => ({
       customers: state.customers.filter(c => c.id !== id),
       selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
