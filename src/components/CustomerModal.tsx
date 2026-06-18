@@ -82,9 +82,9 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
         toast.success(language === 'th' ? "ลงทะเบียนลูกค้าใหม่เรียบร้อย" : "New customer added");
       }
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error(language === 'th' ? "เกิดข้อผิดพลาดในการบันทึกข้อมูล" : "Failed to save customer data");
+      toast.error(language === 'th' ? `เกิดข้อผิดพลาด: ${err.message || err}` : `Failed to save customer: ${err.message || err}`);
     } finally {
       setIsSubmitting(false);
     }

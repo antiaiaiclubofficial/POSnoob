@@ -29,7 +29,12 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) {
+      console.error("Error adding booking:", error);
+      throw error;
+    }
+
+    if (data) {
       set((state) => ({
         queue: [...state.queue, {
           id: data.id,
@@ -53,21 +58,26 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       .update({ status: dbStatus })
       .eq('id', id);
 
-    if (!error) {
-      set((state) => ({
-        queue: state.queue.map(q => {
-          if (q.id !== id) return q;
-          return { ...q, status };
-        })
-      }));
+    if (error) {
+      console.error("Error updating queue status:", error);
+      throw error;
     }
+
+    set((state) => ({
+      queue: state.queue.map(q => {
+        if (q.id !== id) return q;
+        return { ...q, status };
+      })
+    }));
   },
 
   removeQueueItem: async (id) => {
     const { error } = await supabase.from('appointments').delete().eq('id', id);
-    if (!error) {
-      set((state) => ({ queue: state.queue.filter(q => q.id !== id) }));
+    if (error) {
+      console.error("Error removing queue item:", error);
+      throw error;
     }
+    set((state) => ({ queue: state.queue.filter(q => q.id !== id) }));
   },
 
   markAsPaid: async (id) => {
@@ -98,14 +108,24 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) {
+      console.error("Error inserting customer:", error);
+      throw error;
+    }
+
+    if (data) {
       // Create store_customer entry with explicit store_id
-      await supabase.from('store_customers').insert([{
+      const { error: storeCustError } = await supabase.from('store_customers').insert([{
         customer_id: data.id,
         store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
         points: 0,
-        tier: 'Standard'
+        tier: 'bronze' // Use 'bronze' as default to match DB trigger expectations
       }]);
+
+      if (storeCustError) {
+        console.error("Error inserting store_customer:", storeCustError);
+        throw storeCustError;
+      }
 
       set((state) => ({
         customers: [...state.customers, {
@@ -149,29 +169,36 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       })
       .eq('id', id);
 
-    if (!error) {
-      set((state) => ({
-        customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c)
-      }));
+    if (error) {
+      console.error("Error updating customer:", error);
+      throw error;
     }
+
+    set((state) => ({
+      customers: state.customers.map(c => c.id === id ? { ...c, ...customerData } : c)
+    }));
   },
 
   deleteCustomer: async (id) => {
     const { error } = await supabase.from('customers').delete().eq('id', id);
-    if (!error) {
-      set((state) => ({
-        customers: state.customers.filter(c => c.id !== id),
-        selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
-        activePet: state.selectedOwner?.id === id ? null : state.activePet
-      }));
+    if (error) {
+      console.error("Error deleting customer:", error);
+      throw error;
     }
+    set((state) => ({
+      customers: state.customers.filter(c => c.id !== id),
+      selectedOwner: state.selectedOwner?.id === id ? null : state.selectedOwner,
+      activePet: state.selectedOwner?.id === id ? null : state.activePet
+    }));
   },
 
   bindLineToCustomer: async (customerId, lineId) => {
     const { error } = await supabase.from('customers').update({ line_user_id: lineId }).eq('id', customerId);
-    if (!error) {
-      set((state) => ({ customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c) }));
+    if (error) {
+      console.error("Error binding LINE ID:", error);
+      throw error;
     }
+    set((state) => ({ customers: state.customers.map(c => c.id === customerId ? { ...c, lineId } : c) }));
   },
 
   addPet: async (customerId, petData) => {
@@ -199,7 +226,12 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) {
+      console.error("Error adding pet:", error);
+      throw error;
+    }
+
+    if (data) {
       set((state) => ({
         customers: state.customers.map(c => c.id === customerId ? {
           ...c,
@@ -246,14 +278,17 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       })
       .eq('id', petId);
 
-    if (!error) {
-      set((state) => ({
-        customers: state.customers.map(c => c.id === customerId ? {
-          ...c,
-          pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
-        } : c)
-      }));
+    if (error) {
+      console.error("Error updating pet:", error);
+      throw error;
     }
+
+    set((state) => ({
+      customers: state.customers.map(c => c.id === customerId ? {
+        ...c,
+        pets: c.pets.map(p => p.id === petId ? { ...p, ...petData } : p)
+      } : c)
+    }));
   },
 
   updatePetWeight: async (customerId, petId, weight) => {
@@ -272,16 +307,25 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       .select()
       .single();
 
-    if (!error) {
-      set((state) => ({
-        customers: state.customers.map(c => c.id === customerId ? {
-          ...c,
-          pets: c.pets.map(p => p.id === petId ? { 
-            ...p, 
-            weightHistory: [...(p.weightHistory || []), { date: data.date, value: Number(data.weight) }] 
-          } : p)
-        } : c)
-      }));
+    if (error) {
+      console.error("Error updating pet weight:", error);
+      throw error;
     }
+
+    set((state) => ({
+      customers: state.customers.map(c => {
+        if (c.id !== customerId) return c;
+        return {
+          ...c,
+          pets: c.pets.map(p => {
+            if (p.id !== petId) return p;
+            return {
+              ...p,
+              weightHistory: [...(p.weightHistory || []), { date: data.date, value: Number(data.weight) }]
+            };
+          })
+        };
+      })
+    }));
   },
 });
