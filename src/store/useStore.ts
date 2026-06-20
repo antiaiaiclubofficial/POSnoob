@@ -868,9 +868,108 @@ export const useStore = create<AppState>()((set, get, store) => ({
     }
   },
 
-  addStaff: (st) => set(s => ({ staff: [...s.staff, { ...st, id: Math.random().toString() }] })),
-  updateStaff: (id, st) => set(s => ({ staff: s.staff.map(mem => mem.id === id ? { ...mem, ...st } : mem) })),
-  deleteStaff: (id) => set(s => ({ staff: s.staff.filter(mem => mem.id !== id) })),
+  addStaff: async (st) => {
+    const currentStoreId = get().storeId;
+    const email = st.username || st.email;
+
+    if (!email) {
+      toast.error("Email is required to add staff");
+      return;
+    }
+
+    // 1. Search for existing profile by email
+    const { data: existingProfiles, error: searchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', email);
+
+    if (searchError) {
+      console.error("Error searching for staff profile:", searchError);
+      toast.error("Error searching for staff profile");
+      return;
+    }
+
+    if (existingProfiles && existingProfiles.length > 0) {
+      const profile = existingProfiles[0];
+      
+      // 2. Update the existing profile with the current store_id and other details
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+          full_name: st.name,
+          role: st.role === 'Assistant' ? 'staff' : st.role,
+          phone: st.phone,
+          status: st.status,
+          avatar_url: st.avatar,
+          commission_rate: st.commissionRate,
+          is_approved: true // Auto-approve since the store admin is adding them
+        })
+        .eq('id', profile.id);
+
+      if (updateError) {
+        console.error("Error assigning staff to store:", updateError);
+        toast.error("Failed to assign staff to store");
+        return;
+      }
+
+      const newStaff: Staff = {
+        id: profile.id,
+        name: st.name,
+        role: st.role,
+        phone: st.phone,
+        status: st.status,
+        avatar: st.avatar,
+        username: email,
+        commissionRate: st.commissionRate
+      };
+
+      set(s => ({ staff: [...s.staff, newStaff] }));
+      toast.success(`Added ${st.name} to the team!`);
+    } else {
+      // Profile not found - explain that they need to sign up first
+      toast.error(`ไม่พบผู้ใช้ที่มีอีเมล ${email} ในระบบ กรุณาให้พนักงานสมัครสมาชิกก่อน แล้วจึงเพิ่มเข้าสู่ร้านค้าที่นี่`, {
+        duration: 6000
+      });
+    }
+  },
+
+  updateStaff: async (id, st) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: st.name,
+        role: st.role === 'Assistant' ? 'staff' : st.role,
+        phone: st.phone,
+        status: st.status,
+        avatar_url: st.avatar,
+        commission_rate: st.commissionRate
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating staff:", error);
+      throw error;
+    }
+
+    set(s => ({
+      staff: s.staff.map(mem => mem.id === id ? { ...mem, ...st } : mem)
+    }));
+  },
+
+  deleteStaff: async (id) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ store_id: null })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error deleting staff:", error);
+      throw error;
+    }
+
+    set(s => ({ staff: s.staff.filter(mem => mem.id !== id) }));
+  },
 
   addPackageTemplate: (pkg) => set(s => ({ packageTemplates: [...s.packageTemplates, { ...pkg, id: Math.random().toString() }] })),
   updatePackageTemplate: (id, pkg) => set(s => ({ packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p) })),

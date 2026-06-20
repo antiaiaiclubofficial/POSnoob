@@ -6,12 +6,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useStore, BookingType, MembershipLevel, QueueStatus } from "@/store/useStore";
+import { useStore, BookingType, MembershipLevel, QueueStatus, StaffRole } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
-import Queue from "./pages/Queue";
+import Queue import Queue from "./pages/Queue";
 import Services from "./pages/Services";
 import Customers from "./pages/Customers";
 import Inventory from "./pages/Inventory";
@@ -604,6 +604,35 @@ const App = () => {
         }
       } catch (err) {
         console.warn("Failed to fetch report history from Supabase:", err);
+      }
+
+      // 11. Fetch Staff (Profiles)
+      try {
+        let staffQuery = supabase.from('profiles').select('*');
+        if (storeId && storeId !== 'default-store') {
+          staffQuery = staffQuery.eq('store_id', storeId);
+        }
+        const { data: staffData, error: staffError } = await staffQuery;
+
+        if (staffError) throw staffError;
+
+        if (staffData) {
+          const formattedStaff = staffData.map(s => ({
+            id: s.id,
+            name: s.full_name || s.email.split('@')[0],
+            role: (s.role === 'admin' ? 'Admin' : s.role === 'staff' ? 'Assistant' : s.role) as StaffRole,
+            phone: s.phone || '',
+            status: (s.status || 'Active') as 'Active' | 'Inactive',
+            avatar: s.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+            username: s.email,
+            commissionRate: Number(s.commission_rate || 0)
+          }));
+          useStore.setState({ staff: formattedStaff });
+        } else {
+          useStore.setState({ staff: [] });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch staff from Supabase:", err);
       }
     };
 
