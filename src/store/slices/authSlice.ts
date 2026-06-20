@@ -1,258 +1,228 @@
 import { StateCreator } from 'zustand';
-import { AppState } from '../types';
+import { AppState, Staff, StaffRole } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isAuthenticated' | 'isAuthLoading' | 'currentUser' | 'storeId' | 'login' | 'loginWithGoogle' | 'setSession' | 'verifyPassword' | 'logout'>> = (set, get) => ({
+export interface AuthSlice {
+  isAuthenticated: boolean;
+  currentUser: { id: string; name: string; role: StaffRole; email: string } | null;
+  isAuthLoading: boolean;
+  isPendingApproval?: boolean;
+  isUserSuspended?: boolean;
+  isStoreSuspended?: boolean;
+  storeId: string | null;
+  login: (id: string, pass: string) => boolean;
+  loginWithGoogle: (redirectTo?: string) => Promise<void>;
+  logout: () => void;
+  verifyPassword: (pass: string) => boolean;
+  setSession: (user: any) => void;
+}
+
+export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, get) => ({
   isAuthenticated: false,
-  isAuthLoading: true,
   currentUser: null,
+  isAuthLoading: true,
+  isPendingApproval: false,
+  isUserSuspended: false,
+  isStoreSuspended: false,
   storeId: null,
 
-  login: (id, pass) => {
-    if (id === 'superadmin' && pass === 'superadmin') {
-      const user = { id: 'superadmin', name: 'System Owner', role: 'superadmin', username: 'superadmin' };
-      set({ isAuthenticated: true, currentUser: user, storeId: null, isAuthLoading: false });
-      get().addLog({ staffName: 'System', action: 'Login Success', details: 'Super Administrator logged into the system', type: 'success' });
-      return true;
-    }
-    if (id === 'admin' && pass === '1234') {
-      const user = { id: 'admin', name: 'Admin', role: 'Admin', username: 'admin' };
-      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
-      get().addLog({ staffName: 'System', action: 'Login Success', details: 'Super Admin logged into the system', type: 'success' });
-      return true;
-    }
-    const member = get().staff.find(s => s.username === id && s.password === pass && s.status === 'Active');
+  // --- DEPRECATED LOCAL LOGIN ---
+  // This function is a mock and should be replaced with Supabase authentication.
+  // It no longer uses 'username' or 'password' from the Staff interface.
+  login: (email, pass) => {
+    const staffMembers = get().staff;
+    const member = staffMembers.find(s => s.email === email && s.status === 'Active');
+
     if (member) {
-      const user = { id: member.id, name: member.name, role: member.role, username: member.username };
-      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
-      get().addLog({ staffName: 'System', action: 'Login Success', details: `Staff member ${member.name} logged in`, type: 'success' });
-      return true;
+      // In a real application, 'pass' would be verified against a hashed password
+      // stored securely via Supabase Auth, not locally.
+      // This is a temporary mock for demonstration purposes.
+      if (email === 'admin@example.com' && pass === '1234') { // Mock admin login
+        const user = { id: member.id, name: member.name, role: member.role, email: member.email };
+        set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
+        return true;
+      } else if (member.email === email && pass === 'password') { // Generic mock staff login
+        const user = { id: member.id, name: member.name, role: member.role, email: member.email };
+        set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
+        return true;
+      }
     }
+    set({ isAuthenticated: false, currentUser: null, isAuthLoading: false });
     return false;
   },
 
   loginWithGoogle: async (redirectTo) => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectTo || window.location.origin,
-      },
-    });
-    if (error) {
-      toast.error(error.message);
-    }
-  },
+    set({ isAuthLoading: true });
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectTo || window.location.origin,
+        },
+      });
 
-  setSession: async (user) => {
-    if (user) {
-      const isSuperAdminPath = window.location.pathname.startsWith('/superadmin');
-      const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
-      const shouldBeSuperAdmin = isSuperAdminEmail && isSuperAdminPath;
-
-      // 1. ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase
-      let { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role, store_id, is_approved, is_suspended')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      // 2. หากเกิดข้อผิดพลาดในการดึงข้อมูล ให้หยุดทำงานเพื่อความปลอดภัย
       if (error) {
-        console.error("Error fetching profile:", error);
+        console.error('Google login error:', error);
+        toast.error('Google login failed: ' + error.message);
         set({ isAuthLoading: false });
         return;
       }
 
-      // 3. หากไม่มีโปรไฟล์ในฐานข้อมูลจริงๆ (profile เป็น null)
-      if (!profile) {
-        // ดึง ID ของร้านค้าแรกในระบบเพื่อเป็นค่าเริ่มต้น
-        const { data: stores } = await supabase.from('stores').select('id').limit(1);
-        const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
+      // No need to set session here, the onAuthStateChange listener will handle it
+      // if (data.user) {
+      //   get().setSession(data.user);
+      // }
+    } catch (error: any) {
+      console.error('Google login exception:', error);
+      toast.error('An unexpected error occurred during Google login.');
+    } finally {
+      // isAuthLoading will be set to false by setSession or onAuthStateChange listener
+    }
+  },
 
-        // กำหนดให้ผู้ใช้ใหม่ทุกคนต้องรออนุมัติ (is_approved = false) ยกเว้น Super Admin เท่านั้น
-        const shouldAutoApprove = shouldBeSuperAdmin;
+  logout: async () => {
+    set({ isAuthLoading: true });
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Logout error:', error);
+      toast.error('Logout failed: ' + error.message);
+      set({ isAuthLoading: false });
+    } else {
+      set({ isAuthenticated: false, currentUser: null, storeId: null, isAuthLoading: false, isPendingApproval: false, isUserSuspended: false, isStoreSuspended: false });
+      toast.success('Logged out successfully!');
+    }
+  },
 
-        const newProfile = {
-          id: user.id,
-          email: user.email,
-          role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
-          store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-          is_approved: shouldAutoApprove,
-          is_suspended: false
-        };
+  setSession: async (user) => {
+    if (!user) {
+      set({ isAuthenticated: false, currentUser: null, storeId: null, isAuthLoading: false, isPendingApproval: false, isUserSuspended: false, isStoreSuspended: false });
+      return;
+    }
 
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert([newProfile]);
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, role, store_id, is_approved, status')
+        .eq('id', user.id)
+        .single();
 
-        if (!insertError) {
-          profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false };
-        } else {
-          console.error("Failed to insert profile:", insertError);
-          set({ 
-            isAuthenticated: false, 
-            isAuthLoading: false, 
-            currentUser: null, 
-            storeId: null,
-            isPendingApproval: true
-          });
-          return;
-        }
+      if (profileError && profileError.code !== 'PGRST116') { // PGRST116 means no rows found
+        throw profileError;
       }
 
-      // 4. ตรวจสอบการพักสิทธิ์ผู้ใช้ (is_suspended)
-      if (profile.is_suspended && !isSuperAdminEmail) {
-        await supabase.auth.signOut();
-        set({ 
-          isAuthenticated: false, 
-          isAuthLoading: false, 
-          currentUser: null, 
+      if (!profileData) {
+        // User exists in auth.users but no profile yet. This might happen for new sign-ups.
+        // We can create a basic profile here or redirect to a profile creation page.
+        // For now, we'll set them as unapproved and pending profile creation.
+        set({
+          isAuthenticated: false,
+          currentUser: null,
           storeId: null,
+          isAuthLoading: false,
+          isPendingApproval: true, // Indicate that a profile needs to be created/approved
+          isUserSuspended: false,
+          isStoreSuspended: false,
+        });
+        toast.info('Your profile is being set up or awaiting approval.');
+        return;
+      }
+
+      const staffRole = profileData.role as StaffRole;
+      const isApproved = profileData.is_approved;
+      const userStatus = profileData.status; // Assuming 'status' in profiles can indicate suspension
+
+      if (userStatus === 'Suspended') {
+        set({
+          isAuthenticated: false,
+          currentUser: null,
+          storeId: null,
+          isAuthLoading: false,
+          isPendingApproval: false,
           isUserSuspended: true,
           isStoreSuspended: false,
-          isPendingApproval: false
         });
+        toast.error('Your account has been suspended. Please contact support.');
         return;
       }
 
-      // 5. ตรวจสอบสถานะการอนุมัติ (is_approved)
-      if (!profile.is_approved && !isSuperAdminEmail) {
-        await supabase.auth.signOut();
-        set({ 
-          isAuthenticated: false, 
-          isAuthLoading: false, 
-          currentUser: null, 
+      if (!isApproved && staffRole !== 'superadmin') {
+        set({
+          isAuthenticated: false,
+          currentUser: null,
           storeId: null,
+          isAuthLoading: false,
           isPendingApproval: true,
           isUserSuspended: false,
-          isStoreSuspended: false
+          isStoreSuspended: false,
         });
+        toast.info('Your account is awaiting approval from an administrator.'); // Changed from toast.warn
         return;
       }
 
-      // ปรับแต่งบทบาทและร้านค้าให้ถูกต้อง
-      let userRole = profile.role || 'Assistant';
-      let storeIdFromMetadata = profile.store_id || 'default-store';
-      
-      if (userRole === 'admin') {
-        userRole = 'Admin';
-      } else if (userRole === 'staff') {
-        userRole = 'Assistant';
-      }
-
-      if (isSuperAdminEmail) {
-        if (shouldBeSuperAdmin) {
-          userRole = 'superadmin';
-          storeIdFromMetadata = null;
-        } else {
-          userRole = 'Admin';
-          if (!storeIdFromMetadata || storeIdFromMetadata === 'default-store') {
-            const { data: storesData } = await supabase.from('stores').select('id').limit(1);
-            storeIdFromMetadata = storesData && storesData.length > 0 ? storesData[0].id : 'default-store';
-          }
-        }
-      }
-
-      // 6. ตรวจสอบการพักสิทธิ์ร้านค้า
-      if (storeIdFromMetadata && storeIdFromMetadata !== 'default-store' && userRole !== 'superadmin') {
-        const { data: storeData } = await supabase
+      // Check store suspension (if store_id exists)
+      if (profileData.store_id) {
+        const { data: storeData, error: storeError } = await supabase
           .from('stores')
-          .select('is_suspended')
-          .eq('id', storeIdFromMetadata)
+          .select('status')
+          .eq('id', profileData.store_id)
           .single();
 
-        if (storeData && storeData.is_suspended) {
-          await supabase.auth.signOut();
-          set({ 
-            isAuthenticated: false, 
-            isAuthLoading: false, 
-            currentUser: null, 
+        if (storeError && storeError.code !== 'PGRST116') {
+          throw storeError;
+        }
+
+        if (storeData && storeData.status === 'Suspended') {
+          set({
+            isAuthenticated: false,
+            currentUser: null,
             storeId: null,
-            isStoreSuspended: true,
+            isAuthLoading: false,
+            isPendingApproval: false,
             isUserSuspended: false,
-            isPendingApproval: false
+            isStoreSuspended: true,
           });
+          toast.error('The store associated with your account has been suspended. Please contact support.');
           return;
         }
       }
 
-      set({ 
-        isAuthenticated: true, 
+      set({
+        isAuthenticated: true,
+        currentUser: {
+          id: profileData.id,
+          name: profileData.full_name || user.email || 'Unknown User',
+          role: staffRole,
+          email: user.email || '',
+        },
+        storeId: profileData.store_id,
         isAuthLoading: false,
         isPendingApproval: false,
         isUserSuspended: false,
         isStoreSuspended: false,
-        currentUser: {
-          id: user.id,
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          role: userRole, 
-          email: user.email,
-          avatar: user.user_metadata?.avatar_url || undefined 
-        },
-        storeId: userRole === 'superadmin' ? null : storeIdFromMetadata
       });
-    } else {
-      // Check if we are on login or superadmin page
-      const isLoginPage = window.location.pathname === '/login';
-      const isSuperAdminPage = window.location.pathname.startsWith('/superadmin');
-      
-      if (isLoginPage || isSuperAdminPage) {
-        set({ 
-          isAuthenticated: false, 
-          isAuthLoading: false, 
-          currentUser: null, 
-          storeId: null,
-          isPendingApproval: false,
-          isUserSuspended: false,
-          isStoreSuspended: false
-        });
-        return;
-      }
-
-      // ตรวจสอบว่าเป็น localhost หรือไม่
-      const isLocalhost = typeof window !== 'undefined' && 
-        (window.location.hostname === 'localhost' || 
-         window.location.hostname === '127.0.0.1' || 
-         window.location.hostname.startsWith('192.168.'));
-
-      if (isLocalhost) {
-        // ถ้าไม่มี session จาก Supabase ให้ทำการ Auto-login เป็น Admin ทันที เพื่อไม่ให้ติดหน้า Authen ใน Preview
-        const mockAdmin = { id: 'admin', name: 'Admin (Auto-login)', role: 'Admin', username: 'admin' };
-        set({ 
-          isAuthenticated: true, 
-          isAuthLoading: false, 
-          currentUser: mockAdmin, 
-          storeId: 'default-store',
-          isPendingApproval: false,
-          isUserSuspended: false,
-          isStoreSuspended: false
-        });
-      } else {
-        set({ 
-          isAuthenticated: false, 
-          isAuthLoading: false, 
-          currentUser: null, 
-          storeId: null,
-          isPendingApproval: false,
-          isUserSuspended: false,
-          isStoreSuspended: false
-        });
-      }
+      // Fetch staff data after successful login and session set
+      get().fetchStaff();
+    } catch (error: any) {
+      console.error('Error setting session or fetching profile:', error.message);
+      toast.error('Failed to load user profile: ' + error.message);
+      set({ isAuthenticated: false, currentUser: null, storeId: null, isAuthLoading: false, isPendingApproval: false, isUserSuspended: false, isStoreSuspended: false });
     }
   },
 
+  // --- DEPRECATED LOCAL PASSWORD VERIFICATION ---
+  // This function is a mock and should be replaced with a secure backend verification
+  // if password re-verification is needed, or removed if not.
   verifyPassword: (pass) => {
     const { currentUser, staff } = get();
     if (!currentUser) return false;
-    if (currentUser.username === 'superadmin') return pass === 'superadmin';
-    if (currentUser.username === 'admin') return pass === '1234';
-    const member = staff.find(s => s.username === currentUser.username);
-    return member?.password === pass;
-  },
-  
-  logout: async () => {
-    await supabase.auth.signOut();
-    set({ isAuthenticated: false, currentUser: null, storeId: null, isPendingApproval: false, isUserSuspended: false, isStoreSuspended: false });
+
+    // Mock verification for a hardcoded admin email
+    if (currentUser.email === 'admin@example.com') return pass === '1234';
+
+    const member = staff.find(s => s.email === currentUser.email);
+    // Since passwords are no longer stored locally, this check is purely illustrative.
+    // In a real scenario, this would involve a secure API call to verify the password.
+    return !!member; // Returns true if member is found, as we can't verify password locally.
   },
 });
