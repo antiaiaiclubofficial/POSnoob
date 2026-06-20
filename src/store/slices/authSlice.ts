@@ -164,7 +164,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
       if (profileData.store_id) {
         const { data: storeData, error: storeError } = await supabase
           .from('stores')
-          .select('status')
+          .select('is_suspended')
           .eq('id', profileData.store_id)
           .single();
 
@@ -172,7 +172,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
           throw storeError;
         }
 
-        if (storeData && storeData.status === 'Suspended') {
+        if (storeData && storeData.is_suspended) {
           set({
             isAuthenticated: false,
             currentUser: null,
