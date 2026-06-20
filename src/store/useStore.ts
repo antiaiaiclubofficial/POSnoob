@@ -132,9 +132,11 @@ export const useStore = create<AppState>()((set, get) => ({
             address: profile.shopAddress !== undefined ? profile.shopAddress : undefined,
             phone: profile.shopPhone !== undefined ? profile.shopPhone : undefined,
             line_id: profile.shopLineId !== undefined ? profile.shopLineId : undefined,
-            receipt_header: profile.receiptHeader !== undefined ? profile.receiptHeader : undefined,
-            receipt_footer: profile.receiptFooter !== undefined ? profile.receiptFooter : undefined,
+            receipt_header: profile.receipt_header !== undefined ? profile.receiptHeader : undefined,
+            receipt_footer: profile.receipt_footer !== undefined ? profile.receiptFooter : undefined,
             receipt_paper_size: profile.receiptPaperSize !== undefined ? profile.receiptPaperSize : undefined,
+            currency: localCurrency => localCurrency, // handled by other fields
+            shopIsOpen: localShopIsOpen => localShopIsOpen, // handled by other fields
             company_name: profile.companyName !== undefined ? profile.companyName : undefined,
             company_address: profile.companyAddress !== undefined ? profile.companyAddress : undefined,
             company_tax_id: profile.companyTaxId !== undefined ? profile.companyTaxId : undefined,
@@ -601,17 +603,13 @@ export const useStore = create<AppState>()((set, get) => ({
         action: (mode === 'Set' ? 'Adjust' : mode) as StockLog['action'],
         oldQty: oldQty,
         newQty: newQty,
-        reason: reason,
-        staffName: staffName,
-        timestamp: logData.created_at
+        reason: l.reason || '',
+        staffName: l.staff_name || 'System',
+        timestamp: l.created_at
       };
-
-      set(s => ({
-        inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i),
-        stockLogs: [newLog, ...s.stockLogs]
-      }));
+      set(s => ({ stockLogs: [newLog, ...s.stockLogs] }));
     } else {
-      console.error("Error inserting stock log:", logError);
+      console.error("Error adding stock log to Supabase:", error);
       set(s => ({
         inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i)
       }));
@@ -765,7 +763,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
     const { error } = await supabase
       .from('profiles')
-      .update({ store_id: null })
+      .delete()
       .eq('id', id);
 
     if (error) {
