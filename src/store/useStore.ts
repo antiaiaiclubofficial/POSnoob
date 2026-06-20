@@ -603,13 +603,13 @@ export const useStore = create<AppState>()((set, get) => ({
         action: (mode === 'Set' ? 'Adjust' : mode) as StockLog['action'],
         oldQty: oldQty,
         newQty: newQty,
-        reason: l.reason || '',
-        staffName: l.staff_name || 'System',
-        timestamp: l.created_at
+        reason: logData.reason || '',
+        staffName: logData.staff_name || 'System',
+        timestamp: logData.created_at
       };
       set(s => ({ stockLogs: [newLog, ...s.stockLogs] }));
     } else {
-      console.error("Error adding stock log to Supabase:", error);
+      console.error("Error adding stock log to Supabase:", logError);
       set(s => ({
         inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i)
       }));
