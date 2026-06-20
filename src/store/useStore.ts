@@ -208,19 +208,7 @@ export const useStore = create<AppState>()((set, get, store) => ({
   ],
   packageTemplates: [],
   creditPackages: [],
-  staff: [
-    // Add a mock superadmin user for localhost auto-login
-    {
-      id: 'superadmin-mock-id',
-      name: 'Super Admin (Dev)',
-      role: 'superadmin',
-      email: 'antiai.aiclub.official@gmail.com',
-      phone: '000-000-0000',
-      status: 'Active',
-      avatar: 'https://avatars.githubusercontent.com/u/124599?v=4', // Example avatar
-      commissionRate: 0,
-    },
-  ], 
+  staff: [], // This will now be populated from profiles table
   logs: [],
   cart: [],
   rolePermissions: {
