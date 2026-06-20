@@ -29,12 +29,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
-// คอมโพเนนต์สำหรับจัดการหน้าแรกตามบทบาทของผู้ใช้
+// คอมโพเนนต์สำหรับจัดการหน้าแรกให้เข้าสู่ Dashboard โดยตรง
 const HomeRedirect = () => {
-  const { currentUser } = useStore();
-  if (currentUser?.role === 'superadmin') {
-    return <Navigate to="/superadmin" replace />;
-  }
   return <Dashboard />;
 };
 
