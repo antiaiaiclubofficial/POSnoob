@@ -8,26 +8,11 @@ import {
   PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory 
 } from './types';
 import { createAuthSlice } from './slices/authSlice';
-import { createCRMAndStaffSlice } from './slices/crmSlice'; // Wait, let's check if crmSlice exists. Ah, it's createCRMAndStaffSlice or similar? No, let's check the original useStore.ts.
-// Wait, the original useStore.ts imported createAuthSlice and createCRMAndStaffSlice? No, let's look at the original useStore.ts in the prompt:
-// It imports createAuthSlice and then defines the rest of the store directly!
-// Let's write the complete useStore.ts with the updated addStaff and deleteStaff.
+
+// Re-export all types so that other files can import them from '@/store/useStore'
+export * from './types';
 
 export const useStore = create<AppState>()((set, get) => ({
-  ...createAuthSlice(set, get, {} as any), // Wait, let's check how createAuthSlice was initialized in the original useStore.ts:
-  // Ah, in the original useStore.ts:
-  // It didn't use slices! It defined everything directly in useStore!
-  // Let's check the original useStore.ts from the prompt:
-  // Wait, the original useStore.ts has:
-  // `export const useStore = create<AppState>()((set, get) => ({`
-  // `  ...createAuthSlice(set, get, {} as any),`
-  // Wait, let's look at the original useStore.ts file contents in the prompt.
-  // Ah! The original useStore.ts file contents are:
-  // `export const useStore = create<AppState>()((set, get) => ({`
-  // `  shopName: 'Mellow Fellow Sanctuary',`
-  // `  ...`
-  // Yes! It defines everything directly. Let's write the complete useStore.ts file.
-  
   shopName: 'Mellow Fellow Sanctuary',
   shopLogo: null,
   shopAddress: '',
@@ -44,9 +29,17 @@ export const useStore = create<AppState>()((set, get) => ({
   closeTime: '19:00',
   kennelCapacity: 8,
   language: 'th',
+  vatEnabled: false,
+  liffId: '',
+  liffChannelId: '',
+  liffChannelSecret: '',
+  liffEnabled: false,
   
   customers: [],
+  selectedOwner: null,
   activePet: null,
+  activeQueueItemId: null,
+  queue: [],
   services: [],
   addons: [],
   inventory: [],
@@ -71,9 +64,8 @@ export const useStore = create<AppState>()((set, get) => ({
   
   rolePermissions: {
     'superadmin': ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings'],
-    'Store Owner': ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings'],
     'Admin': ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings'],
-    'Staff': ['/', '/pos', '/queue', '/customers', '/inventory'],
+    'Groomer': ['/', '/pos', '/queue', '/customers', '/inventory'],
     'Assistant': ['/', '/queue', '/customers']
   },
 
@@ -206,6 +198,22 @@ export const useStore = create<AppState>()((set, get) => ({
       [role]: permissions
     }
   })),
+
+  setCustomers: (customers) => set({ customers }),
+  addCustomer: (data) => set(s => ({ customers: [...s.customers, { ...data, id: Math.random().toString() }] })),
+  updateCustomer: (id, data) => set(s => ({ customers: s.customers.map(c => c.id === id ? { ...c, ...data } : c) })),
+  deleteCustomer: (id) => set(s => ({ customers: s.customers.filter(c => c.id !== id) })),
+  bindLineToCustomer: (customerId, lineId) => set(s => ({ customers: s.customers.map(c => c.id === customerId ? { ...c, lineId } : c) })),
+
+  addPet: (customerId, pet) => set(s => ({ customers: s.customers.map(c => c.id === customerId ? { ...c, pets: [...c.pets, { ...pet, id: Math.random().toString() }] } : c) })),
+  updatePet: (customerId, petId, data) => set(s => ({ customers: s.customers.map(c => c.id === customerId ? { ...c, pets: c.pets.map(p => p.id === petId ? { ...p, ...data } : p) } : c) })),
+  updatePetWeight: (customerId, petId, weight) => set(s => ({ customers: s.customers.map(c => c.id === customerId ? { ...c, pets: c.pets.map(p => p.id === petId ? { ...p, weightHistory: [...p.weightHistory, { date: new Date().toISOString().split('T')[0], value: weight }] } : p) } : c) })),
+  saveIntakeRecord: (customerId, petId, record) => set(s => ({ customers: s.customers.map(c => c.id === customerId ? { ...c, pets: c.pets.map(p => p.id === petId ? { ...p, intakeHistory: [...(p.intakeHistory || []), record] } : p) } : c) })),
+
+  addBooking: (booking) => set(s => ({ queue: [...s.queue, { ...booking, id: Math.random().toString() }] })),
+  updateQueueStatus: (id, status) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, status } : q) })),
+  removeQueueItem: (id) => set(s => ({ queue: s.queue.filter(q => q.id !== id) })),
+  markAsPaid: (id) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
 
   toggleSlotStatus: (time) => set(s => {
     const isDisabled = s.disabledSlots.includes(time);
@@ -477,7 +485,7 @@ export const useStore = create<AppState>()((set, get) => ({
         name: item.name,
         barcode: item.barcode,
         stock: item.stock || 0,
-        min_stock: item.minStock || 5,
+        min_stock: item.min_stock || 5,
         price: item.price || 0,
         cost_price: item.costPrice || 0,
         unit: item.unit || 'ชิ้น',
