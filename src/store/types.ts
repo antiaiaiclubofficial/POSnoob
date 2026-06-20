@@ -163,13 +163,14 @@ export interface Transaction {
 }
 
 export interface Staff {
-  id: string; // This will be the auth.users.id
-  name: string; // Maps to full_name in profiles
+  id: string;
+  name: string;
   role: StaffRole;
   phone: string;
   status: 'Active' | 'Inactive';
-  avatar: string; // Maps to avatar_url in profiles
-  email: string; // From auth.users, also in profiles
+  avatar: string;
+  username?: string;
+  password?: string;
   commissionRate?: number;
 }
 
@@ -272,7 +273,7 @@ export interface AppState {
   tierRules: TierRule[];
   packageTemplates: PackageTemplate[];
   creditPackages: CreditPackageTemplate[];
-  staff: Staff[]; // This will now be populated from profiles table
+  staff: Staff[];
   logs: ActivityLog[];
   cart: any[];
   rolePermissions: Record<StaffRole, string[]>;
@@ -352,7 +353,6 @@ export interface AppState {
   addStaff: (staff: any) => void;
   updateStaff: (id: string, staff: any) => void;
   deleteStaff: (id: string) => void;
-  fetchStaff: () => Promise<void>;
   
   addPackageTemplate: (pkg: any) => void;
   updatePackageTemplate: (id: string, pkg: any) => void;

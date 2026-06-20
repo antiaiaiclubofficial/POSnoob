@@ -1,163 +1,221 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Staff, StaffRole } from '@/store/types';
-import { useStore } from '@/store/useStore';
+"use client";
+
+import React, { useState, useEffect, useRef } from 'react';
+import { X, User, Phone, Briefcase, Camera, Lock, Key, Percent, Upload } from 'lucide-react';
+import { useStore, Staff, StaffRole } from '@/store/useStore';
+import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
 
 interface StaffModalProps {
-  isOpen: boolean;
+  staff?: Staff | null;
   onClose: () => void;
-  staff?: Staff; // Optional, for editing existing staff
 }
 
-const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, staff }) => {
-  const addStaff = useStore((state) => state.addStaff);
-  const updateStaff = useStore((state) => state.updateStaff);
-
-  const initialState = {
-    name: staff?.name || '',
-    email: staff?.email || '',
-    role: staff?.role || 'Assistant',
-    phone: staff?.phone || '',
-    status: staff?.status || 'Active',
-    avatar: staff?.avatar || '',
-    commissionRate: staff?.commissionRate || 0
-  };
-
-  const [formData, setFormData] = useState(initialState);
+const StaffModal = ({ staff, onClose }: StaffModalProps) => {
+  const { addStaff, updateStaff, language } = useStore();
+  const t = translations[language];
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    role: 'Assistant' as StaffRole,
+    phone: '',
+    status: 'Active' as 'Active' | 'Inactive',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+    username: '',
+    password: '',
+    commissionRate: 0
+  });
 
   useEffect(() => {
     if (staff) {
       setFormData({
         name: staff.name,
-        email: staff.email,
         role: staff.role,
         phone: staff.phone,
         status: staff.status,
         avatar: staff.avatar,
+        username: staff.username || '',
+        password: staff.password || '',
         commissionRate: staff.commissionRate || 0
       });
-    } else {
-      setFormData(initialState);
     }
-  }, [staff, isOpen]);
+  }, [staff]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, avatar: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleSelectChange = (id: keyof typeof formData, value: string) => {
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.name || !formData.email || !formData.role || !formData.phone) {
-      toast.error('Please fill in all required fields.');
+    if (!formData.name || !formData.phone) {
+      toast.error(language === 'th' ? "กรุณากรอกชื่อและเบอร์โทรศัพท์" : "Name and Phone are required");
       return;
     }
 
-    try {
-      if (staff) {
-        await updateStaff(staff.id, formData);
-        toast.success('Staff updated successfully!');
-      } else {
-        await addStaff(formData);
-        toast.success('Staff added successfully!');
-      }
-      onClose();
-    } catch (error) {
-      console.error('Failed to save staff:', error);
-      toast.error('Failed to save staff. Please try again.');
+    if (staff) {
+      updateStaff(staff.id, formData);
+      toast.success(language === 'th' ? "อัปเดตข้อมูลพนักงานเรียบร้อย" : "Staff updated successfully");
+    } else {
+      addStaff(formData);
+      toast.success(language === 'th' ? "เพิ่มพนักงานใหม่เรียบร้อย" : "New staff registered");
     }
+    onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{staff ? 'Edit Staff' : 'Add New Staff'}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
-            <Input id="name" value={formData.name} onChange={handleChange} className="col-span-3" required />
+    <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+      <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-8 border-b border-gray-50 flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-[#1A1F3D]">{staff ? t.editStaff : t.addStaff}</h2>
+            <p className="text-xs text-gray-400 font-medium">{t.staffManagement}</p>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="email" className="text-right">
-              Email
-            </Label>
-            <Input id="email" type="email" value={formData.email} onChange={handleChange} className="col-span-3" required />
+          <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
+            <X size={20} className="text-gray-400" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[75vh] overflow-y-auto scrollbar-hide">
+          {/* Avatar Upload Section */}
+          <div className="flex justify-center mb-4">
+             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <div className="w-24 h-24 rounded-[32px] overflow-hidden border-4 border-[#F5F6FA] shadow-md transition-transform group-hover:scale-105">
+                  <img src={formData.avatar} className="w-full h-full object-cover" alt="Staff Avatar" />
+                </div>
+                <div className="absolute inset-0 bg-[#1A1F3D]/40 rounded-[32px] flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="text-white mb-1" size={20} />
+                </div>
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#1A1F3D] text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                  <Upload size={12} />
+                </div>
+             </div>
+             <input 
+               type="file" 
+               ref={fileInputRef} 
+               className="hidden" 
+               accept="image/*" 
+               onChange={handleImageUpload} 
+             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="role" className="text-right">
-              Role
-            </Label>
-            <Select value={formData.role} onValueChange={(value) => handleSelectChange('role', value as StaffRole)}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Admin">Admin</SelectItem>
-                <SelectItem value="Groomer">Groomer</SelectItem>
-                <SelectItem value="Assistant">Assistant</SelectItem>
-              </SelectContent>
-            </Select>
+
+          <div className="space-y-4">
+            <div className="bg-blue-50/50 p-6 rounded-[28px] border border-blue-100 space-y-4 mb-2">
+              <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest px-1">{t.loginCredentials}</p>
+              <div>
+                <div className="relative">
+                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300" size={18} />
+                  <input 
+                    type="text"
+                    className="w-full bg-white border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500/10"
+                    value={formData.username}
+                    onChange={e => setFormData({...formData, username: e.target.value})}
+                    placeholder={t.loginUsername}
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300" size={18} />
+                  <input 
+                    type="password"
+                    className="w-full bg-white border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500/10"
+                    value={formData.password}
+                    onChange={e => setFormData({...formData, password: e.target.value})}
+                    placeholder={t.loginPassword}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">{t.profileInfo}</p>
+              <div>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                  <input 
+                    type="text"
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold"
+                    value={formData.name}
+                    onChange={e => setFormData({...formData, name: e.target.value})}
+                    placeholder={t.employeeFullName}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">{t.role}</label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                    <select 
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-3.5 text-xs font-bold appearance-none"
+                      value={formData.role}
+                      onChange={e => setFormData({...formData, role: e.target.value as StaffRole})}
+                    >
+                      <option value="Admin">Admin</option>
+                      <option value="Groomer">Groomer</option>
+                      <option value="Assistant">Assistant</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">{t.commissionRate}</label>
+                  <div className="relative">
+                    <Percent className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                    <input 
+                      type="number"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-3.5 text-xs font-bold"
+                      value={formData.commissionRate}
+                      onChange={e => setFormData({...formData, commissionRate: Number(e.target.value)})}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">{t.phone}</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                    <input 
+                      type="tel"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold"
+                      value={formData.phone}
+                      onChange={e => setFormData({...formData, phone: e.target.value})}
+                      placeholder={t.contactNumber}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">{t.status}</label>
+                  <select 
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3.5 text-xs font-bold appearance-none"
+                    value={formData.status}
+                    onChange={e => setFormData({...formData, status: e.target.value as any})}
+                  >
+                    <option value="Active">{t.active}</option>
+                    <option value="Inactive">{t.inactive}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="phone" className="text-right">
-              Phone
-            </Label>
-            <Input id="phone" value={formData.phone} onChange={handleChange} className="col-span-3" required />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="status" className="text-right">
-              Status
-            </Label>
-            <Select value={formData.status} onValueChange={(value) => handleSelectChange('status', value as 'Active' | 'Inactive')}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="avatar" className="text-right">
-              Avatar URL
-            </Label>
-            <Input id="avatar" value={formData.avatar} onChange={handleChange} className="col-span-3" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="commissionRate" className="text-right">
-              Commission Rate (%)
-            </Label>
-            <Input
-              id="commissionRate"
-              type="number"
-              value={formData.commissionRate}
-              onChange={handleChange}
-              className="col-span-3"
-              min="0"
-              max="100"
-            />
-          </div>
-          <DialogFooter>
-            <Button type="submit">{staff ? 'Save Changes' : 'Add Staff'}</Button>
-          </DialogFooter>
+
+          <button className="w-full bg-[#1A1F3D] text-white font-black py-4 rounded-2xl shadow-xl shadow-[#1A1F3D]/10 hover:bg-[#2A3152] transition-all mt-4">
+            {staff ? t.updateStaffMember : t.addToTeam}
+          </button>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 
