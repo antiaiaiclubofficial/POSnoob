@@ -144,7 +144,8 @@ const Dashboard = () => {
     const savedBookings = localStorage.getItem('hotel_bookings');
     if (savedBookings) {
       try {
-        setHotelBookings(JSON.parse(savedBookings));
+        const parsed = JSON.parse(savedBookings);
+        setHotelBookings(Array.isArray(parsed) ? parsed : []);
       } catch (e) {
         setHotelBookings([]);
       }
@@ -217,7 +218,8 @@ const Dashboard = () => {
 
   // บันทึกการจองโรงแรมสัตว์เลี้ยง
   const handleSaveHotelBooking = (bookingData: any) => {
-    const updatedBookings = [...hotelBookings, bookingData];
+    const currentBookings = Array.isArray(hotelBookings) ? hotelBookings : [];
+    const updatedBookings = [...currentBookings, bookingData];
     setHotelBookings(updatedBookings);
     localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
     setIsHotelBookingOpen(false);
@@ -229,7 +231,8 @@ const Dashboard = () => {
   const handleCheckOutRoom = (roomIndex: number) => {
     if (!window.confirm("คุณต้องการทำรายการ Check-out และคืนห้องพักนี้ใช่หรือไม่?")) return;
     
-    const updatedBookings = hotelBookings.filter(b => b.roomIndex !== roomIndex);
+    const currentBookings = Array.isArray(hotelBookings) ? hotelBookings : [];
+    const updatedBookings = currentBookings.filter(b => b && b.roomIndex !== roomIndex);
     setHotelBookings(updatedBookings);
     localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
     setSelectedOccupiedRoom(null);
@@ -286,9 +289,10 @@ const Dashboard = () => {
   // 3. ตารางห้องพักโรงแรมสัตว์เลี้ยงแบบโต้ตอบได้ (Interactive Hotel Rooms Grid)
   const hotelRooms = useMemo(() => {
     if (roomsConfig.length === 0) return [];
+    const currentBookings = Array.isArray(hotelBookings) ? hotelBookings : [];
     return roomsConfig.map((room, idx) => {
       // ค้นหาข้อมูลการจองโรงแรมสัตว์เลี้ยงที่ตรงกับห้องนี้
-      const occupiedBy = hotelBookings.find(b => b.roomIndex === idx) || null;
+      const occupiedBy = currentBookings.find(b => b && b.roomIndex === idx) || null;
       return {
         ...room,
         occupiedBy
@@ -296,7 +300,7 @@ const Dashboard = () => {
     });
   }, [roomsConfig, hotelBookings]);
 
-  const occupiedKennels = hotelBookings.length;
+  const occupiedKennels = Array.isArray(hotelBookings) ? hotelBookings.length : 0;
 
   const handleRoomClick = (room: any, idx: number) => {
     if (isEditRoomsMode) {
@@ -519,7 +523,7 @@ const Dashboard = () => {
               <div>
                 <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">{t.inShop}</p>
                 <h2 className="text-3xl font-black text-[#1A1F3D]">{metrics.activePets} <span className="text-xs text-gray-400 font-bold">ตัว</span></h2>
-                <p className="text-[9px] text-gray-400 font-bold mt-2">Kennel Occupancy: {Math.round((occupiedKennels / kennelCapacity) * 100)}%</p>
+                <p className="text-[9px] text-gray-400 font-bold mt-2">Kennel Occupancy: {kennelCapacity > 0 ? Math.round((occupiedKennels / kennelCapacity) * 100) : 0}%</p>
               </div>
             </div>
 
