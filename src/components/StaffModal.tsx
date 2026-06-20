@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Phone, Briefcase, Camera, Percent, Upload, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Camera, Save, User, Key, Phone, Percent, Shield } from 'lucide-react';
 import { useStore, Staff, StaffRole } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface StaffModalProps {
   staff?: Staff | null;
@@ -14,7 +15,6 @@ interface StaffModalProps {
 const StaffModal = ({ staff, onClose }: StaffModalProps) => {
   const { addStaff, updateStaff, language } = useStore();
   const t = translations[language];
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -22,7 +22,9 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
     phone: '',
     status: 'Active' as 'Active' | 'Inactive',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    commissionRate: 0
+    commissionRate: 0,
+    username: '',
+    password: ''
   });
 
   useEffect(() => {
@@ -33,10 +35,33 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
         phone: staff.phone,
         status: staff.status,
         avatar: staff.avatar,
-        commissionRate: staff.commissionRate || 0
+        commissionRate: staff.commissionRate || 0,
+        username: staff.username || '',
+        password: staff.password || ''
       });
     }
   }, [staff]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name) {
+      toast.error(language === 'th' ? "กรุณากรอกชื่อพนักงาน" : "Staff name is required");
+      return;
+    }
+    if (!formData.username || !formData.password) {
+      toast.error(language === 'th' ? "กรุณากรอกชื่อผู้ใช้และรหัสผ่านสำหรับเข้าสู่ระบบ" : "Username and password are required");
+      return;
+    }
+
+    if (staff) {
+      updateStaff(staff.id, formData);
+      toast.success(language === 'th' ? "อัปเดตข้อมูลพนักงานเรียบร้อย" : "Staff updated successfully");
+    } else {
+      addStaff(formData);
+      toast.success(language === 'th' ? "เพิ่มพนักงานใหม่เรียบร้อย" : "Staff added successfully");
+    }
+    onClose();
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,21 +74,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.phone) {
-      toast.error(language === 'th' ? "กรุณากรอกชื่อและเบอร์โทรศัพท์" : "Name and Phone are required");
-      return;
-    }
-
-    if (staff) {
-      updateStaff(staff.id, formData);
-      toast.success(language === 'th' ? "อัปเดตข้อมูลพนักงานเรียบร้อย" : "Staff updated successfully");
-    } else {
-      addStaff(formData);
-    }
-    onClose();
-  };
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
@@ -89,7 +100,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                   <Camera className="text-white mb-1" size={20} />
                 </div>
                 <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#1A1F3D] text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white">
-                  <Upload size={12} />
+                  <Camera size={12} />
                 </div>
              </div>
              <input 
@@ -102,18 +113,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
           </div>
 
           <div className="space-y-4">
-            {!staff && (
-              <div className="bg-indigo-50/50 p-5 rounded-[28px] border border-indigo-100 flex items-start gap-3 text-indigo-800">
-                <Sparkles className="text-indigo-500 shrink-0 mt-0.5" size={16} />
-                <div className="text-left">
-                  <p className="text-[10px] font-black uppercase tracking-wider mb-1">เชื่อมต่อผ่าน Google</p>
-                  <p className="text-[11px] font-medium leading-relaxed text-indigo-700">
-                    ระบบจะสร้างลิงก์คำเชิญให้โดยอัตโนมัติหลังจากกดเพิ่มพนักงาน เพื่อให้พนักงานนำไปเชื่อมต่อบัญชี Google ของตนเอง
-                  </p>
-                </div>
-              </div>
-            )}
-
+            {/* Profile Info */}
             <div className="space-y-4">
               <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">{t.profileInfo}</p>
               <div>
@@ -125,6 +125,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
                     placeholder={t.employeeFullName}
+                    required
                   />
                 </div>
               </div>
@@ -132,18 +133,15 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">{t.role}</label>
-                  <div className="relative">
-                    <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-                    <select 
-                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-3.5 text-xs font-bold appearance-none"
-                      value={formData.role}
-                      onChange={e => setFormData({...formData, role: e.target.value as StaffRole})}
-                    >
-                      <option value="Admin">Admin</option>
-                      <option value="Groomer">Groomer</option>
-                      <option value="Assistant">Assistant</option>
-                    </select>
-                  </div>
+                  <select 
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3.5 text-xs font-bold appearance-none"
+                    value={formData.role}
+                    onChange={e => setFormData({...formData, role: e.target.value as StaffRole})}
+                  >
+                    <option value="Admin">Admin</option>
+                    <option value="Groomer">Groomer</option>
+                    <option value="Assistant">Assistant</option>
+                  </select>
                 </div>
                 <div>
                   <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">{t.commissionRate}</label>
@@ -171,6 +169,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                       value={formData.phone}
                       onChange={e => setFormData({...formData, phone: e.target.value})}
                       placeholder={t.contactNumber}
+                      required
                     />
                   </div>
                 </div>
@@ -184,6 +183,42 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                     <option value="Active">{t.active}</option>
                     <option value="Inactive">{t.inactive}</option>
                   </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Login Credentials */}
+            <div className="space-y-4 pt-4 border-t border-gray-50">
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">{t.loginCredentials}</p>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-gray-400 px-1">{t.loginUsername}</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                    <input 
+                      type="text"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-3 text-xs font-bold"
+                      value={formData.username}
+                      onChange={e => setFormData({...formData, username: e.target.value})}
+                      placeholder="username"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-gray-400 px-1">{t.loginPassword}</label>
+                  <div className="relative">
+                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                    <input 
+                      type="password"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-3 text-xs font-bold"
+                      value={formData.password}
+                      onChange={e => setFormData({...formData, password: e.target.value})}
+                      placeholder="password"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             </div>
