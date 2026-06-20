@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
-import Queue from "./pages/Queue";
+import Queue import Queue from "./pages/Queue";
 import Services from "./pages/Services";
 import Customers from "./pages/Customers";
 import Inventory from "./pages/Inventory";
@@ -486,25 +486,23 @@ const App = () => {
         if (storeId && storeId !== 'default-store') {
           txQuery = txQuery.eq('store_id', storeId);
         }
-        const { data: txData, error: txError } = await txQuery;
-
-        if (txError) throw txError;
+        const { data: txData } = await txQuery;
 
         if (txData) {
-          const formattedTx = txData.map(t => ({
-            id: t.id,
-            date: t.created_at.split('T')[0],
-            amount: Number(t.amount),
-            discountAmount: Number(t.discount_amount),
-            customerId: t.customer_id || 'walk-in',
-            customerName: t.customer_name,
-            items: t.items,
-            paymentMethod: t.payment_method,
-            staffName: t.staff_name || 'Admin',
+          const formattedTransactions = txData.map((tx: any) => ({
+            id: tx.id,
+            date: tx.created_at.split('T')[0],
+            amount: Number(tx.amount || 0),
+            discountAmount: Number(tx.discount_amount || 0),
+            customerId: tx.customer_id || 'walk-in',
+            customerName: tx.customer_name,
+            items: tx.items,
+            paymentMethod: tx.payment_method,
+            staffName: tx.staff_name || 'Admin',
             species: [],
             bookingType: 'Walk-in' as BookingType
           }));
-          useStore.setState({ transactions: formattedTx });
+          useStore.setState({ transactions: formattedTransactions });
         } else {
           useStore.setState({ transactions: [] });
         }
@@ -617,6 +615,9 @@ const App = () => {
         if (staffError) throw staffError;
 
         if (staffData) {
+          const pendingInvitesStr = localStorage.getItem('pending_staff_invites');
+          let pendingInvites = pendingInvitesStr ? JSON.parse(pendingInvitesStr) : [];
+
           const formattedStaff = staffData.map(s => ({
             id: s.id,
             name: s.full_name || s.email.split('@')[0],
@@ -627,7 +628,15 @@ const App = () => {
             username: s.email,
             commissionRate: Number(s.commission_rate || 0)
           }));
-          useStore.setState({ staff: formattedStaff });
+
+          // Filter out pending invites that have been accepted (matched by phone or name)
+          pendingInvites = pendingInvites.filter((invite: any) => {
+            const accepted = formattedStaff.some(s => s.phone === invite.phone || s.name === invite.name);
+            return !accepted;
+          });
+          localStorage.setItem('pending_staff_invites', JSON.stringify(pendingInvites));
+
+          useStore.setState({ staff: [...formattedStaff, ...pendingInvites] });
         } else {
           useStore.setState({ staff: [] });
         }

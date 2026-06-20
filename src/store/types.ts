@@ -172,6 +172,8 @@ export interface Staff {
   username?: string;
   password?: string;
   commissionRate?: number;
+  isPendingInvite?: boolean;
+  inviteLink?: string;
 }
 
 export interface ActivityLog {

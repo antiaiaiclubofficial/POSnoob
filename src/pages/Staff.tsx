@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, Search, Edit3, Trash2, Phone, BadgeCheck, XCircle, Key } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, Phone, BadgeCheck, XCircle, Key, Clock, Copy } from 'lucide-react';
 import { useStore, Staff as StaffType } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import StaffModal from '@/components/StaffModal';
 import { translations } from '@/utils/translations';
+import { toast } from 'sonner';
 
 const Staff = () => {
   const { staff, deleteStaff, language } = useStore();
@@ -60,37 +61,43 @@ const Staff = () => {
       <div className="flex-1 overflow-y-auto px-10 pb-10 scrollbar-hide">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredStaff.map((member) => (
-            <div key={member.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all">
-              <div className="flex justify-between items-start mb-6">
-                <img src={member.avatar} className="w-20 h-20 rounded-[28px] object-cover shadow-lg border-4 border-white" />
-                <div className="flex gap-2">
-                  <button onClick={() => handleEdit(member)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-xl transition-all"><Edit3 size={16}/></button>
-                  <button onClick={() => deleteStaff(member.id)} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-xl transition-all"><Trash2 size={16}/></button>
+            <div key={member.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-start mb-6">
+                  <img src={member.avatar} className="w-20 h-20 rounded-[28px] object-cover shadow-lg border-4 border-white" />
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEdit(member)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-xl transition-all"><Edit3 size={16}/></button>
+                    <button onClick={() => deleteStaff(member.id)} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-xl transition-all"><Trash2 size={16}/></button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-xl font-black">{member.name}</h3>
-                  {member.status === 'Active' ? <BadgeCheck className="text-green-500" size={18} /> : <XCircle className="text-gray-300" size={18} />}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <span className={cn(
-                    "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
-                    member.role === 'Admin' ? "bg-purple-100 text-purple-600" : 
-                    member.role === 'Groomer' ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"
-                  )}>
-                    {member.role}
-                  </span>
-                  {member.username && (
-                    <span className="bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1">
-                      <Key size={10} /> {member.username}
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-black">{member.name}</h3>
+                    {member.status === 'Active' ? <BadgeCheck className="text-green-500" size={18} /> : <XCircle className="text-gray-300" size={18} />}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className={cn(
+                      "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
+                      member.role === 'Admin' ? "bg-purple-100 text-purple-600" : 
+                      member.role === 'Groomer' ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
+                    )}>
+                      {member.role}
                     </span>
-                  )}
+                    {member.isPendingInvite ? (
+                      <span className="bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1">
+                        <Clock size={10} /> รอเชื่อมต่อ Google
+                      </span>
+                    ) : member.username && (
+                      <span className="bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1">
+                        <Key size={10} /> {member.username}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-3 pt-6 border-t border-gray-50">
+              <div className="space-y-3 pt-6 border-t border-gray-50 mt-auto">
                  <div className="flex items-center gap-3 text-xs font-bold text-gray-400">
                     <Phone size={14} /> {member.phone}
                  </div>
@@ -99,6 +106,20 @@ const Staff = () => {
                       {member.status === 'Active' ? t.active : t.inactive}
                     </span>
                  </div>
+                 
+                 {member.isPendingInvite && (
+                   <div className="pt-3">
+                     <button
+                       onClick={() => {
+                         navigator.clipboard.writeText(member.inviteLink || '');
+                         toast.success("คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว! ส่งให้พนักงานเพื่อเชื่อมต่อ Google");
+                       }}
+                       className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/10"
+                     >
+                       <Copy size={12} /> คัดลอกลิงก์คำเชิญ
+                     </button>
+                   </div>
+                 )}
               </div>
             </div>
           ))}

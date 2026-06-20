@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Phone, Briefcase, Camera, Lock, Key, Percent, Upload } from 'lucide-react';
+import { X, User, Phone, Briefcase, Camera, Percent, Upload, Sparkles } from 'lucide-react';
 import { useStore, Staff, StaffRole } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
@@ -22,8 +22,6 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
     phone: '',
     status: 'Active' as 'Active' | 'Inactive',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    username: '',
-    password: '',
     commissionRate: 0
   });
 
@@ -35,8 +33,6 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
         phone: staff.phone,
         status: staff.status,
         avatar: staff.avatar,
-        username: staff.username || '',
-        password: staff.password || '',
         commissionRate: staff.commissionRate || 0
       });
     }
@@ -65,7 +61,6 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
       toast.success(language === 'th' ? "อัปเดตข้อมูลพนักงานเรียบร้อย" : "Staff updated successfully");
     } else {
       addStaff(formData);
-      toast.success(language === 'th' ? "เพิ่มพนักงานใหม่เรียบร้อย" : "New staff registered");
     }
     onClose();
   };
@@ -107,33 +102,17 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
           </div>
 
           <div className="space-y-4">
-            <div className="bg-blue-50/50 p-6 rounded-[28px] border border-blue-100 space-y-4 mb-2">
-              <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest px-1">{t.loginCredentials}</p>
-              <div>
-                <div className="relative">
-                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300" size={18} />
-                  <input 
-                    type="text"
-                    className="w-full bg-white border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500/10"
-                    value={formData.username}
-                    onChange={e => setFormData({...formData, username: e.target.value})}
-                    placeholder={t.loginUsername}
-                  />
+            {!staff && (
+              <div className="bg-indigo-50/50 p-5 rounded-[28px] border border-indigo-100 flex items-start gap-3 text-indigo-800">
+                <Sparkles className="text-indigo-500 shrink-0 mt-0.5" size={16} />
+                <div className="text-left">
+                  <p className="text-[10px] font-black uppercase tracking-wider mb-1">เชื่อมต่อผ่าน Google</p>
+                  <p className="text-[11px] font-medium leading-relaxed text-indigo-700">
+                    ระบบจะสร้างลิงก์คำเชิญให้โดยอัตโนมัติหลังจากกดเพิ่มพนักงาน เพื่อให้พนักงานนำไปเชื่อมต่อบัญชี Google ของตนเอง
+                  </p>
                 </div>
               </div>
-              <div>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-300" size={18} />
-                  <input 
-                    type="password"
-                    className="w-full bg-white border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500/10"
-                    value={formData.password}
-                    onChange={e => setFormData({...formData, password: e.target.value})}
-                    placeholder={t.loginPassword}
-                  />
-                </div>
-              </div>
-            </div>
+            )}
 
             <div className="space-y-4">
               <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">{t.profileInfo}</p>

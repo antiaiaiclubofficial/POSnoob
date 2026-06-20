@@ -11,11 +11,28 @@ import { cn } from '@/lib/utils';
 const Login = () => {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteData, setInviteData] = useState<any>(null);
   
   const { login, loginWithGoogle, language, setLanguage, isAuthenticated, currentUser, logout, isPendingApproval, isUserSuspended, isStoreSuspended } = useStore();
   
   const t = translations[language];
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('invite') === 'true') {
+      const data = {
+        storeId: params.get('storeId'),
+        role: params.get('role'),
+        name: params.get('name'),
+        commissionRate: params.get('commission'),
+        phone: params.get('phone'),
+        inviteId: params.get('inviteId')
+      };
+      setInviteData(data);
+      localStorage.setItem('pending_invite_data', JSON.stringify(data));
+    }
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -92,6 +109,20 @@ const Login = () => {
         </div>
 
         <div className="bg-white p-10 rounded-[48px] shadow-sm border border-gray-100 space-y-6">
+          {/* Invitation Alert */}
+          {inviteData && (
+            <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-3xl flex items-start gap-3 text-indigo-800 animate-in fade-in zoom-in-95">
+              <Sparkles className="text-indigo-500 shrink-0 mt-0.5" size={18} />
+              <div className="text-left">
+                <p className="text-xs font-black uppercase tracking-wider mb-1">คุณได้รับเชิญเข้าร่วมทีม!</p>
+                <p className="text-[11px] font-medium leading-relaxed text-indigo-700">
+                  คุณได้รับการเชิญเข้าร่วมทีมในตำแหน่ง <span className="font-black text-indigo-950">{inviteData.role}</span>
+                  <br />กรุณาเข้าสู่ระบบด้วย Google เพื่อเชื่อมต่อบัญชีของคุณ
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Pending Approval Alert */}
           {isPendingApproval && (
             <div className="p-5 bg-amber-50 border border-amber-100 rounded-3xl flex items-start gap-3 text-amber-800 animate-in fade-in zoom-in-95">

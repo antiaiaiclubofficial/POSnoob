@@ -50,6 +50,61 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
       const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
       const shouldBeSuperAdmin = isSuperAdminEmail && isSuperAdminPath;
 
+      // Check if there is a pending invitation in localStorage
+      const inviteDataStr = localStorage.getItem('pending_invite_data');
+      if (inviteDataStr) {
+        try {
+          const inviteData = JSON.parse(inviteDataStr);
+          
+          // Check max_users quota for the store
+          const { data: store, error: storeError } = await supabase
+            .from('stores')
+            .select('max_users')
+            .eq('id', inviteData.storeId)
+            .single();
+          
+          if (store) {
+            const maxUsers = store.max_users || 5;
+            const { count, error: countError } = await supabase
+              .from('profiles')
+              .select('*', { count: 'exact', head: true })
+              .eq('store_id', inviteData.storeId)
+              .eq('is_approved', true);
+            
+            if (count !== null && count >= maxUsers) {
+              toast.error(`ไม่สามารถเชื่อมต่อได้: ร้านค้าจำกัดจำนวนผู้ใช้งานสูงสุดไว้ที่ ${maxUsers} บัญชี`);
+              localStorage.removeItem('pending_invite_data');
+              await supabase.auth.signOut();
+              set({ isAuthenticated: false, isAuthLoading: false, currentUser: null, storeId: null });
+              return;
+            }
+          }
+
+          // Create or update profile with invite data
+          const { error: upsertError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: user.id,
+              email: user.email,
+              role: inviteData.role === 'Admin' ? 'admin' : 'staff',
+              store_id: inviteData.storeId,
+              full_name: inviteData.name,
+              phone: inviteData.phone,
+              commission_rate: Number(inviteData.commissionRate || 0),
+              is_approved: true,
+              is_suspended: false
+            });
+
+          if (upsertError) throw upsertError;
+          
+          toast.success("เชื่อมต่อบัญชี Google และเข้าร่วมทีมสำเร็จ!");
+          localStorage.removeItem('pending_invite_data');
+        } catch (err: any) {
+          console.error("Error processing invite:", err);
+          toast.error("เกิดข้อผิดพลาดในการเชื่อมต่อบัญชี: " + err.message);
+        }
+      }
+
       // 1. ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase
       let { data: profile, error } = await supabase
         .from('profiles')
