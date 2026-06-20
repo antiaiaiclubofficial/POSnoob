@@ -1,3 +1,5 @@
+"use client";
+
 import { StateCreator } from 'zustand';
 import { AppState, Staff, StaffRole } from '../types';
 import { supabase } from '@/integrations/supabase/client';
@@ -95,6 +97,28 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
   },
 
   setSession: async (user) => {
+    // Auto-login for localhost development
+    if (window.location.hostname === 'localhost' && !user && get().isAuthLoading) {
+      console.log("Auto-logging in superadmin for localhost development...");
+      set({
+        isAuthenticated: true,
+        currentUser: {
+          id: 'superadmin-mock-id',
+          name: 'Super Admin (Dev)',
+          role: 'superadmin',
+          email: 'antiai.aiclub.official@gmail.com', // Use the superadmin email
+        },
+        storeId: 'default-store', // Or a specific mock store ID
+        isAuthLoading: false,
+        isPendingApproval: false,
+        isUserSuspended: false,
+        isStoreSuspended: false,
+      });
+      toast.info('Auto-logged in as Super Admin for localhost development.');
+      get().fetchStaff(); // Fetch staff for the mock store
+      return;
+    }
+
     if (!user) {
       set({ isAuthenticated: false, currentUser: null, storeId: null, isAuthLoading: false, isPendingApproval: false, isUserSuspended: false, isStoreSuspended: false });
       return;
@@ -164,7 +188,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
       if (profileData.store_id) {
         const { data: storeData, error: storeError } = await supabase
           .from('stores')
-          .select('status')
+          .select('is_suspended') // Changed from 'status' to 'is_suspended' based on schema
           .eq('id', profileData.store_id)
           .single();
 
@@ -172,7 +196,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
           throw storeError;
         }
 
-        if (storeData && storeData.status === 'Suspended') {
+        if (storeData && storeData.is_suspended) { // Check is_suspended field
           set({
             isAuthenticated: false,
             currentUser: null,
