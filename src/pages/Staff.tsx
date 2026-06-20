@@ -45,7 +45,8 @@ const Staff = () => {
     return storeConfig?.max_users;
   }
 
-  const usedSlots = staff.length;
+  // นับเฉพาะพนักงานที่เชื่อมต่อ Google สำเร็จแล้วเท่านั้น (ไม่มีสถานะ isPendingInvite)
+  const usedSlots = staff.filter(s => !s.isPendingInvite).length;
   const remainingSlots = Math.max(0, maxUsers - usedSlots);
   const isQuotaFull = usedSlots >= maxUsers;
   const quotaPercentage = Math.min(100, (usedSlots / maxUsers) * 100);
