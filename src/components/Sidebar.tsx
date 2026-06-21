@@ -35,7 +35,6 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   const navigate = useNavigate();
   const { shopName, shopLogo, logout, language, currentUser, rolePermissions } = useStore();
   const t = translations[language];
-  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = React.useState(false);
 
   const menuItems = [
     { icon: LayoutDashboard, label: t.dashboard, path: '/' },
@@ -118,13 +117,27 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
         })}
       </nav>
 
-      <div className="mt-auto space-y-4 px-4 pb-8 shrink-0">
-        <div className="pt-6 border-t border-gray-50">
-          <button onClick={() => setIsBroadcastModalOpen(true)} className="w-full bg-green-50 text-green-600 p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-green-100 transition-all">
-            <Megaphone size={14} /> Send Broadcast
-          </button>
-        </div>
+      <div className="mt-auto space-y-2 px-4 pb-8 shrink-0 border-t border-gray-50 pt-6">
+        {/* ปุ่มช่วยเหลือ */}
+        <button className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:bg-gray-50 hover:text-[#1A1F3D] transition-all">
+          <HelpCircle size={20} className="shrink-0" />
+          <span className="text-xs opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+            {t.support}
+          </span>
+        </button>
+
+        {/* ปุ่มออกจากระบบ */}
+        <button 
+          onClick={handleLogout} 
+          className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-red-400 hover:bg-red-50 hover:text-red-600 transition-all mb-4"
+        >
+          <LogOut size={20} className="shrink-0" />
+          <span className="text-xs opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+            {t.logout}
+          </span>
+        </button>
         
+        {/* ข้อมูลผู้ใช้ */}
         <div className="bg-[#F5F6FA] p-3 rounded-2xl flex items-center gap-3 overflow-hidden whitespace-nowrap">
           <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-[10px] font-black border border-gray-100 shrink-0 overflow-hidden">
             {userAvatar ? (
