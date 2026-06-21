@@ -267,7 +267,7 @@ export const translations = {
     customers: "ข้อมูลลูกค้า (CRM)",
     inventory: "คลังสินค้าและสต็อก",
     vendors: "คู่ค้าและฝากขาย",
-    staff: "จัดการทีมพนักงาน",
+    staff: "จัดการพนักงาน",
     performance: "วิเคราะห์ผลงาน",
     logs: "บันทึกกิจกรรม",
     reports: "รายงานธุรกิจ",
