@@ -81,6 +81,13 @@ export const createAuthSlice: StateCreator<
           
           toast.success("เชื่อมต่อบัญชี Google และเข้าร่วมทีมสำเร็จ!");
           localStorage.removeItem('pending_invite_data');
+
+          // Sign out immediately so it doesn't count towards concurrent logins or auto-login to dashboard
+          await supabase.auth.signOut();
+
+          // Redirect to login with success param
+          window.location.href = window.location.origin + '/login?inviteSuccess=true';
+          return;
         } catch (err: any) {
           console.error("Error processing invite:", err);
           toast.error("เกิดข้อผิดพลาดในการเชื่อมต่อบัญชี: " + err.message);

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { Lock, User, Scissors, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, User, Scissors, Sparkles, ArrowRight, AlertCircle, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ const Login = () => {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   const [inviteData, setInviteData] = useState<any>(null);
+  const [isInviteSuccess, setIsInviteSuccess] = useState(false);
   
   const { login, loginWithGoogle, language, setLanguage, isAuthenticated, currentUser, logout, isPendingApproval, isUserSuspended, isStoreSuspended } = useStore();
   
@@ -25,12 +26,15 @@ const Login = () => {
         storeId: params.get('storeId'),
         role: params.get('role'),
         name: params.get('name'),
-        commissionRate: params.get('commission'),
+        commission: params.get('commission'),
         phone: params.get('phone'),
         inviteId: params.get('inviteId')
       };
       setInviteData(data);
       localStorage.setItem('pending_invite_data', JSON.stringify(data));
+    }
+    if (params.get('inviteSuccess') === 'true') {
+      setIsInviteSuccess(true);
     }
   }, []);
 
@@ -71,6 +75,32 @@ const Login = () => {
     e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
   };
+
+  if (isInviteSuccess) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FD] flex items-center justify-center p-6 relative">
+        <div className="w-full max-w-md text-center">
+          <div className="w-20 h-20 bg-green-500 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-green-500/20">
+            <Check className="text-white w-10 h-10" />
+          </div>
+          <h1 className="text-3xl font-black text-[#1A1F3D] mb-2">เชื่อมต่อสำเร็จ!</h1>
+          <p className="text-sm text-gray-500 mb-8">
+            บัญชี Google ของคุณได้รับการเชื่อมต่อกับระบบ Tactile Sanctuary เรียบร้อยแล้ว คุณสามารถปิดหน้านี้ได้ทันที
+          </p>
+          <button
+            onClick={() => {
+              // Clear query params and show normal login
+              navigate('/login', { replace: true });
+              setIsInviteSuccess(false);
+            }}
+            className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 transition-all active:scale-95"
+          >
+            เข้าสู่ระบบปกติ
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F9FD] flex items-center justify-center p-6 relative">
