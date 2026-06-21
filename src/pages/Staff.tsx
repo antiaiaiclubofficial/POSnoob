@@ -35,18 +35,24 @@ const Staff = () => {
     enabled: !!storeId && storeId !== 'default-store'
   });
 
-  const maxUsers = storeConfigMaxUsers();
+  const maxUsers = storeConfig?.max_users || 5;
 
-  function storeConfigMaxUsers() {
-    return storeId && storeId !== 'default-store' ? (membershipTiersMaxUsers() || 5) : 5;
-  }
+  // ดึงจำนวนเซสชันที่ใช้งานอยู่ ณ ปัจจุบัน
+  const { data: activeSessionsCount, refetch: refetchSessions } = useQuery({
+    queryKey: ['active-sessions-count', storeId],
+    queryFn: async () => {
+      if (!storeId || storeId === 'default-store') return 0;
+      const { count, error } = await supabase
+        .from('active_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('store_id', storeId);
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 10000 // รีเฟรชทุกๆ 10 วินาที
+  });
 
-  function membershipTiersMaxUsers() {
-    return storeConfig?.max_users;
-  }
-
-  // นับเฉพาะพนักงานที่เปิดใช้งานอยู่ (status === 'Active') และเชื่อมต่อ Google สำเร็จแล้ว (ไม่มีสถานะ isPendingInvite)
-  const usedSlots = staff.filter(s => !s.isPendingInvite && s.status === 'Active').length;
+  const usedSlots = activeSessionsCount || 0;
   const remainingSlots = Math.max(0, maxUsers - usedSlots);
   const isQuotaFull = usedSlots >= maxUsers;
   const quotaPercentage = Math.min(100, (usedSlots / maxUsers) * 100);
@@ -99,19 +105,19 @@ const Staff = () => {
             </div>
             <div>
               <h3 className="text-sm font-black uppercase tracking-wider">
-                {language === 'th' ? 'จำนวน Active User ที่เปิดใช้งาน' : 'Active User Quota'}
+                {language === 'th' ? 'จำนวนผู้ใช้งานพร้อมกัน (Concurrent Logins)' : 'Concurrent Login Quota'}
               </h3>
               <p className="text-xs text-gray-500 font-medium mt-0.5">
                 {language === 'th' 
-                  ? `เปิดใช้งานแล้ว ${usedSlots} คน จากทั้งหมด ${maxUsers} คน (เปิดได้อีก ${remainingSlots} คน)` 
-                  : `Active ${usedSlots} of ${maxUsers} accounts (${remainingSlots} remaining)`}
+                  ? `เข้าสู่ระบบอยู่ ${usedSlots} คน จากทั้งหมด ${maxUsers} คน (ว่างอีก ${remainingSlots} เซสชัน)` 
+                  : `Logged in ${usedSlots} of ${maxUsers} sessions (${remainingSlots} remaining)`}
               </p>
             </div>
           </div>
 
           <div className="w-full md:w-64 space-y-2">
             <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
-              <span>{language === 'th' ? 'เปิดใช้งานไปแล้ว' : 'Quota Usage'}</span>
+              <span>{language === 'th' ? 'การใช้งานโควตา' : 'Quota Usage'}</span>
               <span>{Math.round(quotaPercentage)}%</span>
             </div>
             <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
