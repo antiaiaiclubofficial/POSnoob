@@ -916,7 +916,7 @@ const SuperAdmin = () => {
                               </td>
                               <td className="px-8 py-5 text-right">
                                 <div className="flex gap-2 justify-end">
-                                  <button onClick={() => handleEdit(profile)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-xl transition-all"><Edit3 size={16}/></button>
+                                  <button onClick={() => openUserModal(profile)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-xl transition-all"><Edit3 size={16}/></button>
                                   <button onClick={() => { if(confirm('Delete?')) { supabase.from('profiles').delete().eq('id', profile.id); setProfiles(profiles.filter(p => p.id !== profile.id)); } }} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-xl transition-all"><Trash2 size={16}/></button>
                                 </div>
                               </td>
