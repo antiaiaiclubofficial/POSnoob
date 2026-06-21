@@ -87,8 +87,8 @@ export const createAuthSlice: StateCreator<
           // Sign out immediately so it doesn't count towards concurrent logins or auto-login to dashboard
           await supabase.auth.signOut();
 
-          // Redirect to login with success param
-          window.location.href = window.location.origin + '/login?inviteSuccess=true';
+          // Redirect to login with success param and storeName
+          window.location.href = window.location.origin + `/login?inviteSuccess=true&storeName=${encodeURIComponent(inviteData.storeName || '')}`;
           return;
         } catch (err: any) {
           console.error("Error processing invite:", err);

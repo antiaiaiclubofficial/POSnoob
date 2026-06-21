@@ -13,8 +13,9 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [inviteData, setInviteData] = useState<any>(null);
   const [isInviteSuccess, setIsInviteSuccess] = useState(false);
+  const [successStoreName, setSuccessStoreName] = useState('');
   
-  const { login, loginWithGoogle, language, setLanguage, isAuthenticated, currentUser, logout, isPendingApproval, isUserSuspended, isStoreSuspended } = useStore();
+  const { login, loginWithGoogle, language, setLanguage, isAuthenticated, currentUser, logout, isPendingApproval, isUserSuspended, isStoreSuspended, shopName } = useStore();
   
   const t = translations[language];
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ const Login = () => {
     if (params.get('invite') === 'true') {
       const data = {
         storeId: params.get('storeId'),
+        storeName: params.get('storeName'),
         role: params.get('role'),
         name: params.get('name'),
         commission: params.get('commission'),
@@ -35,6 +37,7 @@ const Login = () => {
     }
     if (params.get('inviteSuccess') === 'true') {
       setIsInviteSuccess(true);
+      setSuccessStoreName(params.get('storeName') || '');
     }
   }, []);
 
@@ -84,8 +87,8 @@ const Login = () => {
             <Check className="text-white w-10 h-10" />
           </div>
           <h1 className="text-3xl font-black text-[#1A1F3D] mb-2">เชื่อมต่อสำเร็จ!</h1>
-          <p className="text-sm text-gray-500 mb-8">
-            บัญชี Google ของคุณได้รับการเชื่อมต่อกับระบบ Tactile Sanctuary เรียบร้อยแล้ว คุณสามารถปิดหน้านี้ได้ทันที
+          <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+            บัญชี Google ของคุณได้รับการเชื่อมต่อกับระบบ Tactile Sanctuary ของร้าน <span className="font-black text-[#1A1F3D]">{successStoreName || shopName}</span> เรียบร้อยแล้ว คุณสามารถปิดหน้านี้ได้ทันที
           </p>
           <button
             onClick={() => {
