@@ -60,6 +60,7 @@ export const createAuthSlice: StateCreator<
       if (inviteDataStr) {
         try {
           const inviteData = JSON.parse(inviteDataStr);
+          const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
           
           // Create or update profile with invite data
           const { error: upsertError } = await supabase
@@ -74,7 +75,8 @@ export const createAuthSlice: StateCreator<
               commission_rate: Number(inviteData.commissionRate || 0),
               is_approved: true,
               is_suspended: false,
-              status: 'Active'
+              status: 'Active',
+              avatar_url: googleAvatar
             });
 
           if (upsertError) throw upsertError;
@@ -108,6 +110,8 @@ export const createAuthSlice: StateCreator<
         return;
       }
 
+      const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+
       // 3. หากไม่มีโปรไฟล์ในฐานข้อมูลจริงๆ (profile เป็น null)
       if (!profile) {
         // ดึง ID ของร้านค้าแรกในระบบเพื่อเป็นค่าเริ่มต้น
@@ -126,7 +130,7 @@ export const createAuthSlice: StateCreator<
           is_suspended: false,
           status: 'Active',
           full_name: user.email?.split('@')[0] || 'User',
-          avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
+          avatar_url: googleAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
         };
 
         const { error: insertError } = await supabase
@@ -152,6 +156,17 @@ export const createAuthSlice: StateCreator<
             storeId: null
           });
           return;
+        }
+      } else if (googleAvatar && (!profile.avatar_url || profile.avatar_url.includes('dicebear.com') || profile.avatar_url.includes('unsplash.com'))) {
+        // อัปเดตรูปโปรไฟล์จาก Google Account หากรูปเดิมเป็นค่าเริ่มต้น
+        try {
+          await supabase
+            .from('profiles')
+            .update({ avatar_url: googleAvatar })
+            .eq('id', user.id);
+          profile.avatar_url = googleAvatar;
+        } catch (err) {
+          console.error("Failed to update profile avatar with Google picture:", err);
         }
       }
 
@@ -310,7 +325,7 @@ export const createAuthSlice: StateCreator<
           email: user.email,
           name: profile.full_name || user.email?.split('@')[0] || 'User',
           role: userRole,
-          avatar: profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
+          avatar: profile.avatar_url || googleAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
         },
         storeId: storeIdFromMetadata,
         isAuthLoading: false

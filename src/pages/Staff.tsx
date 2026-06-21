@@ -197,63 +197,64 @@ const Staff = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto px-10 pb-10 scrollbar-hide">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredStaff.map((member) => (
-            <div key={member.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm transition-all hover:shadow-xl group relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500" />
-              <div className="flex justify-between items-start mb-6">
-                <img src={member.avatar} className="w-20 h-20 rounded-[28px] object-cover shadow-lg border-4 border-white" />
-                <div className="flex gap-2">
-                  <button onClick={() => handleEdit(member)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-xl transition-all"><Edit3 size={16}/></button>
-                  <button onClick={() => deleteStaff(member.id)} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-xl transition-all"><Trash2 size={16}/></button>
+            <div key={member.id} className="bg-white p-5 rounded-[24px] border border-gray-100 shadow-sm transition-all hover:shadow-xl group relative overflow-hidden flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <img src={member.avatar} className="w-16 h-16 rounded-[18px] object-cover shadow-md border-2 border-white" />
+                  <div className="flex gap-1.5">
+                    <button onClick={() => handleEdit(member)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-xl transition-all"><Edit3 size={14}/></button>
+                    <button onClick={() => deleteStaff(member.id)} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-xl transition-all"><Trash2 size={14}/></button>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <h3 className="text-base font-black">{member.name}</h3>
+                    {member.status === 'Active' ? <BadgeCheck className="text-green-500" size={16} /> : <XCircle className="text-gray-300" size={16} />}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full",
+                      member.role === 'Admin' ? "bg-purple-100 text-purple-600" : 
+                      member.role === 'Groomer' ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
+                    )}>
+                      {member.role}
+                    </span>
+                    {member.isPendingInvite ? (
+                      <span className="bg-amber-50 text-amber-600 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <Clock size={10} /> รอเชื่อมต่อ Google
+                      </span>
+                    ) : member.username && (
+                      <span className="bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <Key size={10} /> {member.username}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-xl font-black">{member.name}</h3>
-                  {member.status === 'Active' ? <BadgeCheck className="text-green-500" size={18} /> : <XCircle className="text-gray-300" size={18} />}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <span className={cn(
-                    "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
-                    member.role === 'Admin' ? "bg-purple-100 text-purple-600" : 
-                    member.role === 'Groomer' ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
-                  )}>
-                    {member.role}
-                  </span>
-                  {member.isPendingInvite ? (
-                    <span className="bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1">
-                      <Clock size={10} /> รอเชื่อมต่อ Google
-                    </span>
-                  ) : member.username && (
-                    <span className="bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1">
-                      <Key size={10} /> {member.username}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-6 border-t border-gray-50 mt-auto">
-                 <div className="flex items-center gap-3 text-xs font-bold text-gray-400">
-                    <Phone size={14} /> {member.phone}
+              <div className="space-y-2 pt-4 border-t border-gray-50 mt-auto">
+                 <div className="flex items-center gap-2 text-xs font-bold text-gray-400">
+                    <Phone size={12} /> {member.phone || '-'}
                  </div>
-                 <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest">
+                 <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
                     <span className={member.status === 'Active' ? "text-green-500" : "text-red-400"}>
                       {member.status === 'Active' ? t.active : t.inactive}
                     </span>
                  </div>
                  
                  {member.isPendingInvite && (
-                   <div className="pt-3">
+                   <div className="pt-2">
                      <button
                        onClick={() => {
                          navigator.clipboard.writeText(member.inviteLink || '');
                          toast.success("คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว! ส่งให้พนักงานเพื่อเชื่อมต่อ Google");
                        }}
-                       className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/10"
+                       className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1 shadow-md shadow-amber-500/10"
                      >
-                       <Copy size={12} /> คัดลอกลิงก์คำเชิญ
+                       <Copy size={10} /> คัดลอกลิงก์คำเชิญ
                      </button>
                    </div>
                  )}
