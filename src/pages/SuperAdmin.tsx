@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { 
   Store, Users, ShieldAlert, Plus, Edit3, Trash2, Search, 
   Database, LayoutDashboard, Calendar, Scissors, Tag, Package, 
-  Check, X, RefreshCw, Eye, ArrowLeft, Settings, Layers, Dog, Lock, User, LogOut, Chrome, CheckCircle2, XCircle, AlertCircle, Ban, Play
+  Check, X, RefreshCw, Eye, ArrowLeft, Settings, Layers, Dog, Lock, User, LogOut, CheckCircle2, XCircle, AlertCircle, Ban, Play
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -74,7 +74,6 @@ const SuperAdmin = () => {
   useEffect(() => {
     if (currentUser && currentUser.role !== 'superadmin') {
       if (currentUser.id === 'admin') {
-        // If it's the auto-logged in mock admin, let them log out so they can log in with other accounts
         logout();
       } else {
         toast.info("เข้าสู่ระบบร้านค้าปกติเรียบร้อยแล้ว");
@@ -193,6 +192,18 @@ const SuperAdmin = () => {
     }
   };
 
+  // Helper to map user roles to specific Tailwind CSS color classes
+  const getRoleBadgeColor = (role: string) => {
+    switch (role?.toLowerCase()) {
+      case 'superadmin':
+        return 'bg-purple-100 text-purple-700';
+      case 'admin':
+        return 'bg-blue-100 text-blue-700';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
+
   // Store Actions
   const handleStoreSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,12 +267,10 @@ const SuperAdmin = () => {
     e.preventDefault();
     try {
       if (editingUser) {
-        // Check store's max_users limit if store is being changed or set
         if (userForm.store_id) {
           const store = stores.find(s => s.id === userForm.store_id);
           if (store) {
             const maxUsers = store.max_users || 5;
-            // Count active users in this store (excluding the current user being edited)
             const { count, error: countError } = await supabase
               .from('profiles')
               .select('*', { count: 'exact', head: true })
@@ -288,7 +297,6 @@ const SuperAdmin = () => {
         if (error) throw error;
         toast.success("อัปเดตสิทธิ์ผู้ใช้งานเรียบร้อยแล้ว");
       } else {
-        // Check store's max_users limit for new user
         if (userForm.store_id) {
           const store = stores.find(s => s.id === userForm.store_id);
           if (store) {
@@ -370,11 +378,9 @@ const SuperAdmin = () => {
     }
 
     try {
-      // Check store's max_users limit
       const store = stores.find(s => s.id === assignedStoreId);
       if (store) {
         const maxUsers = store.max_users || 5;
-        // Count active users in this store
         const { count, error: countError } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })
@@ -667,6 +673,65 @@ const SuperAdmin = () => {
                     </p>
                   </div>
                 </div>
+
+                {/* Recent Stores & Users */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Recent Stores */}
+                  <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                    <h3 className="text-lg font-black text-[#1A1F3D] mb-6">ร้านค้าที่สร้างล่าสุด</h3>
+                    <div className="space-y-4">
+                      {stores.slice(0, 5).map(store => (
+                        <div key={store.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden">
+                              {store.logo_url ? (
+                                <img src={store.logo_url} className="w-full h-full object-cover" alt="Logo" />
+                              ) : (
+                                <Store className="text-gray-300" size={18} />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-[#1A1F3D]">{store.name}</p>
+                              <p className="text-[9px] text-gray-400 font-bold uppercase">{store.slug}</p>
+                            </div>
+                          </div>
+                          <span className={cn(
+                            "text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md",
+                            store.is_suspended ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                          )}>
+                            {store.is_suspended ? "Suspended" : "Active"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recent Users */}
+                  <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                    <h3 className="text-lg font-black text-[#1A1F3D] mb-6">ผู้ใช้งานล่าสุด</h3>
+                    <div className="space-y-4">
+                      {profiles.slice(0, 5).map(profile => {
+                        const userStore = stores.find(s => s.id === profile.store_id);
+                        return (
+                          <div key={profile.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                            <div>
+                              <p className="text-xs font-black text-[#1A1F3D]">{profile.email}</p>
+                              <p className="text-[9px] text-gray-400 font-bold uppercase">
+                                {userStore ? userStore.name : "ส่วนกลาง"}
+                              </p>
+                            </div>
+                            <span className={cn(
+                              "text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md",
+                              getRoleBadgeColor(profile.role)
+                            )}>
+                              {profile.role}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -834,7 +899,7 @@ const SuperAdmin = () => {
                               <td className="px-8 py-5 text-center">
                                 <span className={cn(
                                   "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
-                                  profile.role === 'admin' ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+                                  getRoleBadgeColor(profile.role)
                                 )}>
                                   {profile.role}
                                 </span>
@@ -1300,7 +1365,7 @@ const SuperAdmin = () => {
                         <td className="px-6 py-4 text-center">
                           <span className={cn(
                             "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
-                            profile.role === 'admin' ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-700"
+                            getRoleBadgeColor(profile.role)
                           )}>
                             {profile.role}
                           </span>
