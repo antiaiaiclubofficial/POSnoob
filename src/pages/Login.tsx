@@ -149,7 +149,7 @@ const Login = () => {
               <div className="text-left">
                 <p className="text-xs font-black uppercase tracking-wider mb-1">คุณได้รับเชิญเข้าร่วมทีม!</p>
                 <p className="text-[11px] font-medium leading-relaxed text-indigo-700">
-                  คุณได้รับการเชิญเข้าร่วมทีมในตำแหน่ง <span className="font-black text-indigo-950">{inviteData.role}</span>
+                  คุณได้รับเชิญเข้าร่วมทีมในตำแหน่ง <span className="font-black text-indigo-950">{inviteData.role}</span> ของร้าน <span className="font-black text-indigo-950">{inviteData.storeName}</span>
                   <br />กรุณาเข้าสู่ระบบด้วย Google เพื่อเชื่อมต่อบัญชีของคุณ
                 </p>
               </div>
