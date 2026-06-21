@@ -668,7 +668,7 @@ export const useStore = create<AppState>()((set, get) => ({
         contact_person: v.contact_person || '',
         notes: v.notes,
         main_category: v.mainCategory,
-        gp_rate: v.gpRate || 0
+        gp_rate: v.gp_rate || 0
       })
       .eq('id', id);
 
@@ -709,7 +709,7 @@ export const useStore = create<AppState>()((set, get) => ({
     
     // Generate unique invite link
     const inviteId = 'invite-' + Math.random().toString(36).substr(2, 9);
-    const inviteLink = `${window.location.origin}/login?invite=true&storeId=${currentStoreId}&role=${st.role}&name=${encodeURIComponent(st.name)}&commission=${st.commissionRate}&phone=${st.phone}&inviteId=${inviteId}`;
+    const inviteLink = `${window.location.origin}/login?invite=true&storeId=${currentStoreId}&storeName=${encodeURIComponent(get().shopName)}&role=${st.role}&name=${encodeURIComponent(st.name)}&commission=${st.commissionRate}&phone=${st.phone}&inviteId=${inviteId}`;
 
     const newInvite = {
       id: inviteId,
@@ -874,3 +874,4 @@ export const useStore = create<AppState>()((set, get) => ({
     });
   },
 }));
+</dyad-file>
