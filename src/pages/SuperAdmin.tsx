@@ -261,12 +261,12 @@ const SuperAdmin = () => {
           const store = stores.find(s => s.id === userForm.store_id);
           if (store) {
             const maxUsers = store.max_users || 5;
-            // Count approved users in this store (excluding the current user being edited)
+            // Count active users in this store (excluding the current user being edited)
             const { count, error: countError } = await supabase
               .from('profiles')
               .select('*', { count: 'exact', head: true })
               .eq('store_id', userForm.store_id)
-              .eq('is_approved', true)
+              .eq('status', 'Active')
               .neq('id', editingUser.id);
 
             if (countError) throw countError;
@@ -297,7 +297,7 @@ const SuperAdmin = () => {
               .from('profiles')
               .select('*', { count: 'exact', head: true })
               .eq('store_id', userForm.store_id)
-              .eq('is_approved', true);
+              .eq('status', 'Active');
 
             if (countError) throw countError;
 
@@ -316,7 +316,8 @@ const SuperAdmin = () => {
             role: userForm.role,
             store_id: userForm.store_id || null,
             is_approved: true,
-            is_suspended: false
+            is_suspended: false,
+            status: 'Active'
           }]);
         if (error) throw error;
         toast.success("เพิ่มผู้ใช้งานในระบบเรียบร้อยแล้ว");
@@ -373,12 +374,12 @@ const SuperAdmin = () => {
       const store = stores.find(s => s.id === assignedStoreId);
       if (store) {
         const maxUsers = store.max_users || 5;
-        // Count approved users in this store
+        // Count active users in this store
         const { count, error: countError } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })
           .eq('store_id', assignedStoreId)
-          .eq('is_approved', true);
+          .eq('status', 'Active');
 
         if (countError) throw countError;
 
@@ -393,7 +394,8 @@ const SuperAdmin = () => {
         .update({
           is_approved: true,
           store_id: assignedStoreId,
-          role: 'Admin'
+          role: 'Admin',
+          status: 'Active'
         })
         .eq('id', userId);
 
@@ -704,7 +706,7 @@ const SuperAdmin = () => {
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {filteredStores.map(store => {
-                          const storeUserCount = profiles.filter(p => p.store_id === store.id).length;
+                          const storeUserCount = profiles.filter(p => p.store_id === store.id && p.status === 'Active').length;
                           return (
                             <tr key={store.id} className={cn("hover:bg-gray-50/50 transition-colors", store.is_suspended && "bg-red-50/30")}>
                               <td className="px-8 py-5 flex items-center gap-4">
@@ -1298,7 +1300,7 @@ const SuperAdmin = () => {
                         <td className="px-6 py-4 text-center">
                           <span className={cn(
                             "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
-                            profile.role === 'admin' ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+                            profile.role === 'admin' ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-700"
                           )}>
                             {profile.role}
                           </span>

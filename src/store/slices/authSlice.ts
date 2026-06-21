@@ -69,7 +69,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
               .from('profiles')
               .select('*', { count: 'exact', head: true })
               .eq('store_id', inviteData.storeId)
-              .eq('is_approved', true);
+              .eq('status', 'Active');
             
             if (count !== null && count >= maxUsers) {
               toast.error(`ไม่สามารถเชื่อมต่อได้: ร้านค้าจำกัดจำนวนผู้ใช้งานสูงสุดไว้ที่ ${maxUsers} บัญชี`);
@@ -92,7 +92,8 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
               phone: inviteData.phone,
               commission_rate: Number(inviteData.commissionRate || 0),
               is_approved: true,
-              is_suspended: false
+              is_suspended: false,
+              status: 'Active'
             });
 
           if (upsertError) throw upsertError;
@@ -108,7 +109,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
       // 1. ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase
       let { data: profile, error } = await supabase
         .from('profiles')
-        .select('role, store_id, is_approved, is_suspended')
+        .select('role, store_id, is_approved, is_suspended, status')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -134,7 +135,8 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
           role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
           store_id: shouldBeSuperAdmin ? null : defaultStoreId,
           is_approved: shouldAutoApprove,
-          is_suspended: false
+          is_suspended: false,
+          status: 'Active'
         };
 
         const { error: insertError } = await supabase
@@ -142,7 +144,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
           .insert([newProfile]);
 
         if (!insertError) {
-          profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false };
+          profile = { role: newProfile.role, store_id: newProfile.store_id, is_approved: newProfile.is_approved, is_suspended: false, status: 'Active' };
         } else {
           console.error("Failed to insert profile:", insertError);
           set({ 
@@ -171,7 +173,20 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         return;
       }
 
-      // 5. ตรวจสอบสถานะการอนุมัติ (is_approved)
+      // 5. ตรวจสอบสถานะการเปิดใช้งาน (status === 'Inactive')
+      if (profile.status === 'Inactive' && !isSuperAdminEmail) {
+        await supabase.auth.signOut();
+        set({ 
+          isAuthenticated: false, 
+          isAuthLoading: false, 
+          currentUser: null, 
+          storeId: null
+        });
+        toast.error("บัญชีของคุณถูกปิดใช้งานชั่วคราว (Inactive)");
+        return;
+      }
+
+      // 6. ตรวจสอบสถานะการอนุมัติ (is_approved)
       if (!profile.is_approved && !isSuperAdminEmail) {
         await supabase.auth.signOut();
         set({ 
@@ -209,7 +224,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], Pick<AppState, 'isA
         }
       }
 
-      // 6. ตรวจสอบการพักสิทธิ์ร้านค้า
+      // 7. ตรวจสอบการพักสิทธิ์ร้านค้า
       if (storeIdFromMetadata && storeIdFromMetadata !== 'default-store' && userRole !== 'superadmin') {
         const { data: storeData } = await supabase
           .from('stores')
