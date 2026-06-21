@@ -121,7 +121,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
         {/* ปุ่มช่วยเหลือ */}
         <button className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:bg-gray-50 hover:text-[#1A1F3D] transition-all">
           <HelpCircle size={20} className="shrink-0" />
-          <span className="text-xs opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+          <span className="text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
             {t.support}
           </span>
         </button>
@@ -132,7 +132,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
           className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-red-400 hover:bg-red-50 hover:text-red-600 transition-all mb-4"
         >
           <LogOut size={20} className="shrink-0" />
-          <span className="text-xs opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+          <span className="text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
             {t.logout}
           </span>
         </button>
