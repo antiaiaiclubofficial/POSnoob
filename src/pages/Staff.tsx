@@ -1,272 +1,317 @@
-"use client";
+import { useState } from "react";
+import { useStore, StaffRole } from "@/store/useStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Search, 
+  Plus, 
+  Mail, 
+  Phone, 
+  Shield, 
+  Percent, 
+  CheckCircle2, 
+  XCircle, 
+  Chrome
+} from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
-import React, { useState } from 'react';
-import { Plus, Search, Edit3, Trash2, Phone, BadgeCheck, XCircle, Key, Clock, Copy, ShieldAlert, Users, Sparkles } from 'lucide-react';
-import { useStore, Staff as StaffType } from '@/store/useStore';
-import { cn } from '@/lib/utils';
-import StaffModal from '@/components/StaffModal';
-import { translations } from '@/utils/translations';
-import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+interface StaffMember {
+  id: string;
+  name: string;
+  role: StaffRole;
+  phone: string;
+  status: "Active" | "Inactive";
+  avatar: string;
+  username: string;
+  commissionRate: number;
+  googleConnected?: boolean;
+  googleEmail?: string;
+}
 
-const Staff = () => {
-  const { staff, deleteStaff, language, storeId } = useStore();
-  const t = translations[language];
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
+export default function Staff() {
+  const { staff, addStaff, updateStaff } = useStore();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
-  // ดึงข้อมูลจำนวนผู้ใช้สูงสุด (max_users) และจำนวนพนักงานสูงสุด (max_staff) ของร้านค้าจาก Supabase
-  const { data: storeConfig } = useQuery({
-    queryKey: ['store-max-users', storeId],
-    queryFn: async () => {
-      if (!storeId || storeId === 'default-store') {
-        return { max_users: 5, max_staff: 10 };
-      }
-      const { data, error } = await supabase
-        .from('stores')
-        .select('max_users, max_staff')
-        .eq('id', storeId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!storeId && storeId !== 'default-store'
-  });
+  // Form States
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<StaffRole>("Assistant");
+  const [phone, setPhone] = useState("");
+  const [username, setUsername] = useState("");
+  const [commissionRate, setCommissionRate] = useState("0");
 
-  const maxUsers = storeConfig?.max_users || 5;
-  const maxStaff = storeConfig?.max_staff || 10;
-
-  // ดึงจำนวนเซสชันที่ใช้งานอยู่ ณ ปัจจุบัน
-  const { data: activeSessionsCount, refetch: refetchSessions } = useQuery({
-    queryKey: ['active-sessions-count', storeId],
-    queryFn: async () => {
-      if (!storeId || storeId === 'default-store') return 0;
-      const { count, error } = await supabase
-        .from('active_sessions')
-        .select('id', { count: 'exact', head: true })
-        .eq('store_id', storeId);
-      if (error) throw error;
-      return count || 0;
-    },
-    refetchInterval: 10000 // รีเฟรชทุกๆ 10 วินาที
-  });
-
-  const usedSlots = activeSessionsCount || 0;
-  const remainingSlots = Math.max(0, maxUsers - usedSlots);
-  const isQuotaFull = usedSlots >= maxUsers;
-  const quotaPercentage = Math.min(100, (usedSlots / maxUsers) * 100);
-
-  // คำนวณจำนวนพนักงานที่ลงทะเบียนและเปิดใช้งานอยู่
-  const activeStaffCount = staff.filter(s => !s.isPendingInvite && s.status === 'Active').length;
-  const remainingStaffSlots = Math.max(0, maxStaff - activeStaffCount);
-  const isStaffQuotaFull = activeStaffCount >= maxStaff;
-  const staffQuotaPercentage = Math.min(100, (activeStaffCount / maxStaff) * 100);
-
-  const filteredStaff = staff.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    s.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (s.username && s.username.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredStaff = (staff as any[]).filter(
+    (member) =>
+      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleEdit = (s: StaffType) => {
-    setEditingStaff(s);
-    setIsModalOpen(true);
+  const handleAddStaff = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !username) {
+      toast.error("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน");
+      return;
+    }
+
+    const newStaff: Omit<StaffMember, "id"> = {
+      name,
+      role,
+      phone,
+      status: "Active",
+      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
+      username,
+      commissionRate: Number(commissionRate) || 0,
+    };
+
+    addStaff(newStaff);
+    toast.success("เพิ่มพนักงานเรียบร้อยแล้ว");
+    resetForm();
+    setIsAddOpen(false);
   };
 
-  const handleAdd = () => {
+  const handleEditStaff = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaff) return;
+
+    const updated: StaffMember = {
+      ...editingStaff,
+      name,
+      role,
+      phone,
+      username,
+      commissionRate: Number(commissionRate) || 0,
+    };
+
+    updateStaff(updated.id, updated);
+    toast.success("อัปเดตข้อมูลพนักงานเรียบร้อยแล้ว");
+    resetForm();
     setEditingStaff(null);
-    setIsModalOpen(true);
+  };
+
+  const resetForm = () => {
+    setName("");
+    setRole("Assistant");
+    setPhone("");
+    setUsername("");
+    setCommissionRate("0");
+  };
+
+  const openEditDialog = (member: StaffMember) => {
+    setEditingStaff(member);
+    setName(member.name);
+    setRole(member.role);
+    setPhone(member.phone);
+    setUsername(member.username);
+    setCommissionRate(String(member.commissionRate || 0));
+  };
+
+  const toggleStatus = (member: StaffMember) => {
+    const updated: StaffMember = {
+      ...member,
+      status: member.status === "Active" ? "Inactive" : "Active",
+    };
+    updateStaff(updated.id, updated);
+    toast.success(`เปลี่ยนสถานะเป็น ${updated.status === "Active" ? "เปิดใช้งาน" : "ปิดใช้งาน"} เรียบร้อยแล้ว`);
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <header className="px-10 py-10 shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 pl-14 lg:pl-10">
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black mb-1">{t.ourTeam}</h1>
-          <p className="text-gray-400 font-medium">{t.manageStaff}</p>
-        </div>
-        <button 
-          onClick={handleAdd}
-          className="px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl transition-all active:scale-95 bg-[#1A1F3D] text-white shadow-[#1A1F3D]/10"
-        >
-          <Plus size={20} /> {t.addStaff}
-        </button>
-      </header>
-
-      {/* Quota Status Banners */}
-      <div className="px-10 mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Concurrent Login Quota */}
-        <div className={cn(
-          "p-6 rounded-[32px] border flex flex-col justify-between gap-4 transition-all",
-          isQuotaFull 
-            ? "bg-red-50/50 border-red-100 text-red-900" 
-            : "bg-indigo-50/40 border-indigo-100/50 text-indigo-900"
-        )}>
-          <div className="flex items-center gap-4">
-            <div className={cn(
-              "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
-              isQuotaFull ? "bg-red-100 text-red-600" : "bg-indigo-100 text-indigo-600"
-            )}>
-              {isQuotaFull ? <ShieldAlert size={22} /> : <Users size={22} />}
-            </div>
-            <div>
-              <h3 className="text-sm font-black uppercase tracking-wider">
-                {language === 'th' ? 'จำนวนผู้ใช้งานพร้อมกัน (Concurrent Logins)' : 'Concurrent Login Quota'}
-              </h3>
-              <p className="text-xs text-gray-500 font-medium mt-0.5">
-                {language === 'th' 
-                  ? `เข้าสู่ระบบอยู่ ${usedSlots} คน จากทั้งหมด ${maxUsers} คน (ว่างอีก ${remainingSlots} เซสชัน)` 
-                  : `Logged in ${usedSlots} of ${maxUsers} sessions (${remainingSlots} remaining)`}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
-              <span>{language === 'th' ? 'การใช้งานโควตา' : 'Quota Usage'}</span>
-              <span>{Math.round(quotaPercentage)}%</span>
-            </div>
-            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  isQuotaFull ? "bg-red-500" : "bg-indigo-600"
-                )}
-                style={{ width: `${quotaPercentage}%` }}
-              />
-            </div>
-          </div>
+          <h1 className="text-3xl font-bold tracking-tight">การจัดการพนักงาน</h1>
+          <p className="text-muted-foreground">จัดการข้อมูลพนักงาน บทบาทหน้าที่ และค่าคอมมิชชัน</p>
         </div>
 
-        {/* Registered Staff Quota */}
-        <div className={cn(
-          "p-6 rounded-[32px] border flex flex-col justify-between gap-4 transition-all",
-          isStaffQuotaFull 
-            ? "bg-red-50/50 border-red-100 text-red-900" 
-            : "bg-emerald-50/40 border-emerald-100/50 text-emerald-900"
-        )}>
-          <div className="flex items-center gap-4">
-            <div className={cn(
-              "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
-              isStaffQuotaFull ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"
-            )}>
-              {isStaffQuotaFull ? <ShieldAlert size={22} /> : <Users size={22} />}
-            </div>
-            <div>
-              <h3 className="text-sm font-black uppercase tracking-wider">
-                {language === 'th' ? 'จำนวนบัญชีพนักงานสูงสุด (Staff Accounts)' : 'Staff Account Quota'}
-              </h3>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">
-                {language === 'th' 
-                  ? `เปิดใช้งานอยู่ ${activeStaffCount} คน จากทั้งหมด ${maxStaff} คน (ว่างอีก ${remainingStaffSlots} บัญชี)` 
-                  : `Active ${activeStaffCount} of ${maxStaff} accounts (${remainingStaffSlots} remaining)`}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
-              <span>{language === 'th' ? 'การใช้งานโควตา' : 'Quota Usage'}</span>
-              <span>{Math.round(staffQuotaPercentage)}%</span>
-            </div>
-            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  isStaffQuotaFull ? "bg-red-500" : "bg-emerald-600"
-                )}
-                style={{ width: `${staffQuotaPercentage}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-10 mb-8">
-         <div className="relative max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-            <input 
-              className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-6 py-3.5 text-sm font-bold shadow-sm"
-              placeholder={t.searchStaff}
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-         </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-10 pb-10 scrollbar-hide">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredStaff.map((member) => (
-            <div key={member.id} className="bg-white p-5 rounded-[24px] border border-gray-100 shadow-sm transition-all hover:shadow-xl group relative overflow-hidden flex flex-col justify-between">
-              <div>
-                <div className="flex justify-between items-start mb-4">
-                  <img src={member.avatar} className="w-16 h-16 rounded-[18px] object-cover shadow-md border-2 border-white" />
-                  <div className="flex gap-1.5">
-                    <button onClick={() => handleEdit(member)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-xl transition-all"><Edit3 size={14}/></button>
-                    <button onClick={() => deleteStaff(member.id)} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-xl transition-all"><Trash2 size={14}/></button>
-                  </div>
+        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <DialogTrigger asChild>
+            <Button className="w-full md:w-auto gap-2">
+              <Plus className="h-4 w-4" /> เพิ่มพนักงานใหม่
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>เพิ่มพนักงานใหม่</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddStaff} className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">ชื่อ-นามสกุล *</Label>
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="สมชาย ใจดี" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="username">อีเมล / ชื่อผู้ใช้ *</Label>
+                <Input id="username" type="email" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="somchai@example.com" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">เบอร์โทรศัพท์</Label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0812345678" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="role">บทบาท</Label>
+                  <Select value={role} onValueChange={(value: StaffRole) => setRole(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="เลือกบทบาท" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Admin">ผู้ดูแลระบบ (Admin)</SelectItem>
+                      <SelectItem value="Groomer">ช่างตัดขน (Groomer)</SelectItem>
+                      <SelectItem value="Assistant">ผู้ช่วย (Assistant)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="commission">ค่าคอมมิชชัน (%)</Label>
+                  <Input id="commission" type="number" min="0" max="100" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>ยกเลิก</Button>
+                <Button type="submit">บันทึก</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-                <div className="mb-4">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <h3 className="text-base font-black">{member.name}</h3>
-                    {member.status === 'Active' ? <BadgeCheck className="text-green-500" size={16} /> : <XCircle className="text-gray-300" size={16} />}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className={cn(
-                      "text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full",
-                      member.role === 'Admin' ? "bg-purple-100 text-purple-600" : 
-                      member.role === 'Groomer' ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
-                    )}>
-                      {member.role}
-                    </span>
-                    {member.isPendingInvite ? (
-                      <span className="bg-amber-50 text-amber-600 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <Clock size={10} /> รอเชื่อมต่อ Google
-                      </span>
-                    ) : member.username && (
-                      <span className="bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <Key size={10} /> {member.username}
-                      </span>
-                    )}
+      {/* Search and Filters */}
+      <div className="flex items-center gap-2 max-w-md bg-background border rounded-lg px-3 py-2">
+        <Search className="h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="ค้นหาพนักงานด้วยชื่อ, บทบาท หรืออีเมล..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+        />
+      </div>
+
+      {/* Staff Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredStaff.map((member: any) => (
+          <Card key={member.id} className="relative overflow-hidden">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16 border">
+                    <AvatarImage src={member.avatar} alt={member.name} />
+                    <AvatarFallback>{member.name.substring(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="font-semibold text-lg leading-none mb-1.5">{member.name}</h3>
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      <Badge variant={member.role === "Admin" ? "default" : "secondary"}>
+                        <Shield className="h-3 w-3 mr-1" /> {member.role}
+                      </Badge>
+                      <Badge variant={member.status === "Active" ? "default" : "destructive"} className={member.status === "Active" ? "bg-green-600 hover:bg-green-700 text-white" : ""}>
+                        {member.status === "Active" ? "เปิดใช้งาน" : "ปิดใช้งาน"}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2 pt-4 border-t border-gray-50 mt-auto">
-                 <div className="flex items-center gap-2 text-xs font-bold text-gray-400">
-                    <Phone size={12} /> {member.phone || '-'}
-                 </div>
-                 <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
-                    <span className={member.status === 'Active' ? "text-green-500" : "text-red-400"}>
-                      {member.status === 'Active' ? t.active : t.inactive}
-                    </span>
-                 </div>
-                 
-                 {member.isPendingInvite && (
-                   <div className="pt-2">
-                     <button
-                       onClick={() => {
-                         navigator.clipboard.writeText(member.inviteLink || '');
-                         toast.success("คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว! ส่งให้พนักงานเพื่อเชื่อมต่อ Google");
-                       }}
-                       className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1 shadow-md shadow-amber-500/10"
-                     >
-                       <Copy size={10} /> คัดลอกลิงก์คำเชิญ
-                     </button>
-                   </div>
-                 )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+              <div className="mt-6 space-y-2.5 text-sm text-muted-foreground border-t pt-4">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{member.username}</span>
+                </div>
+                {member.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 shrink-0" />
+                    <span>{member.phone}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Percent className="h-4 w-4 shrink-0" />
+                  <span>ค่าคอมมิชชัน: {member.commissionRate || 0}%</span>
+                </div>
 
-      {isModalOpen && <StaffModal staff={editingStaff} onClose={() => setIsModalOpen(false)} />}
+                {/* Real-time Google Connection Status Badge */}
+                <div className="flex items-center justify-between bg-muted/50 p-2 rounded-lg mt-2">
+                  <div className="flex items-center gap-2">
+                    <Chrome className="h-4 w-4 text-blue-500" />
+                    <span className="text-xs font-medium">Google Calendar</span>
+                  </div>
+                  {member.googleConnected ? (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 gap-1 text-[10px] py-0.5">
+                      <CheckCircle2 className="h-3 w-3 text-green-600" /> เชื่อมต่อแล้ว
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200 gap-1 text-[10px] py-0.5">
+                      <XCircle className="h-3 w-3 text-gray-400" /> ยังไม่เชื่อมต่อ
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-6 pt-4 border-t">
+                <Dialog open={editingStaff?.id === member.id} onOpenChange={(open) => !open && setEditingStaff(null)}>
+                  <Button variant="outline" className="flex-1" onClick={() => openEditDialog(member)}>
+                    แก้ไขข้อมูล
+                  </Button>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>แก้ไขข้อมูลพนักงาน</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleEditStaff} className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-name">ชื่อ-นามสกุล *</Label>
+                        <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-username">อีเมล / ชื่อผู้ใช้ *</Label>
+                        <Input id="edit-username" type="email" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-phone">เบอร์โทรศัพท์</Label>
+                        <Input id="edit-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-role">บทบาท</Label>
+                          <Select value={role} onValueChange={(value: StaffRole) => setRole(value)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Admin">ผู้ดูแลระบบ (Admin)</SelectItem>
+                              <SelectItem value="Groomer">ช่างตัดขน (Groomer)</SelectItem>
+                              <SelectItem value="Assistant">ผู้ช่วย (Assistant)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-commission">ค่าคอมมิชชัน (%)</Label>
+                          <Input id="edit-commission" type="number" min="0" max="100" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" variant="outline" onClick={() => setEditingStaff(null)}>ยกเลิก</Button>
+                        <Button type="submit">บันทึกการเปลี่ยนแปลง</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+
+                <Button 
+                  variant={member.status === "Active" ? "destructive" : "outline"} 
+                  className="flex-1"
+                  onClick={() => toggleStatus(member)}
+                >
+                  {member.status === "Active" ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
-};
-
-export default Staff;
+}

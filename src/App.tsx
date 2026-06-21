@@ -58,6 +58,77 @@ const App = () => {
     return () => subscription.unsubscribe();
   }, [setSession]);
 
+  // Real-time Staff (Profiles) Sync Logic
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const fetchStaffData = async () => {
+      try {
+        let staffQuery = supabase.from('profiles').select('*');
+        if (storeId && storeId !== 'default-store') {
+          staffQuery = staffQuery.eq('store_id', storeId);
+        }
+        const { data: staffData, error: staffError } = await staffQuery;
+
+        if (staffError) throw staffError;
+
+        if (staffData) {
+          const pendingInvitesStr = localStorage.getItem('pending_staff_invites');
+          let pendingInvites = pendingInvitesStr ? JSON.parse(pendingInvitesStr) : [];
+
+          const formattedStaff = staffData.map(s => ({
+            id: s.id,
+            name: s.full_name || s.email.split('@')[0],
+            role: (s.role === 'admin' ? 'Admin' : s.role === 'staff' ? 'Assistant' : s.role) as StaffRole,
+            phone: s.phone || '',
+            status: (s.status || 'Active') as 'Active' | 'Inactive',
+            avatar: s.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+            username: s.email,
+            commissionRate: Number(s.commission_rate || 0),
+            googleConnected: !!s.google_connected || !!s.google_email, // Map Google connection status
+            googleEmail: s.google_email || ''
+          }));
+
+          // Filter out pending invites that have been accepted (matched by phone or name)
+          pendingInvites = pendingInvites.filter((invite: any) => {
+            const accepted = formattedStaff.some(s => s.phone === invite.phone || s.name === invite.name);
+            return !accepted;
+          });
+          localStorage.setItem('pending_staff_invites', JSON.stringify(pendingInvites));
+
+          useStore.setState({ staff: [...formattedStaff, ...pendingInvites] });
+        } else {
+          useStore.setState({ staff: [] });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch staff from Supabase:", err);
+      }
+    };
+
+    fetchStaffData();
+
+    // Subscribe to real-time changes on profiles table
+    const channel = supabase
+      .channel('realtime-profiles')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        () => {
+          console.log('Realtime profile update detected, re-fetching staff...');
+          fetchStaffData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, storeId]);
+
   // CRM & Services Data Sync Logic - Runs whenever authenticated
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -604,46 +675,6 @@ const App = () => {
         }
       } catch (err) {
         console.warn("Failed to fetch report history from Supabase:", err);
-      }
-
-      // 11. Fetch Staff (Profiles)
-      try {
-        let staffQuery = supabase.from('profiles').select('*');
-        if (storeId && storeId !== 'default-store') {
-          staffQuery = staffQuery.eq('store_id', storeId);
-        }
-        const { data: staffData, error: staffError } = await staffQuery;
-
-        if (staffError) throw staffError;
-
-        if (staffData) {
-          const pendingInvitesStr = localStorage.getItem('pending_staff_invites');
-          let pendingInvites = pendingInvitesStr ? JSON.parse(pendingInvitesStr) : [];
-
-          const formattedStaff = staffData.map(s => ({
-            id: s.id,
-            name: s.full_name || s.email.split('@')[0],
-            role: (s.role === 'admin' ? 'Admin' : s.role === 'staff' ? 'Assistant' : s.role) as StaffRole,
-            phone: s.phone || '',
-            status: (s.status || 'Active') as 'Active' | 'Inactive',
-            avatar: s.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-            username: s.email,
-            commissionRate: Number(s.commission_rate || 0)
-          }));
-
-          // Filter out pending invites that have been accepted (matched by phone or name)
-          pendingInvites = pendingInvites.filter((invite: any) => {
-            const accepted = formattedStaff.some(s => s.phone === invite.phone || s.name === invite.name);
-            return !accepted;
-          });
-          localStorage.setItem('pending_staff_invites', JSON.stringify(pendingInvites));
-
-          useStore.setState({ staff: [...formattedStaff, ...pendingInvites] });
-        } else {
-          useStore.setState({ staff: [] });
-        }
-      } catch (err) {
-        console.warn("Failed to fetch staff from Supabase:", err);
       }
     };
 
