@@ -522,7 +522,7 @@ const SuperAdmin = () => {
                 <button 
                   onClick={handleGoogleLogin}
                   onMouseMove={handleMouseMove}
-                  className="w-full bg-[#0d0e15] google-border-btn text-white border border-[#3a3f50] font-bold py-5 rounded-full flex items-center justify-center gap-3 shadow-xl active:scale-95"
+                  className="w-full bg-[#0d0e15] google-border-btn text-white border border-[#3a3f50] font-bold py-5 rounded-full flex items-center justify-center gap-3 shadow-sm active:scale-95"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path
@@ -697,7 +697,7 @@ const SuperAdmin = () => {
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">โลโก้ / ชื่อร้าน</th>
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Slug (URL)</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สีหลัก / สีรอง</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">จำนวนบัญชีผู้ใช้</th>
+                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">จำนวนพนักงาน</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
                           <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
                         </tr>
