@@ -17,16 +17,16 @@ const Staff = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffType | null>(null);
 
-  // ดึงข้อมูลจำนวนผู้ใช้สูงสุด (max_users) ของร้านค้าจาก Supabase
+  // ดึงข้อมูลจำนวนผู้ใช้สูงสุด (max_users) และจำนวนพนักงานสูงสุด (max_staff) ของร้านค้าจาก Supabase
   const { data: storeConfig } = useQuery({
     queryKey: ['store-max-users', storeId],
     queryFn: async () => {
       if (!storeId || storeId === 'default-store') {
-        return { max_users: 5 };
+        return { max_users: 5, max_staff: 10 };
       }
       const { data, error } = await supabase
         .from('stores')
-        .select('max_users')
+        .select('max_users, max_staff')
         .eq('id', storeId)
         .single();
       if (error) throw error;
@@ -36,6 +36,7 @@ const Staff = () => {
   });
 
   const maxUsers = storeConfig?.max_users || 5;
+  const maxStaff = storeConfig?.max_staff || 10;
 
   // ดึงจำนวนเซสชันที่ใช้งานอยู่ ณ ปัจจุบัน
   const { data: activeSessionsCount, refetch: refetchSessions } = useQuery({
@@ -56,6 +57,12 @@ const Staff = () => {
   const remainingSlots = Math.max(0, maxUsers - usedSlots);
   const isQuotaFull = usedSlots >= maxUsers;
   const quotaPercentage = Math.min(100, (usedSlots / maxUsers) * 100);
+
+  // คำนวณจำนวนพนักงานที่ลงทะเบียนและเปิดใช้งานอยู่
+  const activeStaffCount = staff.filter(s => !s.isPendingInvite && s.status === 'Active').length;
+  const remainingStaffSlots = Math.max(0, maxStaff - activeStaffCount);
+  const isStaffQuotaFull = activeStaffCount >= maxStaff;
+  const staffQuotaPercentage = Math.min(100, (activeStaffCount / maxStaff) * 100);
 
   const filteredStaff = staff.filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -88,10 +95,11 @@ const Staff = () => {
         </button>
       </header>
 
-      {/* Quota Status Banner */}
-      <div className="px-10 mb-6">
+      {/* Quota Status Banners */}
+      <div className="px-10 mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Concurrent Login Quota */}
         <div className={cn(
-          "p-6 rounded-[32px] border flex flex-col md:flex-row justify-between items-start md:items-center gap-6 transition-all",
+          "p-6 rounded-[32px] border flex flex-col justify-between gap-4 transition-all",
           isQuotaFull 
             ? "bg-red-50/50 border-red-100 text-red-900" 
             : "bg-indigo-50/40 border-indigo-100/50 text-indigo-900"
@@ -115,7 +123,7 @@ const Staff = () => {
             </div>
           </div>
 
-          <div className="w-full md:w-64 space-y-2">
+          <div className="space-y-2">
             <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
               <span>{language === 'th' ? 'การใช้งานโควตา' : 'Quota Usage'}</span>
               <span>{Math.round(quotaPercentage)}%</span>
@@ -127,6 +135,49 @@ const Staff = () => {
                   isQuotaFull ? "bg-red-500" : "bg-indigo-600"
                 )}
                 style={{ width: `${quotaPercentage}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Registered Staff Quota */}
+        <div className={cn(
+          "p-6 rounded-[32px] border flex flex-col justify-between gap-4 transition-all",
+          isStaffQuotaFull 
+            ? "bg-red-50/50 border-red-100 text-red-900" 
+            : "bg-emerald-50/40 border-emerald-100/50 text-emerald-900"
+        )}>
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
+              isStaffQuotaFull ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"
+            )}>
+              {isStaffQuotaFull ? <ShieldAlert size={22} /> : <Users size={22} />}
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-wider">
+                {language === 'th' ? 'จำนวนบัญชีพนักงานสูงสุด (Staff Accounts)' : 'Staff Account Quota'}
+              </h3>
+              <p className="text-xs text-gray-400 font-medium mt-0.5">
+                {language === 'th' 
+                  ? `เปิดใช้งานอยู่ ${activeStaffCount} คน จากทั้งหมด ${maxStaff} คน (ว่างอีก ${remainingStaffSlots} บัญชี)` 
+                  : `Active ${activeStaffCount} of ${maxStaff} accounts (${remainingStaffSlots} remaining)`}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
+              <span>{language === 'th' ? 'การใช้งานโควตา' : 'Quota Usage'}</span>
+              <span>{Math.round(staffQuotaPercentage)}%</span>
+            </div>
+            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div 
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  isStaffQuotaFull ? "bg-red-500" : "bg-emerald-600"
+                )}
+                style={{ width: `${staffQuotaPercentage}%` }}
               />
             </div>
           </div>
