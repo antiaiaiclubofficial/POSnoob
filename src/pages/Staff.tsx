@@ -113,7 +113,7 @@ const Staff = () => {
             </div>
             <div>
               <h3 className="text-sm font-black uppercase tracking-wider">
-                {language === 'th' ? 'โควตาบัญชีผู้ใช้งาน Google' : 'Google Account Quota'}
+                {language === 'th' ? 'จำนวนโควต้าพนักงานที่เพิ่มได้' : 'Google Account Quota'}
               </h3>
               <p className="text-xs text-gray-500 font-medium mt-0.5">
                 {language === 'th' 
