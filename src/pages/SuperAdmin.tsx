@@ -759,28 +759,13 @@ const SuperAdmin = () => {
                       onChange={e => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <button 
-                    onClick={() => openStoreModal()}
-                    className="w-full sm:w-auto bg-[#1A1F3D] text-white px-6 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-md"
-                  >
-                    <Plus size={16} /> เพิ่มร้านค้าใหม่
-                  </button>
+                  <button onClick={() => { setEditingStore(null); setIsStoreModalOpen(true); }} className="bg-[#1A1F3D] text-white px-10 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all"><Plus size={20} className="inline mr-2" /> เพิ่มร้านค้าใหม่</button>
                 </div>
 
-                <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead>
-                        <tr className="bg-gray-50/50 border-b border-gray-100">
-                          <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">โลโก้ / ชื่อร้าน</th>
-                          <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Slug (URL)</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สีหลัก / สีรอง</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">ผู้ใช้งานพร้อมกัน (Concurrent)</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">บัญชีพนักงาน (Staff Accounts)</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
-                          <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
-                        </tr>
-                      </thead>
+                      <thead><tr className="bg-gray-50/50"><th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400">ร้านค้า</th><th className="px-8 py-6 text-center text-[10px] font-black uppercase text-gray-400">ราคาขาย</th><th className="px-8 py-6 text-center text-[10px] font-black uppercase text-gray-400">สต็อก</th><th className="px-8 py-6 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th></tr></thead>
                       <tbody className="divide-y divide-gray-50">
                         {filteredStores.map(store => {
                           const storeUserCount = profiles.filter(p => p.store_id === store.id && p.status === 'Active').length;
@@ -909,61 +894,35 @@ const SuperAdmin = () => {
                             <tr key={profile.id} className={cn("hover:bg-gray-50/50 transition-colors", profile.is_suspended && "bg-red-50/30")}>
                               <td className="px-8 py-5">
                                 <p className="text-sm font-black text-[#1A1F3D]">{profile.email}</p>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase">UID: {profile.id}</p>
+                                <p className="text-[9px] text-gray-300 font-bold uppercase">{profile.id}</p>
                               </td>
-                              <td className="px-8 py-5 text-sm font-bold text-gray-600">
-                                {userStore ? userStore.name : <span className="text-red-400 italic">ไม่ได้สังกัดร้านค้า</span>}
-                              </td>
+                              <td className="px-8 py-5 text-sm font-bold text-gray-600">{userStore ? userStore.name : 'ส่วนกลาง'}</td>
                               <td className="px-8 py-5 text-center">
                                 <span className={cn(
                                   "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
-                                  getRoleBadgeColor(profile.role)
+                                  profile.role === 'admin' ? "bg-purple-100 text-purple-600" : 
+                                  profile.role === 'staff' ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
                                 )}>
                                   {profile.role}
                                 </span>
                               </td>
                               <td className="px-8 py-5 text-center">
                                 <span className={cn(
-                                  "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full",
-                                  profile.is_suspended ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                                  "text-[10px] font-black uppercase tracking-widest",
+                                  profile.status === 'Active' ? "text-green-500" : "text-red-400"
                                 )}>
-                                  {profile.is_suspended ? "ถูกระงับ" : "ปกติ"}
+                                  {profile.status}
                                 </span>
                               </td>
                               <td className="px-8 py-5 text-right">
-                                <div className="flex justify-end gap-2">
-                                  <button 
-                                    onClick={() => handleToggleUserSuspension(profile.id, profile.is_suspended)}
-                                    className={cn(
-                                      "p-2 rounded-xl transition-all",
-                                      profile.is_suspended ? "text-green-600 hover:bg-green-50" : "text-amber-600 hover:bg-amber-50"
-                                    )}
-                                    title={profile.is_suspended ? "เปิดใช้งานผู้ใช้" : "พักสิทธิ์ผู้ใช้"}
-                                  >
-                                    {profile.is_suspended ? <Play size={16} /> : <Ban size={16} />}
-                                  </button>
-                                  <button 
-                                    onClick={() => openUserModal(profile)}
-                                    className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-100 rounded-xl transition-all"
-                                  >
-                                    <Edit3 size={16} />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleDeleteUser(profile.id)}
-                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
+                                <div className="flex gap-2 justify-end">
+                                  <button onClick={() => handleEdit(profile)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-xl transition-all"><Edit3 size={16}/></button>
+                                  <button onClick={() => { if(confirm('Delete?')) { supabase.from('profiles').delete().eq('id', profile.id); setProfiles(profiles.filter(p => p.id !== profile.id)); } }} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-xl transition-all"><Trash2 size={16}/></button>
                                 </div>
                               </td>
                             </tr>
                           );
                         })}
-                        {filteredProfiles.length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="py-20 text-center opacity-20 font-black">ไม่พบข้อมูลผู้ใช้งาน</td>
-                          </tr>
-                        )}
                       </tbody>
                     </table>
                   </div>
@@ -974,84 +933,64 @@ const SuperAdmin = () => {
             {/* Tab: Approvals */}
             {activeTab === 'approvals' && (
               <div className="space-y-6">
-                <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-                  <div className="relative w-full sm:w-80">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                    <input 
-                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-3 text-sm font-bold"
-                      placeholder="ค้นหาคำขออนุมัติ..."
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                    />
-                  </div>
+                <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                  <h3 className="text-xl font-black text-[#1A1F3D] mb-1">คำขออนุมัติเข้าใช้งานระบบ</h3>
+                  <p className="text-xs text-gray-400 font-medium">พนักงานที่ลงทะเบียนใหม่จะต้องได้รับการอนุมัติจาก Super Admin ก่อนเข้าใช้งาน</p>
                 </div>
 
-                <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-gray-50 bg-gray-50/30">
-                    <h4 className="text-xs font-black text-[#1A1F3D] uppercase tracking-widest">
-                      คำขอลงทะเบียนผู้ใช้ใหม่ที่รอการอนุมัติ ({filteredPendingUsers.length} รายการ)
-                    </h4>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-gray-50/50 border-b border-gray-100">
-                          <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">อีเมลผู้สมัคร</th>
-                          <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">มอบหมายร้านค้า (Assign Store)</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">วันที่สมัคร</th>
-                          <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">การดำเนินการ</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {filteredPendingUsers.map(user => (
-                          <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-8 py-5">
-                              <p className="text-sm font-black text-[#1A1F3D]">{user.email}</p>
-                              <p className="text-[9px] text-gray-400 font-bold uppercase">UID: {user.id}</p>
-                            </td>
-                            <td className="px-8 py-5">
-                              <select 
-                                className="bg-[#F5F6FA] border-none rounded-xl px-4 py-2.5 text-xs font-bold focus:ring-2 focus:ring-indigo-500/10"
-                                value={selectedStoreForApproval[user.id] || ''}
-                                onChange={e => setSelectedStoreForApproval({
-                                  ...selectedStoreForApproval,
-                                  [user.id]: e.target.value
-                                })}
+                <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50/50">
+                        <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">ผู้ขออนุมัติ</th>
+                        <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">มอบหมายร้านค้า</th>
+                        <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {filteredPendingUsers.map(user => (
+                        <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-8 py-6">
+                            <p className="text-sm font-black text-[#1A1F3D]">{user.display_name || user.email.split('@')[0]}</p>
+                            <p className="text-xs text-gray-400 font-medium">{user.email}</p>
+                          </td>
+                          <td className="px-8 py-6">
+                            <select 
+                              className="bg-[#F5F6FA] border-none rounded-xl px-4 py-2.5 text-xs font-bold appearance-none"
+                              value={selectedStoreForApproval[user.id] || ''}
+                              onChange={e => setSelectedStoreForApproval({ ...selectedStoreForApproval, [user.id]: e.target.value })}
+                            >
+                              <option value="">-- เลือกร้านค้า --</option>
+                              {stores.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-8 py-6 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button 
+                                onClick={() => handleAcceptUser(user.id, user.email)}
+                                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm"
                               >
-                                {stores.map(s => (
-                                  <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="px-8 py-5 text-center text-xs text-gray-400 font-bold">
-                              {new Date(user.updated_at).toLocaleDateString()}
-                            </td>
-                            <td className="px-8 py-5 text-right">
-                              <div className="flex justify-end gap-2">
-                                <button 
-                                  onClick={() => handleAcceptUser(user.id, user.email)}
-                                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm"
-                                >
-                                  <CheckCircle2 size={14} /> อนุมัติ (Accept)
-                                </button>
-                                <button 
-                                  onClick={() => handleRejectUser(user.id, user.email)}
-                                  className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5"
-                                >
-                                  <XCircle size={14} /> ปฏิเสธ (Reject)
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                        {filteredPendingUsers.length === 0 && (
-                          <tr>
-                            <td colSpan={4} className="py-20 text-center opacity-20 font-black">ไม่มีคำขออนุมัติใหม่ในขณะนี้</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                                <CheckCircle2 size={14} /> อนุมัติ (Accept)
+                              </button>
+                              <button 
+                                onClick={() => handleRejectUser(user.id, user.email)}
+                                className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5"
+                              >
+                                <XCircle size={14} /> ปฏิเสธ (Reject)
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {filteredPendingUsers.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="py-20 text-center opacity-20 font-black">ไม่มีคำขออนุมัติใหม่ในขณะนี้</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
@@ -1225,7 +1164,7 @@ const SuperAdmin = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">ผู้ใช้งานพร้อมกันสูงสุด (Max Users)</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 flex items-end tracking-widest px-1 h-8">ผู้ใช้งานพร้อมกันสูงสุด (Max Users)</label>
                     <input 
                       type="number"
                       min={1}
@@ -1237,7 +1176,7 @@ const SuperAdmin = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">บัญชีพนักงานสูงสุด (Max Staff)</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 flex items-end tracking-widest px-1 h-8">บัญชีพนักงานสูงสุด (Max Staff)</label>
                     <input 
                       type="number"
                       min={1}
