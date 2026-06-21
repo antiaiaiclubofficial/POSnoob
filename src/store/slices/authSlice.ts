@@ -17,20 +17,44 @@ export const createAuthSlice: StateCreator<
   login: (id, pass) => {
     if (id === 'superadmin' && pass === 'superadmin') {
       const user = { id: 'superadmin', name: 'System Owner', role: 'superadmin', username: 'superadmin' };
-      set({ isAuthenticated: true, currentUser: user, storeId: null, isAuthLoading: false });
+      set({ 
+        isAuthenticated: true, 
+        currentUser: user, 
+        storeId: null, 
+        isAuthLoading: false,
+        isPendingApproval: false,
+        isUserSuspended: false,
+        isStoreSuspended: false
+      });
       get().addLog({ staffName: 'System', action: 'Login Success', details: 'Super Administrator logged into the system', type: 'success' });
       return true;
     }
     if (id === 'admin' && pass === '1234') {
       const user = { id: 'admin', name: 'Admin', role: 'Admin', username: 'admin' };
-      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
+      set({ 
+        isAuthenticated: true, 
+        currentUser: user, 
+        storeId: 'default-store', 
+        isAuthLoading: false,
+        isPendingApproval: false,
+        isUserSuspended: false,
+        isStoreSuspended: false
+      });
       get().addLog({ staffName: 'System', action: 'Login Success', details: 'Super Admin logged into the system', type: 'success' });
       return true;
     }
     const member = get().staff.find(s => s.username === id && s.password === pass && s.status === 'Active');
     if (member) {
       const user = { id: member.id, name: member.name, role: member.role, username: member.username };
-      set({ isAuthenticated: true, currentUser: user, storeId: 'default-store', isAuthLoading: false });
+      set({ 
+        isAuthenticated: true, 
+        currentUser: user, 
+        storeId: 'default-store', 
+        isAuthLoading: false,
+        isPendingApproval: false,
+        isUserSuspended: false,
+        isStoreSuspended: false
+      });
       get().addLog({ staffName: 'System', action: 'Login Success', details: `Staff member ${member.name} logged in`, type: 'success' });
       return true;
     }
@@ -177,7 +201,10 @@ export const createAuthSlice: StateCreator<
           isAuthenticated: false, 
           isAuthLoading: false, 
           currentUser: null, 
-          storeId: null
+          storeId: null,
+          isUserSuspended: true,
+          isPendingApproval: false,
+          isStoreSuspended: false
         });
         return;
       }
@@ -189,7 +216,10 @@ export const createAuthSlice: StateCreator<
           isAuthenticated: false, 
           isAuthLoading: false, 
           currentUser: null, 
-          storeId: null
+          storeId: null,
+          isUserSuspended: true,
+          isPendingApproval: false,
+          isStoreSuspended: false
         });
         toast.error("บัญชีของคุณถูกปิดใช้งานชั่วคราว (Inactive)");
         return;
@@ -202,7 +232,10 @@ export const createAuthSlice: StateCreator<
           isAuthenticated: false, 
           isAuthLoading: false, 
           currentUser: null, 
-          storeId: null
+          storeId: null,
+          isPendingApproval: true,
+          isUserSuspended: false,
+          isStoreSuspended: false
         });
         return;
       }
@@ -244,7 +277,10 @@ export const createAuthSlice: StateCreator<
             isAuthenticated: false, 
             isAuthLoading: false, 
             currentUser: null, 
-            storeId: null
+            storeId: null,
+            isStoreSuspended: true,
+            isPendingApproval: false,
+            isUserSuspended: false
           });
           return;
         }
@@ -298,7 +334,10 @@ export const createAuthSlice: StateCreator<
                 isAuthenticated: false, 
                 isAuthLoading: false, 
                 currentUser: null, 
-                storeId: null 
+                storeId: null,
+                isPendingApproval: false,
+                isUserSuspended: false,
+                isStoreSuspended: false
               });
               toast.error(`ไม่สามารถเข้าสู่ระบบได้: จำนวนผู้ใช้งานพร้อมกันของร้านค้าเต็มแล้ว (จำกัดสูงสุด ${maxConcurrentUsers} บัญชีพร้อมกัน)`);
               return;
@@ -328,7 +367,10 @@ export const createAuthSlice: StateCreator<
           avatar: profile.avatar_url || googleAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
         },
         storeId: storeIdFromMetadata,
-        isAuthLoading: false
+        isAuthLoading: false,
+        isPendingApproval: false,
+        isUserSuspended: false,
+        isStoreSuspended: false
       });
     } else {
       set({
@@ -362,7 +404,10 @@ export const createAuthSlice: StateCreator<
     set({
       isAuthenticated: false,
       currentUser: null,
-      storeId: null
+      storeId: null,
+      isPendingApproval: false,
+      isUserSuspended: false,
+      isStoreSuspended: false
     });
   }
 });
