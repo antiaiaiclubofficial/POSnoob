@@ -45,8 +45,8 @@ const Staff = () => {
     return storeConfig?.max_users;
   }
 
-  // นับเฉพาะพนักงานที่เชื่อมต่อ Google สำเร็จแล้วเท่านั้น (ไม่มีสถานะ isPendingInvite)
-  const usedSlots = staff.filter(s => !s.isPendingInvite).length;
+  // นับเฉพาะพนักงานที่เปิดใช้งานอยู่ (status === 'Active') และเชื่อมต่อ Google สำเร็จแล้ว (ไม่มีสถานะ isPendingInvite)
+  const usedSlots = staff.filter(s => !s.isPendingInvite && s.status === 'Active').length;
   const remainingSlots = Math.max(0, maxUsers - usedSlots);
   const isQuotaFull = usedSlots >= maxUsers;
   const quotaPercentage = Math.min(100, (usedSlots / maxUsers) * 100);
@@ -63,14 +63,6 @@ const Staff = () => {
   };
 
   const handleAdd = () => {
-    if (isQuotaFull) {
-      toast.error(
-        language === 'th' 
-          ? `ไม่สามารถเพิ่มพนักงานได้เนื่องจากโควตาเต็มแล้ว (${usedSlots}/${maxUsers} บัญชี)` 
-          : `Cannot add staff. Quota is full (${usedSlots}/${maxUsers} accounts)`
-      );
-      return;
-    }
     setEditingStaff(null);
     setIsModalOpen(true);
   };
@@ -84,13 +76,7 @@ const Staff = () => {
         </div>
         <button 
           onClick={handleAdd}
-          disabled={isQuotaFull}
-          className={cn(
-            "px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl transition-all active:scale-95",
-            isQuotaFull 
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none" 
-              : "bg-[#1A1F3D] text-white shadow-[#1A1F3D]/10"
-          )}
+          className="px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl transition-all active:scale-95 bg-[#1A1F3D] text-white shadow-[#1A1F3D]/10"
         >
           <Plus size={20} /> {t.addStaff}
         </button>
@@ -113,19 +99,19 @@ const Staff = () => {
             </div>
             <div>
               <h3 className="text-sm font-black uppercase tracking-wider">
-                {language === 'th' ? 'จำนวนพนักงานที่เพิ่มได้' : 'Employee Quota'}
+                {language === 'th' ? 'จำนวน Active User ที่เปิดใช้งาน' : 'Active User Quota'}
               </h3>
               <p className="text-xs text-gray-500 font-medium mt-0.5">
                 {language === 'th' 
-                  ? `เพิ่มแล้ว ${usedSlots} คน จากทั้งหมด ${maxUsers} คน (เพิ่มได้อีก ${remainingSlots} คน)` 
-                  : `Used ${usedSlots} of ${maxUsers} accounts (${remainingSlots} remaining)`}
+                  ? `เปิดใช้งานแล้ว ${usedSlots} คน จากทั้งหมด ${maxUsers} คน (เปิดได้อีก ${remainingSlots} คน)` 
+                  : `Active ${usedSlots} of ${maxUsers} accounts (${remainingSlots} remaining)`}
               </p>
             </div>
           </div>
 
           <div className="w-full md:w-64 space-y-2">
             <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
-              <span>{language === 'th' ? 'เพิ่มพนักงานไปแล้ว' : 'Quota Usage'}</span>
+              <span>{language === 'th' ? 'เปิดใช้งานไปแล้ว' : 'Quota Usage'}</span>
               <span>{Math.round(quotaPercentage)}%</span>
             </div>
             <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">

@@ -12,7 +12,7 @@ interface StaffModalProps {
 }
 
 const StaffModal = ({ staff, onClose }: StaffModalProps) => {
-  const { addStaff, updateStaff, language } = useStore();
+  const { addStaff, updateStaff, language, staff: allStaff, maxUsers } = useStore();
   const t = translations[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -53,6 +53,18 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
     e.preventDefault();
     if (!formData.name || !formData.phone) {
       toast.error(language === 'th' ? "กรุณากรอกชื่อและเบอร์โทรศัพท์" : "Name and Phone are required");
+      return;
+    }
+
+    const limit = maxUsers || 5;
+    const activeStaffCount = allStaff.filter(s => !s.isPendingInvite && s.status === 'Active' && s.id !== (staff?.id || '')).length;
+
+    if (formData.status === 'Active' && (!staff || staff.status !== 'Active') && activeStaffCount >= limit) {
+      toast.error(
+        language === 'th' 
+          ? `ไม่สามารถตั้งสถานะเป็นใช้งานได้เนื่องจากจำนวน Active User เต็มแล้ว (${activeStaffCount}/${limit} บัญชี)` 
+          : `Cannot set status to Active. Active user limit reached (${activeStaffCount}/${limit} accounts)`
+      );
       return;
     }
 

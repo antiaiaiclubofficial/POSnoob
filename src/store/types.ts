@@ -252,6 +252,7 @@ export interface AppState {
   vatRate?: number;
   pointsEarnRate?: number;
   pointsRedeemRate?: number;
+  maxUsers?: number;
 
   // LINE LIFF Settings
   liffId: string;
