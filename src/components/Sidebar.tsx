@@ -7,8 +7,10 @@ import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
 import { 
   LayoutDashboard, Store, Users, Megaphone, Star, Package, 
-  History, Activity, Globe, LogOut, ChevronRight, HelpCircle, Scissors
+  History, Activity, Globe, LogOut, ChevronRight, HelpCircle, Scissors,
+  ShoppingBag, CalendarDays, ShieldCheck, Target, Settings, Menu
 } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 
 interface SidebarProps {
@@ -33,7 +35,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     { icon: Target, label: t.performance, path: '/staff/performance' },
     { icon: History, label: t.logs, path: '/logs' },
     { icon: Activity, label: t.reports, path: '/reports' },
-    { icon: SettingsIcon, label: t.settings, path: '/settings' },
+    { icon: Settings, label: t.settings, path: '/settings' },
   ];
 
   const userRole = (currentUser?.role || 'Assistant') as StaffRole;
@@ -79,9 +81,9 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
 
       {/* Navigation Menu */}
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto scrollbar-hide">
-        {filteredStaff.map((item) => (
+        {filteredMenuItems.map((item) => (
           <button
-            key={item.id}
+            key={item.path}
             onClick={() => navigate(item.path)}
             className={cn(
               "w-full flex items-center gap-4 p-4 rounded-2xl transition-all group",
@@ -92,7 +94,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
           >
             <div className={cn(
               "w-10 h-10 rounded-xl flex items-center justify-center transition-colors shrink-0",
-              window.location.pathname === item.id ? "bg-white/10" : "bg-gray-50 group-hover:bg-white"
+              window.location.pathname === item.path ? "bg-white/10" : "bg-gray-50 group-hover:bg-white"
             )}>
               <item.icon size={20} className={cn("shrink-0 transition-transform group-hover:scale-110", window.location.pathname === item.path ? "text-[#D9ED5F]" : "")} />
             </div>
