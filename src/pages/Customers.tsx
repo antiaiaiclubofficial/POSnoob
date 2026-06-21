@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2, Package, Clock, Star, Gift } from 'lucide-react';
-import { useStore, Customer, Pet, MembershipLevel } from '@/store/useStore';
+import React, { useState } from 'react';
+import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2 } from 'lucide-react';
+import { useStore, Customer, Pet } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import CustomerModal from '@/components/CustomerModal';
 import PetModal from '@/components/PetModal';
@@ -11,13 +11,11 @@ import LineBindingModal from '@/components/LineBindingModal';
 import PackageModal from '@/components/PackageModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { translations } from '@/utils/translations';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 const Customers = () => {
   const isMobile = useIsMobile();
-  const { customers, setCustomers, deleteCustomer, currency, language, storeId } = useStore();
+  const { customers, deleteCustomer, currency, language } = useStore();
   const t = translations[language];
   
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -31,67 +29,32 @@ const Customers = () => {
   const [isLineModalOpen, setIsLineModalOpen] = useState(false);
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
 
-  // ดึงข้อมูลระดับสมาชิกจากฐานข้อมูลโดยตรงเพื่อนำสีมาใช้
-  const { data: membershipTiers } = useQuery({
-    queryKey: ['membership_tiers_marketing', storeId],
-    queryFn: async () => {
-      if (!storeId || storeId === 'default-store') {
-        return { max_users: 5, max_staff: 10 };
-      }
-      const { data, error } = await supabase
-        .from('stores')
-        .select('max_users, max_staff')
-        .eq('id', storeId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!storeId && storeId !== 'default-store'
-  });
-
-  const maxUsers = storeConfig?.max_users || 5;
-  const maxStaff = storeConfig?.max_staff || 10;
-
-  // ดึงจำนวนเซสชันที่ใช้งานอยู่ ณ ปัจจุบัน
-  const { data: activeSessionsCount, refetch: refetchSessions } = useQuery({
-    queryKey: ['active-sessions-count', storeId],
-    queryFn: async () => {
-      if (!storeId || storeId === 'default-store') return 0;
-      const { count, error } = await supabase
-        .from('active_sessions')
-        .select('id', { count: 'exact', head: true })
-        .eq('store_id', storeId);
-      if (error) throw error;
-      return count || 0;
-    },
-    refetchInterval: 10000 // รีเฟรชทุกๆ 10 วินาที
-  });
-
-  const usedSlots = activeSessionsCount || 0;
-  const remainingSlots = Math.max(0, maxUsers - usedSlots);
-  const isQuotaFull = usedSlots >= maxUsers;
-  const quotaPercentage = Math.min(100, (usedSlots / maxUsers) * 100);
-
-  // คำนวณจำนวนพนักงานที่ลงทะเบียนและเปิดใช้งานอยู่
-  const activeStaffCount = staff.filter(s => !s.isPendingInvite && s.status === 'Active').length;
-  const remainingStaffSlots = Math.max(0, maxStaff - activeStaffCount);
-  const isStaffQuotaFull = activeStaffCount >= maxStaff;
-  const staffQuotaPercentage = Math.min(100, (activeStaffCount / maxStaff) * 100);
-
-  const filteredStaff = staff.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    s.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (s.username && s.username.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredCustomers = customers.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    c.phone.includes(searchQuery) ||
+    (c.email && c.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const handleEdit = (s: StaffType) => {
-    setEditingStaff(s);
-    setIsModalOpen(true);
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+
+  const handleSelectCustomer = (id: string) => {
+    setSelectedCustomerId(id);
+    if (isMobile) {
+      setShowDetailOnMobile(true);
+    }
   };
 
-  const handleAdd = () => {
-    setEditingStaff(null);
-    setIsModalOpen(true);
+  const getTierColorClass = (tier: string) => {
+    switch (tier?.toUpperCase()) {
+      case 'GOLD': return 'bg-amber-100 text-amber-700';
+      case 'SILVER': return 'bg-slate-100 text-slate-700';
+      case 'BRONZE': return 'bg-orange-100 text-orange-700';
+      default: return 'bg-indigo-100 text-indigo-700';
+    }
+  };
+
+  const refetch = () => {
+    // ฟังก์ชันจำลองเพื่อรองรับ callback ของ modal ต่างๆ
   };
 
   return (
@@ -208,7 +171,7 @@ const Customers = () => {
                               setSelectedCustomerId(null);
                               refetch();
                             } catch (err: any) {
-                              console.error("Error deleting customer:", err); // Log the error for debugging
+                              console.error("Error deleting customer:", err);
                               toast.error(err.message || (language === 'th' ? "เกิดข้อผิดพลาดในการลบข้อมูล" : "Failed to delete customer"));
                             }
                           }

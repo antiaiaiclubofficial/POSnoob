@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, Search, Edit3, Trash2, Phone, BadgeCheck, XCircle, Key, Clock, Copy, ShieldAlert, Users, Sparkles } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, Phone, BadgeCheck, XCircle, Key, Clock, Copy } from 'lucide-react';
 import { useStore, Staff as StaffType } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import StaffModal from '@/components/StaffModal';
@@ -39,7 +39,7 @@ const Staff = () => {
   const maxStaff = storeConfig?.max_staff || 10;
 
   // ดึงจำนวนเซสชันที่ใช้งานอยู่ ณ ปัจจุบัน
-  const { data: activeSessionsCount, refetch: refetchSessions } = useQuery({
+  const { data: activeSessionsCount } = useQuery({
     queryKey: ['active-sessions-count', storeId],
     queryFn: async () => {
       if (!storeId || storeId === 'default-store') return 0;
@@ -104,37 +104,49 @@ const Staff = () => {
             ? "bg-red-50/50 border-red-100 text-red-900" 
             : "bg-indigo-50/40 border-indigo-100/50 text-indigo-900"
         )}>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
-              <Plus size={20} />
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-black uppercase tracking-widest opacity-60">โควตาการใช้งานพร้อมกัน (Concurrent Logins)</span>
+              <span className="text-xs font-black">{usedSlots} / {maxUsers}</span>
             </div>
-            <h4 className="text-sm font-black text-[#1A1F3D]">อัตราการได้รับคะแนน (Earning Rate)</h4>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">จำนวนยอดใช้จ่ายเพื่อรับ 1 คะแนน (บาท)</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">{currency}</span>
-              <input 
-                type="number" 
-                className="w-full bg-white border-none rounded-2xl pl-10 pr-6 py-4 text-sm font-bold shadow-sm" 
-                value={localPointsEarnRate} 
-                onChange={e => setLocalPointsEarnRate(Number(e.target.value))} 
-                placeholder="เช่น 10"
+            <div className="w-full bg-gray-200/50 h-2 rounded-full overflow-hidden">
+              <div 
+                className={cn("h-full transition-all duration-500", isQuotaFull ? "bg-red-500" : "bg-indigo-600")} 
+                style={{ width: `${quotaPercentage}%` }}
               />
             </div>
-            <p className="text-[10px] text-gray-400 font-medium px-2 mt-1">
-              * ตัวอย่าง: หากตั้งค่าเป็น 10 บาท เมื่อลูกค้าใช้จ่ายครบทุกๆ 10 บาท จะได้รับ 1 คะแนนสะสม
-            </p>
           </div>
+          <p className="text-[10px] font-bold opacity-60">
+            {isQuotaFull 
+              ? "⚠️ โควตาเต็มแล้ว! กรุณาอัปเกรดแพ็กเกจเพื่อเพิ่มจำนวนผู้ใช้งานพร้อมกัน" 
+              : `ว่างอีก ${remainingSlots} ช่องทางสำหรับการเข้าใช้งานระบบพร้อมกัน`}
+          </p>
         </div>
 
-        <div className="p-6 border-t border-gray-50">
-          <button 
-            onClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }}
-            className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-black py-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#D9ED5F]/10 hover:scale-[1.02] active:scale-[0.98] transition-all"
-          >
-            <Plus size={18} /> {language === 'th' ? 'เพิ่มลูกค้าใหม่' : 'Add Client'}
-          </button>
+        {/* Staff Quota */}
+        <div className={cn(
+          "p-6 rounded-[32px] border flex flex-col justify-between gap-4 transition-all",
+          isStaffQuotaFull 
+            ? "bg-red-50/50 border-red-100 text-red-900" 
+            : "bg-emerald-50/40 border-emerald-100/50 text-emerald-900"
+        )}>
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-black uppercase tracking-widest opacity-60">โควตาพนักงาน (Staff Quota)</span>
+              <span className="text-xs font-black">{activeStaffCount} / {maxStaff}</span>
+            </div>
+            <div className="w-full bg-gray-200/50 h-2 rounded-full overflow-hidden">
+              <div 
+                className={cn("h-full transition-all duration-500", isStaffQuotaFull ? "bg-red-500" : "bg-emerald-600")} 
+                style={{ width: `${staffQuotaPercentage}%` }}
+              />
+            </div>
+          </div>
+          <p className="text-[10px] font-bold opacity-60">
+            {isStaffQuotaFull 
+              ? "⚠️ โควตาพนักงานเต็มแล้ว! กรุณาอัปเกรดแพ็กเกจเพื่อเพิ่มจำนวนพนักงาน" 
+              : `สามารถเพิ่มพนักงานได้อีก ${remainingStaffSlots} คน`}
+          </p>
         </div>
       </div>
 

@@ -35,6 +35,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   const navigate = useNavigate();
   const { shopName, shopLogo, logout, language, currentUser, rolePermissions } = useStore();
   const t = translations[language];
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = React.useState(false);
 
   const menuItems = [
     { icon: LayoutDashboard, label: t.dashboard, path: '/' },
