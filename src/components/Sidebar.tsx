@@ -118,29 +118,23 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
       </nav>
 
       <div className="mt-auto space-y-4 px-4 pb-8 shrink-0">
-        <div className="pt-6 border-t border-gray-50 space-y-1">
-          <a 
-            href="https://lin.ee/wU8azb5" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-[#1A1F3D] transition-colors group overflow-hidden whitespace-nowrap"
-          >
-            <HelpCircle size={20} className="shrink-0 group-hover:rotate-12 transition-transform" />
-            <span className="text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.support}</span>
-          </a>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-red-500 transition-colors w-full group overflow-hidden whitespace-nowrap"
-          >
-            <LogOut size={20} className="shrink-0 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.logout}</span>
+        <div className="pt-6 border-t border-gray-50">
+          <button onClick={() => setIsBroadcastModalOpen(true)} className="w-full bg-green-50 text-green-600 p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-green-100 transition-all">
+            <Megaphone size={14} /> Send Broadcast
           </button>
         </div>
         
         <div className="bg-[#F5F6FA] p-3 rounded-2xl flex items-center gap-3 overflow-hidden whitespace-nowrap">
           <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-[10px] font-black border border-gray-100 shrink-0 overflow-hidden">
             {userAvatar ? (
-              <img src={userAvatar} alt="User Avatar" className="w-full h-full object-cover" />
+              <img 
+                src={userAvatar} 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userDisplayName)}`;
+                }}
+                alt="User Avatar" 
+                className="w-full h-full object-cover" 
+              />
             ) : (
               userInitial
             )}

@@ -104,83 +104,37 @@ const Staff = () => {
             ? "bg-red-50/50 border-red-100 text-red-900" 
             : "bg-indigo-50/40 border-indigo-100/50 text-indigo-900"
         )}>
-          <div className="flex items-center gap-4">
-            <div className={cn(
-              "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
-              isQuotaFull ? "bg-red-100 text-red-600" : "bg-indigo-100 text-indigo-600"
-            )}>
-              {isQuotaFull ? <ShieldAlert size={22} /> : <Users size={22} />}
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+              <Plus size={20} />
             </div>
-            <div>
-              <h3 className="text-sm font-black uppercase tracking-wider">
-                {language === 'th' ? 'จำนวนผู้ใช้งานพร้อมกัน (Concurrent Logins)' : 'Concurrent Login Quota'}
-              </h3>
-              <p className="text-xs text-gray-500 font-medium mt-0.5">
-                {language === 'th' 
-                  ? `เข้าสู่ระบบอยู่ ${usedSlots} คน จากทั้งหมด ${maxUsers} คน (ว่างอีก ${remainingSlots} เซสชัน)` 
-                  : `Logged in ${usedSlots} of ${maxUsers} sessions (${remainingSlots} remaining)`}
-              </p>
-            </div>
+            <h4 className="text-sm font-black text-[#1A1F3D]">อัตราการได้รับคะแนน (Earning Rate)</h4>
           </div>
-
           <div className="space-y-2">
-            <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
-              <span>{language === 'th' ? 'การใช้งานโควตา' : 'Quota Usage'}</span>
-              <span>{Math.round(quotaPercentage)}%</span>
-            </div>
-            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  isQuotaFull ? "bg-red-500" : "bg-indigo-600"
-                )}
-                style={{ width: `${quotaPercentage}%` }}
+            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">จำนวนยอดใช้จ่ายเพื่อรับ 1 คะแนน (บาท)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">{currency}</span>
+              <input 
+                type="number" 
+                className="w-full bg-white border-none rounded-2xl pl-10 pr-6 py-4 text-sm font-bold shadow-sm" 
+                value={localPointsEarnRate} 
+                onChange={e => setLocalPointsEarnRate(Number(e.target.value))} 
+                placeholder="เช่น 10"
               />
             </div>
+            <p className="text-[10px] text-gray-400 font-medium px-2 mt-1">
+              * ตัวอย่าง: หากตั้งค่าเป็น 10 บาท เมื่อลูกค้าใช้จ่ายครบทุกๆ 10 บาท จะได้รับ 1 คะแนนสะสม
+            </p>
           </div>
         </div>
 
-        {/* Registered Staff Quota */}
-        <div className={cn(
-          "p-6 rounded-[32px] border flex flex-col justify-between gap-4 transition-all",
-          isStaffQuotaFull 
-            ? "bg-red-50/50 border-red-100 text-red-900" 
-            : "bg-emerald-50/40 border-emerald-100/50 text-emerald-900"
-        )}>
-          <div className="flex items-center gap-4">
-            <div className={cn(
-              "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
-              isStaffQuotaFull ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"
-            )}>
-              {isStaffQuotaFull ? <ShieldAlert size={22} /> : <Users size={22} />}
-            </div>
-            <div>
-              <h3 className="text-sm font-black uppercase tracking-wider">
-                {language === 'th' ? 'จำนวนบัญชีพนักงานสูงสุด (Staff Accounts)' : 'Staff Account Quota'}
-              </h3>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">
-                {language === 'th' 
-                  ? `เปิดใช้งานอยู่ ${activeStaffCount} คน จากทั้งหมด ${maxStaff} คน (ว่างอีก ${remainingStaffSlots} บัญชี)` 
-                  : `Active ${activeStaffCount} of ${maxStaff} accounts (${remainingStaffSlots} remaining)`}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
-              <span>{language === 'th' ? 'การใช้งานโควตา' : 'Quota Usage'}</span>
-              <span>{Math.round(staffQuotaPercentage)}%</span>
-            </div>
-            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  isStaffQuotaFull ? "bg-red-500" : "bg-emerald-600"
-                )}
-                style={{ width: `${staffQuotaPercentage}%` }}
-              />
-            </div>
-          </div>
+        <div className="p-6 border-t border-gray-50">
+          <button 
+            onClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }}
+            className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-black py-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#D9ED5F]/10 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            <Plus size={18} /> {language === 'th' ? 'เพิ่มลูกค้าใหม่' : 'Add Client'}
+          </button>
         </div>
       </div>
 
@@ -202,7 +156,14 @@ const Staff = () => {
             <div key={member.id} className="bg-white p-5 rounded-[24px] border border-gray-100 shadow-sm transition-all hover:shadow-xl group relative overflow-hidden flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-start mb-4">
-                  <img src={member.avatar} className="w-16 h-16 rounded-[18px] object-cover shadow-md border-2 border-white" />
+                  <img 
+                    src={member.avatar} 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(member.name)}`;
+                    }}
+                    className="w-16 h-16 rounded-[18px] object-cover shadow-md border-2 border-white" 
+                    alt={member.name}
+                  />
                   <div className="flex gap-1.5">
                     <button onClick={() => handleEdit(member)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-xl transition-all"><Edit3 size={14}/></button>
                     <button onClick={() => deleteStaff(member.id)} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-xl transition-all"><Trash2 size={14}/></button>

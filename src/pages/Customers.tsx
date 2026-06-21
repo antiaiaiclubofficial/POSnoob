@@ -33,184 +33,66 @@ const Customers = () => {
 
   // ดึงข้อมูลระดับสมาชิกจากฐานข้อมูลโดยตรงเพื่อนำสีมาใช้
   const { data: membershipTiers } = useQuery({
-    queryKey: ['membership_tiers'],
+    queryKey: ['membership_tiers_marketing', storeId],
     queryFn: async () => {
+      if (!storeId || storeId === 'default-store') {
+        return { max_users: 5, max_staff: 10 };
+      }
       const { data, error } = await supabase
-        .from('membership_tiers')
-        .select('tier_key, name, color_class');
-      if (error) return [];
+        .from('stores')
+        .select('max_users, max_staff')
+        .eq('id', storeId)
+        .single();
+      if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!storeId && storeId !== 'default-store'
   });
 
-  const { isLoading, refetch } = useQuery({
-    queryKey: ['customers-list', storeId],
+  const maxUsers = storeConfig?.max_users || 5;
+  const maxStaff = storeConfig?.max_staff || 10;
+
+  // ดึงจำนวนเซสชันที่ใช้งานอยู่ ณ ปัจจุบัน
+  const { data: activeSessionsCount, refetch: refetchSessions } = useQuery({
+    queryKey: ['active-sessions-count', storeId],
     queryFn: async () => {
-      let query = supabase
-        .from('customers')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          display_name,
-          phone,
-          email,
-          line_user_id,
-          avatar_url,
-          gender,
-          age,
-          house_no,
-          village_no,
-          soi,
-          road,
-          sub_district,
-          district,
-          province,
-          postal_code,
-          store_customers!inner (
-            points,
-            tier,
-            store_id
-          ),
-          pets (
-            id,
-            name,
-            type,
-            breed,
-            birth_date,
-            weight,
-            medical_condition,
-            image_url
-          )
-        `);
-      
-      if (storeId && storeId !== 'default-store') {
-        query = query.eq('store_customers.store_id', storeId);
-      }
-
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error("Supabase error:", error);
-        toast.error("Failed to fetch customers");
-        throw error;
-      }
-
-      // ดึงข้อมูลประวัติการใช้บริการ (service_history)
-      let serviceHistoryQuery = supabase.from('service_history').select('*');
-      if (storeId && storeId !== 'default-store') {
-        serviceHistoryQuery = serviceHistoryQuery.eq('store_id', storeId);
-      }
-      const { data: serviceHistoryData } = await serviceHistoryQuery;
-      
-      const serviceHistoryMap: Record<string, any[]> = {};
-      if (serviceHistoryData) {
-        serviceHistoryData.forEach(sh => {
-          if (sh.pet_id) {
-            if (!serviceHistoryMap[sh.pet_id]) {
-              serviceHistoryMap[sh.pet_id] = [];
-            }
-            serviceHistoryMap[sh.pet_id].push({
-              id: sh.id,
-              serviceName: sh.note || 'บริการ',
-              date: sh.created_at.split('T')[0],
-              price: Number(sh.price || 0)
-            });
-          }
-        });
-      }
-
-      const transformed: Customer[] = data.map((item: any) => {
-        const storeCustomer = item.store_customers?.[0] || {};
-        return {
-          id: item.id,
-          name: item.display_name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Unnamed',
-          firstName: item.first_name || '',
-          lastName: item.last_name || '',
-          phone: item.phone || '-',
-          email: item.email || '-',
-          lineId: item.line_user_id || '',
-          avatarUrl: item.avatar_url || '',
-          membership: (storeCustomer.tier || 'Standard') as MembershipLevel,
-          points: storeCustomer.points || 0,
-          totalSpent: 0,
-          creditBalance: 0,
-          gender: item.gender || 'Male',
-          age: item.age || '',
-          houseNo: item.house_no || '',
-          villageNo: item.village_no || '',
-          soi: item.soi || '',
-          road: item.road || '',
-          subDistrict: item.sub_district || '',
-          district: item.district || '',
-          province: item.province || '',
-          postalCode: item.postal_code || '',
-          creditHistory: [],
-          packages: [],
-          pets: (item.pets || []).map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            species: (p.type || 'Dog') as 'Dog' | 'Cat' | 'Other',
-            breed: p.breed || '-',
-            birthday: p.birth_date || '',
-            weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
-            serviceHistory: serviceHistoryMap[p.id] || [], // แมปประวัติการใช้บริการจริงจาก Supabase
-            notes: p.medical_condition || '',
-            image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
-          }))
-        };
-      });
-
-      setCustomers(transformed);
-      return transformed;
-    }
+      if (!storeId || storeId === 'default-store') return 0;
+      const { count, error } = await supabase
+        .from('active_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('store_id', storeId);
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 10000 // รีเฟรชทุกๆ 10 วินาที
   });
 
-  useEffect(() => {
-    if (customers.length > 0 && !selectedCustomerId) {
-      setSelectedCustomerId(customers[0].id);
-    }
-  }, [customers, selectedCustomerId]);
+  const usedSlots = activeSessionsCount || 0;
+  const remainingSlots = Math.max(0, maxUsers - usedSlots);
+  const isQuotaFull = usedSlots >= maxUsers;
+  const quotaPercentage = Math.min(100, (usedSlots / maxUsers) * 100);
 
-  const filteredCustomers = customers.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    c.phone.includes(searchQuery)
+  // คำนวณจำนวนพนักงานที่ลงทะเบียนและเปิดใช้งานอยู่
+  const activeStaffCount = staff.filter(s => !s.isPendingInvite && s.status === 'Active').length;
+  const remainingStaffSlots = Math.max(0, maxStaff - activeStaffCount);
+  const isStaffQuotaFull = activeStaffCount >= maxStaff;
+  const staffQuotaPercentage = Math.min(100, (activeStaffCount / maxStaff) * 100);
+
+  const filteredStaff = staff.filter(s => 
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    s.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s.username && s.username.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-
-  const handleSelectCustomer = (id: string) => {
-    setSelectedCustomerId(id);
-    if (isMobile) setShowDetailOnMobile(true);
+  const handleEdit = (s: StaffType) => {
+    setEditingStaff(s);
+    setIsModalOpen(true);
   };
 
-  const getTierColorClass = (tier: string) => {
-    if (!membershipTiers || membershipTiers.length === 0) {
-      // Fallback สีมาตรฐานหากยังโหลดข้อมูลไม่เสร็จ
-      switch (tier.toLowerCase()) {
-        case 'vip': return 'bg-purple-100 text-purple-700';
-        case 'platinum': return 'bg-indigo-100 text-indigo-700';
-        case 'gold': return 'bg-amber-100 text-amber-700';
-        case 'silver': return 'bg-blue-100 text-blue-700';
-        default: return 'bg-gray-100 text-gray-600';
-      }
-    }
-    const found = membershipTiers.find(
-      t => t.tier_key.toLowerCase() === tier.toLowerCase() || t.name.toLowerCase() === tier.toLowerCase()
-    );
-    return found?.color_class || 'bg-gray-100 text-gray-600';
+  const handleAdd = () => {
+    setEditingStaff(null);
+    setIsModalOpen(true);
   };
-
-  if (isLoading && customers.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-[#F8F9FD]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-          <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Syncing Data...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex-1 flex overflow-hidden relative">
@@ -243,7 +125,14 @@ const Customers = () => {
             >
               <div className="flex items-center gap-3">
                 {customer.avatarUrl ? (
-                  <img src={customer.avatarUrl} alt={customer.name} className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                  <img 
+                    src={customer.avatarUrl} 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(customer.name)}`;
+                    }}
+                    alt={customer.name} 
+                    className="w-10 h-10 rounded-xl object-cover shrink-0" 
+                  />
                 ) : (
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0",
@@ -289,7 +178,14 @@ const Customers = () => {
             <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 mb-8 flex flex-col sm:flex-row justify-between items-start gap-6 group">
               <div className="flex gap-6">
                 {selectedCustomer.avatarUrl ? (
-                  <img src={selectedCustomer.avatarUrl} alt={selectedCustomer.name} className="w-20 h-20 rounded-[28px] object-cover shrink-0 shadow-lg" />
+                  <img 
+                    src={selectedCustomer.avatarUrl} 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(selectedCustomer.name)}`;
+                    }}
+                    alt={selectedCustomer.name} 
+                    className="w-20 h-20 rounded-[28px] object-cover shrink-0 shadow-lg" 
+                  />
                 ) : (
                   <div className="w-20 h-20 bg-indigo-500 rounded-[28px] flex items-center justify-center text-2xl font-black text-white shrink-0 shadow-lg shadow-indigo-500/20">
                     {selectedCustomer.name.charAt(0)}
