@@ -697,7 +697,7 @@ const SuperAdmin = () => {
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">โลโก้ / ชื่อร้าน</th>
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Slug (URL)</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สีหลัก / สีรอง</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">จำนวนพนักงานสูงสุด</th>
+                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">จำนวน Active User สูงสุด</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
                           <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
                         </tr>
