@@ -125,7 +125,7 @@ const Staff = () => {
 
           <div className="w-full md:w-64 space-y-2">
             <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
-              <span>{language === 'th' ? 'ความจุโควตา' : 'Quota Usage'}</span>
+              <span>{language === 'th' ? 'เพิ่มพนักงานไปแล้ว' : 'Quota Usage'}</span>
               <span>{Math.round(quotaPercentage)}%</span>
             </div>
             <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
