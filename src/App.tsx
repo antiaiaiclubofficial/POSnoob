@@ -95,7 +95,8 @@ const App = () => {
               companyEmail: storeData.company_email || '',
               vatEnabled: storeData.vat_enabled || false,
               vatRate: storeData.vat_rate || 7,
-              maxUsers: storeData.max_users || 5
+              maxUsers: storeData.max_users || 5,
+              maxStaff: storeData.max_staff || 10
             });
           }
         } catch (err) {
