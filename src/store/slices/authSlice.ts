@@ -68,7 +68,7 @@ export const createAuthSlice: StateCreator<
             .upsert({
               id: user.id,
               email: user.email,
-              role: inviteData.role === 'Admin' ? 'admin' : 'staff',
+              role: inviteData.role === 'Admin' ? 'admin' : inviteData.role === 'Assistant' ? 'staff' : inviteData.role,
               store_id: inviteData.storeId,
               full_name: inviteData.name,
               phone: inviteData.phone,
