@@ -117,7 +117,7 @@ const Staff = () => {
               </h3>
               <p className="text-xs text-gray-500 font-medium mt-0.5">
                 {language === 'th' 
-                  ? `ใช้งานแล้ว ${usedSlots} จากทั้งหมด ${maxUsers} บัญชี (เหลือว่าง ${remainingSlots} บัญชี)` 
+                  ? `เพิ่มแล้ว ${usedSlots} จากทั้งหมด ${maxUsers} คน (เพิ่มได้อีก ${remainingSlots} คน)` 
                   : `Used ${usedSlots} of ${maxUsers} accounts (${remainingSlots} remaining)`}
               </p>
             </div>
