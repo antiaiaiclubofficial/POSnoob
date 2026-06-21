@@ -26,6 +26,7 @@ const SuperAdmin = () => {
   const [stores, setStores] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [activeSessions, setActiveSessions] = useState<any[]>([]);
   const [stats, setStats] = useState({
     storesCount: 0,
     usersCount: 0,
@@ -55,7 +56,8 @@ const SuperAdmin = () => {
     primary_color: '#1A1F3D',
     secondary_color: '#D9ED5F',
     logo_url: '',
-    max_users: 5
+    max_users: 5,
+    max_staff: 10
   });
 
   // Form States - User
@@ -137,7 +139,14 @@ const SuperAdmin = () => {
       if (pendingError) throw pendingError;
       setPendingUsers(pendingData || []);
 
-      // 4. Fetch Stats
+      // 4. Fetch Active Sessions
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('active_sessions')
+        .select('*');
+      if (sessionsError) throw sessionsError;
+      setActiveSessions(sessionsData || []);
+
+      // 5. Fetch Stats
       const { count: petsCount } = await supabase.from('pets').select('*', { count: 'exact', head: true });
       const { count: appointmentsCount } = await supabase.from('appointments').select('*', { count: 'exact', head: true });
       const { count: customersCount } = await supabase.from('customers').select('*', { count: 'exact', head: true });
@@ -438,7 +447,8 @@ const SuperAdmin = () => {
         primary_color: store.primary_color || '#1A1F3D',
         secondary_color: store.secondary_color || '#D9ED5F',
         logo_url: store.logo_url || '',
-        max_users: store.max_users || 5
+        max_users: store.max_users || 5,
+        max_staff: store.max_staff || 10
       });
     } else {
       setEditingStore(null);
@@ -448,7 +458,8 @@ const SuperAdmin = () => {
         primary_color: '#1A1F3D',
         secondary_color: '#D9ED5F',
         logo_url: '',
-        max_users: 5
+        max_users: 5,
+        max_staff: 10
       });
     }
     setIsStoreModalOpen(true);
@@ -764,7 +775,8 @@ const SuperAdmin = () => {
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">โลโก้ / ชื่อร้าน</th>
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Slug (URL)</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สีหลัก / สีรอง</th>
-                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">จำนวน Active User สูงสุด</th>
+                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">ผู้ใช้งานพร้อมกัน (Concurrent)</th>
+                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">บัญชีพนักงาน (Staff Accounts)</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
                           <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
                         </tr>
@@ -772,6 +784,7 @@ const SuperAdmin = () => {
                       <tbody className="divide-y divide-gray-50">
                         {filteredStores.map(store => {
                           const storeUserCount = profiles.filter(p => p.store_id === store.id && p.status === 'Active').length;
+                          const storeActiveSessions = activeSessions.filter(s => s.store_id === store.id).length;
                           return (
                             <tr key={store.id} className={cn("hover:bg-gray-50/50 transition-colors", store.is_suspended && "bg-red-50/30")}>
                               <td className="px-8 py-5 flex items-center gap-4">
@@ -795,11 +808,16 @@ const SuperAdmin = () => {
                                 </div>
                               </td>
                               <td className="px-8 py-5 text-center">
+                                <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-4 py-2 rounded-2xl">
+                                  {storeActiveSessions} / {store.max_users || 5}
+                                </span>
+                              </td>
+                              <td className="px-8 py-5 text-center">
                                 <button
                                   onClick={() => setViewingStoreUsers(store)}
-                                  className="text-xs font-black text-indigo-600 hover:underline bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-2xl transition-all"
+                                  className="text-xs font-black text-emerald-600 hover:underline bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-2xl transition-all"
                                 >
-                                  {storeUserCount} / {store.max_users || 5} บัญชี
+                                  {storeUserCount} / {store.max_staff || 10} บัญชี
                                 </button>
                               </td>
                               <td className="px-8 py-5 text-center">
@@ -841,7 +859,7 @@ const SuperAdmin = () => {
                         })}
                         {filteredStores.length === 0 && (
                           <tr>
-                            <td colSpan={6} className="py-20 text-center opacity-20 font-black">ไม่พบข้อมูลร้านค้า</td>
+                            <td colSpan={7} className="py-20 text-center opacity-20 font-black">ไม่พบข้อมูลร้านค้า</td>
                           </tr>
                         )}
                       </tbody>
@@ -1205,17 +1223,31 @@ const SuperAdmin = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">จำกัดจำนวนผู้ใช้งานสูงสุด (Max Users)</label>
-                  <input 
-                    type="number"
-                    min={1}
-                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
-                    value={storeForm.max_users}
-                    onChange={e => setStoreForm({ ...storeForm, max_users: Number(e.target.value) })}
-                    placeholder="5"
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">ผู้ใช้งานพร้อมกันสูงสุด (Max Users)</label>
+                    <input 
+                      type="number"
+                      min={1}
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
+                      value={storeForm.max_users}
+                      onChange={e => setStoreForm({ ...storeForm, max_users: Number(e.target.value) })}
+                      placeholder="5"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">บัญชีพนักงานสูงสุด (Max Staff)</label>
+                    <input 
+                      type="number"
+                      min={1}
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
+                      value={storeForm.max_staff}
+                      onChange={e => setStoreForm({ ...storeForm, max_staff: Number(e.target.value) })}
+                      placeholder="10"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div>
