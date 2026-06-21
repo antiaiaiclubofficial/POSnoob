@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, Search, Edit3, Trash2, Phone, BadgeCheck, XCircle, Key, Clock, Copy } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, Phone, BadgeCheck, XCircle, Key, Clock, Copy, ShieldAlert, Users, Sparkles } from 'lucide-react';
 import { useStore, Staff as StaffType } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import StaffModal from '@/components/StaffModal';
@@ -39,7 +39,7 @@ const Staff = () => {
   const maxStaff = storeConfig?.max_staff || 10;
 
   // ดึงจำนวนเซสชันที่ใช้งานอยู่ ณ ปัจจุบัน
-  const { data: activeSessionsCount } = useQuery({
+  const { data: activeSessionsCount, refetch: refetchSessions } = useQuery({
     queryKey: ['active-sessions-count', storeId],
     queryFn: async () => {
       if (!storeId || storeId === 'default-store') return 0;
@@ -104,49 +104,83 @@ const Staff = () => {
             ? "bg-red-50/50 border-red-100 text-red-900" 
             : "bg-indigo-50/40 border-indigo-100/50 text-indigo-900"
         )}>
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-black uppercase tracking-widest opacity-60">โควตาการใช้งานพร้อมกัน (Concurrent Logins)</span>
-              <span className="text-xs font-black">{usedSlots} / {maxUsers}</span>
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
+              isQuotaFull ? "bg-red-100 text-red-600" : "bg-indigo-100 text-indigo-600"
+            )}>
+              {isQuotaFull ? <ShieldAlert size={22} /> : <Users size={22} />}
             </div>
-            <div className="w-full bg-gray-200/50 h-2 rounded-full overflow-hidden">
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-wider">
+                {language === 'th' ? 'จำนวนผู้ใช้งานพร้อมกัน (Concurrent Logins)' : 'Concurrent Login Quota'}
+              </h3>
+              <p className="text-xs text-gray-500 font-medium mt-0.5">
+                {language === 'th' 
+                  ? `เข้าสู่ระบบอยู่ ${usedSlots} คน จากทั้งหมด ${maxUsers} คน (ว่างอีก ${remainingSlots} เซสชัน)` 
+                  : `Logged in ${usedSlots} of ${maxUsers} sessions (${remainingSlots} remaining)`}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
+              <span>{language === 'th' ? 'การใช้งานโควตา' : 'Quota Usage'}</span>
+              <span>{Math.round(quotaPercentage)}%</span>
+            </div>
+            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
               <div 
-                className={cn("h-full transition-all duration-500", isQuotaFull ? "bg-red-500" : "bg-indigo-600")} 
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  isQuotaFull ? "bg-red-500" : "bg-indigo-600"
+                )}
                 style={{ width: `${quotaPercentage}%` }}
               />
             </div>
           </div>
-          <p className="text-[10px] font-bold opacity-60">
-            {isQuotaFull 
-              ? "⚠️ โควตาเต็มแล้ว! กรุณาอัปเกรดแพ็กเกจเพื่อเพิ่มจำนวนผู้ใช้งานพร้อมกัน" 
-              : `ว่างอีก ${remainingSlots} ช่องทางสำหรับการเข้าใช้งานระบบพร้อมกัน`}
-          </p>
         </div>
 
-        {/* Staff Quota */}
+        {/* Registered Staff Quota */}
         <div className={cn(
           "p-6 rounded-[32px] border flex flex-col justify-between gap-4 transition-all",
           isStaffQuotaFull 
             ? "bg-red-50/50 border-red-100 text-red-900" 
             : "bg-emerald-50/40 border-emerald-100/50 text-emerald-900"
         )}>
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-black uppercase tracking-widest opacity-60">โควตาพนักงาน (Staff Quota)</span>
-              <span className="text-xs font-black">{activeStaffCount} / {maxStaff}</span>
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm",
+              isStaffQuotaFull ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"
+            )}>
+              {isStaffQuotaFull ? <ShieldAlert size={22} /> : <Users size={22} />}
             </div>
-            <div className="w-full bg-gray-200/50 h-2 rounded-full overflow-hidden">
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-wider">
+                {language === 'th' ? 'จำนวนบัญชีพนักงานสูงสุด (Staff Accounts)' : 'Staff Account Quota'}
+              </h3>
+              <p className="text-xs text-gray-400 font-medium mt-0.5">
+                {language === 'th' 
+                  ? `เปิดใช้งานอยู่ ${activeStaffCount} คน จากทั้งหมด ${maxStaff} คน (ว่างอีก ${remainingStaffSlots} บัญชี)` 
+                  : `Active ${activeStaffCount} of ${maxStaff} accounts (${remainingStaffSlots} remaining)`}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
+              <span>{language === 'th' ? 'การใช้งานโควตา' : 'Quota Usage'}</span>
+              <span>{Math.round(staffQuotaPercentage)}%</span>
+            </div>
+            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
               <div 
-                className={cn("h-full transition-all duration-500", isStaffQuotaFull ? "bg-red-500" : "bg-emerald-600")} 
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  isStaffQuotaFull ? "bg-red-500" : "bg-emerald-600"
+                )}
                 style={{ width: `${staffQuotaPercentage}%` }}
               />
             </div>
           </div>
-          <p className="text-[10px] font-bold opacity-60">
-            {isStaffQuotaFull 
-              ? "⚠️ โควตาพนักงานเต็มแล้ว! กรุณาอัปเกรดแพ็กเกจเพื่อเพิ่มจำนวนพนักงาน" 
-              : `สามารถเพิ่มพนักงานได้อีก ${remainingStaffSlots} คน`}
-          </p>
         </div>
       </div>
 
@@ -168,14 +202,7 @@ const Staff = () => {
             <div key={member.id} className="bg-white p-5 rounded-[24px] border border-gray-100 shadow-sm transition-all hover:shadow-xl group relative overflow-hidden flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-start mb-4">
-                  <img 
-                    src={member.avatar} 
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(member.name)}`;
-                    }}
-                    className="w-16 h-16 rounded-[18px] object-cover shadow-md border-2 border-white" 
-                    alt={member.name}
-                  />
+                  <img src={member.avatar} className="w-16 h-16 rounded-[18px] object-cover shadow-md border-2 border-white" />
                   <div className="flex gap-1.5">
                     <button onClick={() => handleEdit(member)} className="p-2 text-gray-300 hover:text-[#1A1F3D] bg-gray-50 rounded-xl transition-all"><Edit3 size={14}/></button>
                     <button onClick={() => deleteStaff(member.id)} className="p-2 text-gray-300 hover:text-red-500 bg-gray-50 rounded-xl transition-all"><Trash2 size={14}/></button>
