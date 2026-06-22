@@ -2,11 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
 import { 
-  User, Phone, Mail, MapPin, Dog, Cat, Sparkles, CheckCircle2, 
-  Calendar, Scale, ShieldAlert, Heart, FileText, ArrowRight, MessageSquare, Scissors, Lock, Check, X
+  User, Phone, Mail, Clock, Scissors, Lock, Check, X, Ban, ArrowRight, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -16,7 +14,8 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { 
-    shopName, shopLogo, logout, language, setLanguage, isAuthenticated, currentUser, login, loginWithGoogle
+    shopName, shopLogo, logout, language, setLanguage, isAuthenticated, currentUser, login, loginWithGoogle,
+    isPendingApproval, isUserSuspended
   } = useStore();
 
   const t = translations[language];
@@ -166,6 +165,54 @@ const Login = () => {
             className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 transition-all active:scale-95"
           >
             เข้าสู่ระบบปกติ
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPendingApproval) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FD] flex items-center justify-center p-6 relative">
+        <div className="w-full max-w-md text-center">
+          <div className="w-20 h-20 bg-amber-500 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-amber-500/20">
+            <Clock className="text-white w-10 h-10" />
+          </div>
+          <h1 className="text-3xl font-black text-[#1A1F3D] mb-2">รอการอนุมัติ</h1>
+          <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+            บัญชีผู้ใช้งานของคุณอยู่ระหว่างรอการอนุมัติจากผู้ดูแลระบบสูงสุด (Super Admin) กรุณาติดต่อผู้ดูแลระบบของท่านเพื่อเปิดใช้งานบัญชี
+          </p>
+          <button
+            onClick={() => {
+              logout();
+            }}
+            className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 transition-all active:scale-95"
+          >
+            กลับไปหน้าเข้าสู่ระบบ
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isUserSuspended) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FD] flex items-center justify-center p-6 relative">
+        <div className="w-full max-w-md text-center">
+          <div className="w-20 h-20 bg-red-500 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-red-500/20">
+            <Ban className="text-white w-10 h-10" />
+          </div>
+          <h1 className="text-3xl font-black text-[#1A1F3D] mb-2">บัญชีถูกระงับการใช้งาน</h1>
+          <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+            บัญชีผู้ใช้งานของคุณถูกระงับการใช้งานชั่วคราว กรุณาติดต่อผู้ดูแลระบบเพื่อตรวจสอบข้อมูลเพิ่มเติม
+          </p>
+          <button
+            onClick={() => {
+              logout();
+            }}
+            className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 transition-all active:scale-95"
+          >
+            กลับไปหน้าเข้าสู่ระบบ
           </button>
         </div>
       </div>
