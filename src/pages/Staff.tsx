@@ -22,6 +22,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface StaffMember {
   id: string;
@@ -37,7 +39,7 @@ interface StaffMember {
 }
 
 export default function Staff() {
-  const { staff, addStaff, updateStaff, deleteStaff, language } = useStore();
+  const { staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
@@ -48,6 +50,26 @@ export default function Staff() {
   const [phone, setPhone] = useState("");
   const [username, setUsername] = useState("");
   const [commissionRate, setCommissionRate] = useState("0");
+
+  // Fetch active sessions count for the current store
+  const { data: activeSessionsCount = 0 } = useQuery({
+    queryKey: ['active_sessions_count', storeId],
+    queryFn: async () => {
+      if (!storeId || storeId === 'default-store') return 0;
+      const { count, error } = await supabase
+        .from('active_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('store_id', storeId);
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 10000, // Refetch every 10 seconds to keep it live
+    enabled: !!storeId
+  });
+
+  const activeStaffCount = staff.filter(s => !s.isPendingInvite && s.status === 'Active').length;
+  const staffLimit = maxStaff || 10;
+  const userLimit = maxUsers || 5;
 
   const filteredStaff = (staff as any[]).filter(
     (member) =>
@@ -237,6 +259,53 @@ export default function Staff() {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-10 scrollbar-hide space-y-8">
+        {/* Status Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                <Chrome size={24} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-gray-400 mb-0.5">ผู้ใช้งานพร้อมกัน (Concurrent Logins)</p>
+                <h3 className="text-xl font-black text-[#1A1F3D]">
+                  {activeSessionsCount} / {userLimit} <span className="text-xs text-gray-400 font-bold">เซสชัน</span>
+                </h3>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className={cn(
+                "text-[9px] font-black px-2.5 py-1 rounded-full uppercase",
+                activeSessionsCount >= userLimit ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+              )}>
+                {activeSessionsCount >= userLimit ? "เต็มแล้ว" : "ใช้งานได้"}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                <Shield size={24} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-gray-400 mb-0.5">บัญชีพนักงาน (Staff Accounts)</p>
+                <h3 className="text-xl font-black text-[#1A1F3D]">
+                  {activeStaffCount} / {staffLimit} <span className="text-xs text-gray-400 font-bold">บัญชี</span>
+                </h3>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className={cn(
+                "text-[9px] font-black px-2.5 py-1 rounded-full uppercase",
+                activeStaffCount >= staffLimit ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+              )}>
+                {activeStaffCount >= staffLimit ? "เต็มแล้ว" : "ใช้งานได้"}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Search Bar */}
         <div className="relative max-w-md bg-white rounded-[24px] shadow-sm border border-gray-100/50 overflow-hidden">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
