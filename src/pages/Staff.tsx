@@ -15,7 +15,8 @@ import {
   Edit3,
   User,
   Trash2,
-  Sparkles
+  Sparkles,
+  LogOut
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -39,7 +40,7 @@ interface StaffMember {
 }
 
 export default function Staff() {
-  const { staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff } = useStore();
+  const { staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff, currentUser } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
@@ -51,21 +52,48 @@ export default function Staff() {
   const [username, setUsername] = useState("");
   const [commissionRate, setCommissionRate] = useState("0");
 
-  // Fetch active sessions count for the current store
-  const { data: activeSessionsCount = 0 } = useQuery({
-    queryKey: ['active_sessions_count', storeId],
+  // Fetch active sessions for the current store
+  const { data: activeSessions = [], refetch: refetchSessions } = useQuery({
+    queryKey: ['active_sessions_list', storeId],
     queryFn: async () => {
-      if (!storeId || storeId === 'default-store') return 0;
-      const { count, error } = await supabase
+      if (!storeId || storeId === 'default-store') return [];
+      const { data, error } = await supabase
         .from('active_sessions')
-        .select('*', { count: 'exact', head: true })
+        .select('*')
         .eq('store_id', storeId);
       if (error) throw error;
-      return count || 0;
+      return data || [];
     },
-    refetchInterval: 10000, // Refetch every 10 seconds to keep it live
+    refetchInterval: 5000, // Refetch every 5 seconds to keep it live
     enabled: !!storeId
   });
+
+  const activeSessionsCount = activeSessions.length;
+
+  const handleForceLogout = async (userId: string, staffName: string) => {
+    if (currentUser?.role !== 'Admin' && currentUser?.role !== 'superadmin') {
+      toast.error("คุณไม่มีสิทธิ์ในการสั่ง Logout พนักงานคนนี้ (ต้องเป็น Admin เท่านั้น)");
+      return;
+    }
+
+    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการสั่ง Logout เซสชันของ "${staffName}"?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('active_sessions')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast.success(`สั่ง Logout เซสชันของ "${staffName}" เรียบร้อยแล้ว`);
+      refetchSessions();
+    } catch (err: any) {
+      toast.error("เกิดข้อผิดพลาด: " + err.message);
+    }
+  };
 
   const activeStaffCount = staff.filter(s => !s.isPendingInvite && s.status === 'Active').length;
   const staffLimit = maxStaff || 10;
@@ -319,196 +347,242 @@ export default function Staff() {
 
         {/* Staff Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredStaff.map((member: any) => (
-            <div 
-              key={member.id} 
-              className={cn(
-                "bg-white rounded-[40px] p-8 flex flex-col h-full transition-all duration-300 border border-transparent group hover:shadow-2xl hover:border-gray-100 relative",
-                member.status === "Inactive" && "opacity-60 grayscale-[0.3]"
-              )}
-            >
-              {/* Action Buttons on Hover */}
-              <div className="absolute top-6 right-6 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                <button 
-                  onClick={() => handleDeleteStaffMember(member.id, member.name)}
-                  className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                  title="ลบพนักงาน"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+          {filteredStaff.map((member: any) => {
+            const session = activeSessions.find((s: any) => s.user_id === member.id);
+            const isOnline = !!session;
 
-              {/* Top Section: Avatar & Basic Info */}
-              <div className="flex items-center gap-5 mb-6">
-                <div className="relative shrink-0">
-                  <img 
-                    src={member.avatar} 
-                    alt={member.name} 
-                    className="w-16 h-16 rounded-[24px] object-cover border-4 border-white shadow-md"
-                  />
-                  <div className={cn(
-                    "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white",
-                    member.status === "Active" ? "bg-green-500" : "bg-red-500"
-                  )} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-[#1A1F3D] mb-1.5 line-clamp-1">{member.name}</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className={cn(
-                      "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
-                      member.role === "Admin" ? "bg-blue-50 text-blue-600" : "bg-indigo-50 text-indigo-600"
-                    )}>
-                      {member.role}
-                    </span>
-                    <span className={cn(
-                      "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
-                      member.status === "Active" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                    )}>
-                      {member.status === "Active" ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact & Commission Info */}
-              <div className="space-y-3 text-xs font-bold text-gray-500 border-t border-gray-50 pt-5 mb-6 flex-1">
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-gray-300 shrink-0" />
-                  <span className="truncate">{member.username}</span>
-                </div>
-                {member.phone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-gray-300 shrink-0" />
-                    <span>{member.phone}</span>
-                  </div>
+            return (
+              <div 
+                key={member.id} 
+                className={cn(
+                  "bg-white rounded-[40px] p-8 flex flex-col h-full transition-all duration-300 border border-transparent group hover:shadow-2xl hover:border-gray-100 relative",
+                  member.status === "Inactive" && "opacity-60 grayscale-[0.3]"
                 )}
-                <div className="flex items-center gap-3">
-                  <Percent className="h-4 w-4 text-gray-300 shrink-0" />
-                  <span>ค่าคอมมิชชัน: <span className="text-[#1A1F3D] font-black">{member.commissionRate || 0}%</span></span>
-                </div>
-
-                {/* Google Calendar Connection Status */}
-                <div className="bg-[#F5F6FA] p-3.5 rounded-2xl flex items-center justify-between mt-4">
-                  <div className="flex items-center gap-2">
-                    <Chrome className="h-4 w-4 text-blue-500" />
-                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Google Calendar</span>
-                  </div>
-                  {member.googleConnected ? (
-                    <span className="bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3 text-green-600" /> Connected
-                    </span>
-                  ) : (
-                    <span className="bg-gray-100 text-gray-400 border border-gray-200 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1">
-                      <XCircle className="h-3 w-3 text-gray-400" /> Disconnected
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-50">
-                <Dialog open={editingStaff?.id === member.id} onOpenChange={(open) => { if (!open) { setEditingStaff(null); resetForm(); } }}>
+              >
+                {/* Action Buttons on Hover */}
+                <div className="absolute top-6 right-6 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <button 
-                    onClick={() => openEditDialog(member)}
-                    className="flex-1 bg-[#F5F6FA] hover:bg-gray-100 text-[#1A1F3D] font-black py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
+                    onClick={() => handleDeleteStaffMember(member.id, member.name)}
+                    className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                    title="ลบพนักงาน"
                   >
-                    <Edit3 size={14} /> แก้ไขข้อมูล
+                    <Trash2 size={16} />
                   </button>
-                  <DialogContent className="rounded-[32px] max-w-md p-8">
-                    <DialogHeader>
-                      <DialogTitle className="text-xl font-black text-[#1A1F3D]">แก้ไขข้อมูลพนักงาน</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleEditStaff} className="space-y-5 mt-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-name" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อ-นามสกุล *</Label>
-                        <input 
-                          id="edit-name" 
-                          className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                          value={name} 
-                          onChange={(e) => setName(e.target.value)} 
-                          required 
-                        />
+                </div>
+
+                {/* Top Section: Avatar & Basic Info */}
+                <div className="flex items-center gap-5 mb-6">
+                  <div className="relative shrink-0">
+                    <img 
+                      src={member.avatar} 
+                      alt={member.name} 
+                      className="w-16 h-16 rounded-[24px] object-cover border-4 border-white shadow-md"
+                    />
+                    <div className={cn(
+                      "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white",
+                      member.status === "Active" ? "bg-green-500" : "bg-red-500"
+                    )} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-[#1A1F3D] mb-1.5 line-clamp-1">{member.name}</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
+                        member.role === "Admin" ? "bg-blue-50 text-blue-600" : "bg-indigo-50 text-indigo-600"
+                      )}>
+                        {member.role}
+                      </span>
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
+                        member.status === "Active" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                      )}>
+                        {member.status === "Active" ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact & Commission Info */}
+                <div className="space-y-3 text-xs font-bold text-gray-500 border-t border-gray-50 pt-5 mb-6 flex-1">
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-gray-300 shrink-0" />
+                    <span className="truncate">{member.username}</span>
+                  </div>
+                  {member.phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-gray-300 shrink-0" />
+                      <span>{member.phone}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Percent className="h-4 w-4 text-gray-300 shrink-0" />
+                    <span>ค่าคอมมิชชัน: <span className="text-[#1A1F3D] font-black">{member.commissionRate || 0}%</span></span>
+                  </div>
+
+                  {/* Google Calendar Connection Status */}
+                  <div className="bg-[#F5F6FA] p-3.5 rounded-2xl flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-2">
+                      <Chrome className="h-4 w-4 text-blue-500" />
+                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Google Calendar</span>
+                    </div>
+                    {member.googleConnected ? (
+                      <span className="bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-green-600" /> Connected
+                      </span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-400 border border-gray-200 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1">
+                        <XCircle className="h-3 w-3 text-gray-400" /> Disconnected
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Active Session Status & Logout Button */}
+                  <div className="bg-[#F5F6FA] p-3.5 rounded-2xl flex flex-col gap-3 mt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-indigo-500" />
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">สถานะเซสชัน (Session)</span>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-username" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">อีเมล / ชื่อผู้ใช้ *</Label>
-                        <input 
-                          id="edit-username" 
-                          type="email" 
-                          className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                          value={username} 
-                          onChange={(e) => setUsername(e.target.value)} 
-                          required 
-                        />
+                      {isOnline ? (
+                        <span className="bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1 animate-pulse">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" /> Online
+                        </span>
+                      ) : (
+                        <span className="bg-gray-100 text-gray-400 border border-gray-200 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" /> Offline
+                        </span>
+                      )}
+                    </div>
+                    
+                    {isOnline && (
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
+                        <span className="text-[9px] text-gray-400 font-bold">
+                          ใช้งานล่าสุด: {new Date(session.last_active_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} น.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleForceLogout(member.id, member.name)}
+                          disabled={currentUser?.role !== 'Admin' && currentUser?.role !== 'superadmin'}
+                          className={cn(
+                            "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase transition-all flex items-center gap-1",
+                            currentUser?.role === 'Admin' || currentUser?.role === 'superadmin'
+                              ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                              : "bg-gray-100 text-gray-300 border border-gray-200 cursor-not-allowed"
+                          )}
+                          title={currentUser?.role === 'Admin' || currentUser?.role === 'superadmin' ? "สั่ง Logout เซสชันนี้" : "เฉพาะผู้ใช้ที่มีสิทธิ์ Admin เท่านั้น"}
+                        >
+                          <LogOut className="h-3 w-3" /> Logout
+                        </button>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-phone" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">เบอร์โทรศัพท์</Label>
-                        <input 
-                          id="edit-phone" 
-                          className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                          value={phone} 
-                          onChange={(e) => setPhone(e.target.value)} 
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t border-gray-50">
+                  <Dialog open={editingStaff?.id === member.id} onOpenChange={(open) => { if (!open) { setEditingStaff(null); resetForm(); } }}>
+                    <button 
+                      onClick={() => openEditDialog(member)}
+                      className="flex-1 bg-[#F5F6FA] hover:bg-gray-100 text-[#1A1F3D] font-black py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
+                    >
+                      <Edit3 size={14} /> แก้ไขข้อมูล
+                    </button>
+                    <DialogContent className="rounded-[32px] max-w-md p-8">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-black text-[#1A1F3D]">แก้ไขข้อมูลพนักงาน</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleEditStaff} className="space-y-5 mt-4">
                         <div className="space-y-2">
-                          <Label htmlFor="edit-role" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">บทบาท</Label>
-                          <Select value={role} onValueChange={(value: StaffRole) => setRole(value)}>
-                            <SelectTrigger className="border-none bg-[#F5F6FA] rounded-2xl h-12 focus:ring-4 focus:ring-[#1A1F3D]/5 font-bold text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-2xl border-gray-100 shadow-2xl">
-                              <SelectItem value="Admin" className="text-xs font-bold py-3">ผู้ดูแลระบบ (Admin)</SelectItem>
-                              <SelectItem value="Groomer" className="text-xs font-bold py-3">ช่างตัดขน (Groomer)</SelectItem>
-                              <SelectItem value="Assistant" className="text-xs font-bold py-3">ผู้ช่วย (Assistant)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-commission" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ค่าคอมมิชชัน (%)</Label>
+                          <Label htmlFor="edit-name" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อ-นามสกุล *</Label>
                           <input 
-                            id="edit-commission" 
-                            type="number" 
-                            min="0" 
-                            max="100" 
-                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                            value={commissionRate} 
-                            onChange={(e) => setCommissionRate(e.target.value)} 
+                            id="edit-name" 
+                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                            value={name} 
+                            onChange={(e) => setName(e.target.value)} 
+                            required 
                           />
                         </div>
-                      </div>
-                      <div className="flex gap-3 pt-4">
-                        <button 
-                          type="button" 
-                          onClick={() => setEditingStaff(null)}
-                          className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all"
-                        >
-                          ยกเลิก
-                        </button>
-                        <button 
-                          type="submit"
-                          className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all"
-                        >
-                          บันทึกการเปลี่ยนแปลง
-                        </button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-username" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">อีเมล / ชื่อผู้ใช้ *</Label>
+                          <input 
+                            id="edit-username" 
+                            type="email" 
+                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                            value={username} 
+                            onChange={(e) => setUsername(e.target.value)} 
+                            required 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-phone" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">เบอร์โทรศัพท์</Label>
+                          <input 
+                            id="edit-phone" 
+                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                            value={phone} 
+                            onChange={(e) => setPhone(e.target.value)} 
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-role" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">บทบาท</Label>
+                            <Select value={role} onValueChange={(value: StaffRole) => setRole(value)}>
+                              <SelectTrigger className="border-none bg-[#F5F6FA] rounded-2xl h-12 focus:ring-4 focus:ring-[#1A1F3D]/5 font-bold text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-2xl border-gray-100 shadow-2xl">
+                                <SelectItem value="Admin" className="text-xs font-bold py-3">ผู้ดูแลระบบ (Admin)</SelectItem>
+                                <SelectItem value="Groomer" className="text-xs font-bold py-3">ช่างตัดขน (Groomer)</SelectItem>
+                                <SelectItem value="Assistant" className="text-xs font-bold py-3">ผู้ช่วย (Assistant)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-commission" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ค่าคอมมิชชัน (%)</Label>
+                            <input 
+                              id="edit-commission" 
+                              type="number" 
+                              min="0" 
+                              max="100" 
+                              className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                              value={commissionRate} 
+                              onChange={(e) => setCommissionRate(e.target.value)} 
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-3 pt-4">
+                          <button 
+                            type="button" 
+                            onClick={() => setEditingStaff(null)}
+                            className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all"
+                          >
+                            ยกเลิก
+                          </button>
+                          <button 
+                            type="submit"
+                            className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all"
+                          >
+                            บันทึกการเปลี่ยนแปลง
+                          </button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
 
-                <button 
-                  onClick={() => toggleStatus(member)}
-                  className={cn(
-                    "flex-1 font-black py-3.5 rounded-2xl text-xs transition-all active:scale-95 shadow-md",
-                    member.status === "Active" 
-                      ? "bg-red-50 hover:bg-red-100 text-red-600 shadow-red-500/5" 
-                      : "bg-green-50 hover:bg-green-100 text-green-600 shadow-green-500/5"
-                  )}
-                >
-                  {member.status === "Active" ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                </button>
+                  <button 
+                    onClick={() => toggleStatus(member)}
+                    className={cn(
+                      "flex-1 font-black py-3.5 rounded-2xl text-xs transition-all active:scale-95 shadow-md",
+                      member.status === "Active" 
+                        ? "bg-red-50 hover:bg-red-100 text-red-600 shadow-red-500/5" 
+                        : "bg-green-50 hover:bg-green-100 text-green-600 shadow-green-500/5"
+                    )}
+                  >
+                    {member.status === "Active" ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
