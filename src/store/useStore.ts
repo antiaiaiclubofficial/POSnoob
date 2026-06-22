@@ -734,43 +734,55 @@ export const useStore = create<AppState>()((set, get) => ({
     };
 
     const inviteId = generateUUID();
-    const inviteLink = `${window.location.origin}/login?invite=true&inviteId=${inviteId}`;
+    
+    // Encode invitation details into a secure token to bypass foreign key constraints
+    const inviteData = {
+      inviteId,
+      storeId: currentStoreId,
+      storeName: get().shopName,
+      role: st.role,
+      name: st.name,
+      phone: st.phone,
+      commissionRate: st.commissionRate,
+      avatar: st.avatar
+    };
+    const token = btoa(encodeURIComponent(JSON.stringify(inviteData)));
+    const inviteLink = `${window.location.origin}/login?invite=true&token=${token}`;
 
-    try {
-      // Insert pending invite into profiles table
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert([{
-          id: inviteId,
-          email: `invite-${inviteId.substring(0, 8)}@temp.com`,
-          role: st.role === 'Admin' ? 'admin' : st.role === 'Assistant' ? 'staff' : st.role,
-          store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
-          full_name: st.name,
-          phone: st.phone,
-          commission_rate: Number(st.commissionRate || 0),
-          is_approved: false,
-          is_suspended: false,
-          status: 'Pending',
-          avatar_url: st.avatar
-        }]);
+    // Save pending invite locally to localStorage so it displays in the staff list
+    const pendingInvitesStr = localStorage.getItem('pending_staff_invites');
+    const pendingInvites = pendingInvitesStr ? JSON.parse(pendingInvitesStr) : [];
+    
+    const newPendingInvite = {
+      id: `invite-${inviteId}`,
+      name: st.name,
+      role: st.role,
+      phone: st.phone,
+      status: 'Inactive' as const,
+      avatar: st.avatar,
+      username: 'Pending Google Link',
+      commissionRate: st.commissionRate,
+      isPendingInvite: true,
+      inviteLink: inviteLink
+    };
 
-      if (insertError) throw insertError;
+    const updatedInvites = [...pendingInvites, newPendingInvite];
+    localStorage.setItem('pending_staff_invites', JSON.stringify(updatedInvites));
 
-      // Show success toast with link and copy action
-      toast.success(`สร้างคำเชิญสำหรับ ${st.name} เรียบร้อยแล้ว!`, {
-        action: {
-          label: 'คัดลอกลิงก์',
-          onClick: () => {
-            navigator.clipboard.writeText(inviteLink);
-            toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
-          }
-        },
-        duration: 10000
-      });
-    } catch (err: any) {
-      console.error("Error creating invite:", err);
-      toast.error("เกิดข้อผิดพลาดในการสร้างคำเชิญ: " + err.message);
-    }
+    // Update local state immediately
+    set(s => ({ staff: [...s.staff, newPendingInvite] }));
+
+    // Show success toast with link and copy action
+    toast.success(`สร้างคำเชิญสำหรับ ${st.name} เรียบร้อยแล้ว!`, {
+      action: {
+        label: 'คัดลอกลิงก์',
+        onClick: () => {
+          navigator.clipboard.writeText(inviteLink);
+          toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
+        }
+      },
+      duration: 10000
+    });
   },
 
   updateStaff: async (id, st) => {

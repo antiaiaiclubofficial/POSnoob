@@ -24,9 +24,19 @@ const Login = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const isInvite = params.get('invite') === 'true';
+    const token = params.get('token');
     const inviteId = params.get('inviteId');
 
-    if (isInvite && inviteId) {
+    if (isInvite && token) {
+      try {
+        const decodedData = JSON.parse(decodeURIComponent(atob(token)));
+        setInviteData(decodedData);
+        localStorage.setItem('pending_invite_data', JSON.stringify(decodedData));
+      } catch (err) {
+        console.error("Error decoding invite token:", err);
+        toast.error("ลิงก์คำเชิญไม่ถูกต้องหรือหมดอายุแล้ว");
+      }
+    } else if (isInvite && inviteId) {
       const validateAndFetchInvite = async () => {
         try {
           // 1. Fetch profile with status = 'Pending'
