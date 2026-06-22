@@ -3,13 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { Lock, User, Scissors, Sparkles, ArrowRight, AlertCircle, Check, ShieldAlert, Users } from 'lucide-react';
+import { Lock, User, Scissors, Sparkles, ArrowRight, AlertCircle, Check, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
 
 const Login = () => {
-  const [loginMode, setLoginMode] = useState<'staff' | 'superadmin'>('staff');
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   const [inviteData, setInviteData] = useState<any>(null);
@@ -58,24 +57,16 @@ const Login = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Enforce mode-specific credentials
-    if (loginMode === 'superadmin' && id !== 'superadmin') {
-      toast.error("กรุณาใช้บัญชี Superadmin สำหรับโหมดนี้");
-      return;
-    }
-    if (loginMode === 'staff' && id === 'superadmin') {
-      toast.error("กรุณาเข้าสู่ระบบที่แท็บ Superadmin");
+    // Prevent logging in as superadmin from the normal login page
+    if (id === 'superadmin') {
+      toast.error("กรุณาเข้าสู่ระบบผู้ดูแลระบบสูงสุดผ่านช่องทางเฉพาะ");
       return;
     }
 
     const success = login(id, password);
     if (success) {
       toast.success(t.welcomeBack);
-      if (id === 'superadmin') {
-        navigate('/superadmin');
-      } else {
-        navigate('/');
-      }
+      navigate('/');
     } else {
       toast.error(t.invalidCreds);
     }
@@ -83,11 +74,7 @@ const Login = () => {
 
   const handleGoogleLogin = async () => {
     try {
-      if (loginMode === 'superadmin') {
-        await loginWithGoogle(window.location.origin + '/superadmin');
-      } else {
-        await loginWithGoogle(window.location.origin + '/');
-      }
+      await loginWithGoogle(window.location.origin + '/');
     } catch (error) {
       toast.error("Google Login failed");
     }
@@ -162,31 +149,9 @@ const Login = () => {
           <p className="text-xs text-gray-400 font-bold uppercase tracking-[0.2em]">{t.loginSystem}</p>
         </div>
 
-        {/* Mode Switcher Tabs */}
-        <div className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm flex gap-1 mb-4">
-          <button
-            onClick={() => { setLoginMode('staff'); setId(''); setPassword(''); }}
-            className={cn(
-              "flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2",
-              loginMode === 'staff' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            <Users size={14} /> พนักงานร้านค้า (Staff)
-          </button>
-          <button
-            onClick={() => { setLoginMode('superadmin'); setId(''); setPassword(''); }}
-            className={cn(
-              "flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2",
-              loginMode === 'superadmin' ? "bg-red-600 text-white shadow-md" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            <ShieldAlert size={14} /> ผู้ดูแลระบบ (Superadmin)
-          </button>
-        </div>
-
         <div className="bg-white p-10 rounded-[48px] shadow-sm border border-gray-100 space-y-6">
           {/* Invitation Alert */}
-          {inviteData && loginMode === 'staff' && (
+          {inviteData && (
             <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-3xl flex items-start gap-3 text-indigo-800 animate-in fade-in zoom-in-95">
               <Sparkles className="text-indigo-500 shrink-0 mt-0.5" size={18} />
               <div className="text-left">
@@ -200,7 +165,7 @@ const Login = () => {
           )}
 
           {/* Pending Approval Alert */}
-          {isPendingApproval && loginMode === 'staff' && (
+          {isPendingApproval && (
             <div className="p-5 bg-amber-50 border border-amber-100 rounded-3xl flex items-start gap-3 text-amber-800 animate-in fade-in zoom-in-95">
               <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={18} />
               <div className="text-left">
@@ -213,7 +178,7 @@ const Login = () => {
           )}
 
           {/* User Suspended Alert */}
-          {isUserSuspended && loginMode === 'staff' && (
+          {isUserSuspended && (
             <div className="p-5 bg-red-50 border border-red-100 rounded-3xl flex items-start gap-3 text-red-800 animate-in fade-in zoom-in-95">
               <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
               <div className="text-left">
@@ -226,7 +191,7 @@ const Login = () => {
           )}
 
           {/* Store Suspended Alert */}
-          {isStoreSuspended && loginMode === 'staff' && (
+          {isStoreSuspended && (
             <div className="p-5 bg-red-50 border border-red-100 rounded-3xl flex items-start gap-3 text-red-800 animate-in fade-in zoom-in-95">
               <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
               <div className="text-left">
@@ -242,7 +207,7 @@ const Login = () => {
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">
-                  {loginMode === 'superadmin' ? 'Superadmin ID' : t.operatorId}
+                  {t.operatorId}
                 </label>
                 <div className="relative">
                   <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
@@ -250,7 +215,7 @@ const Login = () => {
                     type="text"
                     autoFocus
                     className="w-full bg-[#F5F6FA] border-none rounded-[24px] pl-14 pr-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                    placeholder={loginMode === 'superadmin' ? 'superadmin' : t.enterAdminId}
+                    placeholder={t.enterAdminId}
                     value={id}
                     onChange={(e) => setId(e.target.value)}
                   />
@@ -259,14 +224,14 @@ const Login = () => {
 
               <div>
                 <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">
-                  {loginMode === 'superadmin' ? 'Superadmin Password' : t.accessPin}
+                  {t.accessPin}
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                   <input 
                     type="password"
                     className="w-full bg-[#F5F6FA] border-none rounded-[24px] pl-14 pr-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                    placeholder={loginMode === 'superadmin' ? 'superadmin' : t.enterPassword}
+                    placeholder={t.enterPassword}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
@@ -276,10 +241,7 @@ const Login = () => {
 
             <button 
               type="submit"
-              className={cn(
-                "w-full text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 mt-4",
-                loginMode === 'superadmin' ? "bg-red-600 hover:bg-red-700 shadow-red-600/10" : "bg-[#1A1F3D] hover:bg-[#2A3152] shadow-[#1A1F3D]/10"
-              )}
+              className="w-full text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 mt-4 bg-[#1A1F3D] hover:bg-[#2A3152] shadow-[#1A1F3D]/10"
             >
               {t.signIn} <ArrowRight size={18} />
             </button>

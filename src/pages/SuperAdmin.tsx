@@ -16,12 +16,16 @@ type SuperAdminTab = 'dashboard' | 'stores' | 'users' | 'approvals' | 'explorer'
 
 const SuperAdmin = () => {
   const navigate = useNavigate();
-  const { currentUser, loginWithGoogle, logout } = useStore();
+  const { currentUser, login, loginWithGoogle, logout } = useStore();
 
   // SuperAdmin States
   const [activeTab, setActiveTab] = useState<SuperAdminTab>('dashboard');
   const [loading, setLoading] = useState(true);
   
+  // Local Login States for Super Admin Gate
+  const [localId, setLocalId] = useState('');
+  const [localPassword, setLocalPassword] = useState('');
+
   // Data States
   const [stores, setStores] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -74,17 +78,6 @@ const SuperAdmin = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'superadmin') {
-      if (currentUser.id === 'admin') {
-        logout();
-      } else {
-        toast.info("เข้าสู่ระบบร้านค้าปกติเรียบร้อยแล้ว");
-        navigate('/');
-      }
-    }
-  }, [currentUser, navigate, logout]);
-
-  useEffect(() => {
     if (currentUser?.role === 'superadmin') {
       fetchInitialData();
     }
@@ -98,8 +91,23 @@ const SuperAdmin = () => {
 
   const handleLocalLogout = () => {
     logout();
-    toast.info("ออกจากระบบ Super Admin เรียบร้อยแล้ว");
-    navigate('/login');
+    toast.info("ออกจากระบบเรียบร้อยแล้ว");
+  };
+
+  const handleLocalLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (localId !== 'superadmin') {
+      toast.error("กรุณาใช้บัญชี Superadmin สำหรับโหมดนี้");
+      return;
+    }
+    const success = login(localId, localPassword);
+    if (success) {
+      toast.success("ยินดีต้อนรับกลับผู้ดูแลระบบสูงสุด!");
+      setLocalId('');
+      setLocalPassword('');
+    } else {
+      toast.error("ข้อมูลเข้าสู่ระบบไม่ถูกต้อง");
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -216,26 +224,46 @@ const SuperAdmin = () => {
   // Store Actions
   const handleStoreSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (editingStore) {
-        const { error } = await supabase
-          .from('stores')
-          .update(storeForm)
-          .eq('id', editingStore.id);
-        if (error) throw error;
-        toast.success("อัปเดตร้านค้าเรียบร้อยแล้ว");
-      } else {
-        const { error } = await supabase
-          .from('stores')
-          .insert([storeForm]);
-        if (error) throw error;
-        toast.success("สร้างร้านค้าใหม่เรียบร้อยแล้ว");
-      }
+    if (!storeForm.name) {
+      toast.error("กรุณาระบุชื่อร้านค้า");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('stores')
+      .insert([{
+        name: storeForm.name,
+        logo_url: storeForm.logo_url,
+        address: storeForm.address,
+        phone: storeForm.phone,
+        line_id: storeForm.line_id,
+        receipt_header: storeForm.receipt_header,
+        receipt_footer: storeForm.receipt_footer,
+        receipt_paper_size: storeForm.receipt_paper_size,
+        company_name: storeForm.company_name,
+        company_address: storeForm.company_address,
+        company_tax_id: storeForm.company_tax_id,
+        company_phone: storeForm.company_phone,
+        company_email: storeForm.company_email,
+        vat_enabled: storeForm.vat_enabled,
+        vat_rate: storeForm.vat_rate,
+        points_earn_rate: storeForm.points_earn_rate,
+        points_redeem_rate: storeForm.points_redeem_rate,
+        max_users: storeForm.max_users,
+        max_staff: storeForm.max_staff
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding store:", error);
+      throw error;
+    }
+
+    if (data) {
+      toast.success("สร้างร้านค้าใหม่เรียบร้อยแล้ว");
       setIsStoreModalOpen(false);
-      setEditingStore(null);
       fetchInitialData();
-    } catch (error: any) {
-      toast.error("เกิดข้อผิดพลาด: " + error.message);
     }
   };
 
@@ -251,6 +279,18 @@ const SuperAdmin = () => {
       fetchInitialData();
     } catch (error: any) {
       toast.error("ไม่สามารถลบได้: " + error.message);
+    }
+  };
+
+  const handleEditPartner = (partner: Partner) => {
+    setEditingPartner(partner);
+    setIsVendorModalOpen(true);
+  };
+
+  const handleDeletePartner = (id: string) => {
+    if (window.confirm("ต้องการลบข้อมูลคู่ค้านี้หรือไม่?")) {
+      deletePartner(id);
+      toast.success("ลบข้อมูลคู่ค้าเรียบร้อยแล้ว");
     }
   };
 
@@ -538,10 +578,55 @@ const SuperAdmin = () => {
                 <p className="text-xs text-gray-400 leading-relaxed">
                   กรุณาลงชื่อเข้าใช้งานด้วยบัญชีผู้ดูแลระบบสูงสุด (Super Admin) เพื่อเข้าสู่แผงควบคุมระบบส่วนกลาง
                 </p>
+                
+                {/* Local ID/Password Login Form for Superadmin */}
+                <form onSubmit={handleLocalLogin} className="space-y-4 text-left">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-1">Superadmin ID</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                      <input 
+                        type="text"
+                        className="w-full bg-[#0d0e15] border border-[#3a3f50] rounded-xl pl-11 pr-4 py-3 text-xs font-bold text-white focus:ring-2 focus:ring-red-500/20"
+                        placeholder="superadmin"
+                        value={localId}
+                        onChange={e => setLocalId(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-1">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                      <input 
+                        type="password"
+                        className="w-full bg-[#0d0e15] border border-[#3a3f50] rounded-xl pl-11 pr-4 py-3 text-xs font-bold text-white focus:ring-2 focus:ring-red-500/20"
+                        placeholder="••••••••"
+                        value={localPassword}
+                        onChange={e => setLocalPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <button 
+                    type="submit"
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-600/10 transition-all"
+                  >
+                    เข้าสู่ระบบด้วยรหัสผ่าน
+                  </button>
+                </form>
+
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-gray-800"></div>
+                  <span className="flex-shrink mx-4 text-gray-600 text-[9px] font-black uppercase tracking-widest">Or</span>
+                  <div className="flex-grow border-t border-gray-800"></div>
+                </div>
+
                 <button 
                   onClick={handleGoogleLogin}
                   onMouseMove={handleMouseMove}
-                  className="w-full bg-[#0d0e15] google-border-btn text-white border border-[#3a3f50] font-bold py-5 rounded-full flex items-center justify-center gap-3 shadow-sm active:scale-95"
+                  className="w-full bg-[#0d0e15] google-border-btn text-white border border-[#3a3f50] font-bold py-4 rounded-full flex items-center justify-center gap-3 shadow-sm active:scale-95"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path
