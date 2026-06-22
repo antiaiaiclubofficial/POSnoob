@@ -279,7 +279,7 @@ export default function Staff() {
       <div className="flex-1 overflow-y-auto p-10 scrollbar-hide space-y-8">
         {/* Status Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Dialog open={isSessionsOpen} onOpenChange={setIsSessionsOpen}>
+          <Dialog open={isSessionsOpen} onOpenChange={(open) => { setIsSessionsOpen(open); if (open) refetchSessions(); }}>
             <DialogTrigger asChild>
               <button className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between text-left hover:shadow-md transition-all cursor-pointer w-full">
                 <div className="flex items-center gap-4">
@@ -384,6 +384,7 @@ export default function Staff() {
         {/* Staff Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredStaff.map((member: any) => {
+            const isUserLoggedIn = activeSessions.some((s: any) => s.user_id === member.id);
             return (
               <div 
                 key={member.id} 
@@ -425,7 +426,7 @@ export default function Staff() {
                     />
                     <div className={cn(
                       "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white",
-                      member.status === "Active" ? "bg-green-500" : "bg-red-500"
+                      isUserLoggedIn ? "bg-green-500" : "bg-red-500"
                     )} />
                   </div>
                   <div>
