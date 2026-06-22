@@ -448,13 +448,20 @@ export const useStore = create<AppState>()((set, get) => ({
     }
 
     if (data) {
-      const newAddon: AddonItem = {
+      const newService: Service = {
         id: data.id,
-        name: data.name,
-        price: Number(data.price || 0),
-        icon: data.icon as ServiceIcon
+        title: data.name,
+        category: data.category || 'Grooming',
+        description: data.description || '',
+        icon: (data.icon || 'grooming') as any,
+        targetSpecies: (data.target_species || 'Dog') as any,
+        prices: data.prices && Object.keys(data.prices).length > 0 ? data.prices : {
+          'Standard': { price: Number(data.price || 0), duration: data.duration_minutes || 60 }
+        },
+        isActive: data.is_active !== false,
+        coatType: data.coat_type || undefined
       };
-      set(s => ({ addons: [...s.addons, newAddon] }));
+      set(s => ({ services: [...s.services, newService] }));
     }
   },
 
@@ -473,8 +480,8 @@ export const useStore = create<AppState>()((set, get) => ({
       throw error;
     }
 
-    set(s => ({
-      addons: s.addons.map(add => add.id === id ? { ...add, ...addon } : add)
+    set(state => ({
+      addons: state.addons.map(a => a.id === id ? { ...a, ...addon } : a)
     }));
   },
 
@@ -714,43 +721,56 @@ export const useStore = create<AppState>()((set, get) => ({
       return;
     }
     
-    // Generate unique invite link
-    const inviteId = 'invite-' + Math.random().toString(36).substr(2, 9);
-    const inviteLink = `${window.location.origin}/login?invite=true&storeId=${currentStoreId}&storeName=${encodeURIComponent(get().shopName)}&role=${st.role}&name=${encodeURIComponent(st.name)}&commission=${st.commissionRate}&phone=${st.phone}&inviteId=${inviteId}`;
-
-    const newInvite = {
-      id: inviteId,
-      name: st.name,
-      role: st.role,
-      phone: st.phone,
-      status: 'Inactive' as const,
-      avatar: st.avatar,
-      username: 'Pending Google Link',
-      commissionRate: st.commissionRate,
-      isPendingInvite: true,
-      inviteLink: inviteLink
+    // Generate unique invite link using a valid UUID
+    const generateUUID = () => {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
     };
 
-    // Save to localStorage
-    const pendingInvitesStr = localStorage.getItem('pending_staff_invites');
-    const pendingInvites = pendingInvitesStr ? JSON.parse(pendingInvitesStr) : [];
-    pendingInvites.push(newInvite);
-    localStorage.setItem('pending_staff_invites', JSON.stringify(pendingInvites));
+    const inviteId = generateUUID();
+    const inviteLink = `${window.location.origin}/login?invite=true&inviteId=${inviteId}`;
 
-    // Update state
-    set(s => ({ staff: [...s.staff, newInvite] }));
-    
-    // Show success toast with link and copy action
-    toast.success(`สร้างคำเชิญสำหรับ ${st.name} เรียบร้อยแล้ว!`, {
-      action: {
-        label: 'คัดลอกลิงก์',
-        onClick: () => {
-          navigator.clipboard.writeText(inviteLink);
-          toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
-        }
-      },
-      duration: 10000
-    });
+    try {
+      // Insert pending invite into profiles table
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: inviteId,
+          email: `invite-${inviteId.substring(0, 8)}@temp.com`,
+          role: st.role === 'Admin' ? 'admin' : st.role === 'Assistant' ? 'staff' : st.role,
+          store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+          full_name: st.name,
+          phone: st.phone,
+          commission_rate: Number(st.commissionRate || 0),
+          is_approved: false,
+          is_suspended: false,
+          status: 'Pending',
+          avatar_url: st.avatar
+        }]);
+
+      if (insertError) throw insertError;
+
+      // Show success toast with link and copy action
+      toast.success(`สร้างคำเชิญสำหรับ ${st.name} เรียบร้อยแล้ว!`, {
+        action: {
+          label: 'คัดลอกลิงก์',
+          onClick: () => {
+            navigator.clipboard.writeText(inviteLink);
+            toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
+          }
+        },
+        duration: 10000
+      });
+    } catch (err: any) {
+      console.error("Error creating invite:", err);
+      toast.error("เกิดข้อผิดพลาดในการสร้างคำเชิญ: " + err.message);
+    }
   },
 
   updateStaff: async (id, st) => {
@@ -829,53 +849,39 @@ export const useStore = create<AppState>()((set, get) => ({
 
   addPackageTemplate: (pkg) => set(s => ({ packageTemplates: [...s.packageTemplates, { ...pkg, id: Math.random().toString() }] })),
   updatePackageTemplate: (id, pkg) => set(s => ({ packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p) })),
-  deletePackageTemplate: (id) => set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) })),
-  
-  assignPackageToCustomer: (cid, tid) => {
-    const template = get().packageTemplates.find(t => t.id === tid);
+  deletePackageTemplate: (id) => set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) }));
+  assignPackageToCustomer: (customerId, templateId) => {
+    const template = get().packageTemplates.find(t => t.id === templateId);
     if (!template) return;
-    
+
+    const newPackage = {
+      id: `assigned-${Date.now()}`,
+      templateId: template.id,
+      name: template.name,
+      targetServiceId: template.serviceId,
+      totalSlots: template.paidSlots + template.freeSlots,
+      remainingSlots: template.paidSlots + template.freeSlots,
+      bonusType: template.bonusType,
+      bonusName: template.bonusName,
+      bonusCount: template.bonusCount,
+      purchaseDate: new Date().toISOString().split('T')[0]
+    };
+
     set(s => ({
-      customers: s.customers.map(c => {
-        if (c.id !== cid) return c;
-        const newPackage = {
-          id: `cpkg-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          templateId: tid,
-          name: template.name,
-          targetServiceId: template.serviceId,
-          totalSlots: template.paidSlots + template.freeSlots,
-          remainingSlots: template.paidSlots + template.freeSlots,
-          bonusType: template.bonusType,
-          bonusName: template.bonusName,
-          bonusCount: template.bonusCount,
-          purchaseDate: new Date().toISOString().split('T')[0]
-        };
-        return {
-          ...c,
-          packages: [...(c.packages || []), newPackage]
-        };
-      })
+      customers: s.customers.map(c => c.id === customerId ? { ...c, packages: [...(c.packages || []), newPackage] } : c)
     }));
-    
-    get().addLog({
-      staffName: 'System',
-      action: 'Package Assigned',
-      details: `Assigned package "${template.name}" to customer`,
-      type: 'success'
-    });
   },
 
   addCreditPackage: (pkg) => set(s => ({ creditPackages: [...s.creditPackages, { ...pkg, id: Math.random().toString() }] })),
   updateCreditPackage: (id, pkg) => set(s => ({ creditPackages: s.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p) })),
   deleteCreditPackage: (id) => set(s => ({ creditPackages: s.creditPackages.filter(p => p.id !== id) })),
-  
-  buyCreditPackage: (cid, pid) => {
-    const pkg = get().creditPackages.find(p => p.id === pid);
+  buyCreditPackage: (customerId, packageId) => {
+    const pkg = get().creditPackages.find(p => p.id === packageId);
     if (!pkg) return;
-    
+
     set(s => ({
       customers: s.customers.map(c => {
-        if (c.id !== cid) return c;
+        if (c.id !== customerId) return c;
         const prevBalance = c.creditBalance || 0;
         const newBalance = prevBalance + pkg.creditValue;
         return {
@@ -894,12 +900,5 @@ export const useStore = create<AppState>()((set, get) => ({
         };
       })
     }));
-    
-    get().addLog({
-      staffName: 'System',
-      action: 'Credit Top-up',
-      details: `Topped up ${pkg.creditValue} credits for customer via package "${pkg.name}"`,
-      type: 'success'
-    });
-  },
+  }
 }));

@@ -86,6 +86,31 @@ export const createAuthSlice: StateCreator<
         localStorage.removeItem('pending_invite_data');
         try {
           const inviteData = JSON.parse(inviteDataStr);
+          
+          // Double check if the pending invite still exists in Supabase
+          const { data: pendingProfile, error: checkError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', inviteData.inviteId)
+            .eq('status', 'Pending')
+            .maybeSingle();
+
+          if (checkError) throw checkError;
+
+          if (!pendingProfile) {
+            toast.error("ลิงก์คำเชิญนี้ถูกใช้งานไปแล้วหรือหมดอายุแล้ว", { id: 'invite-already-used' });
+            await supabase.auth.signOut();
+            return;
+          }
+
+          // Delete the temporary invite profile first to make it single-use
+          const { error: deleteError } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', inviteData.inviteId);
+
+          if (deleteError) throw deleteError;
+
           const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
           
           // Create or update profile with invite data
@@ -241,6 +266,32 @@ export const createAuthSlice: StateCreator<
         return;
       }
 
+      // 7. Check if store is suspended
+      if (profile.store_id) {
+        try {
+          const { data: storeData } = await supabase
+            .from('stores')
+            .select('is_suspended')
+            .eq('id', profile.store_id)
+            .single();
+          if (storeData?.is_suspended) {
+            await supabase.auth.signOut();
+            set({ 
+              isAuthenticated: false, 
+              isAuthLoading: false, 
+              currentUser: null, 
+              storeId: null,
+              isStoreSuspended: true,
+              isPendingApproval: false,
+              isUserSuspended: false
+            });
+            return;
+          }
+        } catch (err) {
+          console.error("Error checking store suspension:", err);
+        }
+      }
+
       // ปรับแต่งบทบาทและร้านค้าให้ถูกต้อง
       let userRole = profile.role || 'Assistant';
       let storeIdFromMetadata = profile.store_id || 'default-store';
@@ -261,29 +312,6 @@ export const createAuthSlice: StateCreator<
             const { data: storesData } = await supabase.from('stores').select('id').limit(1);
             storeIdFromMetadata = storesData && storesData.length > 0 ? storesData[0].id : 'default-store';
           }
-        }
-      }
-
-      // 7. ตรวจสอบการพักสิทธิ์ร้านค้า
-      if (storeIdFromMetadata && storeIdFromMetadata !== 'default-store' && userRole !== 'superadmin') {
-        const { data: storeData } = await supabase
-          .from('stores')
-          .select('is_suspended')
-          .eq('id', storeIdFromMetadata)
-          .single();
-
-        if (storeData && storeData.is_suspended) {
-          await supabase.auth.signOut();
-          set({ 
-            isAuthenticated: false, 
-            isAuthLoading: false, 
-            currentUser: null, 
-            storeId: null,
-            isStoreSuspended: true,
-            isPendingApproval: false,
-            isUserSuspended: false
-          });
-          return;
         }
       }
 

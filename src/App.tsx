@@ -127,12 +127,14 @@ const App = () => {
             name: s.full_name || s.email.split('@')[0],
             role: (s.role === 'admin' ? 'Admin' : s.role === 'staff' ? 'Assistant' : s.role) as StaffRole,
             phone: s.phone || '',
-            status: (s.status || 'Active') as 'Active' | 'Inactive',
+            status: (s.status === 'Pending' ? 'Inactive' : (s.status || 'Active')) as 'Active' | 'Inactive',
             avatar: s.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
             username: s.email,
             commissionRate: Number(s.commission_rate || 0),
             googleConnected: !!s.google_connected || !!s.google_email, // Map Google connection status
-            googleEmail: s.google_email || ''
+            googleEmail: s.google_email || '',
+            isPendingInvite: s.status === 'Pending',
+            inviteLink: s.status === 'Pending' ? `${window.location.origin}/login?invite=true&inviteId=${s.id}` : undefined
           }));
 
           // Filter out pending invites that have been accepted (matched by phone or name)
@@ -199,19 +201,16 @@ const App = () => {
               shopLineId: storeData.line_id || '',
               receiptHeader: storeData.receipt_header || 'Tax Invoice / Receipt',
               receiptFooter: storeData.receipt_footer || 'Thank you for your visit!',
-              receiptPaperSize: (storeData.receipt_paper_size || '80mm') as '58mm' | '80mm',
-              slotDuration: storeData.slot_duration || 60,
-              maxCapacity: storeData.max_capacity || 3,
-              openTime: storeData.open_time || '09:00',
-              closeTime: storeData.close_time || '19:00',
-              shopIsOpen: !storeData.is_suspended,
-              companyName: storeData.company_name || 'Mellow Fellow Co., Ltd.',
+              receiptPaperSize: storeData.receipt_paper_size || '80mm',
+              vatEnabled: storeData.vat_enabled || false,
+              companyName: storeData.company_name || '',
               companyAddress: storeData.company_address || '',
               companyTaxId: storeData.company_tax_id || '',
               companyPhone: storeData.company_phone || '',
               companyEmail: storeData.company_email || '',
-              vatEnabled: storeData.vat_enabled || false,
               vatRate: storeData.vat_rate || 7,
+              pointsEarnRate: storeData.points_earn_rate || 10,
+              pointsRedeemRate: storeData.points_redeem_rate || 1,
               maxUsers: storeData.max_users || 5,
               maxStaff: storeData.max_staff || 10
             });
@@ -269,82 +268,6 @@ const App = () => {
 
         if (customersError) throw customersError;
 
-        // Fetch service history
-        let serviceHistoryQuery = supabase.from('service_history').select('*');
-        if (storeId && storeId !== 'default-store') {
-          serviceHistoryQuery = serviceHistoryQuery.eq('store_id', storeId);
-        }
-        const { data: serviceHistoryData } = await serviceHistoryQuery;
-        
-        const serviceHistoryMap: Record<string, any[]> = {};
-        if (serviceHistoryData) {
-          serviceHistoryData.forEach(sh => {
-            if (sh.pet_id) {
-              if (!serviceHistoryMap[sh.pet_id]) {
-                serviceHistoryMap[sh.pet_id] = [];
-              }
-              serviceHistoryMap[sh.pet_id].push({
-                id: sh.id,
-                serviceName: sh.note || 'บริการ',
-                date: sh.created_at.split('T')[0],
-                price: Number(sh.price || 0)
-              });
-            }
-          });
-        }
-
-        // Fetch weight history
-        const { data: weightHistoryData } = await supabase
-          .from('pet_weight_history')
-          .select('*')
-          .order('date', { ascending: true });
-
-        const weightHistoryMap: Record<string, any[]> = {};
-        if (weightHistoryData) {
-          weightHistoryData.forEach(wh => {
-            if (wh.pet_id) {
-              if (!weightHistoryMap[wh.pet_id]) {
-                weightHistoryMap[wh.pet_id] = [];
-              }
-              weightHistoryMap[wh.pet_id].push({
-                date: wh.date,
-                value: Number(wh.weight)
-              });
-            }
-          });
-        }
-
-        // Fetch intake history (pet_health_logs)
-        const { data: healthLogsData } = await supabase
-          .from('pet_health_logs')
-          .select('*')
-          .eq('type', 'intake');
-
-        const intakeHistoryMap: Record<string, any[]> = {};
-        if (healthLogsData) {
-          healthLogsData.forEach(log => {
-            if (log.pet_id) {
-              if (!intakeHistoryMap[log.pet_id]) {
-                intakeHistoryMap[log.pet_id] = [];
-              }
-              try {
-                const parsed = JSON.parse(log.description || '{}');
-                intakeHistoryMap[log.pet_id].push({
-                  id: log.id,
-                  queueItemId: parsed.queueItemId,
-                  date: log.date,
-                  weight: parsed.weight,
-                  details: parsed.details,
-                  signature: parsed.signature,
-                  staffName: parsed.staffName
-                });
-              } catch (e) {
-                console.error("Failed to parse intake log description:", e);
-              }
-            }
-          });
-        }
-        
         if (customersData && customersData.length > 0) {
           const formattedCustomers = customersData.map(c => {
             const storeCustomer = (c.store_customers?.[0] || {}) as any;
@@ -476,18 +399,16 @@ const App = () => {
               title: s.name,
               category: s.category || 'Grooming',
               description: s.description || '',
-              icon: (s.icon || 'grooming') as any,
-              targetSpecies: (s.target_species || 'Dog') as any,
-              prices: s.prices && Object.keys(s.prices).length > 0 ? s.prices : {
-                'Standard': { price: Number(s.price || 0), duration: s.duration_minutes || 60 }
-              },
+              icon: s.icon as ServiceIcon,
+              targetSpecies: s.target_species as 'Dog' | 'Cat',
+              prices: s.prices,
               isActive: s.is_active !== false,
-              coatType: s.coat_type || undefined
+              coatType: s.coat_type
             }));
           setServices(mainServices);
 
-          // แยกบริการเสริม (Add-ons)
-          const addonsList = servicesData
+          // แยกบริการเสริม
+          const mainAddons = servicesData
             .filter(s => s.is_addon)
             .map(s => ({
               id: s.id,
@@ -495,7 +416,7 @@ const App = () => {
               price: Number(s.price || 0),
               icon: (s.icon || 'nail') as any
             }));
-          useStore.setState({ addons: addonsList });
+          useStore.setState({ addons: mainAddons });
         } else {
           setServices([]);
           useStore.setState({ addons: [] });
@@ -631,14 +552,13 @@ const App = () => {
 
       // 7. Fetch Package Templates
       try {
-        let packagesQuery = supabase.from('package_templates').select('*');
+        let packageQuery = supabase.from('package_templates').select('*');
         if (storeId && storeId !== 'default-store') {
-          packagesQuery = packagesQuery.eq('store_id', storeId);
+          packageQuery = packageQuery.eq('store_id', storeId);
         }
-        const { data: packagesData } = await packagesQuery;
-
-        if (packagesData) {
-          const formattedPackages = packagesData.map(p => ({
+        const { data: packageData } = await packageQuery;
+        if (packageData) {
+          const formattedPackages = packageData.map(p => ({
             id: p.id,
             name: p.name,
             serviceId: p.service_id,

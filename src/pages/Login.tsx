@@ -7,6 +7,7 @@ import { Lock, User, Scissors, Sparkles, ArrowRight, AlertCircle, Check, Users }
 import { toast } from 'sonner';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const [id, setId] = useState('');
@@ -22,24 +23,68 @@ const Login = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('invite') === 'true') {
-      const data = {
-        storeId: params.get('storeId'),
-        storeName: params.get('storeName'),
-        role: params.get('role'),
-        name: params.get('name'),
-        commission: params.get('commission'),
-        phone: params.get('phone'),
-        inviteId: params.get('inviteId')
+    const isInvite = params.get('invite') === 'true';
+    const inviteId = params.get('inviteId');
+
+    if (isInvite && inviteId) {
+      const validateAndFetchInvite = async () => {
+        try {
+          // 1. Fetch profile with status = 'Pending'
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', inviteId)
+            .eq('status', 'Pending')
+            .maybeSingle();
+
+          if (profileError) throw profileError;
+
+          if (!profile) {
+            toast.error("ลิงก์คำเชิญนี้ไม่ถูกต้องหรือถูกใช้งานไปแล้ว");
+            // Clear query params from URL
+            navigate('/login', { replace: true });
+            return;
+          }
+
+          // 2. Fetch store name
+          let storeName = 'Tactile Sanctuary';
+          if (profile.store_id) {
+            const { data: store, error: storeError } = await supabase
+              .from('stores')
+              .select('name')
+              .eq('id', profile.store_id)
+              .maybeSingle();
+            if (!storeError && store) {
+              storeName = store.name;
+            }
+          }
+
+          const data = {
+            inviteId: inviteId,
+            storeId: profile.store_id,
+            storeName: storeName,
+            role: profile.role === 'admin' ? 'Admin' : profile.role === 'staff' ? 'Assistant' : profile.role,
+            name: profile.full_name,
+            commissionRate: profile.commission_rate,
+            phone: profile.phone
+          };
+
+          setInviteData(data);
+          localStorage.setItem('pending_invite_data', JSON.stringify(data));
+        } catch (err: any) {
+          console.error("Error validating invite:", err);
+          toast.error("เกิดข้อผิดพลาดในการตรวจสอบคำเชิญ");
+        }
       };
-      setInviteData(data);
-      localStorage.setItem('pending_invite_data', JSON.stringify(data));
+
+      validateAndFetchInvite();
     }
+
     if (params.get('inviteSuccess') === 'true') {
       setIsInviteSuccess(true);
       setSuccessStoreName(params.get('storeName') || '');
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -139,13 +184,16 @@ const Login = () => {
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-[#1A1F3D] rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-[#1A1F3D]/20">
-            <Scissors className="text-[#D9ED5F] w-10 h-10" />
+          <div className="w-20 h-20 bg-[#1A1F3D] rounded-[24px] flex items-center justify-center mx-auto mb-4 shadow-xl">
+            {shopName ? (
+              <div className="w-full h-full flex items-center justify-center text-white font-black text-2xl">
+                {shopName.charAt(0)}
+              </div>
+            ) : (
+              <Scissors className="text-[#D9ED5F] w-8 h-8" />
+            )}
           </div>
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles size={16} className="text-amber-400" />
-            <h1 className="text-3xl font-black text-[#1A1F3D]">Tactile Sanctuary</h1>
-          </div>
+          <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">{shopName}</h1>
           <p className="text-xs text-gray-400 font-bold uppercase tracking-[0.2em]">{t.loginSystem}</p>
         </div>
 
