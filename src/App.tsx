@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useStore, BookingType, MembershipLevel, QueueStatus, StaffRole } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
@@ -39,7 +40,7 @@ const HomeRedirect = () => {
 };
 
 const App = () => {
-  const { language, isAuthenticated, setSession, setCustomers, setServices, storeId } = useStore();
+  const { language, isAuthenticated, setSession, setCustomers, setServices, storeId, currentUser, logout } = useStore();
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -57,6 +58,40 @@ const App = () => {
 
     return () => subscription.unsubscribe();
   }, [setSession]);
+
+  // Real-time Active Sessions Listener to force logout if session is deleted
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser?.id) return;
+
+    const channel = supabase
+      .channel('realtime-active-sessions')
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'active_sessions'
+        },
+        async () => {
+          // Verify if our session still exists in active_sessions
+          const { data, error } = await supabase
+            .from('active_sessions')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .maybeSingle();
+          
+          if (!data && !error) {
+            toast.error(language === 'th' ? "เซสชันของคุณถูกปิดโดยผู้ดูแลระบบ" : "Your session was terminated by an administrator.");
+            logout();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, currentUser?.id, logout, language]);
 
   // Real-time Staff (Profiles) Sync Logic
   useEffect(() => {
