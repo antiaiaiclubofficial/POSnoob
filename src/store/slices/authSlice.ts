@@ -97,11 +97,8 @@ export const createAuthSlice: StateCreator<
 
           if (checkError) throw checkError;
 
-          // Token-based invites bypass foreign key constraints and don't have a database row beforehand.
-          // We allow the invite to proceed if either a pending profile exists OR if it's a valid token-based invite.
-          const isValidTokenInvite = inviteData.storeId && inviteData.role && inviteData.name;
-
-          if (!pendingProfile && !isValidTokenInvite) {
+          // บังคับให้คำเชิญต้องมีแถวที่มีสถานะ Pending อยู่ในฐานข้อมูลเท่านั้น เพื่อป้องกันการใช้ลิงก์ซ้ำ
+          if (!pendingProfile) {
             toast.error("ลิงก์คำเชิญนี้ถูกใช้งานไปแล้วหรือหมดอายุแล้ว", { id: 'invite-already-used' });
             await supabase.auth.signOut();
             return;

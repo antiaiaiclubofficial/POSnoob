@@ -505,7 +505,7 @@ export const useStore = create<AppState>()((set, get) => ({
         stock: item.stock || 0,
         min_stock: item.min_stock || 5,
         price: item.price || 0,
-        cost_price: item.costPrice || 0,
+        cost_price: item.cost_price || 0,
         unit: item.unit || 'ชิ้น',
         category: item.category || 'ทั่วไป',
         image_url: item.image || '',
@@ -748,6 +748,31 @@ export const useStore = create<AppState>()((set, get) => ({
     };
     const token = btoa(encodeURIComponent(JSON.stringify(inviteData)));
     const inviteLink = `${window.location.origin}/login?invite=true&token=${token}`;
+
+    // บันทึกข้อมูลคำเชิญลงในตาราง profiles ของ Supabase ด้วยสถานะ Pending เพื่อให้สามารถตรวจสอบและจำกัดการใช้งานได้เพียงครั้งเดียว
+    try {
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: inviteId,
+          email: `pending-${inviteId.substring(0, 8)}@invite.com`,
+          full_name: st.name,
+          role: st.role === 'Admin' ? 'admin' : st.role === 'Assistant' ? 'staff' : st.role,
+          store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+          phone: st.phone,
+          commission_rate: st.commissionRate,
+          status: 'Pending',
+          is_approved: false,
+          is_suspended: false,
+          avatar_url: st.avatar
+        }]);
+
+      if (insertError) throw insertError;
+    } catch (err: any) {
+      console.error("Error creating pending profile in Supabase:", err);
+      toast.error("ไม่สามารถสร้างคำเชิญในระบบได้: " + err.message);
+      return;
+    }
 
     // Save pending invite locally to localStorage so it displays in the staff list
     const pendingInvitesStr = localStorage.getItem('pending_staff_invites');
