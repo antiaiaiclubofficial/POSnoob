@@ -6,7 +6,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useStore, BookingType, MembershipLevel, QueueStatus, StaffRole } from "@/store/useStore";
+import { useStore, BookingType, MembershipLevel, QueueStatus, StaffRole, ServiceIcon } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Layout from "./components/Layout";
@@ -303,8 +303,8 @@ const App = () => {
                 breed: p.breed || '-',
                 birthday: p.birth_date || '',
                 weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
-                serviceHistory: serviceHistoryMap[p.id] || [],
-                intakeHistory: intakeHistoryMap[p.id] || [],
+                serviceHistory: [],
+                intakeHistory: [],
                 notes: p.medical_condition || '',
                 image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
               }))

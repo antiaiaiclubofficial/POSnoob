@@ -849,7 +849,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   addPackageTemplate: (pkg) => set(s => ({ packageTemplates: [...s.packageTemplates, { ...pkg, id: Math.random().toString() }] })),
   updatePackageTemplate: (id, pkg) => set(s => ({ packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p) })),
-  deletePackageTemplate: (id) => set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) }));
+  deletePackageTemplate: (id) => set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) })),
   assignPackageToCustomer: (customerId, templateId) => {
     const template = get().packageTemplates.find(t => t.id === templateId);
     if (!template) return;
