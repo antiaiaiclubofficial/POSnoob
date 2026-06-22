@@ -1,3 +1,5 @@
+"use client";
+
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -8,6 +10,7 @@ import {
   PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory 
 } from './types';
 import { createAuthSlice } from './slices/authSlice';
+import { createCRMSlice } from './slices/crmSlice';
 
 // Re-export all types so that other files can import them from '@/store/useStore'
 export * from './types';
@@ -36,13 +39,10 @@ export const useStore = create<AppState>()((set, get) => ({
   liffEnabled: false,
   maxUsers: 5,
   maxStaff: 10,
+  pointsEarnRate: 10,
+  pointsRedeemRate: 1,
   
   // Lists
-  customers: [],
-  selectedOwner: null,
-  activePet: null,
-  activeQueueItemId: null,
-  queue: [],
   services: [],
   addons: [],
   inventory: [],
@@ -73,11 +73,9 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   ...createAuthSlice(set, get, {} as any),
+  ...createCRMSlice(set, get, {} as any),
 
   setLanguage: (lang) => set({ language: lang }),
-  selectOwner: (owner) => set({ selectedOwner: owner, activePet: owner ? owner.pets[0] : null, activeQueueItemId: null }),
-  setActivePet: (pet) => set({ activePet: pet }),
-  setActiveQueueItem: (id) => set({ activeQueueItemId: id }),
 
   addLog: (log) => set(s => ({ 
     logs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() } as ActivityLog, ...s.logs] 
@@ -789,5 +787,187 @@ export const useStore = create<AppState>()((set, get) => ({
         };
       })
     }));
-  }
+  },
+
+  toggleSlotStatus: (time) => set(state => ({
+    disabledSlots: state.disabledSlots.includes(time)
+      ? state.disabledSlots.filter(t => t !== time)
+      : [...state.disabledSlots, time]
+  })),
+
+  addToCart: (item) => set(state => {
+    const existingIndex = state.cart.findIndex(i => i.id === item.id && i.petId === item.petId);
+    if (existingIndex > -1) {
+      const newCart = [...state.cart];
+      newCart[existingIndex].quantity += item.quantity;
+      return { cart: newCart };
+    }
+    return { cart: [...state.cart, item] };
+  }),
+
+  removeFromCart: (index) => set(state => ({
+    cart: state.cart.filter((_, i) => i !== index)
+  })),
+
+  updateCartQuantity: (index, delta) => set(state => {
+    const newCart = [...state.cart];
+    newCart[index].quantity = Math.max(1, newCart[index].quantity + delta);
+    return { cart: newCart };
+  }),
+
+  updateCartItemDiscount: (index, discountType, discountValue) => set(state => {
+    const newCart = [...state.cart];
+    newCart[index].discountType = discountType;
+    newCart[index].discountValue = discountValue;
+    return { cart: newCart };
+  }),
+
+  clearCart: () => set({ cart: [] }),
+
+  processPayment: async (customerId, total, discount, items, method, details, isTaxInvoice, redeemedPoints) => {
+    const currentStoreId = get().storeId;
+    const staffName = get().currentUser?.name || 'Admin';
+    const staffId = get().currentUser?.id;
+
+    // 1. Insert transaction into Supabase
+    const { data, error } = await supabase
+      .from('sales_transactions')
+      .insert([{
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+        customer_id: customerId === 'walk-id' || customerId === 'walk-in' ? null : customerId,
+        customer_name: get().selectedOwner?.name || 'Walk-in Customer',
+        amount: total,
+        discount_amount: discount,
+        items: items,
+        payment_method: method,
+        staff_name: staffName,
+        staff_id: staffId,
+        details: details,
+        is_tax_invoice: isTaxInvoice
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error processing payment:", error);
+      toast.error("Payment failed: " + error.message);
+      throw error;
+    }
+
+    // 2. Update customer points and credit balance if applicable
+    if (customerId && customerId !== 'walk-in' && customerId !== 'walk-id') {
+      const customer = get().customers.find(c => c.id === customerId);
+      if (customer) {
+        let newPoints = customer.points || 0;
+        let newCreditBalance = customer.creditBalance || 0;
+
+        // Deduct store credit if payment method is Store Credit
+        if (method === 'Store Credit') {
+          newCreditBalance = Math.max(0, newCreditBalance - total);
+        }
+
+        // Deduct package slots if payment method is Package
+        let updatedPackages = [...(customer.packages || [])];
+        if (method === 'Package' && details.packageId) {
+          updatedPackages = updatedPackages.map(pkg => {
+            if (pkg.id === details.packageId) {
+              return { ...pkg, remainingSlots: Math.max(0, pkg.remainingSlots - 1) };
+            }
+            return pkg;
+          });
+        }
+
+        // Add points based on pointsEarnRate
+        const earnRate = get().pointsEarnRate || 10;
+        const earnedPoints = Math.floor(total / earnRate);
+        newPoints += earnedPoints;
+
+        // Deduct redeemed points if applicable
+        if (redeemedPoints) {
+          newPoints = Math.max(0, newPoints - redeemedPoints);
+        }
+
+        // Update in Supabase
+        const { error: updateError } = await supabase
+          .from('store_customers')
+          .update({
+            points: newPoints,
+          })
+          .eq('customer_id', customerId)
+          .eq('store_id', currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null);
+
+        if (updateError) {
+          console.error("Error updating customer points:", updateError);
+        }
+
+        // Update local state
+        set(state => ({
+          customers: state.customers.map(c => {
+            if (c.id === customerId) {
+              return {
+                ...c,
+                points: newPoints,
+                creditBalance: newCreditBalance,
+                packages: updatedPackages
+              };
+            }
+            return c;
+          }),
+          selectedOwner: state.selectedOwner?.id === customerId ? {
+            ...state.selectedOwner,
+            points: newPoints,
+            creditBalance: newCreditBalance,
+            packages: updatedPackages
+          } : state.selectedOwner
+        }));
+      }
+    }
+
+    // 3. Deduct inventory stock for products in the cart
+    for (const item of items) {
+      if (item.type === 'Product') {
+        const invItem = get().inventory.find(i => i.id === item.id);
+        if (invItem) {
+          await get().adjustStock(item.id, item.quantity, 'Out', `Sale (Tx: ${data?.id || 'N/A'})`);
+        }
+      }
+    }
+
+    // 4. Add transaction to local state
+    if (data) {
+      const newTx: Transaction = {
+        id: data.id,
+        date: data.created_at.split('T')[0],
+        amount: Number(data.amount || 0),
+        discountAmount: Number(data.discount_amount || 0),
+        customerId: data.customer_id || 'walk-in',
+        customerName: data.customer_name,
+        items: data.items,
+        paymentMethod: data.payment_method,
+        staffName: data.staff_name || 'Admin',
+        species: [],
+        bookingType: 'Walk-in'
+      };
+
+      set(state => ({
+        transactions: [newTx, ...state.transactions]
+      }));
+    }
+  },
+
+  deleteTransaction: async (id) => {
+    const { error } = await supabase
+      .from('sales_transactions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error deleting transaction:", error);
+      throw error;
+    }
+
+    set(state => ({
+      transactions: state.transactions.filter(t => t.id !== id)
+    }));
+  },
 }));
