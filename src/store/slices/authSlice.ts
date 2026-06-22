@@ -89,6 +89,14 @@ export const createAuthSlice: StateCreator<
         try {
           const inviteData = JSON.parse(inviteDataStr);
           
+          // Verify that the Google Account email matches the invited email exactly
+          if (inviteData.email && user.email && inviteData.email.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
+            toast.error(`อีเมล Google (${user.email}) ไม่ตรงกับอีเมลที่ได้รับเชิญ (${inviteData.email})`);
+            await supabase.auth.signOut();
+            window.location.href = `${window.location.origin}/login?error=email_mismatch`;
+            return;
+          }
+          
           const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
           
           // Create or update profile with invite data
