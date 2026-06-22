@@ -37,6 +37,7 @@ export const useStore = create<AppState>()((set, get) => ({
   maxUsers: 5,
   maxStaff: 10,
   
+  // Lists
   customers: [],
   selectedOwner: null,
   activePet: null,
@@ -190,145 +191,21 @@ export const useStore = create<AppState>()((set, get) => ({
             label: rule.label,
             min_spent: rule.minSpent,
             discount: rule.discount
-          }, { onConflict: 'level' });
+          })
+          .eq('id', rule.level);
       }
     } catch (e) {
-      console.warn("Failed to save tier rules to Supabase, falling back to local:", e);
+      console.error("Error updating tier rules:", e);
     }
-    set({ tierRules: rules });
   },
 
-  updateRolePermissions: (role, permissions) => set(s => ({
-    rolePermissions: {
-      ...s.rolePermissions,
-      [role]: permissions
-    }
-  })),
-
-  setCustomers: (customers) => set({ customers }),
-  addCustomer: (data) => set(s => ({ customers: [...s.customers, { ...data, id: Math.random().toString() }] })),
-  updateCustomer: (id, data) => set(s => ({ customers: s.customers.map(c => c.id === id ? { ...c, ...data } : c) })),
-  deleteCustomer: (id) => set(s => ({ customers: s.customers.filter(c => c.id !== id) })),
-  bindLineToCustomer: (customerId, lineId) => set(s => ({ customers: s.customers.map(c => c.id === customerId ? { ...c, lineId } : c) })),
-
-  addPet: (customerId, pet) => set(s => ({ customers: s.customers.map(c => c.id === customerId ? { ...c, pets: [...c.pets, { ...pet, id: Math.random().toString() }] } : c) })),
-  updatePet: (customerId, petId, data) => set(s => ({ customers: s.customers.map(c => c.id === customerId ? { ...c, pets: c.pets.map(p => p.id === petId ? { ...p, ...data } : p) } : c) })),
-  updatePetWeight: (customerId, petId, weight) => set(s => ({ customers: s.customers.map(c => c.id === customerId ? { ...c, pets: c.pets.map(p => p.id === petId ? { ...p, weightHistory: [...p.weightHistory, { date: new Date().toISOString().split('T')[0], value: weight }] } : p) } : c) })),
-  saveIntakeRecord: (customerId, petId, record) => set(s => ({ customers: s.customers.map(c => c.id === customerId ? { ...c, pets: c.pets.map(p => p.id === petId ? { ...p, intakeHistory: [...(p.intakeHistory || []), record] } : p) } : c) })),
-
-  addBooking: (booking) => set(s => ({ queue: [...s.queue, { ...booking, id: Math.random().toString() }] })),
-  updateQueueStatus: (id, status) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, status } : q) })),
-  removeQueueItem: (id) => set(s => ({ queue: s.queue.filter(q => q.id !== id) })),
-  toggleSlotStatus: (time) => set(s => {
-    const isDisabled = s.disabledSlots.includes(time);
-    return {
-      disabledSlots: isDisabled 
-        ? s.disabledSlots.filter(t => t !== time)
-        : [...s.disabledSlots, time]
-    };
-  }),
-
-  markAsPaid: async (id: string) => {
-    set(s => ({
-      queue: s.queue.map(q => q.id === id ? { ...q, status: 'Completed' as any } : q)
-    }));
-    toast.success("Marked as paid successfully!");
-  },
-
-  addToCart: (item) => set(s => ({ cart: [...s.cart, item] })),
-  removeFromCart: (index) => set(s => ({ cart: s.cart.filter((_, i) => i !== index) })),
-  updateCartQuantity: (index, delta) => set(s => ({
-    cart: s.cart.map((item, i) => i === index ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item)
-  })),
-  updateCartItemDiscount: (index, discountType, discountValue) => set(s => ({
-    cart: s.cart.map((item, i) => i === index ? { ...item, discountType, discountValue } : item)
-  })),
-  clearCart: () => set({ cart: [] }),
-
-  processPayment: async (customerId, total, discount, items, method, details, isTaxInvoice, redeemedPoints) => {
-    const currentStoreId = get().storeId;
-    const staffName = get().currentUser?.name || 'Admin';
-    
-    const { data, error } = await supabase
-      .from('sales_transactions')
-      .insert([{
-        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
-        customer_id: customerId === 'walk-in' ? null : customerId,
-        customer_name: customerId === 'walk-in' ? 'Walk-in' : get().customers.find(c => c.id === customerId)?.name || 'Customer',
-        amount: total,
-        discount_amount: discount,
-        items: items,
-        payment_method: method,
-        staff_name: staffName,
-        is_tax_invoice: isTaxInvoice
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error saving transaction:", error);
-      throw error;
-    }
-
-    if (data) {
-      const newTx: Transaction = {
-        id: data.id,
-        date: data.created_at.split('T')[0],
-        amount: Number(data.amount),
-        discountAmount: Number(data.discount_amount),
-        customerId: data.customer_id || 'walk-id',
-        customerName: data.customer_name,
-        items: data.items,
-        paymentMethod: data.payment_method as PaymentMethod,
-        staffName: data.staff_name || 'Admin',
-        species: [],
-        bookingType: 'Walk-in' as BookingType
-      };
-
-      set(s => {
-        const updatedCustomers = s.customers.map(c => {
-          if (c.id !== customerId) return c;
-          
-          let newCreditBalance = c.creditBalance;
-          if (method === 'Store Credit') {
-            newCreditBalance = Math.max(0, c.creditBalance - total);
-          }
-
-          const pointsEarned = Math.floor(total / (s.pointsEarnRate || 10));
-          const newPoints = (c.points || 0) + pointsEarned - (redeemedPoints || 0);
-
-          return {
-            ...c,
-            creditBalance: newCreditBalance,
-            points: newPoints,
-            totalSpent: c.totalSpent + total
-          };
-        });
-
-        return {
-          transactions: [newTx, ...s.transactions],
-          customers: updatedCustomers
-        };
-      });
-
-      for (const item of items) {
-        if (item.type === 'Product') {
-          const prod = get().inventory.find(i => i.id === item.id);
-          if (prod) {
-            get().adjustStock(prod.id, item.quantity, 'Out', `Sale #${data.id}`);
-          }
-        }
+  updateRolePermissions: (role, permissions) => {
+    set(state => ({
+      rolePermissions: {
+        ...state.rolePermissions,
+        [role]: permissions
       }
-    }
-  },
-
-  deleteTransaction: async (id) => {
-    const { error } = await supabase.from('sales_transactions').delete().eq('id', id);
-    if (error) {
-      console.error("Error deleting transaction:", error);
-      throw error;
-    }
-    set(s => ({ transactions: s.transactions.filter(t => t.id !== id) }));
+    }));
   },
 
   setServices: (services) => set({ services }),
@@ -418,7 +295,7 @@ export const useStore = create<AppState>()((set, get) => ({
       .eq('id', id);
 
     if (error) {
-      console.error("Error toggling service active:", error);
+      console.error("Error updating service active status:", error);
       throw error;
     }
 
@@ -448,20 +325,13 @@ export const useStore = create<AppState>()((set, get) => ({
     }
 
     if (data) {
-      const newService: Service = {
+      const newAddon: AddonItem = {
         id: data.id,
-        title: data.name,
-        category: data.category || 'Grooming',
-        description: data.description || '',
-        icon: (data.icon || 'grooming') as any,
-        targetSpecies: (data.target_species || 'Dog') as any,
-        prices: data.prices && Object.keys(data.prices).length > 0 ? data.prices : {
-          'Standard': { price: Number(data.price || 0), duration: data.duration_minutes || 60 }
-        },
-        isActive: data.is_active !== false,
-        coatType: data.coat_type || undefined
+        name: data.name,
+        price: Number(data.price || 0),
+        icon: (data.icon || 'grooming') as any
       };
-      set(s => ({ services: [...s.services, newService] }));
+      set(s => ({ addons: [...s.addons, newAddon] }));
     }
   },
 
@@ -480,8 +350,8 @@ export const useStore = create<AppState>()((set, get) => ({
       throw error;
     }
 
-    set(state => ({
-      addons: state.addons.map(a => a.id === id ? { ...a, ...addon } : a)
+    set(s => ({
+      addons: s.addons.map(a => a.id === id ? { ...a, ...addon } : a)
     }));
   },
 
@@ -491,7 +361,7 @@ export const useStore = create<AppState>()((set, get) => ({
       console.error("Error deleting addon:", error);
       throw error;
     }
-    set(s => ({ addons: s.addons.filter(add => add.id !== id) }));
+    set(s => ({ addons: s.addons.filter(a => a.id !== id) }));
   },
 
   addInventoryItem: async (item) => {
@@ -749,31 +619,6 @@ export const useStore = create<AppState>()((set, get) => ({
     const token = btoa(encodeURIComponent(JSON.stringify(inviteData)));
     const inviteLink = `${window.location.origin}/login?invite=true&token=${token}`;
 
-    // บันทึกข้อมูลคำเชิญลงในตาราง profiles ของ Supabase ด้วยสถานะ Pending เพื่อให้สามารถตรวจสอบและจำกัดการใช้งานได้เพียงครั้งเดียว
-    try {
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert([{
-          id: inviteId,
-          email: `pending-${inviteId.substring(0, 8)}@invite.com`,
-          full_name: st.name,
-          role: st.role === 'Admin' ? 'admin' : st.role === 'Assistant' ? 'staff' : st.role,
-          store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
-          phone: st.phone,
-          commission_rate: st.commissionRate,
-          status: 'Pending',
-          is_approved: false,
-          is_suspended: false,
-          avatar_url: st.avatar
-        }]);
-
-      if (insertError) throw insertError;
-    } catch (err: any) {
-      console.error("Error creating pending profile in Supabase:", err);
-      toast.error("ไม่สามารถสร้างคำเชิญในระบบได้: " + err.message);
-      return;
-    }
-
     // Save pending invite locally to localStorage so it displays in the staff list
     const pendingInvitesStr = localStorage.getItem('pending_staff_invites');
     const pendingInvites = pendingInvitesStr ? JSON.parse(pendingInvitesStr) : [];
@@ -904,9 +749,16 @@ export const useStore = create<AppState>()((set, get) => ({
       purchaseDate: new Date().toISOString().split('T')[0]
     };
 
-    set(s => ({
-      customers: s.customers.map(c => c.id === customerId ? { ...c, packages: [...(c.packages || []), newPackage] } : c)
-    }));
+    set(s => {
+      const updatedCustomers = s.customers.map(c => {
+        if (c.id !== customerId) return c;
+        return {
+          ...c,
+          packages: [...(c.packages || []), newPackage]
+        };
+      });
+      return { customers: updatedCustomers };
+    });
   },
 
   addCreditPackage: (pkg) => set(s => ({ creditPackages: [...s.creditPackages, { ...pkg, id: Math.random().toString() }] })),

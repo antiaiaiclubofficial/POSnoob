@@ -87,33 +87,6 @@ export const createAuthSlice: StateCreator<
         try {
           const inviteData = JSON.parse(inviteDataStr);
           
-          // Double check if the pending invite still exists in Supabase
-          const { data: pendingProfile, error: checkError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', inviteData.inviteId)
-            .eq('status', 'Pending')
-            .maybeSingle();
-
-          if (checkError) throw checkError;
-
-          // บังคับให้คำเชิญต้องมีแถวที่มีสถานะ Pending อยู่ในฐานข้อมูลเท่านั้น เพื่อป้องกันการใช้ลิงก์ซ้ำ
-          if (!pendingProfile) {
-            toast.error("ลิงก์คำเชิญนี้ถูกใช้งานไปแล้วหรือหมดอายุแล้ว", { id: 'invite-already-used' });
-            await supabase.auth.signOut();
-            return;
-          }
-
-          // Delete the temporary invite profile first to make it single-use (if it exists)
-          if (pendingProfile) {
-            const { error: deleteError } = await supabase
-              .from('profiles')
-              .delete()
-              .eq('id', inviteData.inviteId);
-
-            if (deleteError) throw deleteError;
-          }
-
           const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
           
           // Create or update profile with invite data
@@ -137,280 +110,145 @@ export const createAuthSlice: StateCreator<
           
           toast.success("เชื่อมต่อบัญชี Google และเข้าร่วมทีมสำเร็จ!", { id: 'invite-success' });
 
-          // Sign out immediately so it doesn't count towards concurrent logins or auto-login to dashboard
+          // Sign out immediately so they can log in with their newly linked Google account
           await supabase.auth.signOut();
 
-          // Redirect to login with success param and storeName
-          window.location.href = window.location.origin + `/login?inviteSuccess=true&storeName=${encodeURIComponent(inviteData.storeName || '')}`;
+          // Redirect to login page with success message
+          window.location.href = `${window.location.origin}/login?registered=true`;
           return;
-        } catch (err: any) {
-          console.error("Error processing invite:", err);
-          toast.error("เกิดข้อผิดพลาดในการเชื่อมต่อบัญชี: " + err.message, { id: 'invite-error' });
+        } catch (error: any) {
+          console.error("LIFF Registration Error:", error);
+          toast.error("เกิดข้อผิดพลาดในการลงทะเบียน: " + error.message);
         }
       }
 
-      // 1. ดึงข้อมูลโปรไฟล์จริงจากฐานข้อมูล Supabase
-      let { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role, store_id, is_approved, is_suspended, status, full_name, avatar_url')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      // 2. หากเกิดข้อผิดพลาดในการดึงข้อมูล ให้หยุดทำงานเพื่อความปลอดภัย
-      if (error) {
-        console.error("Error fetching profile:", error);
-        set({ isAuthLoading: false });
-        return;
-      }
-
-      const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
-
-      // 3. หากไม่มีโปรไฟล์ในฐานข้อมูลจริงๆ (profile เป็น null)
-      if (!profile) {
-        // ดึง ID ของร้านค้าแรกในระบบเพื่อเป็นค่าเริ่มต้น
-        const { data: stores } = await supabase.from('stores').select('id').limit(1);
-        const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
-
-        // กำหนดให้ผู้ใช้ใหม่ทุกคนต้องรออนุมัติ (is_approved = false) ยกเว้น Super Admin เท่านั้น
-        const shouldAutoApprove = shouldBeSuperAdmin;
-
-        const newProfile = {
-          id: user.id,
-          email: user.email,
-          role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
-          store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-          is_approved: shouldAutoApprove,
-          is_suspended: false,
-          status: 'Active',
-          full_name: user.email?.split('@')[0] || 'User',
-          avatar_url: googleAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
-        };
-
-        const { error: insertError } = await supabase
+      // Normal session handling
+      try {
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .insert([newProfile]);
+          .select('role, store_id, is_approved, is_suspended, status, full_name, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
 
-        if (!insertError) {
-          profile = { 
-            role: newProfile.role, 
-            store_id: newProfile.store_id, 
-            is_approved: newProfile.is_approved, 
-            is_suspended: false, 
+        if (profileError) throw profileError;
+
+        const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+
+        if (!profile) {
+          // Create a new profile for first-time Google sign-in
+          const { data: stores } = await supabase.from('stores').select('id').limit(1);
+          const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
+
+          const shouldAutoApprove = shouldBeSuperAdmin;
+
+          const newProfile = {
+            id: user.id,
+            email: user.email,
+            role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
+            store_id: shouldBeSuperAdmin ? null : defaultStoreId,
+            is_approved: shouldAutoApprove,
+            is_suspended: false,
             status: 'Active',
-            full_name: newProfile.full_name,
-            avatar_url: newProfile.avatar_url
+            full_name: user.email?.split('@')[0] || 'User',
+            avatar_url: googleAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
           };
-        } else {
-          console.error("Failed to insert profile:", insertError);
+
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert([newProfile]);
+
+          if (insertError) throw insertError;
+
+          set({
+            isAuthenticated: shouldAutoApprove,
+            currentUser: shouldAutoApprove ? {
+              id: user.id,
+              email: user.email,
+              name: newProfile.full_name,
+              role: newProfile.role,
+              avatar: newProfile.avatar_url
+            } : null,
+            storeId: shouldAutoApprove ? null : defaultStoreId,
+            isAuthLoading: false,
+            isPendingApproval: !shouldAutoApprove,
+            isUserSuspended: false,
+            isStoreSuspended: false
+          });
+          return;
+        }
+
+        if (profile.is_suspended && !isSuperAdminEmail) {
+          await supabase.auth.signOut();
           set({ 
             isAuthenticated: false, 
             isAuthLoading: false, 
             currentUser: null, 
-            storeId: null
+            storeId: null,
+            isUserSuspended: true,
+            isPendingApproval: false,
+            isStoreSuspended: false
           });
           return;
         }
-      } else if (googleAvatar && (!profile.avatar_url || profile.avatar_url.includes('dicebear.com') || profile.avatar_url.includes('unsplash.com'))) {
-        // อัปเดตรูปโปรไฟล์จาก Google Account หากรูปเดิมเป็นค่าเริ่มต้น
-        try {
+
+        if (!profile.is_approved && !shouldBeSuperAdmin) {
+          await supabase.auth.signOut();
+          set({ 
+            isAuthenticated: false, 
+            isAuthLoading: false, 
+            currentUser: null, 
+            storeId: null,
+            isPendingApproval: true,
+            isUserSuspended: false,
+            isStoreSuspended: false
+          });
+          return;
+        }
+
+        // Update avatar if Google avatar is newer/available
+        if (googleAvatar && googleAvatar !== profile.avatar_url) {
           await supabase
             .from('profiles')
             .update({ avatar_url: googleAvatar })
             .eq('id', user.id);
-          profile.avatar_url = googleAvatar;
-        } catch (err) {
-          console.error("Failed to update profile avatar with Google picture:", err);
         }
-      }
 
-      // 4. ตรวจสอบการพักสิทธิ์ผู้ใช้ (is_suspended)
-      if (profile.is_suspended && !isSuperAdminEmail) {
-        await supabase.auth.signOut();
-        set({ 
-          isAuthenticated: false, 
-          isAuthLoading: false, 
-          currentUser: null, 
-          storeId: null,
-          isUserSuspended: true,
+        let userRole = profile.role;
+        let storeId = profile.store_id;
+
+        if (shouldBeSuperAdmin) {
+          userRole = 'superadmin';
+          storeId = null;
+        }
+
+        set({
+          isAuthenticated: true,
+          currentUser: {
+            id: user.id,
+            email: user.email,
+            name: profile.full_name || user.email?.split('@')[0],
+            role: userRole,
+            avatar: googleAvatar || profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
+          },
+          storeId: storeId,
+          isAuthLoading: false,
           isPendingApproval: false,
-          isStoreSuspended: false
-        });
-        return;
-      }
-
-      // 5. ตรวจสอบสถานะการเปิดใช้งาน (status === 'Inactive')
-      if (profile.status === 'Inactive' && !isSuperAdminEmail) {
-        await supabase.auth.signOut();
-        set({ 
-          isAuthenticated: false, 
-          isAuthLoading: false, 
-          currentUser: null, 
-          storeId: null,
-          isUserSuspended: true,
-          isPendingApproval: false,
-          isStoreSuspended: false
-        });
-        toast.error("บัญชีของคุณถูกปิดใช้งานชั่วคราว (Inactive)", { id: 'user-inactive' });
-        return;
-      }
-
-      // 6. ตรวจสอบสถานะการอนุมัติ (is_approved)
-      if (!profile.is_approved && !isSuperAdminEmail) {
-        await supabase.auth.signOut();
-        set({ 
-          isAuthenticated: false, 
-          isAuthLoading: false, 
-          currentUser: null, 
-          storeId: null,
-          isPendingApproval: true,
           isUserSuspended: false,
           isStoreSuspended: false
         });
-        return;
+      } catch (err: any) {
+        console.error("Error in setSession:", err);
+        set({ isAuthLoading: false });
       }
-
-      // 7. Check if store is suspended
-      if (profile.store_id) {
-        try {
-          const { data: storeData } = await supabase
-            .from('stores')
-            .select('is_suspended')
-            .eq('id', profile.store_id)
-            .single();
-          if (storeData?.is_suspended) {
-            await supabase.auth.signOut();
-            set({ 
-              isAuthenticated: false, 
-              isAuthLoading: false, 
-              currentUser: null, 
-              storeId: null,
-              isStoreSuspended: true,
-              isPendingApproval: false,
-              isUserSuspended: false
-            });
-            return;
-          }
-        } catch (err) {
-          console.error("Error checking store suspension:", err);
-        }
-      }
-
-      // ปรับแต่งบทบาทและร้านค้าให้ถูกต้อง
-      let userRole = profile.role || 'Assistant';
-      let storeIdFromMetadata = profile.store_id || 'default-store';
-      
-      if (userRole === 'admin') {
-        userRole = 'Admin';
-      } else if (userRole === 'staff') {
-        userRole = 'Assistant';
-      }
-
-      if (isSuperAdminEmail) {
-        if (shouldBeSuperAdmin) {
-          userRole = 'superadmin';
-          storeIdFromMetadata = null;
-        } else {
-          userRole = 'Admin';
-          if (!storeIdFromMetadata || storeIdFromMetadata === 'default-store') {
-            const { data: storesData } = await supabase.from('stores').select('id').limit(1);
-            storeIdFromMetadata = storesData && storesData.length > 0 ? storesData[0].id : 'default-store';
-          }
-        }
-      }
-
-      // 8. ตรวจสอบและจัดการจำนวนผู้ใช้งานพร้อมกัน (Concurrent Login Limit)
-      if (storeIdFromMetadata && storeIdFromMetadata !== 'default-store' && userRole !== 'superadmin') {
-        try {
-          // ลบเซสชันที่หมดอายุ (ไม่มีความเคลื่อนไหวเกิน 5 นาที)
-          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-          await supabase
-            .from('active_sessions')
-            .delete()
-            .lt('last_active_at', fiveMinutesAgo);
-
-          // ดึงข้อมูลจำนวนผู้ใช้สูงสุดที่อนุญาตให้เข้าสู่ระบบพร้อมกัน
-          const { data: storeData } = await supabase
-            .from('stores')
-            .select('max_users')
-            .eq('id', storeIdFromMetadata)
-            .single();
-
-          const maxConcurrentUsers = storeData?.max_users || 5;
-
-          // ตรวจสอบว่าผู้ใช้คนนี้มีเซสชันอยู่แล้วหรือไม่
-          const { data: existingSession } = await supabase
-            .from('active_sessions')
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (existingSession) {
-            // อัปเดตเวลาความเคลื่อนไล่าสุด
-            await supabase
-              .from('active_sessions')
-              .update({ last_active_at: new Date().toISOString() })
-              .eq('user_id', user.id);
-          } else {
-            // นับจำนวนเซสชันที่ใช้งานอยู่ของร้านค้านี้ (ไม่รวมผู้ใช้ปัจจุบันที่กำลังล็อกอิน)
-            const { count, error: countError } = await supabase
-              .from('active_sessions')
-              .select('id', { count: 'exact', head: true })
-              .eq('store_id', storeIdFromMetadata)
-              .neq('user_id', user.id); // คัดกรองไม่ให้นับรวมผู้ใช้ปัจจุบัน
-
-            if (countError) throw countError;
-
-            if (count !== null && count >= maxConcurrentUsers) {
-              // แจ้งเตือนและปฏิเสธการเข้าสู่ระบบ
-              await supabase.auth.signOut();
-              set({ 
-                isAuthenticated: false, 
-                isAuthLoading: false, 
-                currentUser: null, 
-                storeId: null,
-                isPendingApproval: false,
-                isUserSuspended: false,
-                isStoreSuspended: false
-              });
-              toast.error(`ไม่สามารถเข้าสู่ระบบได้: จำนวนผู้ใช้งานพร้อมกันของร้านค้าเต็มแล้ว (จำกัดสูงสุด ${maxConcurrentUsers} บัญชีพร้อมกัน)`, { id: 'concurrent-limit' });
-              return;
-            }
-
-            // บันทึกเซสชันใหม่
-            await supabase
-              .from('active_sessions')
-              .insert([{
-                user_id: user.id,
-                store_id: storeIdFromMetadata,
-                last_active_at: new Date().toISOString()
-              }]);
-          }
-        } catch (sessionErr) {
-          console.error("Error managing active session:", sessionErr);
-        }
-      }
-
-      set({
-        isAuthenticated: true,
-        currentUser: {
-          id: user.id,
-          email: user.email,
-          name: profile.full_name || user.email?.split('@')[0] || 'User',
-          role: userRole,
-          avatar: profile.avatar_url || googleAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
-        },
-        storeId: storeIdFromMetadata,
-        isAuthLoading: false,
-        isPendingApproval: false,
-        isUserSuspended: false,
-        isStoreSuspended: false
-      });
     } else {
       set({
         isAuthenticated: false,
         currentUser: null,
         storeId: null,
-        isAuthLoading: false
+        isAuthLoading: false,
+        isPendingApproval: false,
+        isUserSuspended: false,
+        isStoreSuspended: false
       });
     }
   },
@@ -420,24 +258,12 @@ export const createAuthSlice: StateCreator<
   },
 
   logout: async () => {
-    const user = get().currentUser;
-    if (user?.id) {
-      try {
-        // ลบเซสชันออกจาก active_sessions เมื่อออกจากระบบ
-        await supabase
-          .from('active_sessions')
-          .delete()
-          .eq('user_id', user.id);
-      } catch (err) {
-        console.error("Error deleting active session on logout:", err);
-      }
-    }
-
     await supabase.auth.signOut();
     set({
       isAuthenticated: false,
       currentUser: null,
       storeId: null,
+      isAuthLoading: false,
       isPendingApproval: false,
       isUserSuspended: false,
       isStoreSuspended: false

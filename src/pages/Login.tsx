@@ -1,133 +1,93 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useStore } from '@/store/useStore';
-import { Lock, User, Scissors, Sparkles, ArrowRight, AlertCircle, Check, Users } from 'lucide-react';
-import { toast } from 'sonner';
-import { translations } from '@/utils/translations';
-import { cn } from '@/lib/utils';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useStore } from '@/store/useStore';
+import { 
+  User, Phone, Mail, MapPin, Dog, Cat, Sparkles, CheckCircle2, 
+  Calendar, Scale, ShieldAlert, Heart, FileText, ArrowRight, MessageSquare, Scissors, Lock, Check
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { translations } from '@/utils/translations';
 
 const Login = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { 
+    shopName, shopLogo, logout, language, setLanguage, isAuthenticated, currentUser, login, loginWithGoogle
+  } = useStore();
+
+  const t = translations[language];
+  
+  // Local Login States
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
+
+  // Invitation States
   const [inviteData, setInviteData] = useState<any>(null);
   const [isInviteSuccess, setIsInviteSuccess] = useState(false);
   const [successStoreName, setSuccessStoreName] = useState('');
-  
-  const { login, loginWithGoogle, language, setLanguage, isAuthenticated, currentUser, logout, isPendingApproval, isUserSuspended, isStoreSuspended, shopName } = useStore();
-  
-  const t = translations[language];
-  const navigate = useNavigate();
+
+  const isInvite = searchParams.get('invite') === 'true';
+  const token = searchParams.get('token');
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const isInvite = params.get('invite') === 'true';
-    const token = params.get('token');
-    const inviteId = params.get('inviteId');
-
-    if (isInvite) {
-      const validateAndFetchInvite = async () => {
-        try {
-          let targetInviteId = inviteId;
-          let decodedData: any = null;
-
-          // 1. ถอดรหัส Token หากมีส่งมา
-          if (token) {
-            try {
-              decodedData = JSON.parse(decodeURIComponent(atob(token)));
-              targetInviteId = decodedData.inviteId;
-            } catch (err) {
-              console.error("Error decoding invite token:", err);
-              toast.error("ลิงก์คำเชิญไม่ถูกต้องหรือหมดอายุแล้ว");
-              navigate('/login', { replace: true });
-              return;
-            }
-          }
-
-          if (!targetInviteId) {
-            toast.error("ไม่พบรหัสคำเชิญที่ถูกต้อง");
-            navigate('/login', { replace: true });
-            return;
-          }
-
-          // 2. ตรวจสอบสถานะคำเชิญในฐานข้อมูล (ต้องเป็น 'Pending' เท่านั้น)
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', targetInviteId)
-            .eq('status', 'Pending')
-            .maybeSingle();
-
-          if (profileError) throw profileError;
-
-          if (!profile) {
-            toast.error("ลิงก์คำเชิญนี้ไม่ถูกต้อง ถูกใช้งานไปแล้ว หรือหมดอายุแล้ว");
-            navigate('/login', { replace: true });
-            return;
-          }
-
-          // 3. ดึงชื่อร้านค้า
-          let storeName = 'Tactile Sanctuary';
-          if (profile.store_id) {
-            const { data: store, error: storeError } = await supabase
-              .from('stores')
-              .select('name')
-              .eq('id', profile.store_id)
-              .maybeSingle();
-            if (!storeError && store) {
-              storeName = store.name;
-            }
-          }
-
-          // 4. รวมข้อมูลคำเชิญเพื่อบันทึกเตรียมเชื่อมต่อ Google Account
+    if (isInvite && token) {
+      try {
+        // Decode the base64 token directly to bypass database foreign key constraints
+        const decodedData = JSON.parse(decodeURIComponent(atob(token)));
+        
+        if (decodedData && decodedData.inviteId) {
           const finalInviteData = {
-            inviteId: targetInviteId,
-            storeId: profile.store_id,
-            storeName: storeName,
-            role: profile.role === 'admin' ? 'Admin' : profile.role === 'staff' ? 'Assistant' : profile.role,
-            name: profile.full_name,
-            commissionRate: profile.commission_rate,
-            phone: profile.phone,
-            avatar: profile.avatar_url
+            inviteId: decodedData.inviteId,
+            storeId: decodedData.storeId,
+            storeName: decodedData.storeName || 'Tactile Sanctuary',
+            role: decodedData.role,
+            name: decodedData.name,
+            commissionRate: decodedData.commissionRate,
+            phone: decodedData.phone,
+            avatar: decodedData.avatar
           };
 
           setInviteData(finalInviteData);
           localStorage.setItem('pending_invite_data', JSON.stringify(finalInviteData));
-        } catch (err: any) {
-          console.error("Error validating invite:", err);
-          toast.error("เกิดข้อผิดพลาดในการตรวจสอบคำเชิญ");
-          navigate('/login', { replace: true });
+          toast.info(`ยินดีต้อนรับคุณ ${decodedData.name}! กรุณาเข้าสู่ระบบด้วย Google เพื่อเชื่อมต่อบัญชี`);
+        } else {
+          toast.error("ลิงก์คำเชิญไม่ถูกต้อง");
         }
-      };
-
-      validateAndFetchInvite();
+      } catch (err) {
+        console.error("Error decoding invite token:", err);
+        toast.error("ลิงก์คำเชิญไม่ถูกต้องหรือหมดอายุแล้ว");
+      }
     }
 
-    if (params.get('inviteSuccess') === 'true') {
+    if (searchParams.get('registered') === 'true') {
       setIsInviteSuccess(true);
-      setSuccessStoreName(params.get('storeName') || '');
+      const pendingData = localStorage.getItem('pending_invite_data');
+      if (pendingData) {
+        try {
+          const parsed = JSON.parse(pendingData);
+          setSuccessStoreName(parsed.storeName || '');
+        } catch (e) {}
+      }
     }
-  }, [navigate]);
+  }, [isInvite, token, searchParams]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isInvite) {
       if (currentUser?.role === 'superadmin') {
         navigate('/superadmin');
-      } else if (currentUser?.id === 'admin') {
-        // If it's the auto-logged in mock admin, let them log out so they can log in with other accounts
-        logout();
       } else {
         navigate('/');
       }
     }
-  }, [isAuthenticated, currentUser, navigate, logout]);
+  }, [isAuthenticated, currentUser, navigate, isInvite]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Prevent logging in as superadmin from the normal login page
     if (id === 'superadmin') {
       toast.error("กรุณาเข้าสู่ระบบผู้ดูแลระบบสูงสุดผ่านช่องทางเฉพาะ", { id: 'superadmin-error' });
       return;
@@ -144,7 +104,7 @@ const Login = () => {
 
   const handleGoogleLogin = async () => {
     try {
-      await loginWithGoogle(window.location.origin + '/');
+      await loginWithGoogle(window.location.origin + '/login');
     } catch (error) {
       toast.error("Google Login failed", { id: 'google-login-error' });
     }
@@ -167,12 +127,12 @@ const Login = () => {
           </div>
           <h1 className="text-3xl font-black text-[#1A1F3D] mb-2">เชื่อมต่อสำเร็จ!</h1>
           <p className="text-sm text-gray-500 mb-8 leading-relaxed">
-            บัญชี Google ของคุณได้รับการเชื่อมต่อกับระบบ Tactile Sanctuary ของร้าน <span className="font-black text-[#1A1F3D]">{successStoreName || shopName}</span> เรียบร้อยแล้ว คุณสามารถปิดหน้านี้ได้ทันที
+            บัญชี Google ของคุณได้รับการเชื่อมต่อกับระบบ Tactile Sanctuary ของร้าน <span className="font-black text-[#1A1F3D]">{successStoreName || shopName}</span> เรียบร้อยแล้ว คุณสามารถเข้าสู่ระบบด้วย Google ได้ทันที
           </p>
           <button
             onClick={() => {
-              navigate('/login', { replace: true });
               setIsInviteSuccess(false);
+              navigate('/login', { replace: true });
             }}
             className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 transition-all active:scale-95"
           >
@@ -210,10 +170,8 @@ const Login = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-[#1A1F3D] rounded-[24px] flex items-center justify-center mx-auto mb-4 shadow-xl">
-            {shopName ? (
-              <div className="w-full h-full flex items-center justify-center text-white font-black text-2xl">
-                {shopName.charAt(0)}
-              </div>
+            {shopLogo ? (
+              <img src={shopLogo} alt="Logo" className="w-full h-full object-cover rounded-[24px]" />
             ) : (
               <Scissors className="text-[#D9ED5F] w-8 h-8" />
             )}
@@ -232,45 +190,6 @@ const Login = () => {
                 <p className="text-[11px] font-medium leading-relaxed text-indigo-700">
                   คุณได้รับคำเชิญให้เข้าสู่ระบบในตำแหน่ง <span className="font-black text-indigo-950">{inviteData.role}</span> ของร้าน <span className="font-black text-indigo-950">{inviteData.storeName}</span>
                   <br />กรุณาเข้าสู่ระบบด้วย Google เพื่อเชื่อมต่อบัญชีของคุณ
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Pending Approval Alert */}
-          {isPendingApproval && (
-            <div className="p-5 bg-amber-50 border border-amber-100 rounded-3xl flex items-start gap-3 text-amber-800 animate-in fade-in zoom-in-95">
-              <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={18} />
-              <div className="text-left">
-                <p className="text-xs font-black uppercase tracking-wider mb-1">อยู่ระหว่างรอการอนุมัติ</p>
-                <p className="text-[11px] font-medium leading-relaxed text-amber-700">
-                  บัญชีของคุณลงทะเบียนสำเร็จแล้ว แต่ต้องรอให้ Super Admin อนุมัติและกำหนดร้านค้าให้ก่อน จึงจะสามารถเข้าใช้งานระบบได้
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* User Suspended Alert */}
-          {isUserSuspended && (
-            <div className="p-5 bg-red-50 border border-red-100 rounded-3xl flex items-start gap-3 text-red-800 animate-in fade-in zoom-in-95">
-              <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
-              <div className="text-left">
-                <p className="text-xs font-black uppercase tracking-wider mb-1">บัญชีถูกระงับการใช้งาน</p>
-                <p className="text-[11px] font-medium leading-relaxed text-red-700">
-                  ขออภัย บัญชีผู้ใช้ของคุณถูกระงับการใช้งานชั่วคราวโดยผู้ดูแลระบบสูงสุด กรุณาติดต่อฝ่ายสนับสนุนเพื่อขอข้อมูลเพิ่มเติม
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Store Suspended Alert */}
-          {isStoreSuspended && (
-            <div className="p-5 bg-red-50 border border-red-100 rounded-3xl flex items-start gap-3 text-red-800 animate-in fade-in zoom-in-95">
-              <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
-              <div className="text-left">
-                <p className="text-xs font-black uppercase tracking-wider mb-1">ร้านค้าถูกระงับการให้บริการ</p>
-                <p className="text-[11px] font-medium leading-relaxed text-red-700">
-                  ขออภัย ร้านค้าต้นสังกัดของคุณถูกระงับการให้บริการชั่วคราวโดยผู้ดูแลระบบสูงสุด ส่งผลให้ไม่สามารถเข้าใช้งานระบบจัดการร้านค้าได้ในขณะนี้
                 </p>
               </div>
             </div>
