@@ -68,6 +68,9 @@ export const createAuthSlice: StateCreator<
       provider: 'google',
       options: {
         redirectTo: redirectTo || window.location.origin,
+        queryParams: {
+          prompt: 'select_account' // Force Google to show account selection to prevent auto-login with wrong account
+        }
       },
     });
     if (error) {
@@ -89,9 +92,19 @@ export const createAuthSlice: StateCreator<
         try {
           const inviteData = JSON.parse(inviteDataStr);
           
+          // Get the invited email from either 'email' or 'username' (for backward compatibility)
+          const invitedEmail = inviteData.email || inviteData.username;
+
+          if (!invitedEmail) {
+            toast.error("ไม่พบข้อมูลอีเมลผู้รับเชิญในลิงก์คำเชิญนี้");
+            await supabase.auth.signOut();
+            window.location.href = `${window.location.origin}/login?error=invalid_invite`;
+            return;
+          }
+          
           // Verify that the Google Account email matches the invited email exactly
-          if (inviteData.email && user.email && inviteData.email.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
-            toast.error(`อีเมล Google (${user.email}) ไม่ตรงกับอีเมลที่ได้รับเชิญ (${inviteData.email})`);
+          if (user.email && invitedEmail.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
+            toast.error(`อีเมล Google (${user.email}) ไม่ตรงกับอีเมลที่ได้รับเชิญ (${invitedEmail})`);
             await supabase.auth.signOut();
             window.location.href = `${window.location.origin}/login?error=email_mismatch`;
             return;
