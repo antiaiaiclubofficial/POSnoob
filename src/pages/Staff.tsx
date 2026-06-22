@@ -437,44 +437,34 @@ export default function Staff() {
                   </div>
 
                   {/* Active Session Status & Logout Button */}
-                  <div className="bg-[#F5F6FA] p-3.5 rounded-2xl flex flex-col gap-3 mt-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-indigo-500" />
-                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">สถานะเซสชัน (Session)</span>
-                      </div>
+                  <div className="bg-[#F5F6FA] p-3 rounded-2xl flex items-center justify-between mt-3">
+                    <div className="flex items-center gap-2">
+                      <User className="h-3.5 w-3.5 text-indigo-500" />
+                      <span className="text-[9px] font-black uppercase text-gray-400 tracking-wider">Session</span>
+                    </div>
+                    <div className="flex items-center gap-2">
                       {isOnline ? (
-                        <span className="bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1 animate-pulse">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" /> Online
-                        </span>
+                        <>
+                          <span className="bg-green-50 text-green-700 border border-green-100 px-2 py-0.5 rounded-md text-[8px] font-black uppercase flex items-center gap-1 animate-pulse">
+                            <span className="w-1 h-1 rounded-full bg-green-500 inline-block" /> Online
+                          </span>
+                          {(currentUser?.role === 'Admin' || currentUser?.role === 'superadmin') && (
+                            <button
+                              type="button"
+                              onClick={() => handleForceLogout(member.id, member.name)}
+                              className="p-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-md transition-all"
+                              title={`สั่ง Logout เซสชันของ ${member.name}`}
+                            >
+                              <LogOut className="h-3 w-3" />
+                            </button>
+                          )}
+                        </>
                       ) : (
-                        <span className="bg-gray-100 text-gray-400 border border-gray-200 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" /> Offline
+                        <span className="bg-gray-100 text-gray-400 border border-gray-200 px-2 py-0.5 rounded-md text-[8px] font-black uppercase flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-gray-400 inline-block" /> Offline
                         </span>
                       )}
                     </div>
-                    
-                    {isOnline && (
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
-                        <span className="text-[9px] text-gray-400 font-bold">
-                          ใช้งานล่าสุด: {new Date(session.last_active_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} น.
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleForceLogout(member.id, member.name)}
-                          disabled={currentUser?.role !== 'Admin' && currentUser?.role !== 'superadmin'}
-                          className={cn(
-                            "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase transition-all flex items-center gap-1",
-                            currentUser?.role === 'Admin' || currentUser?.role === 'superadmin'
-                              ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
-                              : "bg-gray-100 text-gray-300 border border-gray-200 cursor-not-allowed"
-                          )}
-                          title={currentUser?.role === 'Admin' || currentUser?.role === 'superadmin' ? "สั่ง Logout เซสชันนี้" : "เฉพาะผู้ใช้ที่มีสิทธิ์ Admin เท่านั้น"}
-                        >
-                          <LogOut className="h-3 w-3" /> Logout
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
 
