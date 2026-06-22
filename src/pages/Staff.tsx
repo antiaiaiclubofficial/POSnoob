@@ -51,11 +51,10 @@ export default function Staff() {
   const [name, setName] = useState("");
   const [role, setRole] = useState<StaffRole>("Assistant");
   const [phone, setPhone] = useState("");
-  const [username, setUsername] = useState("");
   const [commissionRate, setCommissionRate] = useState("0");
 
   // Fetch active sessions for the current store
-  const { data: activeSessions = [], refetch: refetchSessions } = useQuery({
+  const { data: activeSessions = [], refetch: refetchSessions } = useQuery<any[]>({
     queryKey: ['active_sessions_list', storeId],
     queryFn: async () => {
       if (!storeId || storeId === 'default-store') return [];
@@ -110,7 +109,7 @@ export default function Staff() {
 
   const handleAddStaff = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !username) {
+    if (!name) {
       toast.error("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน");
       return;
     }
@@ -121,7 +120,7 @@ export default function Staff() {
       phone,
       status: "Active",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
-      username,
+      username: "Pending Google Link",
       commissionRate: Number(commissionRate) || 0,
     };
 
@@ -140,7 +139,7 @@ export default function Staff() {
       name,
       role,
       phone,
-      username,
+      username: editingStaff.username,
       commissionRate: Number(commissionRate) || 0,
     };
 
@@ -161,7 +160,6 @@ export default function Staff() {
     setName("");
     setRole("Assistant");
     setPhone("");
-    setUsername("");
     setCommissionRate("0");
   };
 
@@ -170,7 +168,6 @@ export default function Staff() {
     setName(member.name);
     setRole(member.role);
     setPhone(member.phone);
-    setUsername(member.username);
     setCommissionRate(String(member.commissionRate || 0));
   };
 
@@ -215,18 +212,6 @@ export default function Staff() {
                   value={name} 
                   onChange={(e) => setName(e.target.value)} 
                   placeholder="สมชาย ใจดี" 
-                  required 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="username" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">อีเมล / ชื่อผู้ใช้ *</Label>
-                <input 
-                  id="username" 
-                  type="email" 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                  value={username} 
-                  onChange={(e) => setUsername(e.target.value)} 
-                  placeholder="somchai@example.com" 
                   required 
                 />
               </div>
@@ -503,17 +488,6 @@ export default function Staff() {
                             className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
                             value={name} 
                             onChange={(e) => setName(e.target.value)} 
-                            required 
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-username" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">อีเมล / ชื่อผู้ใช้ *</Label>
-                          <input 
-                            id="edit-username" 
-                            type="email" 
-                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                            value={username} 
-                            onChange={(e) => setUsername(e.target.value)} 
                             required 
                           />
                         </div>
