@@ -59,16 +59,16 @@ const Login = () => {
     
     // Prevent logging in as superadmin from the normal login page
     if (id === 'superadmin') {
-      toast.error("กรุณาเข้าสู่ระบบผู้ดูแลระบบสูงสุดผ่านช่องทางเฉพาะ");
+      toast.error("กรุณาเข้าสู่ระบบผู้ดูแลระบบสูงสุดผ่านช่องทางเฉพาะ", { id: 'superadmin-error' });
       return;
     }
 
     const success = login(id, password);
     if (success) {
-      toast.success(t.welcomeBack);
+      toast.success(t.welcomeBack, { id: 'login-success' });
       navigate('/');
     } else {
-      toast.error(t.invalidCreds);
+      toast.error(t.invalidCreds, { id: 'login-error' });
     }
   };
 
@@ -76,7 +76,7 @@ const Login = () => {
     try {
       await loginWithGoogle(window.location.origin + '/');
     } catch (error) {
-      toast.error("Google Login failed");
+      toast.error("Google Login failed", { id: 'google-login-error' });
     }
   };
 

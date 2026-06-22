@@ -69,7 +69,7 @@ export const createAuthSlice: StateCreator<
       },
     });
     if (error) {
-      toast.error(error.message);
+      toast.error(error.message, { id: 'google-login-error' });
     }
   },
 
@@ -82,6 +82,8 @@ export const createAuthSlice: StateCreator<
       // Check if there is a pending invitation in localStorage
       const inviteDataStr = localStorage.getItem('pending_invite_data');
       if (inviteDataStr) {
+        // Remove it immediately to prevent race conditions from multiple setSession calls
+        localStorage.removeItem('pending_invite_data');
         try {
           const inviteData = JSON.parse(inviteDataStr);
           const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
@@ -105,8 +107,7 @@ export const createAuthSlice: StateCreator<
 
           if (upsertError) throw upsertError;
           
-          toast.success("เชื่อมต่อบัญชี Google และเข้าร่วมทีมสำเร็จ!");
-          localStorage.removeItem('pending_invite_data');
+          toast.success("เชื่อมต่อบัญชี Google และเข้าร่วมทีมสำเร็จ!", { id: 'invite-success' });
 
           // Sign out immediately so it doesn't count towards concurrent logins or auto-login to dashboard
           await supabase.auth.signOut();
@@ -116,7 +117,7 @@ export const createAuthSlice: StateCreator<
           return;
         } catch (err: any) {
           console.error("Error processing invite:", err);
-          toast.error("เกิดข้อผิดพลาดในการเชื่อมต่อบัญชี: " + err.message);
+          toast.error("เกิดข้อผิดพลาดในการเชื่อมต่อบัญชี: " + err.message, { id: 'invite-error' });
         }
       }
 
@@ -221,7 +222,7 @@ export const createAuthSlice: StateCreator<
           isPendingApproval: false,
           isStoreSuspended: false
         });
-        toast.error("บัญชีของคุณถูกปิดใช้งานชั่วคราว (Inactive)");
+        toast.error("บัญชีของคุณถูกปิดใช้งานชั่วคราว (Inactive)", { id: 'user-inactive' });
         return;
       }
 
@@ -340,7 +341,7 @@ export const createAuthSlice: StateCreator<
                 isUserSuspended: false,
                 isStoreSuspended: false
               });
-              toast.error(`ไม่สามารถเข้าสู่ระบบได้: จำนวนผู้ใช้งานพร้อมกันของร้านค้าเต็มแล้ว (จำกัดสูงสุด ${maxConcurrentUsers} บัญชีพร้อมกัน)`);
+              toast.error(`ไม่สามารถเข้าสู่ระบบได้: จำนวนผู้ใช้งานพร้อมกันของร้านค้าเต็มแล้ว (จำกัดสูงสุด ${maxConcurrentUsers} บัญชีพร้อมกัน)`, { id: 'concurrent-limit' });
               return;
             }
 
