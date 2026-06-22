@@ -740,8 +740,17 @@ export const useStore = create<AppState>()((set, get) => ({
     // Update state
     set(s => ({ staff: [...s.staff, newInvite] }));
     
-    // Show success toast with link
-    toast.success(`สร้างคำเชิญสำหรับ ${st.name} เรียบร้อยแล้ว!`);
+    // Show success toast with link and copy action
+    toast.success(`สร้างคำเชิญสำหรับ ${st.name} เรียบร้อยแล้ว!`, {
+      action: {
+        label: 'คัดลอกลิงก์',
+        onClick: () => {
+          navigator.clipboard.writeText(inviteLink);
+          toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
+        }
+      },
+      duration: 10000
+    });
   },
 
   updateStaff: async (id, st) => {
