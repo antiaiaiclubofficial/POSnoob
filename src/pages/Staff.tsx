@@ -17,7 +17,8 @@ import {
   Trash2,
   Sparkles,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Copy
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,8 @@ interface StaffMember {
   commissionRate: number;
   googleConnected?: boolean;
   googleEmail?: string;
+  isPendingInvite?: boolean;
+  inviteLink?: string;
 }
 
 export default function Staff() {
@@ -391,6 +394,18 @@ export default function Staff() {
               >
                 {/* Action Buttons on Hover */}
                 <div className="absolute top-6 right-6 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  {member.isPendingInvite && (
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(member.inviteLink || "");
+                        toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
+                      }}
+                      className="p-2.5 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                      title="คัดลอกลิงก์คำเชิญ"
+                    >
+                      <Copy size={16} />
+                    </button>
+                  )}
                   <button 
                     onClick={() => handleDeleteStaffMember(member.id, member.name)}
                     className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
@@ -422,21 +437,41 @@ export default function Staff() {
                       )}>
                         {member.role}
                       </span>
-                      <span className={cn(
-                        "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
-                        member.status === "Active" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                      )}>
-                        {member.status === "Active" ? "Active" : "Inactive"}
-                      </span>
+                      {member.isPendingInvite ? (
+                        <span className="px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider bg-amber-50 text-amber-600">
+                          Pending Invite
+                        </span>
+                      ) : (
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
+                          member.status === "Active" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                        )}>
+                          {member.status === "Active" ? "Active" : "Inactive"}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Contact & Commission Info */}
                 <div className="space-y-3 text-xs font-bold text-gray-500 border-t border-gray-50 pt-5 mb-6 flex-1">
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-gray-300 shrink-0" />
-                    <span className="truncate">{member.username}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Mail className="h-4 w-4 text-gray-300 shrink-0" />
+                      <span className="truncate">{member.username}</span>
+                    </div>
+                    {member.isPendingInvite && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(member.inviteLink || "");
+                          toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
+                        }}
+                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-1 text-[10px] font-black uppercase shrink-0"
+                        title="คัดลอกลิงก์คำเชิญ"
+                      >
+                        <Copy size={12} /> Copy Link
+                      </button>
+                    )}
                   </div>
                   {member.phone && (
                     <div className="flex items-center gap-3">
