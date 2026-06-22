@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
 import { 
   User, Phone, Mail, MapPin, Dog, Cat, Sparkles, CheckCircle2, 
-  Calendar, Scale, ShieldAlert, Heart, FileText, ArrowRight, MessageSquare, Scissors, Lock, Check
+  Calendar, Scale, ShieldAlert, Heart, FileText, ArrowRight, MessageSquare, Scissors, Lock, Check, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,7 @@ const Login = () => {
 
   const isInvite = searchParams.get('invite') === 'true';
   const token = searchParams.get('token');
+  const isEmailMismatch = searchParams.get('error') === 'email_mismatch';
 
   useEffect(() => {
     if (isInvite && token) {
@@ -117,6 +118,30 @@ const Login = () => {
     e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
   };
+
+  if (isEmailMismatch) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FD] flex items-center justify-center p-6 relative">
+        <div className="w-full max-w-md text-center">
+          <div className="w-20 h-20 bg-red-500 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-red-500/20">
+            <X className="text-white w-10 h-10" />
+          </div>
+          <h1 className="text-3xl font-black text-[#1A1F3D] mb-2">เชื่อมต่อไม่สำเร็จ</h1>
+          <p className="text-sm text-gray-500 mb-8 leading-relaxed">
+            กรุณาติดต่อ Admin เพื่อขอ Invite Link ใหม่ และใช้ Google Account ให้ตรงกับในระบบที่ระบุไว้
+          </p>
+          <button
+            onClick={() => {
+              navigate('/login', { replace: true });
+            }}
+            className="w-full bg-[#1A1F3D] hover:bg-[#2A3152] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 transition-all active:scale-95"
+          >
+            กลับไปหน้าเข้าสู่ระบบ
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isInviteSuccess) {
     return (
