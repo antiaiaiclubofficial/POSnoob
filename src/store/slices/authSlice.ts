@@ -97,19 +97,25 @@ export const createAuthSlice: StateCreator<
 
           if (checkError) throw checkError;
 
-          if (!pendingProfile) {
+          // Token-based invites bypass foreign key constraints and don't have a database row beforehand.
+          // We allow the invite to proceed if either a pending profile exists OR if it's a valid token-based invite.
+          const isValidTokenInvite = inviteData.storeId && inviteData.role && inviteData.name;
+
+          if (!pendingProfile && !isValidTokenInvite) {
             toast.error("ลิงก์คำเชิญนี้ถูกใช้งานไปแล้วหรือหมดอายุแล้ว", { id: 'invite-already-used' });
             await supabase.auth.signOut();
             return;
           }
 
-          // Delete the temporary invite profile first to make it single-use
-          const { error: deleteError } = await supabase
-            .from('profiles')
-            .delete()
-            .eq('id', inviteData.inviteId);
+          // Delete the temporary invite profile first to make it single-use (if it exists)
+          if (pendingProfile) {
+            const { error: deleteError } = await supabase
+              .from('profiles')
+              .delete()
+              .eq('id', inviteData.inviteId);
 
-          if (deleteError) throw deleteError;
+            if (deleteError) throw deleteError;
+          }
 
           const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
           
