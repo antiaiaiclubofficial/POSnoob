@@ -313,17 +313,18 @@ export const createAuthSlice: StateCreator<
             .maybeSingle();
 
           if (existingSession) {
-            // อัปเดตเวลาความเคลื่อนไหวล่าสุด
+            // อัปเดตเวลาความเคลื่อนไล่าสุด
             await supabase
               .from('active_sessions')
               .update({ last_active_at: new Date().toISOString() })
               .eq('user_id', user.id);
           } else {
-            // นับจำนวนเซสชันที่ใช้งานอยู่ของร้านค้านี้ (ไม่รวมผู้ใช้ปัจจุบัน)
+            // นับจำนวนเซสชันที่ใช้งานอยู่ของร้านค้านี้ (ไม่รวมผู้ใช้ปัจจุบันที่กำลังล็อกอิน)
             const { count, error: countError } = await supabase
               .from('active_sessions')
               .select('id', { count: 'exact', head: true })
-              .eq('store_id', storeIdFromMetadata);
+              .eq('store_id', storeIdFromMetadata)
+              .neq('user_id', user.id); // คัดกรองไม่ให้นับรวมผู้ใช้ปัจจุบัน
 
             if (countError) throw countError;
 
