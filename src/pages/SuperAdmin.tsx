@@ -18,6 +18,11 @@ const SuperAdmin = () => {
   const navigate = useNavigate();
   const { currentUser, login, loginWithGoogle, logout } = useStore();
 
+  // Independent Superadmin Authentication State
+  const [isSuperAdminAuthenticated, setIsSuperAdminAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('superadmin_session') === 'active';
+  });
+
   // SuperAdmin States
   const [activeTab, setActiveTab] = useState<SuperAdminTab>('dashboard');
   const [loading, setLoading] = useState(true);
@@ -53,7 +58,7 @@ const SuperAdmin = () => {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [viewingStoreUsers, setViewingStoreUsers] = useState<any | null>(null);
 
-  // Form States - Store
+  // Form States - Store (with all required properties to prevent TS errors)
   const [storeForm, setStoreForm] = useState({
     name: '',
     slug: '',
@@ -61,7 +66,22 @@ const SuperAdmin = () => {
     secondary_color: '#D9ED5F',
     logo_url: '',
     max_users: 5,
-    max_staff: 10
+    max_staff: 10,
+    address: '',
+    phone: '',
+    line_id: '',
+    receipt_header: '',
+    receipt_footer: '',
+    receipt_paper_size: 'A4',
+    company_name: '',
+    company_address: '',
+    company_tax_id: '',
+    company_phone: '',
+    company_email: '',
+    vat_enabled: false,
+    vat_rate: 7,
+    points_earn_rate: 1,
+    points_redeem_rate: 100
   });
 
   // Form States - User
@@ -77,21 +97,28 @@ const SuperAdmin = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Check authorization (either local superadmin session or Supabase superadmin role)
+  const isAuthorized = isSuperAdminAuthenticated || currentUser?.role === 'superadmin';
+
   useEffect(() => {
-    if (currentUser?.role === 'superadmin') {
+    if (isAuthorized) {
       fetchInitialData();
     }
-  }, [currentUser]);
+  }, [isAuthorized]);
 
   useEffect(() => {
-    if (currentUser?.role === 'superadmin' && activeTab === 'explorer') {
+    if (isAuthorized && activeTab === 'explorer') {
       fetchExplorerData();
     }
-  }, [selectedStoreId, selectedTable, activeTab, currentUser]);
+  }, [selectedStoreId, selectedTable, activeTab, isAuthorized]);
 
   const handleLocalLogout = () => {
-    logout();
-    toast.info("ออกจากระบบเรียบร้อยแล้ว");
+    localStorage.removeItem('superadmin_session');
+    setIsSuperAdminAuthenticated(false);
+    if (currentUser?.role === 'superadmin') {
+      logout();
+    }
+    toast.info("ออกจากระบบ Super Admin เรียบร้อยแล้ว");
   };
 
   const handleLocalLogin = (e: React.FormEvent) => {
@@ -100,8 +127,12 @@ const SuperAdmin = () => {
       toast.error("กรุณาใช้บัญชี Superadmin สำหรับโหมดนี้");
       return;
     }
+    
+    // Authenticate locally
     const success = login(localId, localPassword);
     if (success) {
+      localStorage.setItem('superadmin_session', 'active');
+      setIsSuperAdminAuthenticated(true);
       toast.success("ยินดีต้อนรับกลับผู้ดูแลระบบสูงสุด!");
       setLocalId('');
       setLocalPassword('');
@@ -229,11 +260,15 @@ const SuperAdmin = () => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('stores')
-      .insert([{
+    try {
+      const storeData = {
         name: storeForm.name,
+        slug: storeForm.slug,
+        primary_color: storeForm.primary_color,
+        secondary_color: storeForm.secondary_color,
         logo_url: storeForm.logo_url,
+        max_users: storeForm.max_users,
+        max_staff: storeForm.max_staff,
         address: storeForm.address,
         phone: storeForm.phone,
         line_id: storeForm.line_id,
@@ -248,22 +283,30 @@ const SuperAdmin = () => {
         vat_enabled: storeForm.vat_enabled,
         vat_rate: storeForm.vat_rate,
         points_earn_rate: storeForm.points_earn_rate,
-        points_redeem_rate: storeForm.points_redeem_rate,
-        max_users: storeForm.max_users,
-        max_staff: storeForm.max_staff
-      }])
-      .select()
-      .single();
+        points_redeem_rate: storeForm.points_redeem_rate
+      };
 
-    if (error) {
-      console.error("Error adding store:", error);
-      throw error;
-    }
+      let error;
+      if (editingStore) {
+        const { error: updateError } = await supabase
+          .from('stores')
+          .update(storeData)
+          .eq('id', editingStore.id);
+        error = updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('stores')
+          .insert([storeData]);
+        error = insertError;
+      }
 
-    if (data) {
-      toast.success("สร้างร้านค้าใหม่เรียบร้อยแล้ว");
+      if (error) throw error;
+
+      toast.success(editingStore ? "อัปเดตข้อมูลร้านค้าเรียบร้อยแล้ว" : "สร้างร้านค้าใหม่เรียบร้อยแล้ว");
       setIsStoreModalOpen(false);
       fetchInitialData();
+    } catch (err: any) {
+      toast.error("เกิดข้อผิดพลาด: " + err.message);
     }
   };
 
@@ -279,18 +322,6 @@ const SuperAdmin = () => {
       fetchInitialData();
     } catch (error: any) {
       toast.error("ไม่สามารถลบได้: " + error.message);
-    }
-  };
-
-  const handleEditPartner = (partner: Partner) => {
-    setEditingPartner(partner);
-    setIsVendorModalOpen(true);
-  };
-
-  const handleDeletePartner = (id: string) => {
-    if (window.confirm("ต้องการลบข้อมูลคู่ค้านี้หรือไม่?")) {
-      deletePartner(id);
-      toast.success("ลบข้อมูลคู่ค้าเรียบร้อยแล้ว");
     }
   };
 
@@ -488,7 +519,22 @@ const SuperAdmin = () => {
         secondary_color: store.secondary_color || '#D9ED5F',
         logo_url: store.logo_url || '',
         max_users: store.max_users || 5,
-        max_staff: store.max_staff || 10
+        max_staff: store.max_staff || 10,
+        address: store.address || '',
+        phone: store.phone || '',
+        line_id: store.line_id || '',
+        receipt_header: store.receipt_header || '',
+        receipt_footer: store.receipt_footer || '',
+        receipt_paper_size: store.receipt_paper_size || 'A4',
+        company_name: store.company_name || '',
+        company_address: store.company_address || '',
+        company_tax_id: store.company_tax_id || '',
+        company_phone: store.company_phone || '',
+        company_email: store.company_email || '',
+        vat_enabled: store.vat_enabled || false,
+        vat_rate: store.vat_rate || 7,
+        points_earn_rate: store.points_earn_rate || 1,
+        points_redeem_rate: store.points_redeem_rate || 100
       });
     } else {
       setEditingStore(null);
@@ -499,7 +545,22 @@ const SuperAdmin = () => {
         secondary_color: '#D9ED5F',
         logo_url: '',
         max_users: 5,
-        max_staff: 10
+        max_staff: 10,
+        address: '',
+        phone: '',
+        line_id: '',
+        receipt_header: '',
+        receipt_footer: '',
+        receipt_paper_size: 'A4',
+        company_name: '',
+        company_address: '',
+        company_tax_id: '',
+        company_phone: '',
+        company_email: '',
+        vat_enabled: false,
+        vat_rate: 7,
+        points_earn_rate: 1,
+        points_redeem_rate: 100
       });
     }
     setIsStoreModalOpen(true);
@@ -548,7 +609,7 @@ const SuperAdmin = () => {
     p.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (currentUser?.role !== 'superadmin') {
+  if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-[#0F111A] flex items-center justify-center p-6 relative">
         <div className="w-full max-w-md">
@@ -561,7 +622,7 @@ const SuperAdmin = () => {
           </div>
 
           <div className="bg-[#151824] p-10 rounded-[48px] border border-gray-800 shadow-2xl text-center space-y-6">
-            {currentUser ? (
+            {currentUser && currentUser.role !== 'superadmin' ? (
               <div className="space-y-6">
                 <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs font-bold leading-relaxed">
                   ปฏิเสธการเข้าถึง: บัญชี Google ของคุณ ({currentUser.email}) ไม่มีสิทธิ์ผู้ดูแลระบบสูงสุด (Super Admin)
@@ -1263,7 +1324,7 @@ const SuperAdmin = () => {
               </button>
             </div>
 
-            <form onSubmit={handleStoreSubmit} className="p-8 space-y-6">
+            <form onSubmit={handleStoreSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto scrollbar-hide">
               <div className="space-y-4">
                 <div>
                   <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">ชื่อร้านค้า (Store Name)</label>
@@ -1367,7 +1428,7 @@ const SuperAdmin = () => {
                   <Users size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-[#1A1F3D]">{editingUser ? 'แก้ไขสิทธิ์ผู้ใช้' : 'เพิ่มสิทธิ์ผู้ใช้ใหม่'}</h3>
+                  <h3 className="text-xl font-black text-[#1A1F3D]">{(editingUser) ? 'แก้ไขสิทธิ์ผู้ใช้' : 'เพิ่มสิทธิ์ผู้ใช้ใหม่'}</h3>
                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">User Profile & Role</p>
                 </div>
               </div>
