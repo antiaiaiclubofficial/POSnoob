@@ -129,7 +129,7 @@ const Login = () => {
           <h1 className="text-3xl font-black text-[#1A1F3D] mb-2">เชื่อมต่อไม่สำเร็จ</h1>
           <p className="text-sm text-gray-500 mb-8 leading-relaxed">
             {isEmailMismatch 
-              ? "กรุณาติดต่อ Admin เพื่อขอ Invite Link ใหม่ และใช้ Google Account ให้ตรงกับในระบบที่ระบุไว้"
+              ? "กรุณาติดต่อผู้ดูแลระบบเพื่อขอ Invite Link ใหม่และใช้ Google Account ให้ตรงกับที่ระบุไว้ในระบบ"
               : "ลิงก์คำเชิญไม่ถูกต้องหรือหมดอายุแล้ว กรุณาติดต่อ Admin เพื่อขอลิงก์ใหม่"}
           </p>
           <button
