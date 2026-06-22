@@ -16,7 +16,8 @@ import {
   User,
   Trash2,
   Sparkles,
-  LogOut
+  LogOut,
+  ChevronRight
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,7 @@ export default function Staff() {
   const { staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff, currentUser } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isSessionsOpen, setIsSessionsOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
   // Form States
@@ -289,27 +291,73 @@ export default function Staff() {
       <div className="flex-1 overflow-y-auto p-10 scrollbar-hide space-y-8">
         {/* Status Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-                <Chrome size={24} />
+          <Dialog open={isSessionsOpen} onOpenChange={setIsSessionsOpen}>
+            <DialogTrigger asChild>
+              <button className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between text-left hover:shadow-md transition-all cursor-pointer w-full">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                    <Chrome size={24} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-gray-400 mb-0.5">ผู้ใช้งานพร้อมกัน (Concurrent Logins)</p>
+                    <h3 className="text-xl font-black text-[#1A1F3D]">
+                      {activeSessionsCount} / {userLimit} <span className="text-xs text-gray-400 font-bold">เซสชัน</span>
+                    </h3>
+                  </div>
+                </div>
+                <div className="text-right flex items-center gap-2">
+                  <span className={cn(
+                    "text-[9px] font-black px-2.5 py-1 rounded-full uppercase",
+                    activeSessionsCount >= userLimit ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                  )}>
+                    {activeSessionsCount >= userLimit ? "เต็มแล้ว" : "ใช้งานได้"}
+                  </span>
+                  <ChevronRight size={16} className="text-gray-400" />
+                </div>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="rounded-[32px] max-w-md p-8">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-black text-[#1A1F3D]">เซสชันที่ใช้งานอยู่ (Active Sessions)</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-4 max-h-[400px] overflow-y-auto scrollbar-hide">
+                {activeSessions.length === 0 ? (
+                  <p className="text-xs text-gray-400 font-bold text-center py-6 italic">ไม่มีเซสชันที่ใช้งานอยู่</p>
+                ) : (
+                  activeSessions.map((session: any) => {
+                    const member = staff.find((s: any) => s.id === session.user_id);
+                    const staffName = member?.name || "Unknown User";
+                    const staffEmail = member?.username || "No Email";
+                    const staffAvatar = member?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop";
+                    const lastActive = session.last_active_at ? new Date(session.last_active_at).toLocaleTimeString() : "N/A";
+
+                    return (
+                      <div key={session.id} className="flex items-center justify-between p-4 bg-[#F5F6FA] rounded-2xl">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img src={staffAvatar} alt={staffName} className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-[#1A1F3D] truncate">{staffName}</p>
+                            <p className="text-[9px] text-gray-400 font-bold truncate">{staffEmail}</p>
+                            <p className="text-[8px] text-indigo-500 font-bold mt-0.5">Active: {lastActive}</p>
+                          </div>
+                        </div>
+                        {(currentUser?.role === 'Admin' || currentUser?.role === 'superadmin') && (
+                          <button
+                            type="button"
+                            onClick={() => handleForceLogout(session.user_id, staffName)}
+                            className="p-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-xl transition-all shrink-0"
+                            title={`สั่ง Logout เซสชันของ ${staffName}`}
+                          >
+                            <LogOut className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-gray-400 mb-0.5">ผู้ใช้งานพร้อมกัน (Concurrent Logins)</p>
-                <h3 className="text-xl font-black text-[#1A1F3D]">
-                  {activeSessionsCount} / {userLimit} <span className="text-xs text-gray-400 font-bold">เซสชัน</span>
-                </h3>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className={cn(
-                "text-[9px] font-black px-2.5 py-1 rounded-full uppercase",
-                activeSessionsCount >= userLimit ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
-              )}>
-                {activeSessionsCount >= userLimit ? "เต็มแล้ว" : "ใช้งานได้"}
-              </span>
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
 
           <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -348,9 +396,6 @@ export default function Staff() {
         {/* Staff Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredStaff.map((member: any) => {
-            const session = activeSessions.find((s: any) => s.user_id === member.id);
-            const isOnline = !!session;
-
             return (
               <div 
                 key={member.id} 
@@ -434,37 +479,6 @@ export default function Staff() {
                         <XCircle className="h-3 w-3 text-gray-400" /> Disconnected
                       </span>
                     )}
-                  </div>
-
-                  {/* Active Session Status & Logout Button */}
-                  <div className="bg-[#F5F6FA] p-3 rounded-2xl flex items-center justify-between mt-3">
-                    <div className="flex items-center gap-2">
-                      <User className="h-3.5 w-3.5 text-indigo-500" />
-                      <span className="text-[9px] font-black uppercase text-gray-400 tracking-wider">Session</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {isOnline ? (
-                        <>
-                          <span className="bg-green-50 text-green-700 border border-green-100 px-2 py-0.5 rounded-md text-[8px] font-black uppercase flex items-center gap-1 animate-pulse">
-                            <span className="w-1 h-1 rounded-full bg-green-500 inline-block" /> Online
-                          </span>
-                          {(currentUser?.role === 'Admin' || currentUser?.role === 'superadmin') && (
-                            <button
-                              type="button"
-                              onClick={() => handleForceLogout(member.id, member.name)}
-                              className="p-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-md transition-all"
-                              title={`สั่ง Logout เซสชันของ ${member.name}`}
-                            >
-                              <LogOut className="h-3 w-3" />
-                            </button>
-                          )}
-                        </>
-                      ) : (
-                        <span className="bg-gray-100 text-gray-400 border border-gray-200 px-2 py-0.5 rounded-md text-[8px] font-black uppercase flex items-center gap-1">
-                          <span className="w-1 h-1 rounded-full bg-gray-400 inline-block" /> Offline
-                        </span>
-                      )}
-                    </div>
                   </div>
                 </div>
 
