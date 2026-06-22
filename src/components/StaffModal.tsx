@@ -20,6 +20,7 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
   const [commissionRate, setCommissionRate] = useState(0);
   const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
   const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop');
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     if (staff) {
@@ -28,14 +29,15 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
       setRole(staff.role);
       setCommissionRate(staff.commissionRate || 0);
       setStatus(staff.status);
-      setAvatar(staff.avatar);
+      setAvatar(st => staff.avatar || st);
+      setEmail(staff.username || '');
     }
   }, [staff]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone) {
-      toast.error(language === 'th' ? "กรุณากรอกชื่อและเบอร์โทรศัพท์" : "Name and Phone are required");
+    if (!name || !phone || !email) {
+      toast.error(language === 'th' ? "กรุณากรอกชื่อ เบอร์โทรศัพท์ และอีเมล" : "Name, Phone and Email are required");
       return;
     }
 
@@ -57,7 +59,8 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
       role,
       commissionRate,
       status,
-      avatar
+      avatar,
+      username: email
     };
 
     if (staff) {
@@ -91,6 +94,18 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="เช่น สมชาย ใจดี"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">อีเมล (Google Account)</label>
+              <input 
+                type="email"
+                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="somchai@gmail.com"
                 required
               />
             </div>

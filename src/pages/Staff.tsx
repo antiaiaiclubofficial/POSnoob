@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useStore, StaffRole } from "@/store/useStore";
 import { 
   Search, 
@@ -55,6 +55,7 @@ export default function Staff() {
   const [role, setRole] = useState<StaffRole>("Assistant");
   const [phone, setPhone] = useState("");
   const [commissionRate, setCommissionRate] = useState("0");
+  const [email, setEmail] = useState("");
 
   // Fetch active sessions for the current store
   const { data: activeSessions = [], refetch: refetchSessions } = useQuery<any[]>({
@@ -112,7 +113,7 @@ export default function Staff() {
 
   const handleAddStaff = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) {
+    if (!name || !email) {
       toast.error("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน");
       return;
     }
@@ -123,7 +124,7 @@ export default function Staff() {
       phone,
       status: "Active",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
-      username: "Pending Google Link",
+      username: email,
       commissionRate: Number(commissionRate) || 0,
     };
 
@@ -142,7 +143,7 @@ export default function Staff() {
       name,
       role,
       phone,
-      username: editingStaff.username,
+      username: email,
       commissionRate: Number(commissionRate) || 0,
     };
 
@@ -164,6 +165,7 @@ export default function Staff() {
     setRole("Assistant");
     setPhone("");
     setCommissionRate("0");
+    setEmail("");
   };
 
   const openEditDialog = (member: StaffMember) => {
@@ -172,6 +174,7 @@ export default function Staff() {
     setRole(member.role);
     setPhone(member.phone);
     setCommissionRate(String(member.commissionRate || 0));
+    setEmail(member.username || "");
   };
 
   const toggleStatus = (member: StaffMember) => {
@@ -215,6 +218,18 @@ export default function Staff() {
                   value={name} 
                   onChange={(e) => setName(e.target.value)} 
                   placeholder="สมชาย ใจดี" 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">อีเมล (Google Account) *</Label>
+                <input 
+                  id="email" 
+                  type="email"
+                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  placeholder="somchai@gmail.com" 
                   required 
                 />
               </div>
@@ -524,6 +539,17 @@ export default function Staff() {
                             className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
                             value={name} 
                             onChange={(e) => setName(e.target.value)} 
+                            required 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-email" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">อีเมล (Google Account) *</Label>
+                          <input 
+                            id="edit-email" 
+                            type="email"
+                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                            value={email} 
+                            onChange={(e) => setEmail(e.target.value)} 
                             required 
                           />
                         </div>
