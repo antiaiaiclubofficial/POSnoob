@@ -27,36 +27,48 @@ const Login = () => {
     const token = params.get('token');
     const inviteId = params.get('inviteId');
 
-    if (isInvite && token) {
-      try {
-        const decodedData = JSON.parse(decodeURIComponent(atob(token)));
-        setInviteData(decodedData);
-        localStorage.setItem('pending_invite_data', JSON.stringify(decodedData));
-      } catch (err) {
-        console.error("Error decoding invite token:", err);
-        toast.error("ลิงก์คำเชิญไม่ถูกต้องหรือหมดอายุแล้ว");
-      }
-    } else if (isInvite && inviteId) {
+    if (isInvite) {
       const validateAndFetchInvite = async () => {
         try {
-          // 1. Fetch profile with status = 'Pending'
+          let targetInviteId = inviteId;
+          let decodedData: any = null;
+
+          // 1. ถอดรหัส Token หากมีส่งมา
+          if (token) {
+            try {
+              decodedData = JSON.parse(decodeURIComponent(atob(token)));
+              targetInviteId = decodedData.inviteId;
+            } catch (err) {
+              console.error("Error decoding invite token:", err);
+              toast.error("ลิงก์คำเชิญไม่ถูกต้องหรือหมดอายุแล้ว");
+              navigate('/login', { replace: true });
+              return;
+            }
+          }
+
+          if (!targetInviteId) {
+            toast.error("ไม่พบรหัสคำเชิญที่ถูกต้อง");
+            navigate('/login', { replace: true });
+            return;
+          }
+
+          // 2. ตรวจสอบสถานะคำเชิญในฐานข้อมูล (ต้องเป็น 'Pending' เท่านั้น)
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', inviteId)
+            .eq('id', targetInviteId)
             .eq('status', 'Pending')
             .maybeSingle();
 
           if (profileError) throw profileError;
 
           if (!profile) {
-            toast.error("ลิงก์คำเชิญนี้ไม่ถูกต้องหรือถูกใช้งานไปแล้ว");
-            // Clear query params from URL
+            toast.error("ลิงก์คำเชิญนี้ไม่ถูกต้อง ถูกใช้งานไปแล้ว หรือหมดอายุแล้ว");
             navigate('/login', { replace: true });
             return;
           }
 
-          // 2. Fetch store name
+          // 3. ดึงชื่อร้านค้า
           let storeName = 'Tactile Sanctuary';
           if (profile.store_id) {
             const { data: store, error: storeError } = await supabase
@@ -69,21 +81,24 @@ const Login = () => {
             }
           }
 
-          const data = {
-            inviteId: inviteId,
+          // 4. รวมข้อมูลคำเชิญเพื่อบันทึกเตรียมเชื่อมต่อ Google Account
+          const finalInviteData = {
+            inviteId: targetInviteId,
             storeId: profile.store_id,
             storeName: storeName,
             role: profile.role === 'admin' ? 'Admin' : profile.role === 'staff' ? 'Assistant' : profile.role,
             name: profile.full_name,
             commissionRate: profile.commission_rate,
-            phone: profile.phone
+            phone: profile.phone,
+            avatar: profile.avatar_url
           };
 
-          setInviteData(data);
-          localStorage.setItem('pending_invite_data', JSON.stringify(data));
+          setInviteData(finalInviteData);
+          localStorage.setItem('pending_invite_data', JSON.stringify(finalInviteData));
         } catch (err: any) {
           console.error("Error validating invite:", err);
           toast.error("เกิดข้อผิดพลาดในการตรวจสอบคำเชิญ");
+          navigate('/login', { replace: true });
         }
       };
 
