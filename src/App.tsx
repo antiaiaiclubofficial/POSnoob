@@ -59,39 +59,50 @@ const App = () => {
     return () => subscription.unsubscribe();
   }, [setSession]);
 
-  // Real-time Active Sessions Listener to force logout if session is deleted
+  // Highly reliable Session Heartbeat to check if session is still valid and update last_active_at
   useEffect(() => {
-    if (!isAuthenticated || !currentUser?.id) return;
+    if (!isAuthenticated || !currentUser?.id || !storeId || storeId === 'default-store' || currentUser?.role === 'superadmin') return;
 
-    const channel = supabase
-      .channel('realtime-active-sessions')
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'active_sessions'
-        },
-        async () => {
-          // Verify if our session still exists in active_sessions
-          const { data, error } = await supabase
-            .from('active_sessions')
-            .select('id')
-            .eq('user_id', currentUser.id)
-            .maybeSingle();
-          
-          if (!data && !error) {
-            toast.error(language === 'th' ? "เซสชันของคุณถูกปิดโดยผู้ดูแลระบบ" : "Your session was terminated by an administrator.");
-            logout();
-          }
+    const checkAndHeartbeat = async () => {
+      try {
+        // 1. Check if our session still exists in active_sessions
+        const { data, error } = await supabase
+          .from('active_sessions')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error checking active session:", error);
+          return;
         }
-      )
-      .subscribe();
+
+        if (!data) {
+          // Session was deleted by Admin! Force logout immediately
+          toast.error(language === 'th' ? "เซสชันของคุณถูกปิดโดยผู้ดูแลระบบ" : "Your session was terminated by an administrator.");
+          logout();
+        } else {
+          // Session is valid, update last_active_at to keep it alive
+          await supabase
+            .from('active_sessions')
+            .update({ last_active_at: new Date().toISOString() })
+            .eq('user_id', currentUser.id);
+        }
+      } catch (err) {
+        console.error("Heartbeat error:", err);
+      }
+    };
+
+    // Run immediately on mount/auth change
+    checkAndHeartbeat();
+
+    // Run every 5 seconds
+    const interval = setInterval(checkAndHeartbeat, 5000);
 
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(interval);
     };
-  }, [isAuthenticated, currentUser?.id, logout, language]);
+  }, [isAuthenticated, currentUser?.id, storeId, logout, language]);
 
   // Real-time Staff (Profiles) Sync Logic
   useEffect(() => {
@@ -365,10 +376,10 @@ const App = () => {
               pets: (c.pets || []).map((p: any) => ({
                 id: p.id,
                 name: p.name,
-                species: p.type || 'Dog',
+                species: (p.type || 'Dog') as 'Dog' | 'Cat' | 'Other',
                 breed: p.breed || '-',
                 birthday: p.birth_date || '',
-                weightHistory: weightHistoryMap[p.id] || (p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : []),
+                weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
                 serviceHistory: serviceHistoryMap[p.id] || [],
                 intakeHistory: intakeHistoryMap[p.id] || [],
                 notes: p.medical_condition || '',
