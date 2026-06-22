@@ -1,3 +1,5 @@
+"use client";
+
 import { StateCreator } from 'zustand';
 import { AppState } from '../types';
 import { supabase } from '@/integrations/supabase/client';
@@ -219,6 +221,21 @@ export const createAuthSlice: StateCreator<
         if (shouldBeSuperAdmin) {
           userRole = 'superadmin';
           storeId = null;
+        }
+
+        // Upsert active session to prevent immediate logout
+        if (storeId && storeId !== 'default-store' && userRole !== 'superadmin') {
+          try {
+            await supabase
+              .from('active_sessions')
+              .upsert({
+                user_id: user.id,
+                store_id: storeId,
+                last_active_at: new Date().toISOString()
+              });
+          } catch (err) {
+            console.error("Failed to upsert active session:", err);
+          }
         }
 
         set({
