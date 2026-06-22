@@ -147,6 +147,76 @@ export const useStore = create<AppState>()((set, get) => ({
             points_earn_rate: profile.pointsEarnRate !== undefined ? profile.pointsEarnRate : undefined,
             points_redeem_rate: profile.pointsRedeemRate !== undefined ? profile.pointsRedeemRate : undefined,
             max_users: profile.maxUsers !== undefined ? profile.maxUsers : undefined,
+            max_staff: profile.max_staff || 10
+          })
+          .eq('id', storeId);
+        
+        if (error) throw error;
+      } catch (err) {
+        console.warn("Failed to update store settings in Supabase:", err);
+      }
+    }
+    toast.success("Business profile updated successfully!");
+  },
+
+  updateBookingSettings: async (settings) => {
+    set(s => ({ ...s, ...settings }));
+    const storeId = get().storeId;
+    if (storeId && storeId !== 'default-store') {
+      try {
+        const { error } = await supabase
+          .from('stores')
+          .update({
+            slot_duration: settings.slotDuration,
+            max_capacity: settings.maxCapacity,
+            open_time: settings.openTime,
+            close_time: settings.closeTime
+          })
+          .eq('id', storeId);
+        
+        if (error) throw error;
+      } catch (err) {
+        console.warn("Failed to update booking settings in Supabase:", err);
+      }
+    }
+    toast.success("Booking settings updated successfully!");
+  },
+
+  updateBusinessProfile: async (profile) => {
+    set(s => ({ ...s, ...profile }));
+    if (typeof window !== 'undefined') {
+      if (profile.companyName !== undefined) localStorage.setItem('company_name', profile.companyName);
+      if (profile.companyAddress !== undefined) localStorage.setItem('company_address', profile.companyAddress);
+      if (profile.companyTaxId !== undefined) localStorage.setItem('company_tax_id', profile.companyTaxId);
+      if (profile.companyPhone !== undefined) localStorage.setItem('company_phone', profile.companyPhone);
+      if (profile.companyEmail !== undefined) localStorage.setItem('company_email', profile.companyEmail);
+      if (profile.vatEnabled !== undefined) localStorage.setItem('vat_enabled', String(profile.vatEnabled));
+      if (profile.vatRate !== undefined) localStorage.setItem('vat_rate', String(profile.vatRate));
+    }
+    const storeId = get().storeId;
+    if (storeId && storeId !== 'default-store') {
+      try {
+        const { error } = await supabase
+          .from('stores')
+          .update({
+            name: profile.shopName !== undefined ? profile.shopName : undefined,
+            logo_url: profile.shopLogo !== undefined ? profile.shopLogo : undefined,
+            address: profile.shopAddress !== undefined ? profile.shopAddress : undefined,
+            phone: profile.shopPhone !== undefined ? profile.shopPhone : undefined,
+            line_id: profile.shopLineId !== undefined ? profile.shopLineId : undefined,
+            receipt_header: profile.receipt_header !== undefined ? profile.receiptHeader : undefined,
+            receipt_footer: profile.receipt_footer !== undefined ? profile.receiptFooter : undefined,
+            receipt_paper_size: profile.receiptPaperSize !== undefined ? profile.receiptPaperSize : undefined,
+            company_name: profile.companyName !== undefined ? profile.companyName : undefined,
+            company_address: profile.companyAddress !== undefined ? profile.companyAddress : undefined,
+            company_tax_id: profile.companyTaxId !== undefined ? profile.companyTaxId : undefined,
+            company_phone: profile.companyPhone !== undefined ? profile.companyPhone : undefined,
+            company_email: profile.companyEmail !== undefined ? profile.companyEmail : undefined,
+            vat_enabled: profile.vatEnabled !== undefined ? profile.vatEnabled : undefined,
+            vat_rate: profile.vatRate !== undefined ? profile.vatRate : undefined,
+            points_earn_rate: profile.pointsEarnRate !== undefined ? profile.pointsEarnRate : undefined,
+            points_redeem_rate: profile.pointsRedeemRate !== undefined ? profile.pointsRedeemRate : undefined,
+            max_users: profile.maxUsers !== undefined ? profile.maxUsers : undefined,
             max_staff: profile.maxStaff !== undefined ? profile.maxStaff : undefined,
           })
           .eq('id', storeId);
@@ -217,8 +287,6 @@ export const useStore = create<AppState>()((set, get) => ({
   addBooking: (booking) => set(s => ({ queue: [...s.queue, { ...booking, id: Math.random().toString() }] })),
   updateQueueStatus: (id, status) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, status } : q) })),
   removeQueueItem: (id) => set(s => ({ queue: s.queue.filter(q => q.id !== id) })),
-  markAsPaid: (id) => set(s => ({ queue: s.queue.map(q => q.id === id ? { ...q, isPaid: true } : q) })),
-
   toggleSlotStatus: (time) => set(s => {
     const isDisabled = s.disabledSlots.includes(time);
     return {
@@ -740,7 +808,7 @@ export const useStore = create<AppState>()((set, get) => ({
   updateStaff: async (id, st) => {
     const maxStaff = get().maxStaff || 10;
     const currentStaff = get().staff.find(s => s.id === id);
-    const activeStaffCount = get().staff.filter(s => !s.isPendingInvite && s.status === 'Active' && s.id !== id).length;
+    const activeStaffCount = get().staff.filter(s => s.status === 'Active' && s.id !== id).length;
 
     if (st.status === 'Active' && currentStaff?.status !== 'Active' && activeStaffCount >= maxStaff) {
       toast.error(get().language === 'th' 
@@ -765,6 +833,19 @@ export const useStore = create<AppState>()((set, get) => ({
     if (error) {
       console.error("Error updating staff:", error);
       throw error;
+    }
+
+    // If status is set to Inactive, delete active session
+    if (st.status === 'Inactive') {
+      try {
+        await supabase
+          .from('active_sessions')
+          .delete()
+          .eq('user_id', id);
+        console.log(`[updateStaff] Deleted active session for user ${id} due to deactivation.`);
+      } catch (err) {
+        console.error("Error deleting active session on staff deactivation:", err);
+      }
     }
 
     set(s => ({
