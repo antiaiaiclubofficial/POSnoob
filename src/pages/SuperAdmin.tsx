@@ -16,7 +16,7 @@ type SuperAdminTab = 'dashboard' | 'stores' | 'users' | 'approvals' | 'explorer'
 
 const SuperAdmin = () => {
   const navigate = useNavigate();
-  const { currentUser, login, loginWithGoogle, logout } = useStore();
+  const { currentUser, loginWithGoogle, logout } = useStore();
 
   // Independent Superadmin Authentication State
   const [isSuperAdminAuthenticated, setIsSuperAdminAuthenticated] = useState<boolean>(() => {
@@ -58,7 +58,7 @@ const SuperAdmin = () => {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [viewingStoreUsers, setViewingStoreUsers] = useState<any | null>(null);
 
-  // Form States - Store (with all required properties to prevent TS errors)
+  // Form States - Store
   const [storeForm, setStoreForm] = useState({
     name: '',
     slug: '',
@@ -114,24 +114,18 @@ const SuperAdmin = () => {
 
   const handleLocalLogout = () => {
     localStorage.removeItem('superadmin_session');
+    localStorage.removeItem('superadmin_user');
     setIsSuperAdminAuthenticated(false);
-    if (currentUser?.role === 'superadmin') {
-      logout();
-    }
     toast.info("ออกจากระบบ Super Admin เรียบร้อยแล้ว");
   };
 
   const handleLocalLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (localId !== 'superadmin') {
-      toast.error("กรุณาใช้บัญชี Superadmin สำหรับโหมดนี้");
-      return;
-    }
     
-    // Authenticate locally
-    const success = login(localId, localPassword);
-    if (success) {
+    // ตรวจสอบข้อมูลเข้าสู่ระบบของ Super Admin โดยตรงที่นี่ เพื่อไม่ให้ไปทับซ้อนกับ Zustand Store ของผู้ใช้ปกติ
+    if (localId === 'superadmin' && localPassword === 'superadmin') {
       localStorage.setItem('superadmin_session', 'active');
+      localStorage.setItem('superadmin_user', JSON.stringify({ id: 'superadmin', name: 'System Owner', role: 'superadmin', username: 'superadmin' }));
       setIsSuperAdminAuthenticated(true);
       toast.success("ยินดีต้อนรับกลับผู้ดูแลระบบสูงสุด!");
       setLocalId('');
@@ -240,7 +234,6 @@ const SuperAdmin = () => {
     }
   };
 
-  // Helper to map user roles to specific Tailwind CSS color classes
   const getRoleBadgeColor = (role: string) => {
     switch (role?.toLowerCase()) {
       case 'superadmin':
@@ -609,6 +602,32 @@ const SuperAdmin = () => {
     p.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleForceLogout = async (userId: string, staffName: string) => {
+    const isSuper = isSuperAdminAuthenticated || currentUser?.role === 'superadmin';
+    if (!isSuper && currentUser?.role !== 'Admin') {
+      toast.error("คุณไม่มีสิทธิ์ในการสั่ง Logout พนักงานคนนี้ (ต้องเป็น Admin เท่านั้น)");
+      return;
+    }
+
+    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการสั่ง Logout เซสชันของ "${staffName}"?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('active_sessions')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast.success(`สั่ง Logout เซสชันของ "${staffName}" เรียบร้อยแล้ว`);
+      fetchInitialData();
+    } catch (err: any) {
+      toast.error("เกิดข้อผิดพลาด: " + err.message);
+    }
+  };
+
   if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-[#0F111A] flex items-center justify-center p-6 relative">
@@ -622,95 +641,87 @@ const SuperAdmin = () => {
           </div>
 
           <div className="bg-[#151824] p-10 rounded-[48px] border border-gray-800 shadow-2xl text-center space-y-6">
-            {currentUser && currentUser.role !== 'superadmin' ? (
+            {currentUser && currentUser.role !== 'superadmin' && !isSuperAdminAuthenticated ? (
               <div className="space-y-6">
                 <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs font-bold leading-relaxed">
-                  ปฏิเสธการเข้าถึง: บัญชี Google ของคุณ ({currentUser.email}) ไม่มีสิทธิ์ผู้ดูแลระบบสูงสุด (Super Admin)
+                  คุณกำลังเข้าสู่ระบบแอปพลิเคชันปกติอยู่ ({currentUser.email}) คุณสามารถเข้าสู่ระบบ Super Admin ด้วยบัญชีผู้ดูแลระบบสูงสุดด้านล่างนี้
                 </div>
-                <button 
-                  onClick={handleLocalLogout}
-                  className="w-full bg-gray-800 hover:bg-gray-700 text-white font-black py-4 rounded-[24px] flex items-center justify-center gap-3 transition-all"
-                >
-                  <LogOut size={18} /> ออกจากระบบ / สลับบัญชี
-                </button>
               </div>
             ) : (
-              <div className="space-y-6 text-center">
-                <p className="text-xs text-gray-400 leading-relaxed">
-                  กรุณาลงชื่อเข้าใช้งานด้วยบัญชีผู้ดูแลระบบสูงสุด (Super Admin) เพื่อเข้าสู่แผงควบคุมระบบส่วนกลาง
-                </p>
-                
-                {/* Local ID/Password Login Form for Superadmin */}
-                <form onSubmit={handleLocalLogin} className="space-y-4 text-left">
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-1">Superadmin ID</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                      <input 
-                        type="text"
-                        className="w-full bg-[#0d0e15] border border-[#3a3f50] rounded-xl pl-11 pr-4 py-3 text-xs font-bold text-white focus:ring-2 focus:ring-red-500/20"
-                        placeholder="superadmin"
-                        value={localId}
-                        onChange={e => setLocalId(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-1">Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                      <input 
-                        type="password"
-                        className="w-full bg-[#0d0e15] border border-[#3a3f50] rounded-xl pl-11 pr-4 py-3 text-xs font-bold text-white focus:ring-2 focus:ring-red-500/20"
-                        placeholder="••••••••"
-                        value={localPassword}
-                        onChange={e => setLocalPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <button 
-                    type="submit"
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-600/10 transition-all"
-                  >
-                    เข้าสู่ระบบด้วยรหัสผ่าน
-                  </button>
-                </form>
-
-                <div className="relative flex py-2 items-center">
-                  <div className="flex-grow border-t border-gray-800"></div>
-                  <span className="flex-shrink mx-4 text-gray-600 text-[9px] font-black uppercase tracking-widest">Or</span>
-                  <div className="flex-grow border-t border-gray-800"></div>
-                </div>
-
-                <button 
-                  onClick={handleGoogleLogin}
-                  onMouseMove={handleMouseMove}
-                  className="w-full bg-[#0d0e15] google-border-btn text-white border border-[#3a3f50] font-bold py-4 rounded-full flex items-center justify-center gap-3 shadow-sm active:scale-95"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-3.3 3.28-8.17 3.28-13.83z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                    />
-                  </svg>
-                  Sign in with Google
-                </button>
-              </div>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                กรุณาลงชื่อเข้าใช้งานด้วยบัญชีผู้ดูแลระบบสูงสุด (Super Admin) เพื่อเข้าสู่แผงควบคุมระบบส่วนกลาง
+              </p>
             )}
+            
+            {/* Local ID/Password Login Form for Superadmin */}
+            <form onSubmit={handleLocalLogin} className="space-y-4 text-left">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-1">Superadmin ID</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                  <input 
+                    type="text"
+                    className="w-full bg-[#0d0e15] border border-[#3a3f50] rounded-xl pl-11 pr-4 py-3 text-xs font-bold text-white focus:ring-2 focus:ring-red-500/20"
+                    placeholder="superadmin"
+                    value={localId}
+                    onChange={e => setLocalId(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-1">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                  <input 
+                    type="password"
+                    className="w-full bg-[#0d0e15] border border-[#3a3f50] rounded-xl pl-11 pr-4 py-3 text-xs font-bold text-white focus:ring-2 focus:ring-red-500/20"
+                    placeholder="••••••••"
+                    value={localPassword}
+                    onChange={e => setLocalPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <button 
+                type="submit"
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-600/10 transition-all"
+              >
+                เข้าสู่ระบบด้วยรหัสผ่าน
+              </button>
+            </form>
+
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-gray-800"></div>
+              <span className="flex-shrink mx-4 text-gray-600 text-[9px] font-black uppercase tracking-widest">Or</span>
+              <div className="flex-grow border-t border-gray-800"></div>
+            </div>
+
+            <button 
+              onClick={handleGoogleLogin}
+              onMouseMove={handleMouseMove}
+              className="w-full bg-[#0d0e15] google-border-btn text-white border border-[#3a3f50] font-bold py-4 rounded-full flex items-center justify-center gap-3 shadow-sm active:scale-95"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-3.3 3.28-8.17 3.28-13.83z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              Sign in with Google
+            </button>
           </div>
         </div>
       </div>
@@ -834,7 +845,7 @@ const SuperAdmin = () => {
                 {/* Recent Stores & Users */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Recent Stores */}
-                  <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                  <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col">
                     <h3 className="text-lg font-black text-[#1A1F3D] mb-6">ร้านค้าที่สร้างล่าสุด</h3>
                     <div className="space-y-4">
                       {stores.slice(0, 5).map(store => (
@@ -1141,8 +1152,9 @@ const SuperAdmin = () => {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="bg-gray-50/50 border-b border-gray-100">
+                        <tr className="bg-gray-50/50">
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">อีเมลผู้สมัคร</th>
+                          <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">ชื่อผู้สมัคร</th>
                           <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">มอบหมายร้านค้า (Assign Store)</th>
                           <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">วันที่สมัคร</th>
                           <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">การดำเนินการ</th>
@@ -1154,6 +1166,9 @@ const SuperAdmin = () => {
                             <td className="px-8 py-5">
                               <p className="text-sm font-black text-[#1A1F3D]">{user.email}</p>
                               <p className="text-[9px] text-gray-400 font-bold uppercase">UID: {user.id}</p>
+                            </td>
+                            <td className="px-8 py-5 text-sm font-bold text-gray-600">
+                              {user.full_name || "-"}
                             </td>
                             <td className="px-8 py-5">
                               <select 
@@ -1192,7 +1207,7 @@ const SuperAdmin = () => {
                         ))}
                         {filteredPendingUsers.length === 0 && (
                           <tr>
-                            <td colSpan={4} className="py-20 text-center opacity-20 font-black">ไม่มีคำขออนุมัติใหม่ในขณะนี้</td>
+                            <td colSpan={5} className="py-20 text-center opacity-20 font-black">ไม่มีคำขออนุมัติใหม่ในขณะนี้</td>
                           </tr>
                         )}
                       </tbody>
@@ -1379,11 +1394,10 @@ const SuperAdmin = () => {
                       value={storeForm.max_users}
                       onChange={e => setStoreForm({ ...storeForm, max_users: Number(e.target.value) })}
                       placeholder="5"
-                      required
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">บัญชีพนักงานสูงสุด (Max Staff)</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">จำนวนพนักงานสูงสุด (Max Staff)</label>
                     <input 
                       type="number"
                       min={1}
@@ -1391,19 +1405,39 @@ const SuperAdmin = () => {
                       value={storeForm.max_staff}
                       onChange={e => setStoreForm({ ...storeForm, max_staff: Number(e.target.value) })}
                       placeholder="10"
-                      required
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">โลโก้ URL (Logo URL)</label>
-                  <input 
-                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
-                    value={storeForm.logo_url}
-                    onChange={e => setStoreForm({ ...storeForm, logo_url: e.target.value })}
-                    placeholder="https://example.com/logo.png"
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">ที่อยู่ร้านค้า (Address)</label>
+                  <textarea 
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-20 resize-none leading-relaxed"
+                    value={storeForm.address}
+                    onChange={e => setStoreForm({ ...storeForm, address: e.target.value })}
+                    placeholder="ที่อยู่ร้านค้า..."
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">เบอร์โทรศัพท์</label>
+                    <input 
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
+                      value={storeForm.phone}
+                      onChange={e => setStoreForm({ ...storeForm, phone: e.target.value })}
+                      placeholder="0812345678"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest px-1">LINE Official ID</label>
+                    <input 
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
+                      value={storeForm.line_id}
+                      onChange={e => setStoreForm({ ...storeForm, line_id: e.target.value })}
+                      placeholder="@mellowfellow"
+                    />
+                  </div>
                 </div>
               </div>
 
