@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import RoleManagementModal from "@/components/RoleManagementModal";
+import PayrollTab from "@/components/PayrollTab";
 import { format } from "date-fns";
 
 interface StaffMember {
@@ -150,45 +151,6 @@ export default function Staff() {
     },
     enabled: !!storeId && activeTab === 'commissions'
   });
-
-  // Fetch Payroll Records
-  const { data: payrollRecords = [], isLoading: payrollLoading } = useQuery({
-    queryKey: ['payroll_records', storeId],
-    queryFn: async () => {
-      if (!storeId || storeId === 'default-store') return [];
-      const { data, error } = await supabase
-        .from('payroll_records' as any)
-        .select('*, profiles(full_name, avatar_url, role)')
-        .eq('store_id', storeId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!storeId && activeTab === 'payroll'
-  });
-
-  // Mutation for Approving Payroll
-  const approvePayrollMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('payroll_records' as any)
-        .update({ status: 'paid' })
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payroll_records'] });
-      toast.success("บันทึกการจ่ายเงินเดือนเรียบร้อยแล้ว");
-    },
-    onError: (err: any) => {
-      toast.error("เกิดข้อผิดพลาด: " + err.message);
-    }
-  });
-
-  const handleApprovePayroll = (id: string) => {
-    if (!window.confirm("ยืนยันการจ่ายเงินเดือนสำหรับพนักงานท่านนี้ใช่หรือไม่?")) return;
-    approvePayrollMutation.mutate(id);
-  };
 
   // Mutations for Leave Management
   const updateLeaveMutation = useMutation({
@@ -423,6 +385,7 @@ export default function Staff() {
       <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
         <Tabs value={activeTab} className="h-full">
           <TabsContent value="profiles" className="space-y-8 m-0 animate-in fade-in duration-300">
+            {/* ... Existing Profiles Content ... */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Dialog open={isSessionsOpen} onOpenChange={(open: boolean) => { setIsSessionsOpen(open); if (open) refetchSessions(); }}>
                 <DialogTrigger asChild>
@@ -534,6 +497,7 @@ export default function Staff() {
           </TabsContent>
 
           <TabsContent value="attendance" className="m-0 h-full animate-in fade-in duration-300">
+            {/* ... Existing Attendance Content ... */}
             <div className="space-y-8">
               <div className="flex justify-between items-end mb-2"><div><h3 className="text-xl font-black text-[#1A1F3D]">คำขออนุมัติการลา (Leave Requests)</h3><p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Pending approval from staff</p></div></div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -563,8 +527,9 @@ export default function Staff() {
           </TabsContent>
 
           <TabsContent value="commissions" className="m-0 h-full animate-in fade-in duration-300">
+            {/* ... Existing Commissions Content ... */}
             <div className="space-y-8">
-              {!commissionsLoading && commissionsData.length > 0 && <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"><p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Total Service Sales</p><h2 className="text-3xl font-black text-[#1A1F3D]">{currency}{commissionsData.reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toLocaleString()}</h2></div><div className="bg-[#1A1F3D] p-8 rounded-[40px] shadow-xl relative overflow-hidden"><div className="absolute top-0 right-0 p-6 opacity-10 text-[#D9ED5F]"><TrendingUp size={60} /></div><p className="text-[10px] font-black uppercase text-white/40 tracking-wider mb-2">Total Payout</p><h2 className="text-3xl font-black text-[#D9ED5F]">{currency}{commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0).toLocaleString()}</h2></div><div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"><p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Avg. Reward Per Job</p><h2 className="text-3xl font-black text-[#1A1F3D]">{currency}{Math.round(commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0) / commissionsData.length).toLocaleString()}</h2></div></div>}
+              {commissionsData.length > 0 && <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"><p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Total Service Sales</p><h2 className="text-3xl font-black text-[#1A1F3D]">{currency}{commissionsData.reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toLocaleString()}</h2></div><div className="bg-[#1A1F3D] p-8 rounded-[40px] shadow-xl relative overflow-hidden"><div className="absolute top-0 right-0 p-6 opacity-10 text-[#D9ED5F]"><TrendingUp size={60} /></div><p className="text-[10px] font-black uppercase text-white/40 tracking-wider mb-2">Total Payout</p><h2 className="text-3xl font-black text-[#D9ED5F]">{currency}{commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0).toLocaleString()}</h2></div><div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"><p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Avg. Reward Per Job</p><h2 className="text-3xl font-black text-[#1A1F3D]">{currency}{Math.round(commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0) / commissionsData.length).toLocaleString()}</h2></div></div>}
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
                 <div className="flex justify-between items-center"><div><h3 className="text-xl font-black text-[#1A1F3D]">สรุปยอดค่าคอมมิชชัน (Commissions)</h3><p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Earnings based on service performance</p></div></div>
                 <div className="overflow-x-auto"><table className="w-full"><thead><tr className="bg-gray-50/50 border-b border-gray-100"><th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">วันที่ / เลขที่สั่งซื้อ</th><th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">พนักงาน</th><th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">ยอดขาย</th><th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">อัตรา (%)</th><th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">รางวัลตอบแทน</th></tr></thead><tbody className="divide-y divide-gray-50">{commissionsLoading ? <tr><td colSpan={5} className="py-20 text-center opacity-40 font-black animate-pulse uppercase text-xs">Loading Commission Data...</td></tr> : commissionsData.length === 0 ? <tr><td colSpan={5} className="py-20 text-center opacity-20 font-black uppercase text-xs tracking-widest">No sales records found</td></tr> : commissionsData.map((tx: any) => (
@@ -581,80 +546,7 @@ export default function Staff() {
           </TabsContent>
 
           <TabsContent value="payroll" className="m-0 h-full animate-in fade-in duration-300">
-            <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden h-full flex flex-col">
-              <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/20">
-                <div>
-                  <h3 className="text-xl font-black text-[#1A1F3D]">ระบบจ่ายเงินเดือน (Payroll)</h3>
-                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Monthly Salary & Commission Summary</p>
-                </div>
-              </div>
-              <div className="overflow-x-auto flex-1 scrollbar-hide">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-white border-b border-gray-50">
-                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">พนักงาน / รอบเดือน</th>
-                      <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">ฐานเงินเดือน</th>
-                      <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">คอมมิชชัน</th>
-                      <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">โบนัส / หัก</th>
-                      <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">สุทธิ (Net)</th>
-                      <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">สถานะ</th>
-                      <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">จัดการ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {payrollLoading ? (
-                      <tr><td colSpan={7} className="py-20 text-center opacity-40 font-black animate-pulse uppercase text-xs">Loading Payroll Data...</td></tr>
-                    ) : payrollRecords.length === 0 ? (
-                      <tr><td colSpan={7} className="py-20 text-center opacity-20 font-black uppercase text-xs tracking-widest">No payroll records found</td></tr>
-                    ) : (
-                      payrollRecords.map((record: any) => {
-                        const netSalary = Number(record.basic_salary || 0) + Number(record.commission || 0) + Number(record.bonus || 0) - Number(record.deductions || 0);
-                        return (
-                          <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-8 py-5">
-                              <div className="flex items-center gap-3">
-                                <img src={record.profiles?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-10 h-10 rounded-xl object-cover" />
-                                <div>
-                                  <p className="text-sm font-bold text-[#1A1F3D]">{record.profiles?.full_name}</p>
-                                  <p className="text-[10px] text-indigo-500 font-black uppercase">{record.month}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-8 py-5 text-right text-xs font-bold text-gray-600">{currency}{Number(record.basic_salary || 0).toLocaleString()}</td>
-                            <td className="px-8 py-5 text-right text-xs font-bold text-blue-600">{currency}{Number(record.commission || 0).toLocaleString()}</td>
-                            <td className="px-8 py-5 text-right">
-                              <p className="text-[10px] text-green-600 font-bold">+{currency}{Number(record.bonus || 0).toLocaleString()}</p>
-                              <p className="text-[10px] text-red-400 font-bold">-{currency}{Number(record.deductions || 0).toLocaleString()}</p>
-                            </td>
-                            <td className="px-8 py-5 text-right">
-                              <p className="text-lg font-black text-[#1A1F3D]">{currency}{netSalary.toLocaleString()}</p>
-                            </td>
-                            <td className="px-8 py-5 text-center">
-                              <span className={cn(
-                                "px-3 py-1 rounded-lg text-[9px] font-black uppercase",
-                                record.status === 'paid' ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"
-                              )}>
-                                {record.status === 'paid' ? 'Paid' : 'Pending'}
-                              </span>
-                            </td>
-                            <td className="px-8 py-5 text-right">
-                              {record.status === 'pending' && canManageStaff && (
-                                <button 
-                                  onClick={() => handleApprovePayroll(record.id)}
-                                  className="bg-[#1A1F3D] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-[#2A3152] transition-all shadow-md active:scale-95"
-                                >
-                                  ชำระเงิน
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <PayrollTab />
           </TabsContent>
         </Tabs>
       </div>
