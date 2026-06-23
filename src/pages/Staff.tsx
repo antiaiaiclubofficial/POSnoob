@@ -25,7 +25,9 @@ import {
   Users,
   Check,
   X,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  DollarSign
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -55,7 +57,7 @@ interface StaffMember {
 
 export default function Staff() {
   const queryClient = useQueryClient();
-  const { staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff, currentUser, roles } = useStore();
+  const { staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff, currentUser, roles, currency } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSessionsOpen, setIsSessionsOpen] = useState(false);
@@ -117,6 +119,43 @@ export default function Staff() {
       return data;
     },
     enabled: !!storeId && activeTab === 'attendance'
+  });
+
+  // Fetch Commissions Data (joined transactions with profiles)
+  const { data: commissionsData = [], isLoading: commissionsLoading } = useQuery({
+    queryKey: ['commissions_list', storeId],
+    queryFn: async () => {
+      if (!storeId || storeId === 'default-store') return [];
+      
+      // Fetching sales_transactions (orders) and profiles (employees)
+      const { data: txData, error: txError } = await supabase
+        .from('sales_transactions')
+        .select('*')
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: false });
+
+      if (txError) throw txError;
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, commission_rate, avatar_url')
+        .eq('store_id', storeId);
+
+      if (profileError) throw profileError;
+
+      // Map profiles to transactions to calculate commissions
+      return (txData || []).map(tx => {
+        const staff = (profileData || []).find(p => p.full_name === tx.staff_name || p.id === tx.staff_id);
+        const rate = staff?.commission_rate || 0;
+        return {
+          ...tx,
+          staff_profile: staff,
+          calculated_commission: (Number(tx.amount || 0) * rate) / 100,
+          commission_rate: rate
+        };
+      });
+    },
+    enabled: !!storeId && activeTab === 'commissions'
   });
 
   // Mutations for Leave Management
@@ -270,7 +309,7 @@ export default function Staff() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Sparkles size={14} className="text-[#D9ED5F]" />
-            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Team Management</p>
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-0.2em">Team Management</p>
           </div>
           <h1 className="text-3xl font-black text-[#1A1F3D]">การจัดการพนักงาน</h1>
           <p className="text-xs text-gray-400 font-bold mt-1">จัดการข้อมูลพนักงาน บทบาทหน้าที่ และค่าคอมมิชชัน</p>
@@ -516,7 +555,7 @@ export default function Staff() {
                     key={member.id} 
                     className={cn(
                       "bg-white rounded-[40px] p-8 flex flex-col h-full transition-all duration-300 border border-transparent group hover:shadow-2xl hover:border-gray-100 relative",
-                      member.status === "Inactive" && "opacity-60 grayscale-[0.3]"
+                      member.status === "Inactive" && "opacity-60 grayscale-0.3"
                     )}
                   >
                     {/* Action Buttons on Hover */}
@@ -863,12 +902,88 @@ export default function Staff() {
           </TabsContent>
 
           <TabsContent value="commissions" className="m-0 h-full animate-in fade-in duration-300">
-            <div className="h-full bg-white rounded-[48px] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center p-12">
-               <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-[32px] flex items-center justify-center mb-6">
-                  <Percent size={40} />
-               </div>
-               <h2 className="text-2xl font-black text-[#1A1F3D]">การคำนวณค่าคอมมิชชัน (Commissions)</h2>
-               <p className="text-sm text-gray-400 max-w-sm mt-2 font-medium">สรุปยอดคอมมิชชันรายบุคคลจากผลงานการให้บริการ กำลังอยู่ระหว่างการพัฒนา</p>
+            <div className="space-y-8">
+              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-xl font-black text-[#1A1F3D]">สรุปยอดค่าคอมมิชชัน (Commissions)</h3>
+                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Earnings based on service performance</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50/50 border-b border-gray-100">
+                        <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">วันที่ / เลขที่สั่งซื้อ</th>
+                        <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">พนักงาน</th>
+                        <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">ยอดขาย</th>
+                        <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">อัตรา (%)</th>
+                        <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">รางวัลตอบแทน</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {commissionsLoading ? (
+                        <tr><td colSpan={5} className="py-20 text-center opacity-40 font-black animate-pulse uppercase text-xs">Loading Commission Data...</td></tr>
+                      ) : commissionsData.length === 0 ? (
+                        <tr><td colSpan={5} className="py-20 text-center opacity-20 font-black uppercase text-xs tracking-widest">No sales records found</td></tr>
+                      ) : (
+                        commissionsData.map((tx: any) => (
+                          <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-8 py-5">
+                              <p className="text-xs font-black text-[#1A1F3D]">{format(new Date(tx.created_at), 'dd MMM yyyy')}</p>
+                              <p className="text-[9px] text-gray-400 font-bold uppercase">{tx.id}</p>
+                            </td>
+                            <td className="px-8 py-5 flex items-center gap-3">
+                              <img src={tx.staff_profile?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-8 h-8 rounded-lg object-cover" />
+                              <div>
+                                <p className="text-sm font-bold text-[#1A1F3D]">{tx.staff_name || 'Admin'}</p>
+                                <p className="text-[8px] text-indigo-500 font-black uppercase">{tx.staff_profile?.role || 'Staff'}</p>
+                              </div>
+                            </td>
+                            <td className="px-8 py-5 text-right font-black text-[#1A1F3D]">
+                              {currency}{Number(tx.amount || 0).toLocaleString()}
+                            </td>
+                            <td className="px-8 py-5 text-center">
+                              <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">
+                                {tx.commission_rate}%
+                              </span>
+                            </td>
+                            <td className="px-8 py-5 text-right font-black text-green-600">
+                              +{currency}{tx.calculated_commission.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Earnings Summary Cards */}
+              {!commissionsLoading && commissionsData.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Total Service Sales</p>
+                    <h2 className="text-3xl font-black text-[#1A1F3D]">
+                      {currency}{commissionsData.reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toLocaleString()}
+                    </h2>
+                  </div>
+                  <div className="bg-[#1A1F3D] p-8 rounded-[40px] shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-6 opacity-10 text-[#D9ED5F]"><TrendingUp size={60} /></div>
+                    <p className="text-[10px] font-black uppercase text-white/40 tracking-wider mb-2">Total Payout</p>
+                    <h2 className="text-3xl font-black text-[#D9ED5F]">
+                      {currency}{commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0).toLocaleString()}
+                    </h2>
+                  </div>
+                  <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Avg. Reward Per Job</p>
+                    <h2 className="text-3xl font-black text-[#1A1F3D]">
+                      {currency}{Math.round(commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0) / commissionsData.length).toLocaleString()}
+                    </h2>
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
 
