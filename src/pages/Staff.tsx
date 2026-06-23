@@ -122,36 +122,6 @@ export default function Staff() {
     enabled: !!storeId && activeTab === 'attendance'
   });
 
-  // Fetch Commissions Data
-  const { data: commissionsData = [], isLoading: commissionsLoading } = useQuery({
-    queryKey: ['commissions_list', storeId],
-    queryFn: async () => {
-      if (!storeId || storeId === 'default-store') return [];
-      const { data: txData, error: txError } = await supabase
-        .from('sales_transactions')
-        .select('*')
-        .eq('store_id', storeId)
-        .order('created_at', { ascending: false });
-      if (txError) throw txError;
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, commission_rate, avatar_url')
-        .eq('store_id', storeId);
-      if (profileError) throw profileError;
-      return (txData || []).map(tx => {
-        const staff = (profileData || []).find(p => p.full_name === tx.staff_name || p.id === tx.staff_id);
-        const rate = staff?.commission_rate || 0;
-        return {
-          ...tx,
-          staff_profile: staff,
-          calculated_commission: (Number(tx.amount || 0) * rate) / 100,
-          commission_rate: rate
-        };
-      });
-    },
-    enabled: !!storeId && activeTab === 'commissions'
-  });
-
   // Mutations for Leave Management
   const updateLeaveMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string, status: string }) => {
@@ -218,7 +188,10 @@ export default function Staff() {
       status: "Active",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
       username: email,
-      commissionRate: Number(commissionRate) || 0,
+      commissionRate: Number(commissionRate || 0),
+      googleConnected: false,
+      googleEmail: '',
+      isPendingInvite: false
     };
     addStaff(newStaff);
     toast.success("เพิ่มพนักงานเรียบร้อยแล้ว");
@@ -353,8 +326,8 @@ export default function Staff() {
                   </div>
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setIsAddOpen(false)} className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all">ยกเลิก</button>
-                  <button type="submit" className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all">บันทึก</button>
+                  <button type="button" onClick={() => setIsAddOpen(false)} className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400">ยกเลิก</button>
+                  <button type="submit" className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl">เพิ่มพนักงาน</button>
                 </div>
               </form>
             </DialogContent>
@@ -362,8 +335,8 @@ export default function Staff() {
         </div>
       </header>
 
-      {/* Tabs List */}
-      <div className="px-10 py-4 bg-white border-b border-gray-50 overflow-x-auto scrollbar-hide shrink-0">
+      {/* Navigation Tabs */}
+      <div className="px-10 py-4 bg-white border-b border-gray-50 flex gap-2 overflow-x-auto scrollbar-hide shrink-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-transparent h-auto p-0 flex gap-4">
             <TabsTrigger value="profiles" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
@@ -371,9 +344,6 @@ export default function Staff() {
             </TabsTrigger>
             <TabsTrigger value="attendance" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
               <CalendarDays size={16} className="mr-2" /> Attendance
-            </TabsTrigger>
-            <TabsTrigger value="commissions" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
-              <Percent size={16} className="mr-2" /> Commissions
             </TabsTrigger>
             <TabsTrigger value="payroll" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
               <Wallet size={16} className="mr-2" /> Payroll
@@ -385,7 +355,6 @@ export default function Staff() {
       <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
         <Tabs value={activeTab} className="h-full">
           <TabsContent value="profiles" className="space-y-8 m-0 animate-in fade-in duration-300">
-            {/* ... Existing Profiles Content ... */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Dialog open={isSessionsOpen} onOpenChange={(open: boolean) => { setIsSessionsOpen(open); if (open) refetchSessions(); }}>
                 <DialogTrigger asChild>
@@ -421,7 +390,7 @@ export default function Staff() {
                               <img src={member?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} alt={staffName} className="w-10 h-10 rounded-xl object-cover shrink-0" />
                               <div className="min-w-0"><p className="text-xs font-black text-[#1A1F3D] truncate">{staffName}</p><p className="text-[9px] text-gray-400 font-bold truncate">{staffEmail}</p><p className="text-[8px] text-indigo-500 font-bold mt-0.5">Active: {lastActive}</p></div>
                             </div>
-                            {canManageStaff && <button type="button" onClick={() => handleForceLogout(session.user_id, staffName)} className="p-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-xl transition-all shrink-0"><LogOut className="h-4 w-4" /></button>}
+                            {canManageStaff && <button type="button" onClick={() => handleForceLogout(session.user_id, staffName)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl"><LogOut className="h-4 w-4" /></button>}
                           </div>
                         );
                       })}
@@ -469,7 +438,7 @@ export default function Staff() {
                       <div className="flex items-center justify-between"><div className="flex items-center gap-3 min-w-0"><Mail className="h-4 w-4 text-gray-300 shrink-0" /><span className="truncate">{member.username}</span></div>{member.isPendingInvite && <button onClick={() => { navigator.clipboard.writeText(member.inviteLink || ""); toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!'); }} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-1 text-[10px] font-black uppercase shrink-0"><Copy size={12} /> Copy Link</button>}</div>
                       {member.phone && <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-gray-300 shrink-0" /><span>{member.phone}</span></div>}
                       <div className="flex items-center gap-3"><Percent className="h-4 w-4 text-gray-300 shrink-0" /><span>ค่าคอมมิชชัน: <span className="text-[#1A1F3D] font-black">{member.commissionRate || 0}%</span></span></div>
-                      <div className="bg-[#F5F6FA] p-3.5 rounded-2xl flex items-center justify-between mt-4"><div className="flex items-center gap-2"><Chrome className="h-4 w-4 text-blue-500" /><span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Google Calendar</span></div>{member.googleConnected ? <span className="bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-green-600" /> Connected</span> : <span className="bg-gray-100 text-gray-400 border border-gray-200 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1"><XCircle className="h-3 w-3 text-gray-400" /> Disconnected</span>}</div>
+                      <div className="bg-[#F5F6FA] p-3.5 rounded-2xl flex items-center justify-between mt-4"><div className="flex items-center gap-2"><Chrome className="h-4 w-4 text-blue-500" /><span className="text-xs font-bold">Google Account</span></div>{member.googleConnected ? <span className="text-[10px] font-black text-green-600 uppercase flex items-center gap-1"><CheckCircle2 size={12} /> Connected</span> : <span className="text-[10px] font-black text-gray-400 uppercase flex items-center gap-1"><XCircle size={12} /> Unlinked</span>}</div>
                     </div>
                     <div className="flex gap-3 pt-4 border-t border-gray-50">
                       <Dialog open={editingStaff?.id === member.id} onOpenChange={(open) => { if (!open) { setEditingStaff(null); resetForm(); } }}>
@@ -488,7 +457,7 @@ export default function Staff() {
                           </form>
                         </DialogContent>
                       </Dialog>
-                      {canManageStaff && <button onClick={() => toggleStatus(member)} className={cn("flex-1 font-black py-3.5 rounded-2xl text-xs transition-all active:scale-95 shadow-md", member.status === "Active" ? "bg-red-50 hover:bg-red-100 text-red-600 shadow-red-500/5" : "bg-green-50 hover:bg-green-100 text-green-600 shadow-green-500/5")}>{member.status === "Active" ? "ปิดใช้งาน" : "เปิดใช้งาน"}</button>}
+                      {canManageStaff && <button onClick={() => toggleStatus(member)} className={cn("flex-1 font-black py-3.5 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/10 active:scale-95 transition-all", member.status === "Active" ? "bg-red-500 text-white" : "bg-green-500 text-white")}>{member.status === "Active" ? "ปิดใช้งาน" : "เปิดใช้งาน"}</button>}
                     </div>
                   </div>
                 );
@@ -496,51 +465,73 @@ export default function Staff() {
             </div>
           </TabsContent>
 
-          <TabsContent value="attendance" className="m-0 h-full animate-in fade-in duration-300">
-            {/* ... Existing Attendance Content ... */}
-            <div className="space-y-8">
-              <div className="flex justify-between items-end mb-2"><div><h3 className="text-xl font-black text-[#1A1F3D]">คำขออนุมัติการลา (Leave Requests)</h3><p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Pending approval from staff</p></div></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {leaveRequests.length === 0 ? <div className="col-span-full py-12 text-center bg-white rounded-[32px] border border-dashed border-gray-200 opacity-40"><p className="font-black text-xs uppercase tracking-widest">No pending leave requests</p></div> : leaveRequests.map((request: any) => (
-                    <div key={request.id} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-3"><img src={request.profiles?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-10 h-10 rounded-xl object-cover" /><div><p className="text-sm font-black text-[#1A1F3D]">{request.profiles?.full_name}</p><p className="text-[10px] text-indigo-500 font-black uppercase">{request.leave_type}</p></div></div>
-                        <span className={cn("px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider", request.status === 'pending' ? "bg-amber-50 text-amber-600" : request.status === 'approved' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600")}>{request.status}</span>
+          <TabsContent value="attendance" className="m-0">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Attendance Logs */}
+              <div className="lg:col-span-2 bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col">
+                <h3 className="text-xl font-black text-[#1A1F3D] mb-6">ประวัติการลงเวลาเข้า-ออกงาน</h3>
+                <div className="divide-y divide-gray-50 overflow-y-auto max-h-[500px] scrollbar-hide">
+                  {attendanceLogs.map((log: any) => (
+                    <div key={log.id} className="py-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img src={log.profiles?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-10 h-10 rounded-xl object-cover" />
+                        <div>
+                          <p className="text-sm font-black text-[#1A1F3D]">{log.profiles?.full_name}</p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase">{log.type === 'check_in' ? 'เข้างาน' : 'ออกงาน'}</p>
+                        </div>
                       </div>
-                      <div className="bg-[#F5F6FA] p-4 rounded-2xl space-y-2"><div className="flex items-center gap-2 text-[10px] font-bold text-gray-500"><CalendarDays size={12} /><span>{request.start_date} ถึง {request.end_date}</span></div><p className="text-xs text-gray-600 leading-relaxed italic">"{request.reason || 'ไม่ได้ระบุเหตุผล'}"</p></div>
-                      {request.status === 'pending' && canManageStaff && <div className="flex gap-2 pt-2"><button onClick={() => handleApproveLeave(request.id)} className="flex-1 bg-green-500 text-white py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5 shadow-lg shadow-green-500/10 active:scale-95"><Check size={14} /> Approve</button><button onClick={() => handleRejectLeave(request.id)} className="flex-1 bg-red-50 text-red-500 py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5 active:scale-95"><X size={14} /> Reject</button></div>}
+                      <div className="text-right">
+                        <p className="text-sm font-black text-[#1A1F3D]">{format(new Date(log.created_at), 'HH:mm น.')}</p>
+                        <p className="text-[9px] text-gray-400 font-bold">{format(new Date(log.created_at), 'dd MMM yyyy')}</p>
+                      </div>
                     </div>
                   ))}
+                  {attendanceLogs.length === 0 && (
+                    <div className="py-12 text-center opacity-20 font-black text-xs uppercase">
+                      ไม่มีประวัติการลงเวลาในขณะนี้
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden mt-10">
-                <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/20"><div><h3 className="text-xl font-black text-[#1A1F3D]">ประวัติการลงเวลา (Recent Logs)</h3><p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Check-in / Check-out history</p></div></div>
-                <div className="overflow-x-auto"><table className="w-full"><thead><tr className="bg-white border-b border-gray-50"><th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">พนักงาน</th><th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">ประเภท</th><th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">เวลา</th><th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">หมายเหตุ / พิกัด</th></tr></thead><tbody className="divide-y divide-gray-50">{attendanceLogs.length === 0 ? <tr><td colSpan={4} className="py-20 text-center opacity-20 font-black">ไม่พบข้อมูลการลงเวลา</td></tr> : attendanceLogs.map((log: any) => (
-                          <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-8 py-5 flex items-center gap-3"><img src={log.profiles?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-8 h-8 rounded-lg object-cover" /><span className="text-sm font-bold text-[#1A1F3D]">{log.profiles?.full_name}</span></td>
-                            <td className="px-8 py-5 text-center"><span className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase", log.type === 'check_in' ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600")}>{log.type === 'check_in' ? 'Check In' : 'Check Out'}</span></td>
-                            <td className="px-8 py-5 text-center"><p className="text-xs font-black text-[#1A1F3D]">{format(new Date(log.created_at), 'HH:mm')}</p><p className="text-[9px] text-gray-400 font-bold">{format(new Date(log.created_at), 'dd MMM yyyy')}</p></td>
-                            <td className="px-8 py-5"><p className="text-xs text-gray-500">{log.notes || 'Normal Check'}</p><p className="text-[8px] text-gray-300 uppercase font-black">{log.location_name || 'In Shop'}</p></td>
-                          </tr>
-                        ))}</tbody></table></div>
-              </div>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="commissions" className="m-0 h-full animate-in fade-in duration-300">
-            {/* ... Existing Commissions Content ... */}
-            <div className="space-y-8">
-              {commissionsData.length > 0 && <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"><p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Total Service Sales</p><h2 className="text-3xl font-black text-[#1A1F3D]">{currency}{commissionsData.reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toLocaleString()}</h2></div><div className="bg-[#1A1F3D] p-8 rounded-[40px] shadow-xl relative overflow-hidden"><div className="absolute top-0 right-0 p-6 opacity-10 text-[#D9ED5F]"><TrendingUp size={60} /></div><p className="text-[10px] font-black uppercase text-white/40 tracking-wider mb-2">Total Payout</p><h2 className="text-3xl font-black text-[#D9ED5F]">{currency}{commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0).toLocaleString()}</h2></div><div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm"><p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Avg. Reward Per Job</p><h2 className="text-3xl font-black text-[#1A1F3D]">{currency}{Math.round(commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0) / commissionsData.length).toLocaleString()}</h2></div></div>}
-              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-                <div className="flex justify-between items-center"><div><h3 className="text-xl font-black text-[#1A1F3D]">สรุปยอดค่าคอมมิชชัน (Commissions)</h3><p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Earnings based on service performance</p></div></div>
-                <div className="overflow-x-auto"><table className="w-full"><thead><tr className="bg-gray-50/50 border-b border-gray-100"><th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">วันที่ / เลขที่สั่งซื้อ</th><th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">พนักงาน</th><th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">ยอดขาย</th><th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">อัตรา (%)</th><th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">รางวัลตอบแทน</th></tr></thead><tbody className="divide-y divide-gray-50">{commissionsLoading ? <tr><td colSpan={5} className="py-20 text-center opacity-40 font-black animate-pulse uppercase text-xs">Loading Commission Data...</td></tr> : commissionsData.length === 0 ? <tr><td colSpan={5} className="py-20 text-center opacity-20 font-black uppercase text-xs tracking-widest">No sales records found</td></tr> : commissionsData.map((tx: any) => (
-                          <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-8 py-5"><p className="text-xs font-black text-[#1A1F3D]">{format(new Date(tx.created_at), 'dd MMM yyyy')}</p><p className="text-[9px] text-gray-400 font-bold uppercase">{tx.id}</p></td>
-                            <td className="px-8 py-5 flex items-center gap-3"><img src={tx.staff_profile?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-8 h-8 rounded-lg object-cover" /><div><p className="text-sm font-bold text-[#1A1F3D]">{tx.staff_name || 'Admin'}</p><p className="text-[8px] text-indigo-500 font-black uppercase">{tx.staff_profile?.role || 'Staff'}</p></div></td>
-                            <td className="px-8 py-5 text-right font-black text-[#1A1F3D]">{currency}{Number(tx.amount || 0).toLocaleString()}</td>
-                            <td className="px-8 py-5 text-center"><span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">{tx.commission_rate}%</span></td>
-                            <td className="px-8 py-5 text-right font-black text-green-600">+{currency}{tx.calculated_commission.toLocaleString()}</td>
-                          </tr>
-                        ))}</tbody></table></div>
+              {/* Leave Requests */}
+              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col">
+                <h3 className="text-xl font-black text-[#1A1F3D] mb-6">คำขอลาหยุด</h3>
+                <div className="divide-y divide-gray-50 overflow-y-auto max-h-[500px] scrollbar-hide">
+                  {leaveRequests.map((request: any) => (
+                    <div key={request.id} className="py-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <img src={request.profiles?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-8 h-8 rounded-lg object-cover" />
+                          <div>
+                            <p className="text-xs font-black text-[#1A1F3D]">{request.profiles?.full_name}</p>
+                            <p className="text-[8px] text-indigo-500 font-black uppercase">{request.leave_type}</p>
+                          </div>
+                        </div>
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-md text-[8px] font-black uppercase",
+                          request.status === 'pending' ? "bg-amber-50 text-amber-600" :
+                          request.status === 'approved' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                        )}>
+                          {request.status}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-gray-500 font-bold">วันที่: {request.start_date} ถึง {request.end_date}</p>
+                      <p className="text-xs text-gray-600 italic">"{request.reason || 'ไม่ได้ระบุเหตุผล'}"</p>
+                      {request.status === 'pending' && canManageStaff && (
+                        <div className="flex gap-2 pt-1">
+                          <button onClick={() => handleApproveLeave(request.id)} className="flex-1 bg-green-500 text-white py-1.5 rounded-lg text-[9px] font-black uppercase">Approve</button>
+                          <button onClick={() => handleRejectLeave(request.id)} className="flex-1 bg-red-50 text-red-500 py-1.5 rounded-lg text-[9px] font-black uppercase">Reject</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {leaveRequests.length === 0 && (
+                    <div className="py-12 text-center opacity-20 font-black text-xs uppercase">
+                      ไม่มีคำขอลาหยุดในขณะนี้
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </TabsContent>
