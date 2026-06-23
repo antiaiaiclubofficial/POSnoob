@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import RoleManagementModal from "@/components/RoleManagementModal"; // Import the new modal
 
 interface StaffMember {
   id: string;
@@ -44,10 +45,11 @@ interface StaffMember {
 }
 
 export default function Staff() {
-  const { staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff, currentUser } = useStore();
+  const { staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff, currentUser, roles } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSessionsOpen, setIsSessionsOpen] = useState(false);
+  const [isRoleManagementOpen, setIsRoleManagementOpen] = useState(false); // New state for role management modal
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
   // Form States
@@ -209,97 +211,107 @@ export default function Staff() {
           <p className="text-xs text-gray-400 font-bold mt-1">จัดการข้อมูลพนักงาน บทบาทหน้าที่ และค่าคอมมิชชัน</p>
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            {canManageStaff && (
-              <button className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all">
-                <Plus size={18} /> เพิ่มพนักงานใหม่
-              </button>
-            )}
-          </DialogTrigger>
-          <DialogContent className="rounded-[32px] max-w-md p-8">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-black text-[#1A1F3D]">เพิ่มพนักงานใหม่</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddStaff} className="space-y-5 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อ-นามสกุล *</Label>
-                <input 
-                  id="name" 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)} 
-                  placeholder="สมชาย ใจดี" 
-                  required 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">อีเมล (Google Account) *</Label>
-                <input 
-                  id="email" 
-                  type="email"
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  placeholder="somchai@gmail.com" 
-                  required 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">เบอร์โทรศัพท์</Label>
-                <input 
-                  id="phone" 
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                  value={phone} 
-                  onChange={(e) => setPhone(e.target.value)} 
-                  placeholder="0812345678" 
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-wrap gap-3">
+          {canManageStaff && (
+            <button 
+              onClick={() => setIsRoleManagementOpen(true)}
+              className="bg-indigo-50 text-indigo-600 px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-indigo-500/10 active:scale-95 transition-all"
+            >
+              <Shield size={18} /> จัดการบทบาท
+            </button>
+          )}
+          <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              {canManageStaff && (
+                <button className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all">
+                  <Plus size={18} /> เพิ่มพนักงานใหม่
+                </button>
+              )}
+            </DialogTrigger>
+            <DialogContent className="rounded-[32px] max-w-md p-8">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-black text-[#1A1F3D]">เพิ่มพนักงานใหม่</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddStaff} className="space-y-5 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="role" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">บทบาท</Label>
-                  <Select value={role} onValueChange={(value: StaffRole) => setRole(value)}>
-                    <SelectTrigger className="border-none bg-[#F5F6FA] rounded-2xl h-12 focus:ring-4 focus:ring-[#1A1F3D]/5 font-bold text-sm">
-                      <SelectValue placeholder="เลือกบทบาท" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl border-gray-100 shadow-2xl">
-                      <SelectItem value="Admin" className="text-xs font-bold py-3">ผู้ดูแลระบบ (Admin)</SelectItem>
-                      <SelectItem value="Groomer" className="text-xs font-bold py-3">ช่างตัดขน (Groomer)</SelectItem>
-                      <SelectItem value="Assistant" className="text-xs font-bold py-3">ผู้ช่วย (Assistant)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="commission" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ค่าคอมมิชชัน (%)</Label>
+                  <Label htmlFor="name" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อ-นามสกุล *</Label>
                   <input 
-                    id="commission" 
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                    value={commissionRate} 
-                    onChange={(e) => setCommissionRate(e.target.value)} 
+                    id="name" 
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)} 
+                    placeholder="สมชาย ใจดี" 
+                    required 
                   />
                 </div>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button 
-                  type="button" 
-                  onClick={() => setIsAddOpen(false)}
-                  className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all"
-                >
-                  ยกเลิก
-                </button>
-                <button 
-                  type="submit"
-                  className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all"
-                >
-                  บันทึก
-                </button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">อีเมล (Google Account) *</Label>
+                  <input 
+                    id="email" 
+                    type="email"
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    placeholder="somchai@gmail.com" 
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">เบอร์โทรศัพท์</Label>
+                  <input 
+                    id="phone" 
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                    value={phone} 
+                    onChange={(e) => setPhone(e.target.value)} 
+                    placeholder="0812345678" 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="role" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">บทบาท</Label>
+                    <Select value={role} onValueChange={(value: StaffRole) => setRole(value)}>
+                      <SelectTrigger className="border-none bg-[#F5F6FA] rounded-2xl h-12 focus:ring-4 focus:ring-[#1A1F3D]/5 font-bold text-sm">
+                        <SelectValue placeholder="เลือกบทบาท" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-gray-100 shadow-2xl">
+                        {roles.filter(r => r.name !== 'superadmin').map(r => (
+                          <SelectItem key={r.id} value={r.name} className="text-xs font-bold py-3">{r.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="commission" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ค่าคอมมิชชัน (%)</Label>
+                    <input 
+                      id="commission" 
+                      type="number" 
+                      min="0" 
+                      max="100" 
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                      value={commissionRate} 
+                      onChange={(e) => setCommissionRate(e.target.value)} 
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsAddOpen(false)}
+                    className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all"
+                  >
+                    บันทึก
+                  </button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </header>
 
       {/* Main Content Area */}
@@ -586,9 +598,9 @@ export default function Staff() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent className="rounded-2xl border-gray-100 shadow-2xl">
-                                <SelectItem value="Admin" className="text-xs font-bold py-3">ผู้ดูแลระบบ (Admin)</SelectItem>
-                                <SelectItem value="Groomer" className="text-xs font-bold py-3">ช่างตัดขน (Groomer)</SelectItem>
-                                <SelectItem value="Assistant" className="text-xs font-bold py-3">ผู้ช่วย (Assistant)</SelectItem>
+                                {roles.filter(r => r.name !== 'superadmin').map(r => (
+                                  <SelectItem key={r.id} value={r.name} className="text-xs font-bold py-3">{r.name}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -643,6 +655,10 @@ export default function Staff() {
           })}
         </div>
       </div>
+
+      {isRoleManagementOpen && (
+        <RoleManagementModal onClose={() => setIsRoleManagementOpen(false)} />
+      )}
     </div>
   );
 }

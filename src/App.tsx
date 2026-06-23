@@ -220,6 +220,27 @@ const App = () => {
         }
       }
 
+      // 0.5 Fetch Roles
+      try {
+        let rolesQuery = supabase.from('roles').select('*');
+        if (storeId && storeId !== 'default-store') {
+          rolesQuery = rolesQuery.or(`store_id.is.null,store_id.eq.${storeId}`);
+        }
+        const { data: rolesData, error: rolesError } = await rolesQuery;
+        if (rolesError) throw rolesError;
+        if (rolesData) {
+          useStore.setState({ roles: rolesData });
+          // Dynamically update rolePermissions based on fetched roles
+          const newRolePermissions: Record<StaffRole, string[]> = {};
+          rolesData.forEach(role => {
+            newRolePermissions[role.name] = role.permissions;
+          });
+          useStore.setState({ rolePermissions: newRolePermissions });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch roles from Supabase:", err);
+      }
+
       // 1. Fetch Customers & Service History
       try {
         let customersQuery = supabase

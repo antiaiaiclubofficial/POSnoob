@@ -12,7 +12,7 @@ interface StaffModalProps {
 }
 
 const StaffModal = ({ staff, onClose }: StaffModalProps) => {
-  const { addStaff, updateStaff, language, staff: allStaff, maxStaff } = useStore();
+  const { addStaff, updateStaff, language, staff: allStaff, maxStaff, roles } = useStore();
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -129,9 +129,9 @@ const StaffModal = ({ staff, onClose }: StaffModalProps) => {
                   value={role}
                   onChange={e => setRole(e.target.value as StaffRole)}
                 >
-                  <option value="Admin">Admin</option>
-                  <option value="Groomer">Groomer</option>
-                  <option value="Assistant">Assistant</option>
+                  {roles.filter(r => r.name !== 'superadmin').map(r => (
+                    <option key={r.id} value={r.name}>{r.name}</option>
+                  ))}
                 </select>
               </div>
               <div>

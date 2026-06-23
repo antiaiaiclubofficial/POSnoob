@@ -5,7 +5,6 @@ export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
 export type PaymentMethod = 'Cash' | 'Transfer' | 'Credit Card' | 'Package' | 'Store Credit';
-export type StaffRole = 'Admin' | 'Groomer' | 'Assistant' | 'superadmin';
 export type BookingType = 'Appointment' | 'Walk-in';
 
 // Entities
@@ -162,6 +161,17 @@ export interface Transaction {
   bookingType: BookingType;
 }
 
+export interface Role {
+  id: string;
+  store_id: string | null;
+  name: string;
+  description: string;
+  permissions: string[];
+  created_at: string;
+}
+
+export type StaffRole = string; // Make StaffRole dynamic
+
 export interface Staff {
   id: string;
   name: string;
@@ -279,6 +289,7 @@ export interface AppState {
   creditPackages: CreditPackageTemplate[];
   staff: Staff[];
   logs: ActivityLog[];
+  roles: Role[]; // Add roles to AppState
   cart: any[];
   rolePermissions: Record<StaffRole, string[]>;
 
@@ -357,6 +368,10 @@ export interface AppState {
   addStaff: (staff: any) => void;
   updateStaff: (id: string, staff: any) => void;
   deleteStaff: (id: string) => void;
+
+  addRole: (role: Omit<Role, 'id' | 'created_at'>) => Promise<void>; // Add role actions
+  updateRole: (id: string, role: Partial<Omit<Role, 'id' | 'created_at'>>) => Promise<void>;
+  deleteRole: (id: string) => Promise<void>;
   
   addPackageTemplate: (pkg: any) => void;
   updatePackageTemplate: (id: string, pkg: any) => void;

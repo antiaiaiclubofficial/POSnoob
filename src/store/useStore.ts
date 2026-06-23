@@ -7,7 +7,7 @@ import {
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
   QueueItem, Service, InventoryItem, Partner, StockLog, Transaction, 
   Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, 
-  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory 
+  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory, Role 
 } from './types';
 import { createAuthSlice } from './slices/authSlice';
 import { createCRMSlice } from './slices/crmSlice';
@@ -54,6 +54,7 @@ export const useStore = create<AppState>()((set, get) => ({
   staff: [],
   logs: [],
   reportHistory: [],
+  roles: [], // Initialize roles array
   tierRules: [
     { level: 'Standard', label: 'Standard', minSpent: 0, discount: 0 },
     { level: 'Silver', label: 'Silver', minSpent: 5000, discount: 5 },
@@ -550,7 +551,7 @@ export const useStore = create<AppState>()((set, get) => ({
         contact_person: v.contactPerson || '',
         notes: v.notes,
         main_category: v.mainCategory,
-        gp_rate: v.gp_rate || 0
+        gp_rate: v.gpRate || 0
       })
       .eq('id', id);
 
@@ -726,6 +727,57 @@ export const useStore = create<AppState>()((set, get) => ({
     }
 
     set(s => ({ staff: s.staff.filter(mem => mem.id !== id) }));
+  },
+
+  // Role Management Actions
+  addRole: async (roleData) => {
+    const currentStoreId = get().storeId;
+    const { data, error } = await supabase
+      .from('roles')
+      .insert([{
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+        name: roleData.name,
+        description: roleData.description,
+        permissions: roleData.permissions
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding role:", error);
+      throw error;
+    }
+    if (data) {
+      set(s => ({ roles: [...s.roles, data] }));
+    }
+  },
+
+  updateRole: async (id, roleData) => {
+    const { error } = await supabase
+      .from('roles')
+      .update(roleData)
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating role:", error);
+      throw error;
+    }
+    set(s => ({
+      roles: s.roles.map(r => r.id === id ? { ...r, ...roleData } : r)
+    }));
+  },
+
+  deleteRole: async (id) => {
+    const { error } = await supabase
+      .from('roles')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error deleting role:", error);
+      throw error;
+    }
+    set(s => ({ roles: s.roles.filter(r => r.id !== id) }));
   },
 
   addPackageTemplate: (pkg) => set(s => ({ packageTemplates: [...s.packageTemplates, { ...pkg, id: Math.random().toString() }] })),
