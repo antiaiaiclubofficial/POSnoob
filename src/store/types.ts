@@ -1,3 +1,5 @@
+"use client";
+
 import { Language } from '@/utils/translations';
 
 // Basic Types
@@ -308,7 +310,7 @@ export interface AppState {
   loginWithGoogle: (redirectTo?: string) => Promise<void>;
   logout: () => void;
   verifyPassword: (pass: string) => boolean;
-  setSession: (user: any) => void;
+  setSession: (user: any, navigate: any) => void; // Add navigate
   addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
   addReportLog: (log: Omit<ReportHistory, 'id' | 'timestamp'>) => void;
   

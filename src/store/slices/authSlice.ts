@@ -78,7 +78,7 @@ export const createAuthSlice: StateCreator<
     }
   },
 
-  setSession: async (user) => {
+  setSession: async (user, navigate) => { // Added navigate parameter
     if (user) {
       const isSuperAdminPath = window.location.pathname.startsWith('/superadmin');
       const isSuperAdminEmail = user.email === 'antiai.aiclub.official@gmail.com';
@@ -87,12 +87,10 @@ export const createAuthSlice: StateCreator<
       // Check if there is a pending invitation in localStorage
       const inviteDataStr = localStorage.getItem('pending_invite_data');
       if (inviteDataStr) {
-        // Remove it immediately to prevent race conditions from multiple setSession calls
-        localStorage.removeItem('pending_invite_data');
+        localStorage.removeItem('pending_invite_data'); // Clear immediately to prevent re-processing
         try {
           const inviteData = JSON.parse(inviteDataStr);
           
-          // Get the invited email from either 'email' or 'username' (for backward compatibility)
           const invitedEmail = inviteData.email || inviteData.username;
 
           if (!invitedEmail) {
@@ -102,7 +100,6 @@ export const createAuthSlice: StateCreator<
             return;
           }
           
-          // Verify that the Google Account email matches the invited email exactly
           if (user.email && invitedEmail.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
             toast.error(`อีเมล Google (${user.email}) ไม่ตรงกับอีเมลที่ได้รับเชิญ (${invitedEmail})`);
             await supabase.auth.signOut();
@@ -112,7 +109,7 @@ export const createAuthSlice: StateCreator<
           
           const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
           
-          // Create or update profile with invite data
+          // This upsert is the critical part for auto-approval via invite
           const { error: upsertError } = await supabase
             .from('profiles')
             .upsert({
@@ -123,7 +120,7 @@ export const createAuthSlice: StateCreator<
               full_name: inviteData.name,
               phone: inviteData.phone,
               commission_rate: Number(inviteData.commissionRate || 0),
-              is_approved: true,
+              is_approved: true, // This is already correctly set to true for invite flow
               is_suspended: false,
               status: 'Active',
               avatar_url: googleAvatar
@@ -133,10 +130,7 @@ export const createAuthSlice: StateCreator<
           
           toast.success("เชื่อมต่อบัญชี Google และเข้าร่วมทีมสำเร็จ!", { id: 'invite-success' });
 
-          // Sign out immediately so they can log in with their newly linked Google account
           await supabase.auth.signOut();
-
-          // Redirect to login page with success message
           window.location.href = `${window.location.origin}/login?registered=true`;
           return;
         } catch (error: any) {
@@ -162,18 +156,33 @@ export const createAuthSlice: StateCreator<
           const { data: stores } = await supabase.from('stores').select('id').limit(1);
           const defaultStoreId = stores && stores.length > 0 ? stores[0].id : null;
 
-          const shouldAutoApprove = shouldBeSuperAdmin;
+          const isRegisteredViaInvite = window.location.search.includes('registered=true');
+          const inviteDataFromStorage = localStorage.getItem('pending_invite_data'); // Re-check for invite data
+          let parsedInviteData = null;
+          if (inviteDataFromStorage) {
+            try {
+              parsedInviteData = JSON.parse(inviteDataFromStorage);
+            } catch (e) {
+              console.error("Error parsing pending_invite_data from localStorage:", e);
+            }
+          }
+
+          const shouldAutoApprove = shouldBeSuperAdmin || (isRegisteredViaInvite && parsedInviteData); // Auto-approve if superadmin or if it's an invite registration
+          const assignedRole = shouldBeSuperAdmin ? 'superadmin' : (parsedInviteData?.role || 'Admin');
+          const assignedStoreId = shouldBeSuperAdmin ? null : (parsedInviteData?.storeId || defaultStoreId);
+          const assignedFullName = parsedInviteData?.name || user.email?.split('@')[0] || 'User';
+          const assignedAvatar = parsedInviteData?.avatar || googleAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
 
           const newProfile = {
             id: user.id,
             email: user.email,
-            role: shouldBeSuperAdmin ? 'superadmin' : 'Admin',
-            store_id: shouldBeSuperAdmin ? null : defaultStoreId,
-            is_approved: shouldAutoApprove,
+            role: assignedRole,
+            store_id: assignedStoreId,
+            is_approved: shouldAutoApprove, // Set approval based on logic
             is_suspended: false,
             status: 'Active',
-            full_name: user.email?.split('@')[0] || 'User',
-            avatar_url: googleAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
+            full_name: assignedFullName,
+            avatar_url: assignedAvatar
           };
 
           const { error: insertError } = await supabase
@@ -191,15 +200,54 @@ export const createAuthSlice: StateCreator<
               role: newProfile.role,
               avatar: newProfile.avatar_url
             } : null,
-            storeId: shouldAutoApprove ? null : defaultStoreId,
+            storeId: assignedStoreId,
             isAuthLoading: false,
             isPendingApproval: !shouldAutoApprove,
             isUserSuspended: false,
             isStoreSuspended: false
           });
+          // Clear the 'registered=true' flag from URL after processing
+          if (isRegisteredViaInvite) {
+            navigate(window.location.pathname, { replace: true });
+          }
           return;
         }
 
+        // Existing profile logic
+        if (!profile.is_suspended && !profile.is_approved && !shouldBeSuperAdmin) { // Added !profile.is_suspended check
+          const isRegisteredViaInvite = window.location.search.includes('registered=true');
+          if (isRegisteredViaInvite) {
+            // This block is for existing unapproved users who *just* completed an invite flow.
+            // This is a fallback/re-confirmation. The initial upsert in the inviteDataStr block
+            // should have already set is_approved: true.
+            // If we reach here and profile.is_approved is still false, it means the upsert failed
+            // or there's a race condition. We try to approve it again.
+            const { error: updateApprovalError } = await supabase
+              .from('profiles')
+              .update({ is_approved: true, status: 'Active' })
+              .eq('id', user.id);
+            if (updateApprovalError) throw updateApprovalError;
+            
+            profile.is_approved = true; // Update local profile object for current session
+            profile.status = 'Active';
+            navigate(window.location.pathname, { replace: true }); // Clear the flag
+          } else {
+            // This is the original path for unapproved users not from an invite.
+            await supabase.auth.signOut();
+            set({ 
+              isAuthenticated: false, 
+              isAuthLoading: false, 
+              currentUser: null, 
+              storeId: null,
+              isPendingApproval: true,
+              isUserSuspended: false,
+              isStoreSuspended: false
+            });
+            return;
+          }
+        }
+        
+        // Handle suspended users (already done above, but ensuring consistency)
         if (profile.is_suspended && !isSuperAdminEmail) {
           await supabase.auth.signOut();
           set({ 
@@ -209,20 +257,6 @@ export const createAuthSlice: StateCreator<
             storeId: null,
             isUserSuspended: true,
             isPendingApproval: false,
-            isStoreSuspended: false
-          });
-          return;
-        }
-
-        if (!profile.is_approved && !shouldBeSuperAdmin) {
-          await supabase.auth.signOut();
-          set({ 
-            isAuthenticated: false, 
-            isAuthLoading: false, 
-            currentUser: null, 
-            storeId: null,
-            isPendingApproval: true,
-            isUserSuspended: false,
             isStoreSuspended: false
           });
           return;
@@ -292,7 +326,15 @@ export const createAuthSlice: StateCreator<
   },
 
   verifyPassword: (pass) => {
-    return pass === '1234';
+    // This is a placeholder. In a real app, you'd hash passwords and compare securely.
+    // For now, it checks against hardcoded admin/superadmin or staff in store.
+    const staffMember = get().staff.find(s => s.id === get().currentUser?.id);
+    if (staffMember && staffMember.password === pass) {
+      return true;
+    }
+    if (get().currentUser?.id === 'admin' && pass === '1234') return true;
+    if (get().currentUser?.id === 'superadmin' && pass === 'superadmin') return true;
+    return false;
   },
 
   logout: async () => {
@@ -306,5 +348,6 @@ export const createAuthSlice: StateCreator<
       isUserSuspended: false,
       isStoreSuspended: false
     });
+    get().addLog({ staffName: get().currentUser?.name || 'System', action: 'Logout', details: 'User logged out', type: 'info' });
   }
 });

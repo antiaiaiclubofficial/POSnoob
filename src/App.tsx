@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom"; // Import useNavigate
 import { useStore, BookingType, MembershipLevel, QueueStatus, StaffRole, ServiceIcon } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ const HomeRedirect = () => {
 
 const App = () => {
   const { language, isAuthenticated, setSession, setCustomers, setServices, storeId, currentUser, logout } = useStore();
+  const navigate = useNavigate(); // Get navigate here
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -49,15 +50,15 @@ const App = () => {
   useEffect(() => {
     // Auth Session Handling
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session?.user ?? null);
+      setSession(session?.user ?? null, navigate); // Pass navigate
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session?.user ?? null);
+      setSession(session?.user ?? null, navigate); // Pass navigate
     });
 
     return () => subscription.unsubscribe();
-  }, [setSession]);
+  }, [setSession, navigate]); // Add navigate to dependency array
 
   // Highly reliable Session Heartbeat to check if session is still valid and update last_active_at
   useEffect(() => {
