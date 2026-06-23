@@ -154,6 +154,10 @@ export default function Staff() {
   };
 
   const handleDeleteStaffMember = (id: string, name: string) => {
+    if (currentUser?.role !== 'Admin' && currentUser?.role !== 'superadmin') {
+      toast.error("คุณไม่มีสิทธิ์ในการลบพนักงาน (ต้องเป็น Admin เท่านั้น)");
+      return;
+    }
     if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบพนักงาน "${name}"?`)) {
       deleteStaff(id);
       toast.success("ลบพนักงานเรียบร้อยแล้ว");
@@ -178,6 +182,10 @@ export default function Staff() {
   };
 
   const toggleStatus = (member: StaffMember) => {
+    if (currentUser?.role !== 'Admin' && currentUser?.role !== 'superadmin') {
+      toast.error("คุณไม่มีสิทธิ์ในการเปลี่ยนสถานะพนักงาน (ต้องเป็น Admin เท่านั้น)");
+      return;
+    }
     const updated: StaffMember = {
       ...member,
       status: member.status === "Active" ? "Inactive" : "Active",
@@ -185,6 +193,8 @@ export default function Staff() {
     updateStaff(member.id, updated);
     toast.success(`เปลี่ยนสถานะเป็น ${updated.status === "Active" ? "เปิดใช้งาน" : "ปิดใช้งาน"} เรียบร้อยแล้ว`);
   };
+
+  const canManageStaff = currentUser?.role === 'Admin' || currentUser?.role === 'superadmin';
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
@@ -201,9 +211,11 @@ export default function Staff() {
 
         <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <button className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all">
-              <Plus size={18} /> เพิ่มพนักงานใหม่
-            </button>
+            {canManageStaff && (
+              <button className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all">
+                <Plus size={18} /> เพิ่มพนักงานใหม่
+              </button>
+            )}
           </DialogTrigger>
           <DialogContent className="rounded-[32px] max-w-md p-8">
             <DialogHeader>
@@ -344,7 +356,7 @@ export default function Staff() {
                             <p className="text-[8px] text-indigo-500 font-bold mt-0.5">Active: {lastActive}</p>
                           </div>
                         </div>
-                        {(currentUser?.role === 'Admin' || currentUser?.role === 'superadmin') && (
+                        {canManageStaff && (
                           <button
                             type="button"
                             onClick={() => handleForceLogout(session.user_id, staffName)}
@@ -422,13 +434,15 @@ export default function Staff() {
                       <Copy size={16} />
                     </button>
                   )}
-                  <button 
-                    onClick={() => handleDeleteStaffMember(member.id, member.name)}
-                    className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                    title="ลบพนักงาน"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {canManageStaff && (
+                    <button 
+                      onClick={() => handleDeleteStaffMember(member.id, member.name)}
+                      className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                      title="ลบพนักงาน"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Top Section: Avatar & Basic Info */}
@@ -521,12 +535,14 @@ export default function Staff() {
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4 border-t border-gray-50">
                   <Dialog open={editingStaff?.id === member.id} onOpenChange={(open) => { if (!open) { setEditingStaff(null); resetForm(); } }}>
-                    <button 
-                      onClick={() => openEditDialog(member)}
-                      className="flex-1 bg-[#F5F6FA] hover:bg-gray-100 text-[#1A1F3D] font-black py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
-                    >
-                      <Edit3 size={14} /> แก้ไขข้อมูล
-                    </button>
+                    {canManageStaff && (
+                      <button 
+                        onClick={() => openEditDialog(member)}
+                        className="flex-1 bg-[#F5F6FA] hover:bg-gray-100 text-[#1A1F3D] font-black py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
+                      >
+                        <Edit3 size={14} /> แก้ไขข้อมูล
+                      </button>
+                    )}
                     <DialogContent className="rounded-[32px] max-w-md p-8">
                       <DialogHeader>
                         <DialogTitle className="text-xl font-black text-[#1A1F3D]">แก้ไขข้อมูลพนักงาน</DialogTitle>
@@ -608,17 +624,19 @@ export default function Staff() {
                     </DialogContent>
                   </Dialog>
 
-                  <button 
-                    onClick={() => toggleStatus(member)}
-                    className={cn(
-                      "flex-1 font-black py-3.5 rounded-2xl text-xs transition-all active:scale-95 shadow-md",
-                      member.status === "Active" 
-                        ? "bg-red-50 hover:bg-red-100 text-red-600 shadow-red-500/5" 
-                        : "bg-green-50 hover:bg-green-100 text-green-600 shadow-green-500/5"
-                    )}
-                  >
-                    {member.status === "Active" ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                  </button>
+                  {canManageStaff && (
+                    <button 
+                      onClick={() => toggleStatus(member)}
+                      className={cn(
+                        "flex-1 font-black py-3.5 rounded-2xl text-xs transition-all active:scale-95 shadow-md",
+                        member.status === "Active" 
+                          ? "bg-red-50 hover:bg-red-100 text-red-600 shadow-red-500/5" 
+                          : "bg-green-50 hover:bg-green-100 text-green-600 shadow-green-500/5"
+                      )}
+                    >
+                      {member.status === "Active" ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                    </button>
+                  )}
                 </div>
               </div>
             );

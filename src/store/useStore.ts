@@ -547,7 +547,7 @@ export const useStore = create<AppState>()((set, get) => ({
         address: v.address,
         phone: v.phone,
         email: v.email,
-        contact_person: v.contact_person || '',
+        contact_person: v.contactPerson || '',
         notes: v.notes,
         main_category: v.mainCategory,
         gp_rate: v.gp_rate || 0

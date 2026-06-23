@@ -137,9 +137,9 @@ const App = () => {
             inviteLink: s.status === 'Pending' ? `${window.location.origin}/login?invite=true&inviteId=${s.id}` : undefined
           }));
 
-          // Filter out pending invites that have been accepted (matched by phone or name)
+          // Filter out pending invites that have been accepted (matched by email)
           pendingInvites = pendingInvites.filter((invite: any) => {
-            const accepted = formattedStaff.some(s => s.phone === invite.phone || s.name === invite.name);
+            const accepted = formattedStaff.some(s => s.username.toLowerCase() === invite.username.toLowerCase());
             return !accepted;
           });
           localStorage.setItem('pending_staff_invites', JSON.stringify(pendingInvites));
