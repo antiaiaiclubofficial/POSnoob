@@ -903,6 +903,31 @@ export default function Staff() {
 
           <TabsContent value="commissions" className="m-0 h-full animate-in fade-in duration-300">
             <div className="space-y-8">
+              {/* Earnings Summary Cards */}
+              {!commissionsLoading && commissionsData.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Total Service Sales</p>
+                    <h2 className="text-3xl font-black text-[#1A1F3D]">
+                      {currency}{commissionsData.reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toLocaleString()}
+                    </h2>
+                  </div>
+                  <div className="bg-[#1A1F3D] p-8 rounded-[40px] shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-6 opacity-10 text-[#D9ED5F]"><TrendingUp size={60} /></div>
+                    <p className="text-[10px] font-black uppercase text-white/40 tracking-wider mb-2">Total Payout</p>
+                    <h2 className="text-3xl font-black text-[#D9ED5F]">
+                      {currency}{commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0).toLocaleString()}
+                    </h2>
+                  </div>
+                  <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Avg. Reward Per Job</p>
+                    <h2 className="text-3xl font-black text-[#1A1F3D]">
+                      {currency}{Math.round(commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0) / commissionsData.length).toLocaleString()}
+                    </h2>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
                 <div className="flex justify-between items-center">
                   <div>
@@ -959,31 +984,6 @@ export default function Staff() {
                   </table>
                 </div>
               </div>
-
-              {/* Earnings Summary Cards */}
-              {!commissionsLoading && commissionsData.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Total Service Sales</p>
-                    <h2 className="text-3xl font-black text-[#1A1F3D]">
-                      {currency}{commissionsData.reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toLocaleString()}
-                    </h2>
-                  </div>
-                  <div className="bg-[#1A1F3D] p-8 rounded-[40px] shadow-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-6 opacity-10 text-[#D9ED5F]"><TrendingUp size={60} /></div>
-                    <p className="text-[10px] font-black uppercase text-white/40 tracking-wider mb-2">Total Payout</p>
-                    <h2 className="text-3xl font-black text-[#D9ED5F]">
-                      {currency}{commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0).toLocaleString()}
-                    </h2>
-                  </div>
-                  <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
-                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">Avg. Reward Per Job</p>
-                    <h2 className="text-3xl font-black text-[#1A1F3D]">
-                      {currency}{Math.round(commissionsData.reduce((acc, curr) => acc + curr.calculated_commission, 0) / commissionsData.length).toLocaleString()}
-                    </h2>
-                  </div>
-                </div>
-              )}
             </div>
           </TabsContent>
 
