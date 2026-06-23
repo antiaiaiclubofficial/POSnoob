@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useStore, StaffRole } from "@/store/useStore";
+import { useStore, StaffRole, PayrollRecord } from "@/store/useStore";
 import { 
   Search, 
   Plus, 
@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import RoleManagementModal from "@/components/RoleManagementModal";
+import PayrollModal from "@/components/PayrollModal"; // Import the new PayrollModal
 import { format } from "date-fns";
 
 interface StaffMember {
@@ -57,13 +58,20 @@ interface StaffMember {
 
 export default function Staff() {
   const queryClient = useQueryClient();
-  const { staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff, currentUser, roles, currency } = useStore();
+  const { 
+    staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff, currentUser, roles, currency,
+    addPayrollRecord, updatePayrollRecord, payrollRecords // Destructure new actions and state
+  } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSessionsOpen, setIsSessionsOpen] = useState(false);
   const [isRoleManagementOpen, setIsRoleManagementOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [activeTab, setActiveTab] = useState("profiles");
+
+  // Payroll Modal States
+  const [isPayrollModalOpen, setIsPayrollModalOpen] = useState(false);
+  const [editingPayrollRecord, setEditingPayrollRecord] = useState<PayrollRecord | null>(null);
 
   // Form States
   const [name, setName] = useState("");
@@ -152,7 +160,7 @@ export default function Staff() {
   });
 
   // Fetch Payroll Records
-  const { data: payrollRecords = [], isLoading: payrollLoading } = useQuery({
+  const { data: fetchedPayrollRecords = [], isLoading: payrollLoading, refetch: refetchPayroll } = useQuery<PayrollRecord[]>({
     queryKey: ['payroll_records', storeId],
     queryFn: async () => {
       if (!storeId || storeId === 'default-store') return [];
@@ -160,12 +168,20 @@ export default function Staff() {
         .from('payroll_records' as any)
         .select('*, profiles(full_name, avatar_url, role)')
         .eq('store_id', storeId)
+        .order('month', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
     enabled: !!storeId && activeTab === 'payroll'
   });
+
+  useEffect(() => {
+    // Sync fetched payroll records with Zustand store
+    if (fetchedPayrollRecords) {
+      useStore.setState({ payrollRecords: fetchedPayrollRecords });
+    }
+  }, [fetchedPayrollRecords]);
 
   // Mutation for Approving Payroll
   const approvePayrollMutation = useMutation({
@@ -323,6 +339,25 @@ export default function Staff() {
   };
 
   const canManageStaff = currentUser?.role === 'Admin' || currentUser?.role === 'superadmin';
+
+  // Payroll Modal Handlers
+  const handleOpenPayrollModal = (record: PayrollRecord | null = null) => {
+    setEditingPayrollRecord(record);
+    setIsPayrollModalOpen(true);
+  };
+
+  const handleSavePayroll = async (data: any) => {
+    if (data.id) {
+      await updatePayrollRecord(data.id, data);
+      toast.success("Payroll record updated successfully!");
+    } else {
+      await addPayrollRecord(data);
+      toast.success("Payroll record created successfully!");
+    }
+    refetchPayroll(); // Refetch payroll data after save
+    setIsPayrollModalOpen(false);
+    setEditingPayrollRecord(null);
+  };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
@@ -570,7 +605,7 @@ export default function Staff() {
                 <div className="overflow-x-auto"><table className="w-full"><thead><tr className="bg-gray-50/50 border-b border-gray-100"><th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">วันที่ / เลขที่สั่งซื้อ</th><th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">พนักงาน</th><th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">ยอดขาย</th><th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">อัตรา (%)</th><th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">รางวัลตอบแทน</th></tr></thead><tbody className="divide-y divide-gray-50">{commissionsLoading ? <tr><td colSpan={5} className="py-20 text-center opacity-40 font-black animate-pulse uppercase text-xs">Loading Commission Data...</td></tr> : commissionsData.length === 0 ? <tr><td colSpan={5} className="py-20 text-center opacity-20 font-black uppercase text-xs tracking-widest">No sales records found</td></tr> : commissionsData.map((tx: any) => (
                           <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
                             <td className="px-8 py-5"><p className="text-xs font-black text-[#1A1F3D]">{format(new Date(tx.created_at), 'dd MMM yyyy')}</p><p className="text-[9px] text-gray-400 font-bold uppercase">{tx.id}</p></td>
-                            <td className="px-8 py-5 flex items-center gap-3"><img src={tx.staff_profile?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-8 h-8 rounded-lg object-cover" /><div><p className="text-sm font-bold text-[#1A1F3D]">{tx.staff_name || 'Admin'}</p><p className="text-[8px] text-indigo-500 font-black uppercase">{tx.staff_profile?.role || 'Staff'}</p></div></td>
+                            <td className="px-8 py-5 flex items-center gap-3"><img src={tx.staff_profile?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-8 h-8 rounded-lg object-cover" /><span className="text-sm font-bold text-[#1A1F3D]">{tx.staff_name || 'Admin'}</span></td>
                             <td className="px-8 py-5 text-right font-black text-[#1A1F3D]">{currency}{Number(tx.amount || 0).toLocaleString()}</td>
                             <td className="px-8 py-5 text-center"><span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">{tx.commission_rate}%</span></td>
                             <td className="px-8 py-5 text-right font-black text-green-600">+{currency}{tx.calculated_commission.toLocaleString()}</td>
@@ -587,6 +622,14 @@ export default function Staff() {
                   <h3 className="text-xl font-black text-[#1A1F3D]">ระบบจ่ายเงินเดือน (Payroll)</h3>
                   <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Monthly Salary & Commission Summary</p>
                 </div>
+                {canManageStaff && (
+                  <button 
+                    onClick={() => handleOpenPayrollModal()}
+                    className="bg-[#1A1F3D] text-white px-6 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all"
+                  >
+                    <Plus size={16} /> เพิ่มรายการเงินเดือน
+                  </button>
+                )}
               </div>
               <div className="overflow-x-auto flex-1 scrollbar-hide">
                 <table className="w-full">
@@ -639,11 +682,27 @@ export default function Staff() {
                             </td>
                             <td className="px-8 py-5 text-right">
                               {record.status === 'pending' && canManageStaff && (
+                                <div className="flex justify-end gap-2">
+                                  <button 
+                                    onClick={() => handleApprovePayroll(record.id)}
+                                    className="bg-[#1A1F3D] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-[#2A3152] transition-all shadow-md active:scale-95"
+                                  >
+                                    ชำระเงิน
+                                  </button>
+                                  <button 
+                                    onClick={() => handleOpenPayrollModal(record)}
+                                    className="p-2 text-gray-400 hover:bg-gray-100 rounded-xl transition-all"
+                                  >
+                                    <Edit3 size={16} />
+                                  </button>
+                                </div>
+                              )}
+                              {record.status === 'paid' && canManageStaff && (
                                 <button 
-                                  onClick={() => handleApprovePayroll(record.id)}
-                                  className="bg-[#1A1F3D] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-[#2A3152] transition-all shadow-md active:scale-95"
+                                  onClick={() => handleOpenPayrollModal(record)}
+                                  className="p-2 text-gray-400 hover:bg-gray-100 rounded-xl transition-all"
                                 >
-                                  ชำระเงิน
+                                  <Edit3 size={16} />
                                 </button>
                               )}
                             </td>
@@ -660,6 +719,14 @@ export default function Staff() {
       </div>
 
       {isRoleManagementOpen && <RoleManagementModal onClose={() => setIsRoleManagementOpen(false)} />}
+      
+      {isPayrollModalOpen && (
+        <PayrollModal
+          payrollRecord={editingPayrollRecord}
+          onClose={() => setIsPayrollModalOpen(false)}
+          onSave={handleSavePayroll}
+        />
+      )}
     </div>
   );
 }

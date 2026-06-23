@@ -232,6 +232,20 @@ export interface CreditPackageTemplate {
   creditValue: number;
 }
 
+export interface PayrollRecord {
+  id: string;
+  store_id: string | null;
+  staff_id: string;
+  month: string; // YYYY-MM format
+  basic_salary: number;
+  commission: number;
+  bonus: number;
+  deductions: number;
+  status: 'pending' | 'paid';
+  created_at: string;
+  profiles?: Staff; // Joined staff profile for display
+}
+
 // App State Interface
 export interface AppState {
   language: Language;
@@ -292,6 +306,7 @@ export interface AppState {
   staff: Staff[];
   logs: ActivityLog[];
   roles: Role[]; // Add roles to AppState
+  payrollRecords: PayrollRecord[]; // Add payrollRecords to AppState
   cart: any[];
   rolePermissions: Record<StaffRole, string[]>;
 
@@ -374,6 +389,9 @@ export interface AppState {
   addRole: (role: Omit<Role, 'id' | 'created_at'>) => Promise<void>; // Add role actions
   updateRole: (id: string, role: Partial<Omit<Role, 'id' | 'created_at'>>) => Promise<void>;
   deleteRole: (id: string) => Promise<void>;
+
+  addPayrollRecord: (record: Omit<PayrollRecord, 'id' | 'store_id' | 'created_at' | 'profiles'>) => Promise<void>;
+  updatePayrollRecord: (id: string, record: Partial<Omit<PayrollRecord, 'id' | 'store_id' | 'created_at' | 'profiles'>>) => Promise<void>;
   
   addPackageTemplate: (pkg: any) => void;
   updatePackageTemplate: (id: string, pkg: any) => void;

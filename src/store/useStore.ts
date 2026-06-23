@@ -7,7 +7,7 @@ import {
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
   QueueItem, Service, InventoryItem, Partner, StockLog, Transaction, 
   Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, 
-  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory, Role 
+  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory, Role, PayrollRecord 
 } from './types';
 import { createAuthSlice } from './slices/authSlice';
 import { createCRMSlice } from './slices/crmSlice';
@@ -55,6 +55,7 @@ export const useStore = create<AppState>()((set, get) => ({
   logs: [],
   reportHistory: [],
   roles: [], // Initialize roles array
+  payrollRecords: [], // Initialize payrollRecords
   tierRules: [
     { level: 'Standard', label: 'Standard', minSpent: 0, discount: 0 },
     { level: 'Silver', label: 'Silver', minSpent: 5000, discount: 5 },
@@ -996,10 +997,10 @@ export const useStore = create<AppState>()((set, get) => ({
         customerId: data.customer_id || 'walk-in',
         customerName: data.customer_name,
         items: data.items,
-        paymentMethod: data.payment_method,
+        paymentMethod: data.payment_method as PaymentMethod,
         staffName: data.staff_name || 'Admin',
         species: [],
-        bookingType: 'Walk-in'
+        bookingType: 'Walk-in' as BookingType
       };
 
       set(state => ({
@@ -1021,6 +1022,73 @@ export const useStore = create<AppState>()((set, get) => ({
 
     set(state => ({
       transactions: state.transactions.filter(t => t.id !== id)
+    }));
+  },
+
+  // Payroll Actions
+  addPayrollRecord: async (record) => {
+    const currentStoreId = get().storeId;
+    const { data, error } = await supabase
+      .from('payroll_records')
+      .insert([{
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+        staff_id: record.staff_id,
+        month: record.month,
+        basic_salary: record.basic_salary,
+        commission: record.commission,
+        bonus: record.bonus,
+        deductions: record.deductions,
+        status: record.status
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding payroll record:", error);
+      throw error;
+    }
+
+    if (data) {
+      const newRecord: PayrollRecord = {
+        id: data.id,
+        store_id: data.store_id,
+        staff_id: data.staff_id,
+        month: data.month,
+        basic_salary: Number(data.basic_salary || 0),
+        commission: Number(data.commission || 0),
+        bonus: Number(data.bonus || 0),
+        deductions: Number(data.deductions || 0),
+        status: data.status,
+        created_at: data.created_at,
+        profiles: get().staff.find(s => s.id === data.staff_id) // Attach staff profile for display
+      };
+      set(s => ({ payrollRecords: [newRecord, ...s.payrollRecords] }));
+    }
+  },
+
+  updatePayrollRecord: async (id, record) => {
+    const { error } = await supabase
+      .from('payroll_records')
+      .update({
+        basic_salary: record.basic_salary,
+        commission: record.commission,
+        bonus: record.bonus,
+        deductions: record.deductions,
+        status: record.status
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating payroll record:", error);
+      throw error;
+    }
+
+    set(s => ({
+      payrollRecords: s.payrollRecords.map(pr => pr.id === id ? { 
+        ...pr, 
+        ...record, 
+        profiles: get().staff.find(s => s.id === record.staff_id) // Re-attach staff profile
+      } : pr)
     }));
   },
 }));
