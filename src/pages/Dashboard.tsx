@@ -58,6 +58,8 @@ import BookingModal from '@/components/BookingModal';
 import CustomerModal from '@/components/CustomerModal';
 import HotelBookingModal from '@/components/HotelBookingModal';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RoomConfig {
   id: number;
@@ -106,7 +108,8 @@ const COLOR_MAP = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { queue, transactions, inventory, customers, currency, kennelCapacity, language, currentUser } = useStore();
+  const queryClient = useQueryClient();
+  const { queue, transactions, inventory, customers, currency, kennelCapacity, language, currentUser, storeId } = useStore();
   const t = translations[language];
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -126,6 +129,49 @@ const Dashboard = () => {
   const [tempRoomName, setTempRoomName] = useState('');
   const [tempRoomColor, setTempRoomColor] = useState<RoomConfig['color']>('gray');
   const [roomsConfig, setRoomsConfig] = useState<RoomConfig[]>([]);
+
+  // Fetch today's attendance status for the current user
+  const { data: todayAttendance = [] } = useQuery({
+    queryKey: ['today_attendance', currentUser?.id, today],
+    queryFn: async () => {
+      if (!currentUser?.id) return [];
+      const { data, error } = await supabase
+        .from('attendance_logs' as any)
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .gte('created_at', `${today}T00:00:00.000Z`)
+        .order('created_at', { ascending: false });
+      if (error) return [];
+      return data || [];
+    },
+    enabled: !!currentUser?.id
+  });
+
+  const lastLog = todayAttendance[0];
+  const isClockedIn = lastLog?.type === 'check_in';
+
+  const clockMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentUser?.id || !storeId) return;
+      const nextType = isClockedIn ? 'check_out' : 'check_in';
+      const { error } = await supabase
+        .from('attendance_logs' as any)
+        .insert([{
+          user_id: currentUser.id,
+          store_id: storeId,
+          type: nextType
+        }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['today_attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance_logs'] });
+      toast.success(isClockedIn ? "บันทึกเวลาออกงานเรียบร้อยแล้ว" : "บันทึกเวลาเข้างานเรียบร้อยแล้ว");
+    },
+    onError: (err: any) => {
+      toast.error("เกิดข้อผิดพลาด: " + err.message);
+    }
+  });
 
   // Load & Save Room Configurations from localStorage
   useEffect(() => {
@@ -405,6 +451,28 @@ const Dashboard = () => {
 
         {/* Quick Actions & Alerts */}
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Clock In / Out Button */}
+          {currentUser?.role !== 'superadmin' && (
+            <button 
+              onClick={() => clockMutation.mutate()}
+              disabled={clockMutation.isPending}
+              className={cn(
+                "flex-1 md:flex-none px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 font-black text-xs shadow-lg active:scale-95 transition-all",
+                isClockedIn 
+                  ? "bg-red-500 text-white shadow-red-500/10 hover:bg-red-600" 
+                  : "bg-emerald-500 text-white shadow-emerald-500/10 hover:bg-emerald-600"
+              )}
+            >
+              <Clock size={16} /> 
+              {clockMutation.isPending 
+                ? "กำลังบันทึก..." 
+                : isClockedIn 
+                  ? (language === 'th' ? 'ลงชื่อออกงาน' : 'Clock Out') 
+                  : (language === 'th' ? 'ลงชื่อเข้างาน' : 'Clock In')
+              }
+            </button>
+          )}
+
           {/* Alerts Popover */}
           <Popover>
             <PopoverTrigger asChild>
@@ -427,7 +495,7 @@ const Dashboard = () => {
                 ) : (
                   <div className="divide-y divide-gray-50">
                     {lowStockItems.map(item => (
-                      <div key={item.id} className="p-4 flex gap-4 hover:bg-gray-50 transition-all">
+                      <div key={item.id} className="p-4 flex gap-4 hover:bg-gray-50/50 transition-all">
                         <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center shrink-0">
                           <Package size={18} />
                         </div>
@@ -438,7 +506,7 @@ const Dashboard = () => {
                       </div>
                     ))}
                     {specialCarePets.map((pet, idx) => (
-                      <div key={idx} className="p-4 flex gap-4 hover:bg-gray-50 transition-all">
+                      <div key={idx} className="p-4 flex gap-4 hover:bg-gray-50/50 transition-all">
                         <div className="w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center shrink-0">
                           <AlertTriangle size={18} />
                         </div>
