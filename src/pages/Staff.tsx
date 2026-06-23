@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { useStore, StaffRole } from "@/store/useStore";
-import { 
-  Search, 
-  Plus, 
-  Mail, 
-  Phone, 
-  Shield, 
-  Percent, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Search,
+  Plus,
+  Mail,
+  Phone,
+  Shield,
+  Percent,
+  CheckCircle2,
+  XCircle,
   Chrome,
   Edit3,
   User,
@@ -39,6 +39,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import RoleManagementModal from "@/components/RoleManagementModal";
 import PayrollTab from "@/components/PayrollTab";
+import ScheduleTab from "@/components/ScheduleTab";
 import { format } from "date-fns";
 
 interface StaffMember {
@@ -274,7 +275,7 @@ export default function Staff() {
 
         <div className="flex flex-wrap gap-3">
           {canManageStaff && (
-            <button 
+            <button
               onClick={() => setIsRoleManagementOpen(true)}
               className="bg-indigo-50 text-indigo-600 px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-indigo-500/10 active:scale-95 transition-all"
             >
@@ -345,6 +346,9 @@ export default function Staff() {
             <TabsTrigger value="attendance" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
               <CalendarDays size={16} className="mr-2" /> Attendance
             </TabsTrigger>
+            <TabsTrigger value="schedule" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
+              <CalendarDays size={16} className="mr-2" /> Shift & Schedule
+            </TabsTrigger>
             <TabsTrigger value="payroll" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
               <Wallet size={16} className="mr-2" /> Payroll
             </TabsTrigger>
@@ -380,20 +384,20 @@ export default function Staff() {
                   <DialogHeader><DialogTitle className="text-xl font-black text-[#1A1F3D]">เซสชันที่ใช้งานอยู่ (Active Sessions)</DialogTitle></DialogHeader>
                   <div className="space-y-4 mt-4 max-h-[400px] overflow-y-auto scrollbar-hide">
                     {activeSessions.length === 0 ? <p className="text-xs text-gray-400 font-bold text-center py-6 italic">ไม่มีเซสชันที่ใช้งานอยู่</p> : activeSessions.map((session: any) => {
-                        const member = staff.find((s: any) => s.id === session.user_id);
-                        const staffName = member?.name || "Unknown User";
-                        const staffEmail = member?.username || "No Email";
-                        const lastActive = session.last_active_at ? new Date(session.last_active_at).toLocaleTimeString() : "N/A";
-                        return (
-                          <div key={session.id} className="flex items-center justify-between p-4 bg-[#F5F6FA] rounded-2xl">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <img src={member?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} alt={staffName} className="w-10 h-10 rounded-xl object-cover shrink-0" />
-                              <div className="min-w-0"><p className="text-xs font-black text-[#1A1F3D] truncate">{staffName}</p><p className="text-[9px] text-gray-400 font-bold truncate">{staffEmail}</p><p className="text-[8px] text-indigo-500 font-bold mt-0.5">Active: {lastActive}</p></div>
-                            </div>
-                            {canManageStaff && <button type="button" onClick={() => handleForceLogout(session.user_id, staffName)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl"><LogOut className="h-4 w-4" /></button>}
+                      const member = staff.find((s: any) => s.id === session.user_id);
+                      const staffName = member?.name || "Unknown User";
+                      const staffEmail = member?.username || "No Email";
+                      const lastActive = session.last_active_at ? new Date(session.last_active_at).toLocaleTimeString() : "N/A";
+                      return (
+                        <div key={session.id} className="flex items-center justify-between p-4 bg-[#F5F6FA] rounded-2xl">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <img src={member?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} alt={staffName} className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                            <div className="min-w-0"><p className="text-xs font-black text-[#1A1F3D] truncate">{staffName}</p><p className="text-[9px] text-gray-400 font-bold truncate">{staffEmail}</p><p className="text-[8px] text-indigo-500 font-bold mt-0.5">Active: {lastActive}</p></div>
                           </div>
-                        );
-                      })}
+                          {canManageStaff && <button type="button" onClick={() => handleForceLogout(session.user_id, staffName)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl"><LogOut className="h-4 w-4" /></button>}
+                        </div>
+                      );
+                    })}
                   </div>
                 </DialogContent>
               </Dialog>
@@ -511,7 +515,7 @@ export default function Staff() {
                         <span className={cn(
                           "px-2 py-0.5 rounded-md text-[8px] font-black uppercase",
                           request.status === 'pending' ? "bg-amber-50 text-amber-600" :
-                          request.status === 'approved' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                            request.status === 'approved' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                         )}>
                           {request.status}
                         </span>
@@ -536,8 +540,12 @@ export default function Staff() {
             </div>
           </TabsContent>
 
+          <TabsContent value="schedule" className="m-0 h-full animate-in fade-in duration-300">
+            <ScheduleTab storeId={storeId} />
+          </TabsContent>
+
           <TabsContent value="payroll" className="m-0 h-full animate-in fade-in duration-300">
-            <PayrollTab />
+            <PayrollTab storeId={""} />
           </TabsContent>
         </Tabs>
       </div>
