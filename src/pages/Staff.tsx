@@ -18,16 +18,21 @@ import {
   Sparkles,
   LogOut,
   ChevronRight,
-  Copy
+  Copy,
+  Clock,
+  Wallet,
+  CalendarDays,
+  Users
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import RoleManagementModal from "@/components/RoleManagementModal"; // Import the new modal
+import RoleManagementModal from "@/components/RoleManagementModal";
 
 interface StaffMember {
   id: string;
@@ -49,8 +54,9 @@ export default function Staff() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSessionsOpen, setIsSessionsOpen] = useState(false);
-  const [isRoleManagementOpen, setIsRoleManagementOpen] = useState(false); // New state for role management modal
+  const [isRoleManagementOpen, setIsRoleManagementOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [activeTab, setActiveTab] = useState("profiles");
 
   // Form States
   const [name, setName] = useState("");
@@ -71,7 +77,7 @@ export default function Staff() {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 5000, // Refetch every 5 seconds to keep it live
+    refetchInterval: 5000,
     enabled: !!storeId
   });
 
@@ -314,346 +320,400 @@ export default function Staff() {
         </div>
       </header>
 
+      {/* Tabs List */}
+      <div className="px-10 py-4 bg-white border-b border-gray-50 overflow-x-auto scrollbar-hide shrink-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-transparent h-auto p-0 flex gap-4">
+            <TabsTrigger value="profiles" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
+              <Users size={16} className="mr-2" /> Profiles & Roles
+            </TabsTrigger>
+            <TabsTrigger value="attendance" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
+              <CalendarDays size={16} className="mr-2" /> Attendance
+            </TabsTrigger>
+            <TabsTrigger value="commissions" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
+              <Percent size={16} className="mr-2" /> Commissions
+            </TabsTrigger>
+            <TabsTrigger value="payroll" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
+              <Wallet size={16} className="mr-2" /> Payroll
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-10 scrollbar-hide space-y-8">
-        {/* Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Dialog open={isSessionsOpen} onOpenChange={(open) => { setIsSessionsOpen(open); if (open) refetchSessions(); }}>
-            <DialogTrigger asChild>
-              <button className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between text-left hover:shadow-md transition-all cursor-pointer w-full">
+      <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
+        <Tabs value={activeTab} className="h-full">
+          <TabsContent value="profiles" className="space-y-8 m-0 animate-in fade-in duration-300">
+            {/* Status Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Dialog open={isSessionsOpen} onOpenChange={(open) => { setIsSessionsOpen(open); if (open) refetchSessions(); }}>
+                <DialogTrigger asChild>
+                  <button className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between text-left hover:shadow-md transition-all cursor-pointer w-full">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                        <Chrome size={24} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-gray-400 mb-0.5">ผู้ใช้งานพร้อมกัน (Concurrent Logins)</p>
+                        <h3 className="text-xl font-black text-[#1A1F3D]">
+                          {activeSessionsCount} / {userLimit} <span className="text-xs text-gray-400 font-bold">เซสชัน</span>
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="text-right flex items-center gap-2">
+                      <span className={cn(
+                        "text-[9px] font-black px-2.5 py-1 rounded-full uppercase",
+                        activeSessionsCount >= userLimit ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                      )}>
+                        {activeSessionsCount >= userLimit ? "เต็มแล้ว" : "ใช้งานได้"}
+                      </span>
+                      <ChevronRight size={16} className="text-gray-400" />
+                    </div>
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="rounded-[32px] max-w-md p-8">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-black text-[#1A1F3D]">เซสชันที่ใช้งานอยู่ (Active Sessions)</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4 max-h-[400px] overflow-y-auto scrollbar-hide">
+                    {activeSessions.length === 0 ? (
+                      <p className="text-xs text-gray-400 font-bold text-center py-6 italic">ไม่มีเซสชันที่ใช้งานอยู่</p>
+                    ) : (
+                      activeSessions.map((session: any) => {
+                        const member = staff.find((s: any) => s.id === session.user_id);
+                        const staffName = member?.name || "Unknown User";
+                        const staffEmail = member?.username || "No Email";
+                        const staffAvatar = member?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop";
+                        const lastActive = session.last_active_at ? new Date(session.last_active_at).toLocaleTimeString() : "N/A";
+
+                        return (
+                          <div key={session.id} className="flex items-center justify-between p-4 bg-[#F5F6FA] rounded-2xl">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <img src={staffAvatar} alt={staffName} className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-black text-[#1A1F3D] truncate">{staffName}</p>
+                                <p className="text-[9px] text-gray-400 font-bold truncate">{staffEmail}</p>
+                                <p className="text-[8px] text-indigo-500 font-bold mt-0.5">Active: {lastActive}</p>
+                              </div>
+                            </div>
+                            {canManageStaff && (
+                              <button
+                                type="button"
+                                onClick={() => handleForceLogout(session.user_id, staffName)}
+                                className="p-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-xl transition-all shrink-0"
+                                title={`สั่ง Logout เซสชันของ ${staffName}`}
+                              >
+                                <LogOut className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-                    <Chrome size={24} />
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                    <Shield size={24} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 mb-0.5">ผู้ใช้งานพร้อมกัน (Concurrent Logins)</p>
+                    <p className="text-[10px] font-black uppercase text-gray-400 mb-0.5">บัญชีพนักงาน (Staff Accounts)</p>
                     <h3 className="text-xl font-black text-[#1A1F3D]">
-                      {activeSessionsCount} / {userLimit} <span className="text-xs text-gray-400 font-bold">เซสชัน</span>
+                      {activeStaffCount} / {staffLimit} <span className="text-xs text-gray-400 font-bold">บัญชี</span>
                     </h3>
                   </div>
                 </div>
-                <div className="text-right flex items-center gap-2">
+                <div className="text-right">
                   <span className={cn(
                     "text-[9px] font-black px-2.5 py-1 rounded-full uppercase",
-                    activeSessionsCount >= userLimit ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                    activeStaffCount >= staffLimit ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
                   )}>
-                    {activeSessionsCount >= userLimit ? "เต็มแล้ว" : "ใช้งานได้"}
+                    {activeStaffCount >= staffLimit ? "เต็มแล้ว" : "ใช้งานได้"}
                   </span>
-                  <ChevronRight size={16} className="text-gray-400" />
                 </div>
-              </button>
-            </DialogTrigger>
-            <DialogContent className="rounded-[32px] max-w-md p-8">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-black text-[#1A1F3D]">เซสชันที่ใช้งานอยู่ (Active Sessions)</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-4 max-h-[400px] overflow-y-auto scrollbar-hide">
-                {activeSessions.length === 0 ? (
-                  <p className="text-xs text-gray-400 font-bold text-center py-6 italic">ไม่มีเซสชันที่ใช้งานอยู่</p>
-                ) : (
-                  activeSessions.map((session: any) => {
-                    const member = staff.find((s: any) => s.id === session.user_id);
-                    const staffName = member?.name || "Unknown User";
-                    const staffEmail = member?.username || "No Email";
-                    const staffAvatar = member?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop";
-                    const lastActive = session.last_active_at ? new Date(session.last_active_at).toLocaleTimeString() : "N/A";
+              </div>
+            </div>
 
-                    return (
-                      <div key={session.id} className="flex items-center justify-between p-4 bg-[#F5F6FA] rounded-2xl">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <img src={staffAvatar} alt={staffName} className="w-10 h-10 rounded-xl object-cover shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-xs font-black text-[#1A1F3D] truncate">{staffName}</p>
-                            <p className="text-[9px] text-gray-400 font-bold truncate">{staffEmail}</p>
-                            <p className="text-[8px] text-indigo-500 font-bold mt-0.5">Active: {lastActive}</p>
-                          </div>
+            {/* Search Bar */}
+            <div className="relative max-w-md bg-white rounded-[24px] shadow-sm border border-gray-100/50 overflow-hidden">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                placeholder="ค้นหาพนักงานด้วยชื่อ, บทบาท หรืออีเมล..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent pl-14 pr-6 py-4 text-sm font-bold border-none focus:outline-none focus:ring-0"
+              />
+            </div>
+
+            {/* Staff Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredStaff.map((member: any) => {
+                const isUserLoggedIn = activeSessions.some((s: any) => s.user_id === member.id);
+                return (
+                  <div 
+                    key={member.id} 
+                    className={cn(
+                      "bg-white rounded-[40px] p-8 flex flex-col h-full transition-all duration-300 border border-transparent group hover:shadow-2xl hover:border-gray-100 relative",
+                      member.status === "Inactive" && "opacity-60 grayscale-[0.3]"
+                    )}
+                  >
+                    {/* Action Buttons on Hover */}
+                    <div className="absolute top-6 right-6 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      {member.isPendingInvite && (
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(member.inviteLink || "");
+                            toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
+                          }}
+                          className="p-2.5 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                          title="คัดลอกลิงก์คำเชิญ"
+                        >
+                          <Copy size={16} />
+                        </button>
+                      )}
+                      {canManageStaff && (
+                        <button 
+                          onClick={() => handleDeleteStaffMember(member.id, member.name)}
+                          className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                          title="ลบพนักงาน"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Top Section: Avatar & Basic Info */}
+                    <div className="flex items-center gap-5 mb-6">
+                      <div className="relative shrink-0">
+                        <img 
+                          src={member.avatar} 
+                          alt={member.name} 
+                          className="w-16 h-16 rounded-[24px] object-cover border-4 border-white shadow-md"
+                        />
+                        <div className={cn(
+                          "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white",
+                          isUserLoggedIn ? "bg-green-500" : "bg-red-500"
+                        )} />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-[#1A1F3D] mb-1.5 line-clamp-1">{member.name}</h3>
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className={cn(
+                            "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
+                            member.role === "Admin" ? "bg-blue-50 text-blue-600" : "bg-indigo-50 text-indigo-600"
+                          )}>
+                            {member.role}
+                          </span>
+                          {member.isPendingInvite ? (
+                            <span className="px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider bg-amber-50 text-amber-600">
+                              Pending Invite
+                            </span>
+                          ) : (
+                            <span className={cn(
+                              "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
+                              member.status === "Active" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                            )}>
+                              {member.status === "Active" ? "Active" : "Inactive"}
+                            </span>
+                          )}
                         </div>
-                        {canManageStaff && (
+                      </div>
+                    </div>
+
+                    {/* Contact & Commission Info */}
+                    <div className="space-y-3 text-xs font-bold text-gray-500 border-t border-gray-50 pt-5 mb-6 flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Mail className="h-4 w-4 text-gray-300 shrink-0" />
+                          <span className="truncate">{member.username}</span>
+                        </div>
+                        {member.isPendingInvite && (
                           <button
-                            type="button"
-                            onClick={() => handleForceLogout(session.user_id, staffName)}
-                            className="p-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-xl transition-all shrink-0"
-                            title={`สั่ง Logout เซสชันของ ${staffName}`}
+                            onClick={() => {
+                              navigator.clipboard.writeText(member.inviteLink || "");
+                              toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
+                            }}
+                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-1 text-[10px] font-black uppercase shrink-0"
+                            title="คัดลอกลิงก์คำเชิญ"
                           >
-                            <LogOut className="h-4 w-4" />
+                            <Copy size={12} /> Copy Link
                           </button>
                         )}
                       </div>
-                    );
-                  })
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+                      {member.phone && (
+                        <div className="flex items-center gap-3">
+                          <Phone className="h-4 w-4 text-gray-300 shrink-0" />
+                          <span>{member.phone}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <Percent className="h-4 w-4 text-gray-300 shrink-0" />
+                        <span>ค่าคอมมิชชัน: <span className="text-[#1A1F3D] font-black">{member.commissionRate || 0}%</span></span>
+                      </div>
 
-          <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
-                <Shield size={24} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-gray-400 mb-0.5">บัญชีพนักงาน (Staff Accounts)</p>
-                <h3 className="text-xl font-black text-[#1A1F3D]">
-                  {activeStaffCount} / {staffLimit} <span className="text-xs text-gray-400 font-bold">บัญชี</span>
-                </h3>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className={cn(
-                "text-[9px] font-black px-2.5 py-1 rounded-full uppercase",
-                activeStaffCount >= staffLimit ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
-              )}>
-                {activeStaffCount >= staffLimit ? "เต็มแล้ว" : "ใช้งานได้"}
-              </span>
-            </div>
-          </div>
-        </div>
+                      {/* Google Calendar Connection Status */}
+                      <div className="bg-[#F5F6FA] p-3.5 rounded-2xl flex items-center justify-between mt-4">
+                        <div className="flex items-center gap-2">
+                          <Chrome className="h-4 w-4 text-blue-500" />
+                          <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Google Calendar</span>
+                        </div>
+                        {member.googleConnected ? (
+                          <span className="bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3 text-green-600" /> Connected
+                          </span>
+                        ) : (
+                          <span className="bg-gray-100 text-gray-400 border border-gray-200 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1">
+                            <XCircle className="h-3 w-3 text-gray-400" /> Disconnected
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-        {/* Search Bar */}
-        <div className="relative max-w-md bg-white rounded-[24px] shadow-sm border border-gray-100/50 overflow-hidden">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            placeholder="ค้นหาพนักงานด้วยชื่อ, บทบาท หรืออีเมล..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent pl-14 pr-6 py-4 text-sm font-bold border-none focus:outline-none focus:ring-0"
-          />
-        </div>
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-4 border-t border-gray-50">
+                      <Dialog open={editingStaff?.id === member.id} onOpenChange={(open) => { if (!open) { setEditingStaff(null); resetForm(); } }}>
+                        {canManageStaff && (
+                          <button 
+                            onClick={() => openEditDialog(member)}
+                            className="flex-1 bg-[#F5F6FA] hover:bg-gray-100 text-[#1A1F3D] font-black py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
+                          >
+                            <Edit3 size={14} /> แก้ไขข้อมูล
+                          </button>
+                        )}
+                        <DialogContent className="rounded-[32px] max-w-md p-8">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl font-black text-[#1A1F3D]">แก้ไขข้อมูลพนักงาน</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleEditStaff} className="space-y-5 mt-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-name" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อ-นามสกุล *</Label>
+                              <input 
+                                id="edit-name" 
+                                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                                value={name} 
+                                onChange={(e) => setName(e.target.value)} 
+                                required 
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-email" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">อีเมล (Google Account) *</Label>
+                              <input 
+                                id="edit-email" 
+                                type="email"
+                                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                                value={email} 
+                                onChange={(e) => setEmail(e.target.value)} 
+                                required 
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-phone" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">เบอร์โทรศัพท์</Label>
+                              <input 
+                                id="edit-phone" 
+                                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                                value={phone} 
+                                onChange={(e) => setPhone(e.target.value)} 
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="edit-role" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">บทบาท</Label>
+                                <Select value={role} onValueChange={(value: StaffRole) => setRole(value)}>
+                                  <SelectTrigger className="border-none bg-[#F5F6FA] rounded-2xl h-12 focus:ring-4 focus:ring-[#1A1F3D]/5 font-bold text-sm">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="rounded-2xl border-gray-100 shadow-2xl">
+                                    {roles.filter(r => r.name !== 'superadmin').map(r => (
+                                      <SelectItem key={r.id} value={r.name} className="text-xs font-bold py-3">{r.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="edit-commission" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ค่าคอมมิชชัน (%)</Label>
+                                <input 
+                                  id="edit-commission" 
+                                  type="number" 
+                                  min="0" 
+                                  max="100" 
+                                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                                  value={commissionRate} 
+                                  onChange={(e) => setCommissionRate(e.target.value)} 
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                              <button 
+                                type="button" 
+                                onClick={() => setEditingStaff(null)}
+                                className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all"
+                              >
+                                ยกเลิก
+                              </button>
+                              <button 
+                                type="submit"
+                                className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all"
+                              >
+                                บันทึกการเปลี่ยนแปลง
+                              </button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
 
-        {/* Staff Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredStaff.map((member: any) => {
-            const isUserLoggedIn = activeSessions.some((s: any) => s.user_id === member.id);
-            return (
-              <div 
-                key={member.id} 
-                className={cn(
-                  "bg-white rounded-[40px] p-8 flex flex-col h-full transition-all duration-300 border border-transparent group hover:shadow-2xl hover:border-gray-100 relative",
-                  member.status === "Inactive" && "opacity-60 grayscale-[0.3]"
-                )}
-              >
-                {/* Action Buttons on Hover */}
-                <div className="absolute top-6 right-6 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                  {member.isPendingInvite && (
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(member.inviteLink || "");
-                        toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
-                      }}
-                      className="p-2.5 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                      title="คัดลอกลิงก์คำเชิญ"
-                    >
-                      <Copy size={16} />
-                    </button>
-                  )}
-                  {canManageStaff && (
-                    <button 
-                      onClick={() => handleDeleteStaffMember(member.id, member.name)}
-                      className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                      title="ลบพนักงาน"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Top Section: Avatar & Basic Info */}
-                <div className="flex items-center gap-5 mb-6">
-                  <div className="relative shrink-0">
-                    <img 
-                      src={member.avatar} 
-                      alt={member.name} 
-                      className="w-16 h-16 rounded-[24px] object-cover border-4 border-white shadow-md"
-                    />
-                    <div className={cn(
-                      "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white",
-                      isUserLoggedIn ? "bg-green-500" : "bg-red-500"
-                    )} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-[#1A1F3D] mb-1.5 line-clamp-1">{member.name}</h3>
-                    <div className="flex flex-wrap gap-1.5">
-                      <span className={cn(
-                        "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
-                        member.role === "Admin" ? "bg-blue-50 text-blue-600" : "bg-indigo-50 text-indigo-600"
-                      )}>
-                        {member.role}
-                      </span>
-                      {member.isPendingInvite ? (
-                        <span className="px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider bg-amber-50 text-amber-600">
-                          Pending Invite
-                        </span>
-                      ) : (
-                        <span className={cn(
-                          "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
-                          member.status === "Active" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
-                        )}>
-                          {member.status === "Active" ? "Active" : "Inactive"}
-                        </span>
+                      {canManageStaff && (
+                        <button 
+                          onClick={() => toggleStatus(member)}
+                          className={cn(
+                            "flex-1 font-black py-3.5 rounded-2xl text-xs transition-all active:scale-95 shadow-md",
+                            member.status === "Active" 
+                              ? "bg-red-50 hover:bg-red-100 text-red-600 shadow-red-500/5" 
+                              : "bg-green-50 hover:bg-green-100 text-green-600 shadow-green-500/5"
+                          )}
+                        >
+                          {member.status === "Active" ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                        </button>
                       )}
                     </div>
                   </div>
-                </div>
+                );
+              })}
+            </div>
+          </TabsContent>
 
-                {/* Contact & Commission Info */}
-                <div className="space-y-3 text-xs font-bold text-gray-500 border-t border-gray-50 pt-5 mb-6 flex-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Mail className="h-4 w-4 text-gray-300 shrink-0" />
-                      <span className="truncate">{member.username}</span>
-                    </div>
-                    {member.isPendingInvite && (
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(member.inviteLink || "");
-                          toast.success('คัดลอกลิงก์คำเชิญเรียบร้อยแล้ว!');
-                        }}
-                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-1 text-[10px] font-black uppercase shrink-0"
-                        title="คัดลอกลิงก์คำเชิญ"
-                      >
-                        <Copy size={12} /> Copy Link
-                      </button>
-                    )}
-                  </div>
-                  {member.phone && (
-                    <div className="flex items-center gap-3">
-                      <Phone className="h-4 w-4 text-gray-300 shrink-0" />
-                      <span>{member.phone}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <Percent className="h-4 w-4 text-gray-300 shrink-0" />
-                    <span>ค่าคอมมิชชัน: <span className="text-[#1A1F3D] font-black">{member.commissionRate || 0}%</span></span>
-                  </div>
+          <TabsContent value="attendance" className="m-0 h-full animate-in fade-in duration-300">
+            <div className="h-full bg-white rounded-[48px] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center p-12">
+               <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-[32px] flex items-center justify-center mb-6">
+                  <Clock size={40} />
+               </div>
+               <h2 className="text-2xl font-black text-[#1A1F3D]">ระบบลงเวลาทำงาน (Attendance)</h2>
+               <p className="text-sm text-gray-400 max-w-sm mt-2 font-medium">ฟีเจอร์การเช็คอิน-เช็คเอาท์ และประวัติการทำงานของพนักงาน กำลังอยู่ระหว่างการพัฒนา</p>
+            </div>
+          </TabsContent>
 
-                  {/* Google Calendar Connection Status */}
-                  <div className="bg-[#F5F6FA] p-3.5 rounded-2xl flex items-center justify-between mt-4">
-                    <div className="flex items-center gap-2">
-                      <Chrome className="h-4 w-4 text-blue-500" />
-                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Google Calendar</span>
-                    </div>
-                    {member.googleConnected ? (
-                      <span className="bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-600" /> Connected
-                      </span>
-                    ) : (
-                      <span className="bg-gray-100 text-gray-400 border border-gray-200 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase flex items-center gap-1">
-                        <XCircle className="h-3 w-3 text-gray-400" /> Disconnected
-                      </span>
-                    )}
-                  </div>
-                </div>
+          <TabsContent value="commissions" className="m-0 h-full animate-in fade-in duration-300">
+            <div className="h-full bg-white rounded-[48px] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center p-12">
+               <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-[32px] flex items-center justify-center mb-6">
+                  <Percent size={40} />
+               </div>
+               <h2 className="text-2xl font-black text-[#1A1F3D]">การคำนวณค่าคอมมิชชัน (Commissions)</h2>
+               <p className="text-sm text-gray-400 max-w-sm mt-2 font-medium">สรุปยอดคอมมิชชันรายบุคคลจากผลงานการให้บริการ กำลังอยู่ระหว่างการพัฒนา</p>
+            </div>
+          </TabsContent>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-4 border-t border-gray-50">
-                  <Dialog open={editingStaff?.id === member.id} onOpenChange={(open) => { if (!open) { setEditingStaff(null); resetForm(); } }}>
-                    {canManageStaff && (
-                      <button 
-                        onClick={() => openEditDialog(member)}
-                        className="flex-1 bg-[#F5F6FA] hover:bg-gray-100 text-[#1A1F3D] font-black py-3.5 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
-                      >
-                        <Edit3 size={14} /> แก้ไขข้อมูล
-                      </button>
-                    )}
-                    <DialogContent className="rounded-[32px] max-w-md p-8">
-                      <DialogHeader>
-                        <DialogTitle className="text-xl font-black text-[#1A1F3D]">แก้ไขข้อมูลพนักงาน</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleEditStaff} className="space-y-5 mt-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-name" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อ-นามสกุล *</Label>
-                          <input 
-                            id="edit-name" 
-                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                            value={name} 
-                            onChange={(e) => setName(e.target.value)} 
-                            required 
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-email" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">อีเมล (Google Account) *</Label>
-                          <input 
-                            id="edit-email" 
-                            type="email"
-                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                            value={email} 
-                            onChange={(e) => setEmail(e.target.value)} 
-                            required 
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-phone" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">เบอร์โทรศัพท์</Label>
-                          <input 
-                            id="edit-phone" 
-                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                            value={phone} 
-                            onChange={(e) => setPhone(e.target.value)} 
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-role" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">บทบาท</Label>
-                            <Select value={role} onValueChange={(value: StaffRole) => setRole(value)}>
-                              <SelectTrigger className="border-none bg-[#F5F6FA] rounded-2xl h-12 focus:ring-4 focus:ring-[#1A1F3D]/5 font-bold text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-2xl border-gray-100 shadow-2xl">
-                                {roles.filter(r => r.name !== 'superadmin').map(r => (
-                                  <SelectItem key={r.id} value={r.name} className="text-xs font-bold py-3">{r.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-commission" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ค่าคอมมิชชัน (%)</Label>
-                            <input 
-                              id="edit-commission" 
-                              type="number" 
-                              min="0" 
-                              max="100" 
-                              className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                              value={commissionRate} 
-                              onChange={(e) => setCommissionRate(e.target.value)} 
-                            />
-                          </div>
-                        </div>
-                        <div className="flex gap-3 pt-4">
-                          <button 
-                            type="button" 
-                            onClick={() => setEditingStaff(null)}
-                            className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all"
-                          >
-                            ยกเลิก
-                          </button>
-                          <button 
-                            type="submit"
-                            className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all"
-                          >
-                            บันทึกการเปลี่ยนแปลง
-                          </button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-
-                  {canManageStaff && (
-                    <button 
-                      onClick={() => toggleStatus(member)}
-                      className={cn(
-                        "flex-1 font-black py-3.5 rounded-2xl text-xs transition-all active:scale-95 shadow-md",
-                        member.status === "Active" 
-                          ? "bg-red-50 hover:bg-red-100 text-red-600 shadow-red-500/5" 
-                          : "bg-green-50 hover:bg-green-100 text-green-600 shadow-green-500/5"
-                      )}
-                    >
-                      {member.status === "Active" ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+          <TabsContent value="payroll" className="m-0 h-full animate-in fade-in duration-300">
+            <div className="h-full bg-white rounded-[48px] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center p-12">
+               <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[32px] flex items-center justify-center mb-6">
+                  <Wallet size={40} />
+               </div>
+               <h2 className="text-2xl font-black text-[#1A1F3D]">ระบบจ่ายเงินเดือน (Payroll)</h2>
+               <p className="text-sm text-gray-400 max-w-sm mt-2 font-medium">การจัดการฐานเงินเดือนและประวัติการโอนเงิน กำลังอยู่ระหว่างการพัฒนา</p>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {isRoleManagementOpen && (
