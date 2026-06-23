@@ -22,7 +22,10 @@ import {
   Clock,
   Wallet,
   CalendarDays,
-  Users
+  Users,
+  Check,
+  X,
+  AlertCircle
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -30,9 +33,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import RoleManagementModal from "@/components/RoleManagementModal";
+import { format } from "date-fns";
 
 interface StaffMember {
   id: string;
@@ -50,6 +54,7 @@ interface StaffMember {
 }
 
 export default function Staff() {
+  const queryClient = useQueryClient();
   const { staff, addStaff, updateStaff, deleteStaff, language, storeId, maxUsers, maxStaff, currentUser, roles } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -65,7 +70,7 @@ export default function Staff() {
   const [commissionRate, setCommissionRate] = useState("0");
   const [email, setEmail] = useState("");
 
-  // Fetch active sessions for the current store
+  // Fetch active sessions
   const { data: activeSessions = [], refetch: refetchSessions } = useQuery<any[]>({
     queryKey: ['active_sessions_list', storeId],
     queryFn: async () => {
@@ -80,6 +85,60 @@ export default function Staff() {
     refetchInterval: 5000,
     enabled: !!storeId
   });
+
+  // Fetch Attendance Logs
+  const { data: attendanceLogs = [] } = useQuery({
+    queryKey: ['attendance_logs', storeId],
+    queryFn: async () => {
+      if (!storeId) return [];
+      const { data, error } = await supabase
+        .from('attendance_logs' as any)
+        .select('*, profiles(full_name, avatar_url)')
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) return [];
+      return data;
+    },
+    enabled: !!storeId && activeTab === 'attendance'
+  });
+
+  // Fetch Leave Requests
+  const { data: leaveRequests = [], refetch: refetchLeaves } = useQuery({
+    queryKey: ['leave_requests', storeId],
+    queryFn: async () => {
+      if (!storeId) return [];
+      const { data, error } = await supabase
+        .from('leave_requests' as any)
+        .select('*, profiles(full_name, avatar_url)')
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: false });
+      if (error) return [];
+      return data;
+    },
+    enabled: !!storeId && activeTab === 'attendance'
+  });
+
+  // Mutations for Leave Management
+  const updateLeaveMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string, status: string }) => {
+      const { error } = await supabase
+        .from('leave_requests' as any)
+        .update({ status, approved_by: currentUser?.id })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leave_requests'] });
+      toast.success("อัปเดตสถานะการลาเรียบร้อยแล้ว");
+    },
+    onError: (err: any) => {
+      toast.error("เกิดข้อผิดพลาด: " + err.message);
+    }
+  });
+
+  const handleApproveLeave = (id: string) => updateLeaveMutation.mutate({ id, status: 'approved' });
+  const handleRejectLeave = (id: string) => updateLeaveMutation.mutate({ id, status: 'rejected' });
 
   const activeSessionsCount = activeSessions.length;
 
@@ -685,12 +744,121 @@ export default function Staff() {
           </TabsContent>
 
           <TabsContent value="attendance" className="m-0 h-full animate-in fade-in duration-300">
-            <div className="h-full bg-white rounded-[48px] border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center p-12">
-               <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-[32px] flex items-center justify-center mb-6">
-                  <Clock size={40} />
-               </div>
-               <h2 className="text-2xl font-black text-[#1A1F3D]">ระบบลงเวลาทำงาน (Attendance)</h2>
-               <p className="text-sm text-gray-400 max-w-sm mt-2 font-medium">ฟีเจอร์การเช็คอิน-เช็คเอาท์ และประวัติการทำงานของพนักงาน กำลังอยู่ระหว่างการพัฒนา</p>
+            <div className="space-y-8">
+              {/* Leave Requests Header */}
+              <div className="flex justify-between items-end mb-2">
+                <div>
+                  <h3 className="text-xl font-black text-[#1A1F3D]">คำขออนุมัติการลา (Leave Requests)</h3>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Pending approval from staff</p>
+                </div>
+              </div>
+
+              {/* Leave Requests List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {leaveRequests.length === 0 ? (
+                  <div className="col-span-full py-12 text-center bg-white rounded-[32px] border border-dashed border-gray-200 opacity-40">
+                    <p className="font-black text-xs uppercase tracking-widest">No pending leave requests</p>
+                  </div>
+                ) : (
+                  leaveRequests.map((request: any) => (
+                    <div key={request.id} className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <img src={request.profiles?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-10 h-10 rounded-xl object-cover" />
+                          <div>
+                            <p className="text-sm font-black text-[#1A1F3D]">{request.profiles?.full_name}</p>
+                            <p className="text-[10px] text-indigo-500 font-black uppercase">{request.leave_type}</p>
+                          </div>
+                        </div>
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider",
+                          request.status === 'pending' ? "bg-amber-50 text-amber-600" :
+                          request.status === 'approved' ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                        )}>
+                          {request.status}
+                        </span>
+                      </div>
+                      
+                      <div className="bg-[#F5F6FA] p-4 rounded-2xl space-y-2">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500">
+                          <CalendarDays size={12} />
+                          <span>{request.start_date} ถึง {request.end_date}</span>
+                        </div>
+                        <p className="text-xs text-gray-600 leading-relaxed italic">"{request.reason || 'ไม่ได้ระบุเหตุผล'}"</p>
+                      </div>
+
+                      {request.status === 'pending' && canManageStaff && (
+                        <div className="flex gap-2 pt-2">
+                          <button 
+                            onClick={() => handleApproveLeave(request.id)}
+                            className="flex-1 bg-green-500 text-white py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5 shadow-lg shadow-green-500/10 active:scale-95"
+                          >
+                            <Check size={14} /> Approve
+                          </button>
+                          <button 
+                            onClick={() => handleRejectLeave(request.id)}
+                            className="flex-1 bg-red-50 text-red-500 py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5 active:scale-95"
+                          >
+                            <X size={14} /> Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Attendance Logs Table */}
+              <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden mt-10">
+                <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/20">
+                  <div>
+                    <h3 className="text-xl font-black text-[#1A1F3D]">ประวัติการลงเวลา (Recent Logs)</h3>
+                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Check-in / Check-out history</p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-white border-b border-gray-50">
+                        <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">พนักงาน</th>
+                        <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">ประเภท</th>
+                        <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">เวลา</th>
+                        <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">หมายเหตุ / พิกัด</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {attendanceLogs.length === 0 ? (
+                        <tr><td colSpan={4} className="py-20 text-center opacity-20 font-black">ไม่พบข้อมูลการลงเวลา</td></tr>
+                      ) : (
+                        attendanceLogs.map((log: any) => (
+                          <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-8 py-5 flex items-center gap-3">
+                              <img src={log.profiles?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="w-8 h-8 rounded-lg object-cover" />
+                              <span className="text-sm font-bold text-[#1A1F3D]">{log.profiles?.full_name}</span>
+                            </td>
+                            <td className="px-8 py-5 text-center">
+                              <span className={cn(
+                                "px-3 py-1 rounded-lg text-[9px] font-black uppercase",
+                                log.type === 'check_in' ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"
+                              )}>
+                                {log.type === 'check_in' ? 'Check In' : 'Check Out'}
+                              </span>
+                            </td>
+                            <td className="px-8 py-5 text-center">
+                              <p className="text-xs font-black text-[#1A1F3D]">{format(new Date(log.created_at), 'HH:mm')}</p>
+                              <p className="text-[9px] text-gray-400 font-bold">{format(new Date(log.created_at), 'dd MMM yyyy')}</p>
+                            </td>
+                            <td className="px-8 py-5">
+                              <p className="text-xs text-gray-500">{log.notes || 'Normal Check'}</p>
+                              <p className="text-[8px] text-gray-300 uppercase font-black">{log.location_name || 'In Shop'}</p>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
