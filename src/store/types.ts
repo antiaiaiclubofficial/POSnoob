@@ -384,4 +384,27 @@ export interface AppState {
   updateCreditPackage: (id: string, pkg: any) => void;
   deleteCreditPackage: (id: string) => void;
   buyCreditPackage: (customerId: string, packageId: string) => void;
+
+  // Staff Settings
+  staffSettings: StaffSettings;
+  updateStaffSettings: (settings: Partial<StaffSettings>) => Promise<void>;
+}
+
+export interface StaffSettings {
+  attendance: {
+    requireGps: boolean;
+    lateBufferMinutes: number;
+    autoCheckoutTime: string;
+  };
+  schedule: {
+    allowShiftSwapping: boolean;
+    minHoursBetweenShifts: number;
+    releaseNoticeDays: number;
+  };
+  payroll: {
+    payFrequency: 'monthly' | 'semi-monthly' | 'weekly';
+    payDayOfMonth: number;
+    overtimeRate: number;
+    socialSecurityRate: number;
+  };
 }

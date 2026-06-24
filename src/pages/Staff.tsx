@@ -27,7 +27,8 @@ import {
   X,
   AlertCircle,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  Settings
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -37,7 +38,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import RoleManagementModal from "@/components/RoleManagementModal";
+import StaffSettingsModal from "@/components/StaffSettingsModal";
 import PayrollTab from "@/components/PayrollTab";
 import ScheduleTab from "@/components/ScheduleTab";
 import { format } from "date-fns";
@@ -63,7 +64,7 @@ export default function Staff() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSessionsOpen, setIsSessionsOpen] = useState(false);
-  const [isRoleManagementOpen, setIsRoleManagementOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [activeTab, setActiveTab] = useState("profiles");
 
@@ -273,13 +274,73 @@ export default function Staff() {
           <p className="text-xs text-gray-400 font-bold mt-1">จัดการข้อมูลพนักงาน บทบาทหน้าที่ และค่าคอมมิชชัน</p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Dialog open={isSessionsOpen} onOpenChange={(open: boolean) => { setIsSessionsOpen(open); if (open) refetchSessions(); }}>
+            <DialogTrigger asChild>
+              <button className="bg-gradient-to-br from-white to-indigo-50/10 p-2.5 px-4 rounded-2xl shadow-[0_10px_25px_rgba(24,35,74,0.03)] hover:shadow-[0_15px_30px_rgba(24,35,74,0.06)] flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer w-[220px] group relative overflow-hidden border-none shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/10 pointer-events-none" />
+                <div className="flex items-center gap-2.5 z-10">
+                  <div className="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/10 shrink-0">
+                    <Chrome size={15} className="group-hover:rotate-12 transition-transform duration-300" />
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-black uppercase text-indigo-500/80 tracking-wider mb-0.5">Concurrent Logins</p>
+                    <h3 className="text-xs font-black text-[#1A1F3D] leading-none">
+                      {activeSessionsCount} <span className="text-[9px] text-gray-400 font-bold">/ {userLimit}</span>
+                    </h3>
+                  </div>
+                </div>
+                <div className="text-right flex items-center gap-1 z-10">
+                  <span className={cn("text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider", activeSessionsCount >= userLimit ? "bg-red-50 text-red-600" : "bg-indigo-50 text-indigo-600")}>
+                    {activeSessionsCount >= userLimit ? "เต็ม" : "ว่าง"}
+                  </span>
+                  <ChevronRight size={12} className="text-indigo-400 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="bg-white/90 backdrop-blur-xl border-none shadow-[0_20px_40px_rgba(24,35,74,0.08)] rounded-[32px] max-w-md p-8">
+              <DialogHeader><DialogTitle className="text-xl font-black text-[#1A1F3D]">เซสชันที่ใช้งานอยู่ (Active Sessions)</DialogTitle></DialogHeader>
+              <div className="space-y-4 mt-4 max-h-[400px] overflow-y-auto scrollbar-hide">
+                {activeSessions.length === 0 ? <p className="text-xs text-gray-400 font-bold text-center py-6 italic">ไม่มีเซสชันที่ใช้งานอยู่</p> : activeSessions.map((session: any) => {
+                  const member = staff.find((s: any) => s.id === session.user_id);
+                  const staffName = member?.name || "Unknown User";
+                  const staffEmail = member?.username || "No Email";
+                  const lastActive = session.last_active_at ? new Date(session.last_active_at).toLocaleTimeString() : "N/A";
+                  return (
+                    <div key={session.id} className="flex items-center justify-between p-4 bg-[#F5F6FA] rounded-2xl">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img src={member?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} alt={staffName} className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                        <div className="min-w-0"><p className="text-xs font-black text-[#1A1F3D] truncate">{staffName}</p><p className="text-[9px] text-gray-400 font-bold truncate">{staffEmail}</p><p className="text-[8px] text-indigo-500 font-bold mt-0.5">Active: {lastActive}</p></div>
+                      </div>
+                      {canManageStaff && <button type="button" onClick={() => handleForceLogout(session.user_id, staffName)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl"><LogOut className="h-4 w-4" /></button>}
+                    </div>
+                  );
+                })}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <div className="bg-gradient-to-br from-white to-emerald-50/10 p-2.5 px-4 rounded-2xl shadow-[0_10px_25px_rgba(24,35,74,0.03)] flex items-center justify-between text-left w-[200px] relative overflow-hidden border-none shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/10 pointer-events-none" />
+            <div className="flex items-center gap-2.5 z-10">
+              <div className="w-8 h-8 bg-gradient-to-tr from-emerald-500 to-teal-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-emerald-500/10 shrink-0"><Shield size={15} /></div>
+              <div>
+                <p className="text-[8px] font-black uppercase text-emerald-600 tracking-wider mb-0.5">Staff Accounts</p>
+                <h3 className="text-xs font-black text-[#1A1F3D] leading-none">{activeStaffCount} <span className="text-[9px] text-gray-400 font-bold">/ {staffLimit}</span></h3>
+              </div>
+            </div>
+            <div className="text-right z-10">
+              <span className={cn("text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider", activeStaffCount >= staffLimit ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600")}>
+                {activeStaffCount >= staffLimit ? "เต็ม" : "ว่าง"}
+              </span>
+            </div>
+          </div>
           {canManageStaff && (
             <button
-              onClick={() => setIsRoleManagementOpen(true)}
-              className="bg-indigo-50 text-indigo-600 px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-indigo-500/10 active:scale-95 transition-all"
+              onClick={() => setIsSettingsOpen(true)}
+              className="bg-[#F5F6FA] text-[#1A1F3D] hover:bg-gray-100 px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl active:scale-95 transition-all border border-gray-100"
             >
-              <Shield size={18} /> จัดการบทบาท
+              <Settings size={18} /> ตั้งค่าระบบพนักงาน
             </button>
           )}
           <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
@@ -339,7 +400,7 @@ export default function Staff() {
       {/* Navigation Tabs */}
       <div className="px-10 py-4 bg-white border-b border-gray-50 flex gap-2 overflow-x-auto scrollbar-hide shrink-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-transparent h-auto p-0 flex gap-4">
+          <TabsList className="bg-transparent h-auto p-0 flex gap-4 justify-start">
             <TabsTrigger value="profiles" className="data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white data-[state=active]:shadow-lg bg-white border border-gray-100 rounded-2xl px-8 py-3 text-xs font-black uppercase tracking-widest transition-all">
               <Users size={16} className="mr-2" /> Profiles & Roles
             </TabsTrigger>
@@ -359,61 +420,6 @@ export default function Staff() {
       <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
         <Tabs value={activeTab} className="h-full">
           <TabsContent value="profiles" className="space-y-8 m-0 animate-in fade-in duration-300">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Dialog open={isSessionsOpen} onOpenChange={(open: boolean) => { setIsSessionsOpen(open); if (open) refetchSessions(); }}>
-                <DialogTrigger asChild>
-                  <button className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between text-left hover:shadow-md transition-all cursor-pointer w-full">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-                        <Chrome size={24} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-gray-400 mb-0.5">ผู้ใช้งานพร้อมกัน (Concurrent Logins)</p>
-                        <h3 className="text-xl font-black text-[#1A1F3D]">
-                          {activeSessionsCount} / {userLimit} <span className="text-xs text-gray-400 font-bold">เซสชัน</span>
-                        </h3>
-                      </div>
-                    </div>
-                    <div className="text-right flex items-center gap-2">
-                      <span className={cn("text-[9px] font-black px-2.5 py-1 rounded-full uppercase", activeSessionsCount >= userLimit ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600")}>{activeSessionsCount >= userLimit ? "เต็มแล้ว" : "ใช้งานได้"}</span>
-                      <ChevronRight size={16} className="text-gray-400" />
-                    </div>
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="rounded-[32px] max-w-md p-8">
-                  <DialogHeader><DialogTitle className="text-xl font-black text-[#1A1F3D]">เซสชันที่ใช้งานอยู่ (Active Sessions)</DialogTitle></DialogHeader>
-                  <div className="space-y-4 mt-4 max-h-[400px] overflow-y-auto scrollbar-hide">
-                    {activeSessions.length === 0 ? <p className="text-xs text-gray-400 font-bold text-center py-6 italic">ไม่มีเซสชันที่ใช้งานอยู่</p> : activeSessions.map((session: any) => {
-                      const member = staff.find((s: any) => s.id === session.user_id);
-                      const staffName = member?.name || "Unknown User";
-                      const staffEmail = member?.username || "No Email";
-                      const lastActive = session.last_active_at ? new Date(session.last_active_at).toLocaleTimeString() : "N/A";
-                      return (
-                        <div key={session.id} className="flex items-center justify-between p-4 bg-[#F5F6FA] rounded-2xl">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <img src={member?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} alt={staffName} className="w-10 h-10 rounded-xl object-cover shrink-0" />
-                            <div className="min-w-0"><p className="text-xs font-black text-[#1A1F3D] truncate">{staffName}</p><p className="text-[9px] text-gray-400 font-bold truncate">{staffEmail}</p><p className="text-[8px] text-indigo-500 font-bold mt-0.5">Active: {lastActive}</p></div>
-                          </div>
-                          {canManageStaff && <button type="button" onClick={() => handleForceLogout(session.user_id, staffName)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl"><LogOut className="h-4 w-4" /></button>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center"><Shield size={24} /></div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-gray-400 mb-0.5">บัญชีพนักงาน (Staff Accounts)</p>
-                    <h3 className="text-xl font-black text-[#1A1F3D]">{activeStaffCount} / {staffLimit} <span className="text-xs text-gray-400 font-bold">บัญชี</span></h3>
-                  </div>
-                </div>
-                <div className="text-right"><span className={cn("text-[9px] font-black px-2.5 py-1 rounded-full uppercase", activeStaffCount >= staffLimit ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600")}>{activeStaffCount >= staffLimit ? "เต็มแล้ว" : "ใช้งานได้"}</span></div>
-              </div>
-            </div>
-
             <div className="relative max-w-md bg-white rounded-[24px] shadow-sm border border-gray-100/50 overflow-hidden">
               <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input placeholder="ค้นหาพนักงานด้วยชื่อ, บทบาท หรืออีเมล..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-transparent pl-14 pr-6 py-4 text-sm font-bold border-none focus:outline-none focus:ring-0" />
@@ -550,7 +556,7 @@ export default function Staff() {
         </Tabs>
       </div>
 
-      {isRoleManagementOpen && <RoleManagementModal onClose={() => setIsRoleManagementOpen(false)} />}
+      {isSettingsOpen && <StaffSettingsModal onClose={() => setIsSettingsOpen(false)} />}
     </div>
   );
 }

@@ -55,6 +55,24 @@ export const useStore = create<AppState>()((set, get) => ({
   logs: [],
   reportHistory: [],
   roles: [], // Initialize roles array
+  staffSettings: {
+    attendance: {
+      requireGps: false,
+      lateBufferMinutes: 15,
+      autoCheckoutTime: '18:00',
+    },
+    schedule: {
+      allowShiftSwapping: false,
+      minHoursBetweenShifts: 8,
+      releaseNoticeDays: 7,
+    },
+    payroll: {
+      payFrequency: 'monthly',
+      payDayOfMonth: 25,
+      overtimeRate: 1.5,
+      socialSecurityRate: 5,
+    },
+  },
   tierRules: [
     { level: 'Standard', label: 'Standard', minSpent: 0, discount: 0 },
     { level: 'Silver', label: 'Silver', minSpent: 5000, discount: 5 },
@@ -1022,5 +1040,32 @@ export const useStore = create<AppState>()((set, get) => ({
     set(state => ({
       transactions: state.transactions.filter(t => t.id !== id)
     }));
+  },
+
+  updateStaffSettings: async (settings) => {
+    const currentSettings = get().staffSettings;
+    const newSettings = {
+      attendance: { ...currentSettings.attendance, ...settings.attendance },
+      schedule: { ...currentSettings.schedule, ...settings.schedule },
+      payroll: { ...currentSettings.payroll, ...settings.payroll },
+    };
+
+    set({ staffSettings: newSettings });
+
+    const storeId = get().storeId;
+    if (storeId && storeId !== 'default-store') {
+      try {
+        const { error } = await supabase
+          .from('stores')
+          .update({
+            staff_settings: newSettings
+          })
+          .eq('id', storeId);
+        if (error) throw error;
+      } catch (err) {
+        console.error("Failed to update staff settings in Supabase:", err);
+        throw err;
+      }
+    }
   },
 }));

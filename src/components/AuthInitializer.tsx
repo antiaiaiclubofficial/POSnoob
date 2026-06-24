@@ -207,7 +207,25 @@ const AuthInitializer = () => {
               pointsEarnRate: storeData.points_earn_rate || 10,
               pointsRedeemRate: storeData.points_redeem_rate || 1,
               maxUsers: storeData.max_users || 5,
-              maxStaff: storeData.max_staff || 10
+              maxStaff: storeData.max_staff || 10,
+              staffSettings: storeData.staff_settings ? {
+                attendance: {
+                  requireGps: storeData.staff_settings.attendance?.requireGps ?? false,
+                  lateBufferMinutes: Number(storeData.staff_settings.attendance?.lateBufferMinutes ?? 15),
+                  autoCheckoutTime: storeData.staff_settings.attendance?.autoCheckoutTime ?? '18:00',
+                },
+                schedule: {
+                  allowShiftSwapping: storeData.staff_settings.schedule?.allowShiftSwapping ?? false,
+                  minHoursBetweenShifts: Number(storeData.staff_settings.schedule?.minHoursBetweenShifts ?? 8),
+                  releaseNoticeDays: Number(storeData.staff_settings.schedule?.releaseNoticeDays ?? 7),
+                },
+                payroll: {
+                  payFrequency: storeData.staff_settings.payroll?.payFrequency ?? 'monthly',
+                  payDayOfMonth: Number(storeData.staff_settings.payroll?.payDayOfMonth ?? 25),
+                  overtimeRate: Number(storeData.staff_settings.payroll?.overtimeRate ?? 1.5),
+                  socialSecurityRate: Number(storeData.staff_settings.payroll?.socialSecurityRate ?? 5),
+                }
+              } : useStore.getState().staffSettings
             });
           }
         } catch (err) {
