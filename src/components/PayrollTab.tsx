@@ -17,7 +17,8 @@ import {
   FileText, 
   ShieldAlert, 
   Calendar,
-  Trash2
+  Trash2,
+  Edit3
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -581,25 +582,21 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
                       </div>
                     </td>
                     <td className="px-6 py-5 text-right">
-                      {record.isPaid ? (
-                        <span className="text-xs font-black text-[#1A1F3D]">
-                          {currency}{record.baseSalary.toLocaleString()}
-                        </span>
+                      {editingSalaryStaffId === record.id ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span className="text-xs text-gray-400 font-bold">{currency}</span>
+                          <input 
+                            type="number"
+                            min="0"
+                            autoFocus
+                            value={localSalaries[record.id] !== undefined ? localSalaries[record.id] : record.baseSalary}
+                            onChange={(e) => setLocalSalaries(prev => ({ ...prev, [record.id]: e.target.value }))}
+                            onBlur={() => handleSalaryBlur(record.id)}
+                            className="w-24 bg-[#F5F6FA] border-none rounded-xl px-2.5 py-1.5 text-right text-xs font-black focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                          />
+                        </div>
                       ) : (
-                        editingSalaryStaffId === record.id ? (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <span className="text-xs text-gray-400 font-bold">{currency}</span>
-                            <input 
-                              type="number"
-                              min="0"
-                              autoFocus
-                              value={localSalaries[record.id] !== undefined ? localSalaries[record.id] : record.baseSalary}
-                              onChange={(e) => setLocalSalaries(prev => ({ ...prev, [record.id]: e.target.value }))}
-                              onBlur={() => handleSalaryBlur(record.id)}
-                              className="w-24 bg-[#F5F6FA] border-none rounded-xl px-2.5 py-1.5 text-right text-xs font-black focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
-                            />
-                          </div>
-                        ) : (
+                        <div className="flex items-center justify-end gap-1.5">
                           <span 
                             onClick={() => {
                               setEditingSalaryStaffId(record.id);
@@ -609,7 +606,17 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
                           >
                             {currency}{record.baseSalary.toLocaleString()}
                           </span>
-                        )
+                          <button
+                            onClick={() => {
+                              setEditingSalaryStaffId(record.id);
+                              setLocalSalaries(prev => ({ ...prev, [record.id]: String(record.baseSalary) }));
+                            }}
+                            className="text-gray-400 hover:text-indigo-600 p-1 rounded transition-colors"
+                            title="แก้ไขฐานเงินเดือน"
+                          >
+                            <Edit3 size={12} className="shrink-0" />
+                          </button>
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-5 text-right text-xs font-black text-blue-600">

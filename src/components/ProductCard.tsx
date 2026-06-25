@@ -10,7 +10,7 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
-  const { addToCart, selectedOwner, currency } = useStore();
+  const { addToCart, selectedOwner, currency, partners } = useStore();
 
   const handleAdd = () => {
     if (!selectedOwner) {
@@ -23,13 +23,19 @@ const ProductCard = ({ product }: ProductCardProps) => {
       return;
     }
 
+    const partner = partners.find(p => p.id === product.partnerId);
+    const resolvedRate = product.consignmentRate || (partner ? partner.gpRate : 0);
+
     addToCart({
       id: product.id,
       title: product.name,
       price: product.price,
       quantity: 1,
       ownerName: selectedOwner.name,
-      type: 'Product'
+      type: 'Product',
+      isConsignment: product.isConsignment,
+      partnerId: product.partnerId,
+      consignmentRate: resolvedRate
     });
     toast.success(`Added ${product.name} to cart`);
   };

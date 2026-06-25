@@ -10,9 +10,10 @@ import { Switch } from "@/components/ui/switch";
 interface InventoryModalProps {
   item?: InventoryItem | null;
   onClose: () => void;
+  initialPartnerId?: string;
 }
 
-const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
+const InventoryModal = ({ item, onClose, initialPartnerId }: InventoryModalProps) => {
   const { addInventoryItem, updateInventoryItem, partners, currency } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,8 +28,8 @@ const InventoryModal = ({ item, onClose }: InventoryModalProps) => {
     unit: 'ชิ้น',
     category: 'ทั่วไป',
     image: '',
-    isConsignment: false,
-    partnerId: ''
+    isConsignment: !!initialPartnerId,
+    partnerId: initialPartnerId || ''
   });
 
   useEffect(() => {

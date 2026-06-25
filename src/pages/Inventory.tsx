@@ -48,6 +48,7 @@ const Inventory = () => {
 
   const [dashStartDate, setDashStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [dashEndDate, setDashEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [stockSortOrder, setStockSortOrder] = useState<'desc' | 'asc'>('desc');
 
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -97,6 +98,14 @@ const Inventory = () => {
   const filteredTransactions = useMemo(() => {
     return transactions.filter(tx => tx.date >= dashStartDate && tx.date <= dashEndDate);
   }, [transactions, dashStartDate, dashEndDate]);
+
+  const sortedStockLogs = useMemo(() => {
+    return [...stockLogs].sort((a, b) => {
+      const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return stockSortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+  }, [stockLogs, stockSortOrder]);
 
   const productSales = useMemo(() => {
     const salesList: {
@@ -745,7 +754,78 @@ const Inventory = () => {
         {activeTab === 'adjust' && (
            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10 animate-in slide-in-from-bottom-4 duration-300">
               <div className="lg:col-span-1"><div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm space-y-8"><div><h3 className="text-xl font-black text-[#1A1F3D] mb-1">Update Balance</h3><p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Add stock or set quantity</p></div><form onSubmit={handleAdjustSubmit} className="space-y-6"><div className="space-y-2 relative"><label className="text-[10px] font-black uppercase text-gray-400 px-2">1. ค้นหาสินค้า</label><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold shadow-inner" placeholder="พิมพ์ชื่อหรือบาร์โค้ด..." value={adjustSearch} onChange={e => setAdjustSearch(e.target.value)} /></div>{adjustSearchItems.length > 0 && !selectedAdjustId && (<div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">{adjustSearchItems.map(item => (<button key={item.id} type="button" onClick={() => { setSelectedAdjustId(item.id); setAdjustSearch(item.name); }} className="w-full px-5 py-4 text-left hover:bg-gray-50 border-b border-gray-50 last:border-0 flex justify-between items-center transition-colors"><div><p className="text-sm font-black text-[#1A1F3D]">{item.name}</p><p className="text-[10px] text-gray-400 font-bold uppercase">{item.barcode || 'No Barcode'}</p></div><p className="text-xs font-black text-blue-500">Stock: {item.stock}</p></button>))}</div>)}</div>{selectedItemForAdjust && (<div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100 flex items-center gap-4 animate-in zoom-in-95"><div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-500 shadow-sm shrink-0"><Package size={24} /></div><div><p className="text-xs font-black text-[#1A1F3D]">{selectedItemForAdjust.name}</p><p className="text-[10px] text-blue-600 font-black uppercase">Current: {selectedItemForAdjust.stock}</p></div><button type="button" onClick={() => setSelectedAdjustId('')} className="ml-auto p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button></div>)}<div className="space-y-3"><label className="text-[10px] font-black uppercase text-gray-400 px-2">2. ประเภทการทำงาน</label><div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2"><button type="button" onClick={() => setAdjustMode('Add')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2", adjustMode === 'Add' ? "bg-white text-green-600 shadow-sm" : "text-gray-400")}><ArrowUp size={12} /> เติมเพิ่ม</button><button type="button" onClick={() => setAdjustMode('Set')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2", adjustMode === 'Set' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400")}><RotateCcw size={12} /> ปรับตามจริง</button></div></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">3. จำนวน</label><input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xl font-black text-center" placeholder="0" value={adjustQty} onChange={e => setAdjustQty(e.target.value)} /></div><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">4. หมายเหตุ</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" placeholder="..." value={adjustReason} onChange={e => setAdjustReason(e.target.value)} /></div></div><button type="submit" disabled={!selectedAdjustId || !adjustQty} className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[28px] shadow-xl shadow-[#1A1F3D]/20 flex items-center justify-center gap-3 transition-all active:scale-95"><Save size={20} /> บันทึกการปรับสต็อก</button></form></div></div>
-              <div className="lg:col-span-2"><div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full"><div className="p-8 border-b border-gray-50 flex items-center gap-3 bg-gray-50/20"><div className="p-3 bg-blue-50 text-blue-600 rounded-2xl"><History size={20} /></div><div><h3 className="text-xl font-black text-[#1A1F3D]">Movement History</h3><p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Audit Trail</p></div></div><div className="flex-1 overflow-y-auto scrollbar-hide"><table className="w-full"><thead><tr className="bg-white border-b border-gray-50"><th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Timestamp</th><th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Product</th><th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Action</th><th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">New Bal</th></tr></thead><tbody className="divide-y divide-gray-50">{stockLogs.map((log) => (<tr key={log.id} className="hover:bg-[#F8F9FD]"><td className="px-8 py-6"><p className="text-xs font-black text-[#1A1F3D]">{format(new Date(log.timestamp), 'HH:mm • dd MMM')}</p><p className="text-[9px] text-gray-400 font-bold uppercase">{log.staffName}</p></td><td className="px-8 py-6"><p className="text-sm font-black text-[#1A1F3D]">{log.productName}</p><p className="text-[9px] text-gray-400 font-bold italic line-clamp-1">"{log.reason}"</p></td><td className="px-8 py-6 text-center"><span className={cn("px-3 py-1 rounded-lg text-[8px] font-black uppercase", log.action === 'Add' || log.action === 'In' ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600")}>{log.action}</span></td><td className="px-8 py-6 text-right font-black text-[#1A1F3D]">{log.newQty}</td></tr>))}</tbody></table></div></div></div>
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
+                  <div className="p-8 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/20">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                        <History size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-[#1A1F3D]">Movement History</h3>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Audit Trail</p>
+                      </div>
+                    </div>
+                    <div className="flex bg-[#F5F6FA] p-1 rounded-xl gap-1 self-start sm:self-auto">
+                      <button 
+                        type="button"
+                        onClick={() => setStockSortOrder('desc')}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all flex items-center gap-1.5",
+                          stockSortOrder === 'desc' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:text-gray-600"
+                        )}
+                      >
+                        <ArrowDown size={12} /> ใหม่ ไป เก่า
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setStockSortOrder('asc')}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all flex items-center gap-1.5",
+                          stockSortOrder === 'asc' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:text-gray-600"
+                        )}
+                      >
+                        <ArrowUp size={12} /> เก่า ไป ใหม่
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto scrollbar-hide">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-white border-b border-gray-50">
+                          <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Timestamp</th>
+                          <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Product</th>
+                          <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Action</th>
+                          <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">New Bal</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {sortedStockLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-[#F8F9FD]">
+                            <td className="px-8 py-6">
+                              <p className="text-xs font-black text-[#1A1F3D]">{format(new Date(log.timestamp), 'HH:mm • dd MMM')}</p>
+                              <p className="text-[9px] text-gray-400 font-bold uppercase">{log.staffName}</p>
+                            </td>
+                            <td className="px-8 py-6">
+                              <p className="text-sm font-black text-[#1A1F3D]">{log.productName}</p>
+                              <p className="text-[9px] text-gray-400 font-bold italic line-clamp-1">"{log.reason}"</p>
+                            </td>
+                            <td className="px-8 py-6 text-center">
+                              <span className={cn(
+                                "px-3 py-1 rounded-lg text-[8px] font-black uppercase",
+                                log.action === 'Add' || log.action === 'In' ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"
+                              )}>
+                                {log.action}
+                              </span>
+                            </td>
+                            <td className="px-8 py-6 text-right font-black text-[#1A1F3D]">{log.newQty}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
            </div>
         )}
 

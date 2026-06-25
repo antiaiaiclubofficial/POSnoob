@@ -1,9 +1,10 @@
 "use client";
 
-import React from 'react';
-import { X, Package, DollarSign, TrendingUp, BarChart3, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Package, DollarSign, TrendingUp, BarChart3, AlertCircle, Plus } from 'lucide-react';
 import { useStore, Partner } from '@/store/useStore';
 import { cn } from '@/lib/utils';
+import InventoryModal from './InventoryModal';
 
 interface VendorInventoryViewProps {
   vendor: Partner;
@@ -12,13 +13,14 @@ interface VendorInventoryViewProps {
 
 const VendorInventoryView = ({ vendor, onClose }: VendorInventoryViewProps) => {
   const { inventory, currency } = useStore();
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   
   const vendorItems = inventory.filter(i => i.partnerId === vendor.id);
 
   const stats = vendorItems.reduce((acc, item) => {
     const totalItemRetailValue = item.price * item.stock;
     const profitPerUnit = item.isConsignment 
-      ? (item.price * (item.consignmentRate || 0) / 100)
+      ? (item.price * (item.consignmentRate || vendor.gpRate || 0) / 100)
       : (item.price - (item.costPrice || 0));
     
     return {
@@ -53,9 +55,17 @@ const VendorInventoryView = ({ vendor, onClose }: VendorInventoryViewProps) => {
                 </div>
              </div>
           </div>
-          <button onClick={onClose} className="p-3 hover:bg-gray-50 rounded-2xl transition-all">
-            <X size={24} className="text-gray-400" />
-          </button>
+          <div className="flex items-center gap-3">
+             <button 
+               onClick={() => setIsAddProductOpen(true)} 
+               className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all"
+             >
+                <Plus size={20} /> เพิ่มสินค้าใหม่
+             </button>
+             <button onClick={onClose} className="p-3 hover:bg-gray-50 rounded-2xl transition-all">
+               <X size={24} className="text-gray-400" />
+             </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-10 space-y-10 scrollbar-hide">
@@ -94,7 +104,7 @@ const VendorInventoryView = ({ vendor, onClose }: VendorInventoryViewProps) => {
                    <tbody className="divide-y divide-gray-50">
                       {vendorItems.map(item => {
                          const profit = item.isConsignment 
-                            ? (item.price * (item.consignmentRate || 0) / 100)
+                            ? (item.price * (item.consignmentRate || vendor.gpRate || 0) / 100)
                             : (item.price - (item.costPrice || 0));
                          
                          return (
@@ -105,13 +115,13 @@ const VendorInventoryView = ({ vendor, onClose }: VendorInventoryViewProps) => {
                                     "text-[8px] font-black uppercase px-2 py-0.5 rounded-full",
                                     item.isConsignment ? "bg-amber-100 text-amber-600" : "bg-blue-100 text-blue-600"
                                   )}>
-                                     {item.isConsignment ? `Consignment (${item.consignmentRate}%)` : 'Normal Stock'}
+                                     {item.isConsignment ? `Consignment (${item.consignmentRate || vendor.gpRate || 0}%)` : 'Normal Stock'}
                                   </span>
                                </td>
                                <td className="px-8 py-6 text-center font-bold text-gray-500">{item.stock}</td>
                                <td className="px-8 py-6 text-center font-black text-[#1A1F3D]">{currency}{item.price.toLocaleString()}</td>
                                <td className="px-8 py-6 text-center text-[10px] font-bold text-gray-400">
-                                  {item.isConsignment ? `${item.consignmentRate}% GP` : `${currency}${item.costPrice}`}
+                                  {item.isConsignment ? `${item.consignmentRate || vendor.gpRate || 0}% GP` : `${currency}${item.costPrice}`}
                                </td>
                                <td className="px-8 py-6 text-right font-black text-green-600">+{currency}{profit.toLocaleString()}</td>
                             </tr>
@@ -126,6 +136,13 @@ const VendorInventoryView = ({ vendor, onClose }: VendorInventoryViewProps) => {
           </div>
         </div>
       </div>
+      {isAddProductOpen && (
+        <InventoryModal 
+          item={null} 
+          initialPartnerId={vendor.id} 
+          onClose={() => setIsAddProductOpen(false)} 
+        />
+      )}
     </div>
   );
 };

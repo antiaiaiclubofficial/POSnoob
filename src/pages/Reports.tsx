@@ -63,7 +63,8 @@ const Reports = () => {
           const qty = item.quantity || 1;
           const lineTotal = actualPrice * qty;
           
-          const rate = item.consignmentRate || 0;
+          const partner = partners.find(p => p.id === item.partnerId);
+          const rate = item.consignmentRate || (partner ? partner.gpRate : 0);
           const payout = (lineTotal * rate) / 100;
           const profit = lineTotal - payout;
           

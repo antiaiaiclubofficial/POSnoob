@@ -387,6 +387,10 @@ export const useStore = create<AppState>()((set, get) => ({
 
   addInventoryItem: async (item) => {
     const currentStoreId = get().storeId;
+    const partners = get().partners;
+    const partner = partners.find(p => p.id === item.partnerId);
+    const resolvedRate = partner ? partner.gpRate : 0;
+
     const { data, error } = await supabase
       .from('products')
       .insert([{
@@ -394,15 +398,15 @@ export const useStore = create<AppState>()((set, get) => ({
         name: item.name,
         barcode: item.barcode,
         stock: item.stock || 0,
-        min_stock: item.min_stock || 5,
+        min_stock: item.minStock || item.min_stock || 5,
         price: item.price || 0,
-        cost_price: item.cost_price || 0,
+        cost_price: item.costPrice || item.cost_price || 0,
         unit: item.unit || 'ชิ้น',
         category: item.category || 'ทั่วไป',
         image_url: item.image || '',
         is_consignment: item.isConsignment || false,
         partner_id: item.partnerId || null,
-        consignment_rate: item.consignment_rate || 0
+        consignment_rate: item.consignmentRate || item.consignment_rate || resolvedRate || 0
       }])
       .select()
       .single();
@@ -430,6 +434,10 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateInventoryItem: async (id, item) => {
+    const partners = get().partners;
+    const partner = partners.find(p => p.id === item.partnerId);
+    const resolvedRate = partner ? partner.gpRate : 0;
+
     const { error } = await supabase
       .from('products')
       .update({
@@ -444,13 +452,17 @@ export const useStore = create<AppState>()((set, get) => ({
         image_url: item.image,
         is_consignment: item.isConsignment,
         partner_id: item.partnerId || null,
-        consignment_rate: item.consignment_rate || 0
+        consignment_rate: item.consignmentRate || item.consignment_rate || resolvedRate || 0
       })
       .eq('id', id);
 
     if (!error) {
       set(s => ({
-        inventory: s.inventory.map(itemObj => itemObj.id === id ? { ...itemObj, ...item } : itemObj)
+        inventory: s.inventory.map(itemObj => itemObj.id === id ? { 
+          ...itemObj, 
+          ...item,
+          consignmentRate: item.consignmentRate || item.consignment_rate || resolvedRate || 0
+        } : itemObj)
       }));
     } else {
       console.error("Error updating product:", error);
@@ -514,7 +526,10 @@ export const useStore = create<AppState>()((set, get) => ({
         staffName: logData.staff_name || 'System',
         timestamp: logData.created_at
       };
-      set(s => ({ stockLogs: [newLog, ...s.stockLogs] }));
+      set(s => ({ 
+        stockLogs: [newLog, ...s.stockLogs],
+        inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i)
+      }));
     } else {
       console.error("Error adding stock log to Supabase:", logError);
       set(s => ({
