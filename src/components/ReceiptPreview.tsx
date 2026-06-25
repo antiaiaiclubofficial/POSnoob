@@ -4,6 +4,7 @@ import React from 'react';
 import { X, Printer, Scissors, QrCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useStore } from '@/store/useStore';
 
 interface ReceiptPreviewProps {
   shopName: string;
@@ -22,6 +23,11 @@ interface ReceiptPreviewProps {
     amount: number;
     discountAmount: number;
     paymentMethod: string;
+    subtotal?: number;
+    vatAmount?: number;
+    vatRate?: number;
+    isTaxInvoice?: boolean;
+    details?: any;
   } | null;
 }
 
@@ -30,6 +36,8 @@ const ReceiptPreview = ({
   header, footer, paperSize, onClose, transaction 
 }: ReceiptPreviewProps) => {
   
+  const { vatEnabled, vatRate, vatInclusive } = useStore();
+
   const is80mm = paperSize === '80mm';
   
   // ใช้ข้อมูลจริงจากธุรกรรม หรือใช้ข้อมูลจำลองหากไม่มีการส่งเข้ามา
@@ -44,10 +52,55 @@ const ReceiptPreview = ({
     { title: "Pet Shampoo (Sensitive)", price: 350, quantity: 1, petName: "Retail Item" }
   ];
 
-  const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const discountAmount = transaction?.discountAmount || 155.00;
-  const tax = (subtotal - discountAmount) * 0.07;
-  const total = transaction?.amount || (subtotal - discountAmount + tax);
+  // 1. Calculate raw subtotal (sum of original prices * quantities)
+  const rawSubtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  
+  // 2. Get discount amount
+  const discountAmountVal = transaction?.discountAmount ?? (isDemo ? 155.00 : 0);
+  
+  // 3. Get tax rate and check if VAT is enabled
+  const currentVatRate = transaction?.vatRate ?? vatRate ?? 7;
+  const isVatEnabled = transaction 
+    ? (transaction.vatAmount !== undefined && transaction.vatAmount > 0) || (transaction.subtotal !== undefined && transaction.subtotal < transaction.amount)
+    : vatEnabled;
+  const isVatInclusive = transaction?.details?.vatInclusive ?? vatInclusive ?? true;
+
+  // 4. Determine tax and net amount
+  let taxVal = 0;
+  let totalVal = 0;
+  let preTaxVal = 0;
+
+  if (transaction) {
+    totalVal = transaction.amount;
+    taxVal = transaction.vatAmount || 0;
+    preTaxVal = transaction.subtotal !== undefined ? transaction.subtotal : (totalVal - taxVal);
+  } else {
+    // Demo Mode
+    const netAfterDiscount = Math.max(0, rawSubtotal - discountAmountVal);
+    if (isVatEnabled) {
+      if (isVatInclusive) {
+        totalVal = netAfterDiscount;
+        taxVal = totalVal * currentVatRate / (100 + currentVatRate);
+        preTaxVal = totalVal - taxVal;
+      } else {
+        taxVal = netAfterDiscount * currentVatRate / 100;
+        totalVal = netAfterDiscount + taxVal;
+        preTaxVal = netAfterDiscount;
+      }
+    } else {
+      totalVal = netAfterDiscount;
+      taxVal = 0;
+      preTaxVal = totalVal;
+    }
+  }
+
+  const round2 = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
+  
+  const displaySubtotal = round2(rawSubtotal).toFixed(2);
+  const displayDiscount = round2(discountAmountVal).toFixed(2);
+  const displayPreTax = round2(preTaxVal).toFixed(2);
+  const displayTax = round2(taxVal).toFixed(2);
+  const displayTotal = round2(totalVal).toFixed(2);
 
   const electronicReceiptUrl = `https://e-receipt.tactilesanctuary.com/view/${txId}`;
 
@@ -144,7 +197,7 @@ const ReceiptPreview = ({
                         {item.petName ? `Pet: ${item.petName}` : 'Retail Item'}
                       </span>
                     </div>
-                    <span>{(item.price * item.quantity).toFixed(2)}</span>
+                    <span>{((item.finalPrice ?? item.price) * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -156,21 +209,29 @@ const ReceiptPreview = ({
             <div className="space-y-1.5 mb-8">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>{subtotal.toFixed(2)}</span>
+                <span>{displaySubtotal}</span>
               </div>
-              {discountAmount > 0 && (
+              {discountAmountVal > 0 && (
                 <div className="flex justify-between text-red-500">
                   <span>Discount</span>
-                  <span>-{discountAmount.toFixed(2)}</span>
+                  <span>-{displayDiscount}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span>Vat (7%)</span>
-                <span>{tax.toFixed(2)}</span>
-              </div>
+              {isVatEnabled && (
+                <>
+                  <div className="flex justify-between opacity-60">
+                    <span>Before VAT</span>
+                    <span>{displayPreTax}</span>
+                  </div>
+                  <div className="flex justify-between opacity-60">
+                    <span>VAT ({currentVatRate}%) {isVatInclusive ? '(Incl.)' : ''}</span>
+                    <span>{displayTax}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between font-bold text-base pt-2">
                 <span>TOTAL</span>
-                <span>{total.toFixed(2)}</span>
+                <span>{displayTotal}</span>
               </div>
             </div>
 

@@ -152,6 +152,11 @@ export interface Transaction {
   date: string;
   amount: number;
   discountAmount: number;
+  subtotal?: number;
+  vatAmount?: number;
+  vatRate?: number;
+  isTaxInvoice?: boolean;
+  details?: any;
   customerId: string;
   customerName: string;
   items: any[];
@@ -184,6 +189,7 @@ export interface Staff {
   username?: string;
   password?: string;
   commissionRate?: number;
+  baseSalary?: number;
   isPendingInvite?: boolean;
   inviteLink?: string;
 }
@@ -256,6 +262,7 @@ export interface AppState {
   receiptFooter: string;
   receiptPaperSize: '58mm' | '80mm';
   vatEnabled: boolean;
+  vatInclusive: boolean;
   companyName?: string;
   companyAddress?: string;
   companyTaxId?: string;
@@ -345,7 +352,7 @@ export interface AppState {
   updateCartQuantity: (index: number, delta: number) => void;
   updateCartItemDiscount: (index: number, discountType: 'percent' | 'amount' | null, discountValue: number) => void;
   clearCart: () => void;
-  processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean, redeemedPoints?: number) => void;
+  processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean, redeemedPoints?: number, subtotal?: number, vatAmount?: number, vatRate?: number) => Promise<any>;
   deleteTransaction: (id: string) => void;
 
   setServices: (services: Service[]) => void;
@@ -390,6 +397,12 @@ export interface AppState {
   updateStaffSettings: (settings: Partial<StaffSettings>) => Promise<void>;
 }
 
+export interface DeductionPreset {
+  id: string;
+  name: string;
+  amount: number;
+}
+
 export interface StaffSettings {
   attendance: {
     requireGps: boolean;
@@ -406,5 +419,6 @@ export interface StaffSettings {
     payDayOfMonth: number;
     overtimeRate: number;
     socialSecurityRate: number;
+    deductionPresets?: DeductionPreset[];
   };
 }

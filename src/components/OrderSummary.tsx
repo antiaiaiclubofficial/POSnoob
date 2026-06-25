@@ -21,7 +21,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
     cart, removeFromCart, updateCartQuantity, updateCartItemDiscount, clearCart, 
     selectedOwner, activePet, markAsPaid, processPayment, tierRules, inventory, 
     addToCart, currency, language, shopName, shopLogo, shopAddress, shopPhone,
-    receiptHeader, receiptFooter, receiptPaperSize
+    receiptHeader, receiptFooter, receiptPaperSize, vatEnabled, vatRate, vatInclusive
   } = useStore();
   
   const t = translations[language];
@@ -66,38 +66,63 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
     setBarcodeQuery('');
   };
 
+  const round2 = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
+
   // คำนวณราคาสินค้าแต่ละรายการหลังหักส่วนลดรายรายการ
   const getItemPriceAfterDiscount = (item: any) => {
     if (!item.discountType || !item.discountValue) return item.price;
+    let price = item.price;
     if (item.discountType === 'percent') {
-      return Math.max(0, item.price * (1 - item.discountValue / 100));
+      price = item.price * (1 - item.discountValue / 100);
     } else {
-      return Math.max(0, item.price - item.discountValue);
+      price = item.price - item.discountValue;
     }
+    return Math.max(0, round2(price));
   };
 
   // คำนวณยอดรวมของตะกร้า
-  const subtotal = cart.reduce((acc, item) => {
+  const subtotal = round2(cart.reduce((acc, item) => {
     const finalPrice = getItemPriceAfterDiscount(item);
-    return acc + (finalPrice * item.quantity);
-  }, 0);
+    return acc + round2(finalPrice * item.quantity);
+  }, 0));
 
   // คำนวณส่วนลดรวมของตะกร้า (จากส่วนลดรายรายการ)
-  const totalItemDiscounts = cart.reduce((acc, item) => {
+  const totalItemDiscounts = round2(cart.reduce((acc, item) => {
     if (!item.discountType || !item.discountValue) return acc;
-    const originalTotal = item.price * item.quantity;
-    const discountedTotal = getItemPriceAfterDiscount(item) * item.quantity;
-    return acc + (originalTotal - discountedTotal);
-  }, 0);
+    const originalTotal = round2(item.price * item.quantity);
+    const discountedTotal = round2(getItemPriceAfterDiscount(item) * item.quantity);
+    return acc + round2(originalTotal - discountedTotal);
+  }, 0));
 
   // ส่วนลดระดับสมาชิก (Tier Discount) จะคำนวณจากยอดรวมหลังหักส่วนลดรายรายการแล้ว
   const userTier = selectedOwner ? tierRules.find(r => r.level === selectedOwner.membership) : null;
   const tierDiscountPercent = userTier?.discount || 0;
-  const tierDiscountAmount = (subtotal * tierDiscountPercent) / 100;
+  const tierDiscountAmount = round2((subtotal * tierDiscountPercent) / 100);
   
-  // คำนวณภาษีเฉพาะเมื่อเปิดสวิตช์ขอใบกำกับภาษี (isTaxInvoice) เท่านั้น
-  const tax = isTaxInvoice ? (subtotal - tierDiscountAmount) * 0.07 : 0;
-  const total = subtotal - tierDiscountAmount + tax;
+  // ยอดรวมหลังหักส่วนลดสมาชิก
+  const discountableSubtotal = round2(subtotal - tierDiscountAmount);
+
+  // คำนวณภาษีและยอดสุทธิ
+  const vatRateVal = vatRate || 7;
+  let tax = 0;
+  let total = 0;
+  let subtotalBeforeTax = discountableSubtotal;
+
+  if (vatEnabled) {
+    if (vatInclusive) {
+      total = discountableSubtotal;
+      tax = round2(total * vatRateVal / (100 + vatRateVal));
+      subtotalBeforeTax = round2(total - tax);
+    } else {
+      tax = round2(discountableSubtotal * vatRateVal / 100);
+      total = round2(discountableSubtotal + tax);
+      subtotalBeforeTax = discountableSubtotal;
+    }
+  } else {
+    total = discountableSubtotal;
+    tax = 0;
+    subtotalBeforeTax = total;
+  }
 
   const availablePackages = selectedOwner?.packages?.filter(pkg => {
     return cart.some(item => pkg.targetServiceId === item.id && pkg.remainingSlots > 0);
@@ -129,19 +154,44 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       packageId: paymentMethod === 'Package' ? selectedPackageId : undefined
     };
 
+    const finalCart = cart.map(item => ({
+      ...item,
+      finalPrice: getItemPriceAfterDiscount(item)
+    }));
+
     // สร้างข้อมูลจำลองของ Transaction เพื่อส่งให้ ReceiptPreview แสดงผล
     const txId = `TX-${Date.now()}`;
     const txData = {
       id: txId,
       date: new Date().toISOString(),
       customerName: selectedOwner.name,
-      items: [...cart],
+      items: finalCart,
       amount: total,
       discountAmount: totalItemDiscounts + tierDiscountAmount,
-      paymentMethod: paymentMethod
+      subtotal: subtotalBeforeTax,
+      vatAmount: tax,
+      vatRate: vatRateVal,
+      isTaxInvoice: isTaxInvoice,
+      paymentMethod: paymentMethod,
+      details: {
+        ...finalDetails,
+        vatInclusive: vatInclusive
+      }
     };
 
-    processPayment(selectedOwner.id, total, totalItemDiscounts + tierDiscountAmount, cart, paymentMethod, finalDetails, isTaxInvoice);
+    processPayment(
+      selectedOwner.id, 
+      total, 
+      totalItemDiscounts + tierDiscountAmount, 
+      finalCart, 
+      paymentMethod, 
+      finalDetails, 
+      isTaxInvoice,
+      undefined, 
+      subtotalBeforeTax,
+      tax,
+      vatRateVal
+    );
     cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
     
     toast.success("Transaction Complete!");
@@ -348,13 +398,13 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
       </div>
 
       <div className="pt-6 mb-6 space-y-4">
-        <div className="bg-[#F8F9FD] p-4 rounded-2xl flex items-center justify-between border border-gray-100">
-           <div className="flex items-center gap-2">
-              <FileText size={16} className="text-gray-400" />
-              <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{language === 'th' ? 'ขอใบกำกับภาษี' : 'Tax Invoice'}</span>
-           </div>
-           <Switch checked={isTaxInvoice} onCheckedChange={setIsTaxInvoice} className="data-[state=checked]:bg-[#1A1F3D]" />
-        </div>
+         <div className="bg-[#F8F9FD] p-4 rounded-2xl flex items-center justify-between border border-gray-100">
+            <div className="flex items-center gap-2">
+               <FileText size={16} className="text-gray-400" />
+               <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{language === 'th' ? 'ขอใบกำกับภาษี' : 'Tax Invoice'}</span>
+            </div>
+            <Switch checked={isTaxInvoice && vatEnabled} onCheckedChange={setIsTaxInvoice} disabled={!vatEnabled} className="data-[state=checked]:bg-[#1A1F3D]" />
+         </div>
 
         <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.paymentMethod}</p>
         <div className="grid grid-cols-5 gap-1.5">
@@ -371,20 +421,41 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
         </div>
       </div>
 
-      <div className="pt-6 space-y-3 border-t border-dashed border-gray-200 mt-auto">
+      <div className="pt-6 space-y-2 border-t border-dashed border-gray-200 mt-auto">
+        <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
+          <span>{language === 'th' ? 'ยอดรวม' : 'Subtotal'}</span>
+          <span>{currency}{round2(cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)).toFixed(2)}</span>
+        </div>
+
         {totalItemDiscounts > 0 && (
-          <div className="flex justify-between items-center text-xs text-red-500 font-bold bg-red-50 px-4 py-2.5 rounded-2xl">
-            <span className="flex items-center gap-2"><ArrowDownCircle size={12}/> Item Discounts</span>
+          <div className="flex justify-between items-center text-xs text-red-500 font-medium px-2 py-0.5">
+            <span className="flex items-center gap-1.5"><Tag size={12}/> {language === 'th' ? 'ส่วนลดสินค้า' : 'Item Discounts'}</span>
             <span>-{currency}{totalItemDiscounts.toFixed(2)}</span>
           </div>
         )}
+
         {tierDiscountPercent > 0 && paymentMethod !== 'Package' && (
-          <div className="flex justify-between items-center text-xs text-green-600 font-bold bg-green-50 px-4 py-2.5 rounded-2xl">
-            <span className="flex items-center gap-2"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
+          <div className="flex justify-between items-center text-xs text-green-600 font-medium px-2 py-0.5">
+            <span className="flex items-center gap-1.5"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
             <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
           </div>
         )}
-        <div className="flex justify-between items-end pt-2 px-2">
+
+        {vatEnabled && !vatInclusive && (
+          <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
+            <span>{language === 'th' ? 'ยอดก่อนภาษี' : 'Subtotal Before VAT'}</span>
+            <span>{currency}{discountableSubtotal.toFixed(2)}</span>
+          </div>
+        )}
+
+        {vatEnabled && (
+          <div className="flex justify-between items-center text-xs text-gray-400 px-2 py-0.5">
+            <span>{vatInclusive ? (language === 'th' ? `VAT (${vatRateVal}% รวมในราคา)` : `VAT (${vatRateVal}% Incl.)`) : (language === 'th' ? `ภาษีมูลค่าเพิ่ม VAT (${vatRateVal}%)` : `VAT (${vatRateVal}%)`)}</span>
+            <span>{currency}{tax.toFixed(2)}</span>
+          </div>
+        )}
+
+        <div className="flex justify-between items-end pt-2 px-2 border-t border-gray-50 mt-2">
           <span className="text-xl font-bold text-[#1A1F3D]">{t.total}</span>
           <span className="text-3xl font-extrabold text-[#1A1F3D]">{paymentMethod === 'Package' ? "0.00" : `${currency}${total.toFixed(2)}`}</span>
         </div>

@@ -52,6 +52,7 @@ interface StaffMember {
   avatar: string;
   username: string;
   commissionRate: number;
+  baseSalary?: number;
   googleConnected?: boolean;
   googleEmail?: string;
   isPendingInvite?: boolean;
@@ -73,6 +74,7 @@ export default function Staff() {
   const [role, setRole] = useState<StaffRole>("Assistant");
   const [phone, setPhone] = useState("");
   const [commissionRate, setCommissionRate] = useState("0");
+  const [baseSalary, setBaseSalary] = useState("15000");
   const [email, setEmail] = useState("");
 
   // Fetch active sessions
@@ -191,6 +193,7 @@ export default function Staff() {
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
       username: email,
       commissionRate: Number(commissionRate || 0),
+      baseSalary: Number(baseSalary || 15000),
       googleConnected: false,
       googleEmail: '',
       isPendingInvite: false
@@ -211,6 +214,7 @@ export default function Staff() {
       phone,
       username: email,
       commissionRate: Number(commissionRate) || 0,
+      baseSalary: Number(baseSalary) || 0,
     };
     updateStaff(editingStaff.id, updated);
     toast.success("อัปเดตข้อมูลพนักงานเรียบร้อยแล้ว");
@@ -234,6 +238,7 @@ export default function Staff() {
     setRole("Assistant");
     setPhone("");
     setCommissionRate("0");
+    setBaseSalary("15000");
     setEmail("");
   };
 
@@ -243,6 +248,7 @@ export default function Staff() {
     setRole(member.role);
     setPhone(member.phone);
     setCommissionRate(String(member.commissionRate || 0));
+    setBaseSalary(String(member.baseSalary || 15000));
     setEmail(member.username || "");
   };
 
@@ -383,9 +389,13 @@ export default function Staff() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="commission" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ค่าคอมมิชชัน (%)</Label>
-                    <input id="commission" type="number" min="0" max="100" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} />
+                    <Label htmlFor="baseSalary" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ฐานเงินเดือน (บาท)</Label>
+                    <input id="baseSalary" type="number" min="0" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} required />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="commission" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ค่าคอมมิชชัน (%)</Label>
+                  <input id="commission" type="number" min="0" max="100" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} />
                 </div>
                 <div className="flex gap-3 pt-4">
                   <button type="button" onClick={() => setIsAddOpen(false)} className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400">ยกเลิก</button>
@@ -461,8 +471,9 @@ export default function Staff() {
                             <div className="space-y-2"><Label htmlFor="edit-phone" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">เบอร์โทรศัพท์</Label><input id="edit-phone" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2"><Label htmlFor="edit-role" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">บทบาท</Label><Select value={role} onValueChange={(value: StaffRole) => setRole(value)}><SelectTrigger className="border-none bg-[#F5F6FA] rounded-2xl h-12 focus:ring-4 focus:ring-[#1A1F3D]/5 font-bold text-sm"><SelectValue /></SelectTrigger><SelectContent className="rounded-2xl border-gray-100 shadow-2xl">{roles.filter(r => r.name !== 'superadmin').map(r => (<SelectItem key={r.id} value={r.name} className="text-xs font-bold py-3">{r.name}</SelectItem>))}</SelectContent></Select></div>
-                              <div className="space-y-2"><Label htmlFor="edit-commission" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ค่าคอมมิชชัน (%)</Label><input id="edit-commission" type="number" min="0" max="100" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} /></div>
+                              <div className="space-y-2"><Label htmlFor="edit-baseSalary" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ฐานเงินเดือน (บาท)</Label><input id="edit-baseSalary" type="number" min="0" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} /></div>
                             </div>
+                            <div className="space-y-2"><Label htmlFor="edit-commission" className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ค่าคอมมิชชัน (%)</Label><input id="edit-commission" type="number" min="0" max="100" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} /></div>
                             <div className="flex gap-3 pt-4"><button type="button" onClick={() => setEditingStaff(null)} className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all">ยกเลิก</button><button type="submit" className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all">บันทึกการเปลี่ยนแปลง</button></div>
                           </form>
                         </DialogContent>
@@ -551,7 +562,7 @@ export default function Staff() {
           </TabsContent>
 
           <TabsContent value="payroll" className="m-0 h-full animate-in fade-in duration-300">
-            <PayrollTab storeId={""} />
+            <PayrollTab storeId={storeId} />
           </TabsContent>
         </Tabs>
       </div>

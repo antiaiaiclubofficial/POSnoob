@@ -26,7 +26,8 @@ const Inventory = () => {
   const { 
     inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLineId,
     companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
-    adjustStock, deletePartner, currency, currentUser, addReportLog, transactions
+    adjustStock, deletePartner, currency, currentUser, addReportLog, transactions,
+    deleteInventoryItem
   } = useStore();
   
   const [activeTab, setActiveTab] = useState<WmsTab>('dashboard');
@@ -160,6 +161,13 @@ const Inventory = () => {
     if (window.confirm("ต้องการลบข้อมูลคู่ค้านี้หรือไม่?")) {
       deletePartner(id);
       toast.success("ลบข้อมูลคู่ค้าเรียบร้อยแล้ว");
+    }
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    if (window.confirm("ต้องการลบสินค้านี้หรือไม่?")) {
+      await deleteInventoryItem(id);
+      toast.success("ลบสินค้าเรียบร้อยแล้ว");
     }
   };
 
@@ -596,7 +604,12 @@ const Inventory = () => {
                               <td className="px-8 py-6 flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-50">{item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <Package className="w-full h-full p-3 text-gray-300" />}</div><div><p className="text-sm font-black text-[#1A1F3D]">{item.name}</p><p className="text-[9px] font-black uppercase text-blue-500">{item.category}</p></div></td>
                               <td className="px-8 py-6 text-center text-sm font-black">฿{item.price.toLocaleString()}</td>
                               <td className="px-8 py-6 text-center font-black text-blue-600">{item.stock} {item.unit}</td>
-                              <td className="px-8 py-6 text-right"><button onClick={() => { setEditingItem(item); setIsItemModalOpen(true); }} className="p-3 text-gray-300 hover:text-[#1A1F3D] hover:bg-white rounded-xl transition-all shadow-sm"><Edit3 size={16}/></button></td>
+                              <td className="px-8 py-6 text-right">
+                                 <div className="flex items-center justify-end gap-2">
+                                    <button onClick={() => { setEditingItem(item); setIsItemModalOpen(true); }} className="p-3 text-gray-300 hover:text-[#1A1F3D] hover:bg-white rounded-xl transition-all shadow-sm"><Edit3 size={16}/></button>
+                                    <button onClick={() => handleDeleteItem(item.id)} className="p-3 text-gray-300 hover:text-red-600 hover:bg-white rounded-xl transition-all shadow-sm"><Trash2 size={16}/></button>
+                                 </div>
+                              </td>
                            </tr>
                         ))}
                      </tbody>

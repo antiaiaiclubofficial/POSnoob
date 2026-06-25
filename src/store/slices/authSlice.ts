@@ -120,6 +120,7 @@ export const createAuthSlice: StateCreator<
               full_name: inviteData.name,
               phone: inviteData.phone,
               commission_rate: Number(inviteData.commissionRate || 0),
+              base_salary: Number(inviteData.baseSalary || 15000),
               is_approved: true, // This is already correctly set to true for invite flow
               is_suspended: false,
               status: 'Active',

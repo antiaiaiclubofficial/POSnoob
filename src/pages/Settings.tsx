@@ -22,6 +22,7 @@ const Settings = () => {
     receiptHeader, receiptFooter, receiptPaperSize,
     liffId, liffChannelId, liffChannelSecret, liffEnabled,
     companyName, companyAddress, companyTaxId, companyPhone, companyEmail, vatEnabled, vatRate,
+    vatInclusive,
     updateBusinessProfile,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings,
     recurringHolidays, specificHolidays,
@@ -59,6 +60,7 @@ const Settings = () => {
   const [localCompanyEmail, setLocalCompanyEmail] = useState(companyEmail || '');
   const [localVatEnabled, setLocalVatEnabled] = useState(vatEnabled);
   const [localVatRate, setLocalVatRate] = useState(vatRate || 7);
+  const [localVatInclusive, setLocalVatInclusive] = useState(vatInclusive !== undefined ? vatInclusive : true);
 
   // LINE LIFF Local States
   const [localLiffId, setLocalLiffId] = useState(liffId);
@@ -93,6 +95,7 @@ const Settings = () => {
       companyEmail: localCompanyEmail,
       vatEnabled: localVatEnabled,
       vatRate: localVatRate,
+      vatInclusive: localVatInclusive,
     });
     updateBookingSettings({
       slotDuration: localSlotDuration,
@@ -354,17 +357,49 @@ const Settings = () => {
                     </div>
 
                     {localVatEnabled && (
-                      <div className="space-y-2 max-w-xs animate-in slide-in-from-top-2 duration-200">
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">VAT Rate (%)</label>
-                        <div className="relative">
-                          <Percent className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-                          <input 
-                            type="number"
-                            className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
-                            value={localVatRate} 
-                            onChange={e => setLocalVatRate(Number(e.target.value))} 
-                            placeholder="7"
-                          />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-200">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">VAT Rate (%)</label>
+                          <div className="relative">
+                            <Percent className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                            <input 
+                              type="number"
+                              className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                              value={localVatRate} 
+                              onChange={e => setLocalVatRate(Number(e.target.value))} 
+                              placeholder="7"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">VAT Pricing Model</label>
+                          <div className="flex gap-2 p-1.5 bg-[#F5F6FA] rounded-2xl">
+                            <button
+                              type="button"
+                              onClick={() => setLocalVatInclusive(true)}
+                              className={cn(
+                                "flex-1 py-3 text-xs font-black rounded-xl transition-all",
+                                localVatInclusive 
+                                  ? "bg-white text-indigo-600 shadow-sm" 
+                                  : "text-gray-400 hover:text-gray-600"
+                              )}
+                            >
+                              Inclusive (รวม VAT)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setLocalVatInclusive(false)}
+                              className={cn(
+                                "flex-1 py-3 text-xs font-black rounded-xl transition-all",
+                                !localVatInclusive 
+                                  ? "bg-white text-indigo-600 shadow-sm" 
+                                  : "text-gray-400 hover:text-gray-600"
+                              )}
+                            >
+                              Exclusive (แยก VAT)
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}

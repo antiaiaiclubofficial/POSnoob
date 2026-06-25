@@ -128,6 +128,7 @@ const AuthInitializer = () => {
             avatar: s.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
             username: s.email,
             commissionRate: Number(s.commission_rate || 0),
+            baseSalary: Number(s.base_salary || 15000),
             googleConnected: !!s.google_connected || !!s.google_email,
             googleEmail: s.google_email || '',
             isPendingInvite: s.status === 'Pending',
@@ -198,6 +199,7 @@ const AuthInitializer = () => {
               receiptFooter: storeData.receipt_footer || 'Thank you for your visit!',
               receiptPaperSize: storeData.receipt_paper_size || '80mm',
               vatEnabled: storeData.vat_enabled || false,
+              vatInclusive: storeData.vat_inclusive !== undefined ? storeData.vat_inclusive : true,
               companyName: storeData.company_name || '',
               companyAddress: storeData.company_address || '',
               companyTaxId: storeData.company_tax_id || '',
@@ -224,6 +226,7 @@ const AuthInitializer = () => {
                   payDayOfMonth: Number(storeData.staff_settings.payroll?.payDayOfMonth ?? 25),
                   overtimeRate: Number(storeData.staff_settings.payroll?.overtimeRate ?? 1.5),
                   socialSecurityRate: Number(storeData.staff_settings.payroll?.socialSecurityRate ?? 5),
+                  deductionPresets: storeData.staff_settings.payroll?.deductionPresets ?? [],
                 }
               } : useStore.getState().staffSettings
             });
@@ -565,11 +568,17 @@ const AuthInitializer = () => {
             date: tx.created_at.split('T')[0],
             amount: Number(tx.amount || 0),
             discountAmount: Number(tx.discount_amount || 0),
+            subtotal: Number(tx.subtotal || 0),
+            vatAmount: Number(tx.vat_amount || 0),
+            vatRate: Number(tx.vat_rate || 0),
+            isTaxInvoice: tx.is_tax_invoice || false,
+            details: tx.details || {},
             customerId: tx.customer_id || 'walk-in',
             customerName: tx.customer_name,
             items: tx.items,
             paymentMethod: tx.payment_method as PaymentMethod,
             staffName: tx.staff_name || 'Admin',
+            staffId: tx.staff_id,
             species: [],
             bookingType: 'Walk-in' as BookingType
           }));

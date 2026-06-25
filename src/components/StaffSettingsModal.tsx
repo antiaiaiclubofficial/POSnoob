@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Edit3, Trash2, Shield, Settings2, Clock, CalendarDays, Wallet, Check, Save } from 'lucide-react';
-import { useStore, Role, StaffRole } from '@/store/useStore';
+import { useStore, Role, StaffRole, DeductionPreset } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,7 +14,7 @@ interface StaffSettingsModalProps {
 }
 
 const StaffSettingsModal = ({ onClose }: StaffSettingsModalProps) => {
-  const { roles, addRole, updateRole, deleteRole, storeId, currentUser, staffSettings, updateStaffSettings } = useStore();
+  const { roles, addRole, updateRole, deleteRole, storeId, currentUser, staffSettings, updateStaffSettings, currency } = useStore();
   
   const [activeTab, setActiveTab] = useState<'roles' | 'attendance' | 'schedule' | 'payroll'>('roles');
 
@@ -42,6 +42,34 @@ const StaffSettingsModal = ({ onClose }: StaffSettingsModalProps) => {
   const [overtimeRate, setOvertimeRate] = useState(1.5);
   const [socialSecurityRate, setSocialSecurityRate] = useState(5);
 
+  const [deductionPresets, setDeductionPresets] = useState<DeductionPreset[]>([]);
+  const [newPresetName, setNewPresetName] = useState('');
+  const [newPresetAmount, setNewPresetAmount] = useState('');
+
+  const handleAddPreset = () => {
+    if (!newPresetName.trim() || !newPresetAmount) {
+      toast.error('กรุณากรอกชื่อและจำนวนเงินสำหรับรายการหัก');
+      return;
+    }
+    const amountNum = parseFloat(newPresetAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      toast.error('จำนวนเงินต้องมากกว่า 0');
+      return;
+    }
+    const newPreset = {
+      id: Math.random().toString(36).substring(2, 9),
+      name: newPresetName.trim(),
+      amount: amountNum
+    };
+    setDeductionPresets(prev => [...prev, newPreset]);
+    setNewPresetName('');
+    setNewPresetAmount('');
+  };
+
+  const handleRemovePreset = (id: string) => {
+    setDeductionPresets(prev => prev.filter(p => p.id !== id));
+  };
+
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   // Initialize setting states
@@ -59,6 +87,7 @@ const StaffSettingsModal = ({ onClose }: StaffSettingsModalProps) => {
       setPayDayOfMonth(staffSettings.payroll?.payDayOfMonth ?? 25);
       setOvertimeRate(staffSettings.payroll?.overtimeRate ?? 1.5);
       setSocialSecurityRate(staffSettings.payroll?.socialSecurityRate ?? 5);
+      setDeductionPresets(staffSettings.payroll?.deductionPresets ?? []);
     }
   }, [staffSettings]);
 
@@ -154,6 +183,7 @@ const StaffSettingsModal = ({ onClose }: StaffSettingsModalProps) => {
           payDayOfMonth: Number(payDayOfMonth),
           overtimeRate: Number(overtimeRate),
           socialSecurityRate: Number(socialSecurityRate),
+          deductionPresets,
         }
       });
       toast.success("บันทึกการตั้งค่าระบบพนักงานเรียบร้อยแล้ว!");
@@ -501,6 +531,64 @@ const StaffSettingsModal = ({ onClose }: StaffSettingsModalProps) => {
                         onChange={e => setSocialSecurityRate(Number(e.target.value))}
                         placeholder="5"
                       />
+                    </div>
+                  </div>
+
+                  {/* Deduction Presets Settings */}
+                  <div className="border-t border-gray-100 pt-6 mt-6 space-y-4">
+                    <div>
+                      <h5 className="text-sm font-black text-[#1A1F3D]">รายการหักเงินเดือนล่วงหน้า (Deduction Presets)</h5>
+                      <p className="text-[10px] text-gray-400 font-bold mt-0.5">กำหนดรายการที่หักเป็นประจำเพื่อสะดวกในการกดเลือกตอนคำนวณเงินเดือน</p>
+                    </div>
+
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {deductionPresets.length === 0 ? (
+                        <p className="text-xs text-gray-400 font-bold italic py-2">ยังไม่มีรายการหักเงินเดือนแบบล่วงหน้า</p>
+                      ) : (
+                        deductionPresets.map(preset => (
+                          <div key={preset.id} className="flex justify-between items-center bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100">
+                            <span className="text-xs font-black text-[#1A1F3D]">{preset.name}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs font-bold text-red-500">-{currency}{preset.amount.toLocaleString()}</span>
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemovePreset(preset.id)}
+                                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="flex gap-3 bg-gray-50/50 p-4 rounded-2xl border border-dashed border-gray-200">
+                      <div className="flex-1">
+                        <input 
+                          type="text" 
+                          placeholder="ชื่อรายการ เช่น ค่ามาสาย, เบิกล่วงหน้า" 
+                          value={newPresetName}
+                          onChange={e => setNewPresetName(e.target.value)}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-[#1A1F3D]/20 outline-none"
+                        />
+                      </div>
+                      <div className="w-32">
+                        <input 
+                          type="number" 
+                          placeholder="จำนวนเงิน" 
+                          value={newPresetAmount}
+                          onChange={e => setNewPresetAmount(e.target.value)}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-[#1A1F3D]/20 outline-none"
+                        />
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={handleAddPreset}
+                        className="bg-[#1A1F3D] text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-[#2A3152] transition-colors shrink-0"
+                      >
+                        เพิ่ม
+                      </button>
                     </div>
                   </div>
                 </div>

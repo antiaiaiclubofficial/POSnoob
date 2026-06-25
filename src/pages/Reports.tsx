@@ -41,20 +41,36 @@ const Reports = () => {
   const consignmentStats = useMemo(() => {
     const report: Record<string, { total: number, payout: number, profit: number, items: number }> = {};
     
+    const getItemPriceAfterDiscount = (item: any) => {
+      if (item.finalPrice !== undefined) return item.finalPrice;
+      if (!item.discountType || !item.discountValue) return item.price;
+      let price = item.price;
+      if (item.discountType === 'percent') {
+        price = item.price * (1 - item.discountValue / 100);
+      } else {
+        price = item.price - item.discountValue;
+      }
+      return Math.max(0, Math.round((price + Number.EPSILON) * 100) / 100);
+    };
+
     filteredData.forEach(tx => {
       tx.items.forEach(item => {
         if (item.isConsignment && item.partnerId) {
           if (!report[item.partnerId]) {
             report[item.partnerId] = { total: 0, payout: 0, profit: 0, items: 0 };
           }
-          const rate = item.consignmentRate || 0;
-          const payout = (item.price * rate) / 100;
-          const profit = item.price - payout;
+          const actualPrice = getItemPriceAfterDiscount(item);
+          const qty = item.quantity || 1;
+          const lineTotal = actualPrice * qty;
           
-          report[item.partnerId].total += item.price;
+          const rate = item.consignmentRate || 0;
+          const payout = (lineTotal * rate) / 100;
+          const profit = lineTotal - payout;
+          
+          report[item.partnerId].total += lineTotal;
           report[item.partnerId].payout += payout;
           report[item.partnerId].profit += profit;
-          report[item.partnerId].items += 1;
+          report[item.partnerId].items += qty;
         }
       });
     });

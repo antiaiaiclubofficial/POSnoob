@@ -33,6 +33,7 @@ export const useStore = create<AppState>()((set, get) => ({
   kennelCapacity: 8,
   language: 'th',
   vatEnabled: false,
+  vatInclusive: true,
   liffId: '',
   liffChannelId: '',
   liffChannelSecret: '',
@@ -71,6 +72,7 @@ export const useStore = create<AppState>()((set, get) => ({
       payDayOfMonth: 25,
       overtimeRate: 1.5,
       socialSecurityRate: 5,
+      deductionPresets: [],
     },
   },
   tierRules: [
@@ -140,6 +142,7 @@ export const useStore = create<AppState>()((set, get) => ({
       if (profile.companyEmail !== undefined) localStorage.setItem('company_email', profile.companyEmail);
       if (profile.vatEnabled !== undefined) localStorage.setItem('vat_enabled', String(profile.vatEnabled));
       if (profile.vatRate !== undefined) localStorage.setItem('vat_rate', String(profile.vatRate));
+      if (profile.vatInclusive !== undefined) localStorage.setItem('vat_inclusive', String(profile.vatInclusive));
     }
     const storeId = get().storeId;
     if (storeId && storeId !== 'default-store') {
@@ -162,6 +165,7 @@ export const useStore = create<AppState>()((set, get) => ({
             company_email: profile.companyEmail !== undefined ? profile.companyEmail : undefined,
             vat_enabled: profile.vatEnabled !== undefined ? profile.vatEnabled : undefined,
             vat_rate: profile.vatRate !== undefined ? profile.vatRate : undefined,
+            vat_inclusive: profile.vatInclusive !== undefined ? profile.vatInclusive : undefined,
             points_earn_rate: profile.pointsEarnRate !== undefined ? profile.pointsEarnRate : undefined,
             points_redeem_rate: profile.pointsRedeemRate !== undefined ? profile.pointsRedeemRate : undefined,
             max_users: profile.maxUsers !== undefined ? profile.maxUsers : undefined,
@@ -631,6 +635,7 @@ export const useStore = create<AppState>()((set, get) => ({
       name: st.name,
       phone: st.phone,
       commissionRate: st.commissionRate,
+      baseSalary: st.baseSalary,
       avatar: st.avatar,
       email: st.username
     };
@@ -650,6 +655,7 @@ export const useStore = create<AppState>()((set, get) => ({
       avatar: st.avatar,
       username: st.username || 'Pending Google Link',
       commissionRate: st.commissionRate,
+      baseSalary: st.baseSalary,
       isPendingInvite: true,
       inviteLink: inviteLink
     };
@@ -694,7 +700,8 @@ export const useStore = create<AppState>()((set, get) => ({
         phone: st.phone,
         status: st.status,
         avatar_url: st.avatar,
-        commission_rate: st.commissionRate
+        commission_rate: st.commissionRate,
+        base_salary: st.baseSalary
       })
       .eq('id', id);
 
@@ -895,7 +902,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   clearCart: () => set({ cart: [] }),
 
-  processPayment: async (customerId, total, discount, items, method, details, isTaxInvoice, redeemedPoints) => {
+  processPayment: async (customerId, total, discount, items, method, details, isTaxInvoice, redeemedPoints, subtotal, vatAmount, vatRate) => {
     const currentStoreId = get().storeId;
     const staffName = get().currentUser?.name || 'Admin';
     const staffId = get().currentUser?.id;
@@ -913,8 +920,14 @@ export const useStore = create<AppState>()((set, get) => ({
         payment_method: method,
         staff_name: staffName,
         staff_id: staffId,
-        details: details,
-        is_tax_invoice: isTaxInvoice
+        details: {
+          ...details,
+          vatInclusive: get().vatInclusive
+        },
+        is_tax_invoice: isTaxInvoice,
+        subtotal: subtotal !== undefined ? subtotal : total,
+        vat_amount: vatAmount !== undefined ? vatAmount : 0,
+        vat_rate: vatRate !== undefined ? vatRate : 0
       }])
       .select()
       .single();
@@ -1011,6 +1024,11 @@ export const useStore = create<AppState>()((set, get) => ({
         date: data.created_at.split('T')[0],
         amount: Number(data.amount || 0),
         discountAmount: Number(data.discount_amount || 0),
+        subtotal: Number(data.subtotal || 0),
+        vatAmount: Number(data.vat_amount || 0),
+        vatRate: Number(data.vat_rate || 0),
+        isTaxInvoice: data.is_tax_invoice || false,
+        details: data.details || {},
         customerId: data.customer_id || 'walk-in',
         customerName: data.customer_name,
         items: data.items,

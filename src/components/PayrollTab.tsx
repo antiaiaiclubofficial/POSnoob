@@ -16,8 +16,10 @@ import {
   RefreshCw, 
   FileText, 
   ShieldAlert, 
-  Calendar
+  Calendar,
+  Trash2
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface PayrollTabProps {
   storeId: string | null;
@@ -25,12 +27,205 @@ interface PayrollTabProps {
 
 export default function PayrollTab({ storeId }: PayrollTabProps) {
   const queryClient = useQueryClient();
-  const { currency } = useStore();
+  const { currency, staffSettings } = useStore();
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   
-  // Local state for dynamic inputs
-  const [bonuses, setBonuses] = useState<Record<string, number>>({});
-  const [deductions, setDeductions] = useState<Record<string, number>>({});
+  // Local state for inline input overrides
+  const [editingSalaryStaffId, setEditingSalaryStaffId] = useState<string | null>(null);
+  const [editingBonusStaffId, setEditingBonusStaffId] = useState<string | null>(null);
+  const [localSalaries, setLocalSalaries] = useState<Record<string, string>>({});
+  const [localBonuses, setLocalBonuses] = useState<Record<string, string>>({});
+
+  // Deduction popup states
+  const [editingDeductionStaffId, setEditingDeductionStaffId] = useState<string | null>(null);
+  const [staffDeductionsList, setStaffDeductionsList] = useState<Record<string, Array<{ id: string, name: string, amount: number }>>>({});
+  const [manualDeductionName, setManualDeductionName] = useState('');
+  const [manualDeductionAmount, setManualDeductionAmount] = useState('');
+
+  const savePayrollDraft = async (staffId: string, updates: { basicSalary?: number, bonus?: number, deductions?: number }) => {
+    if (!storeId || storeId === 'default-store') return;
+
+    const existing = payrollRecords.find((r: any) => r.staff_id === staffId);
+    const emp = employees.find(e => e.id === staffId);
+    if (!emp) return;
+
+    // Calculate commission
+    const empTransactions = (transactions || []).filter(tx => {
+      if (tx.staff_id === emp.id) return true;
+      if (Array.isArray(tx.items)) {
+        return tx.items.some((item: any) => {
+          if (item.staffId === emp.id || item.staff_id === emp.id) return true;
+          const itemStr = JSON.stringify(item).toLowerCase();
+          return itemStr.includes(emp.id.toLowerCase()) || (emp.full_name && itemStr.includes(emp.full_name.toLowerCase()));
+        });
+      }
+      return false;
+    });
+
+    const getPreTaxItemPrice = (item: any, tx: any) => {
+      let price = item.finalPrice !== undefined ? item.finalPrice : item.price;
+      if (item.finalPrice === undefined && item.discountType && item.discountValue) {
+        if (item.discountType === 'percent') {
+          price = item.price * (1 - item.discountValue / 100);
+        } else {
+          price = item.price - item.discountValue;
+        }
+        price = Math.max(0, Math.round((price + Number.EPSILON) * 100) / 100);
+      }
+      const vatRateVal = tx.vatRate || tx.vat_rate || 0;
+      const vatInclusive = tx.details?.vatInclusive !== undefined ? tx.details.vatInclusive : true;
+      const hasVat = vatRateVal > 0 || (tx.vatAmount || tx.vat_amount || 0) > 0;
+      if (hasVat && vatInclusive) {
+        return price * 100 / (100 + vatRateVal);
+      }
+      return price;
+    };
+
+    const totalSales = empTransactions.reduce((acc, tx: any) => {
+      const vatRateVal = tx.vatRate || tx.vat_rate || 0;
+      const vatInclusive = tx.details?.vatInclusive !== undefined ? tx.details.vatInclusive : true;
+      if (tx.staff_id === emp.id) {
+        let baseAmount = tx.subtotal !== undefined ? Number(tx.subtotal) : (Number(tx.amount) || 0);
+        if (tx.subtotal === undefined && vatRateVal > 0 && vatInclusive) {
+          const taxVal = Number(tx.vatAmount || tx.vat_amount || 0);
+          baseAmount = baseAmount - taxVal;
+        }
+        return acc + baseAmount;
+      }
+      if (Array.isArray(tx.items)) {
+        const empItemsSum = tx.items
+          .filter((item: any) => {
+            if (item.staffId === emp.id || item.staff_id === emp.id) return true;
+            const itemStr = JSON.stringify(item).toLowerCase();
+            return itemStr.includes(emp.id.toLowerCase()) || (emp.full_name && itemStr.includes(emp.full_name.toLowerCase()));
+          })
+          .reduce((sum: number, item: any) => {
+            const preTaxPrice = getPreTaxItemPrice(item, tx);
+            const qty = Number(item.quantity) || 1;
+            return sum + (preTaxPrice * qty);
+          }, 0);
+        return acc + empItemsSum;
+      }
+      return acc;
+    }, 0);
+
+    const commission = (totalSales * (Number(emp.commission_rate) || 0)) / 100;
+    const baseSalary = updates.basicSalary !== undefined ? updates.basicSalary : (existing ? existing.basic_salary : (Number(emp.base_salary) || 15000));
+    const bonus = updates.bonus !== undefined ? updates.bonus : (existing ? existing.bonus : 0);
+    const deduction = updates.deductions !== undefined ? updates.deductions : (existing ? existing.deductions : 0);
+
+    try {
+      if (existing) {
+        const { error } = await supabase
+          .from('payroll_records')
+          .update({
+            basic_salary: baseSalary,
+            commission,
+            bonus,
+            deductions: deduction,
+            status: existing.status
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('payroll_records')
+          .insert([{
+            store_id: storeId,
+            staff_id: staffId,
+            month: selectedMonth,
+            basic_salary: baseSalary,
+            commission,
+            bonus,
+            deductions: deduction,
+            status: 'draft'
+          }]);
+        if (error) throw error;
+      }
+      queryClient.invalidateQueries({ queryKey: ['payroll_records_list', storeId, selectedMonth] });
+    } catch (err: any) {
+      console.error("Failed to save payroll draft:", err);
+      toast.error("บันทึกข้อมูลล้มเหลว: " + err.message);
+    }
+  };
+
+  const handleSalaryBlur = async (staffId: string) => {
+    const rawVal = localSalaries[staffId];
+    setEditingSalaryStaffId(null);
+    if (rawVal === undefined) return;
+
+    const num = parseFloat(rawVal) || 0;
+    await savePayrollDraft(staffId, { basicSalary: num });
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ base_salary: num })
+        .eq('id', staffId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['profiles_payroll', storeId] });
+      toast.success("อัปเดตฐานเงินเดือนพนักงานและบันทึกดราฟต์สำเร็จ");
+    } catch (err: any) {
+      console.error("Failed to update profile base salary:", err);
+      toast.error("อัปเดตฐานเงินเดือนพนักงานในโปรไฟล์ล้มเหลว: " + err.message);
+    }
+
+    setLocalSalaries(prev => {
+      const copy = { ...prev };
+      delete copy[staffId];
+      return copy;
+    });
+  };
+
+  const handleBonusBlur = async (staffId: string) => {
+    const rawVal = localBonuses[staffId];
+    setEditingBonusStaffId(null);
+    if (rawVal === undefined) return;
+
+    const num = parseFloat(rawVal) || 0;
+    await savePayrollDraft(staffId, { bonus: num });
+    toast.success("บันทึกดราฟต์โบนัสสำเร็จ");
+
+    setLocalBonuses(prev => {
+      const copy = { ...prev };
+      delete copy[staffId];
+      return copy;
+    });
+  };
+
+  const addDeductionItem = (name: string, amount: number) => {
+    if (!name.trim() || amount <= 0) return;
+    const newItem = {
+      id: Math.random().toString(36).substring(2, 9),
+      name: name.trim(),
+      amount
+    };
+    setStaffDeductionsList(prev => {
+      const currentList = prev[editingDeductionStaffId || ''] || [];
+      return {
+        ...prev,
+        [editingDeductionStaffId || '']: [...currentList, newItem]
+      };
+    });
+  };
+
+  const removeDeductionItem = (itemId: string) => {
+    setStaffDeductionsList(prev => {
+      const currentList = prev[editingDeductionStaffId || ''] || [];
+      return {
+        ...prev,
+        [editingDeductionStaffId || '']: currentList.filter(item => item.id !== itemId)
+      };
+    });
+  };
+
+  const handleConfirmDeductions = async (staffId: string) => {
+    const list = staffDeductionsList[staffId] || [];
+    const total = list.reduce((sum, item) => sum + item.amount, 0);
+    await savePayrollDraft(staffId, { deductions: total });
+    toast.success("บันทึกรายการหักสำเร็จ");
+    setEditingDeductionStaffId(null);
+  };
 
   const monthDate = parse(selectedMonth, 'yyyy-MM', new Date());
   const monthStart = startOfMonth(monthDate).toISOString();
@@ -59,7 +254,7 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
       if (!storeId || storeId === 'default-store') return [];
       const { data, error } = await supabase
         .from('sales_transactions')
-        .select('amount, staff_id, items')
+        .select('amount, staff_id, items, subtotal, vat_amount, vat_rate, details')
         .eq('store_id', storeId)
         .gte('created_at', monthStart)
         .lte('created_at', monthEnd);
@@ -95,23 +290,31 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
         throw new Error("Invalid Store ID");
       }
 
-      const insertData = recordsToApprove.map(r => ({
-        store_id: storeId,
-        staff_id: r.id,
-        month: selectedMonth,
-        basic_salary: r.baseSalary,
-        commission: r.commission,
-        bonus: r.bonus,
-        deductions: r.deduction,
-        status: 'paid',
-        created_at: new Date().toISOString()
-      }));
-
-      const { error } = await supabase
-        .from('payroll_records')
-        .insert(insertData);
-
-      if (error) throw error;
+      for (const r of recordsToApprove) {
+        const existing = payrollRecords.find((rec: any) => rec.staff_id === r.id);
+        if (existing) {
+          const { error } = await supabase
+            .from('payroll_records')
+            .update({ status: 'paid' })
+            .eq('id', existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('payroll_records')
+            .insert([{
+              store_id: storeId,
+              staff_id: r.id,
+              month: selectedMonth,
+              basic_salary: r.baseSalary,
+              commission: r.commission,
+              bonus: r.bonus,
+              deductions: r.deduction,
+              status: 'paid',
+              created_at: new Date().toISOString()
+            }]);
+          if (error) throw error;
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll_records_list', storeId, selectedMonth] });
@@ -133,6 +336,7 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
       if (tx.staff_id === emp.id) return true;
       if (Array.isArray(tx.items)) {
         return tx.items.some((item: any) => {
+          if (!item) return false;
           if (item.staffId === emp.id || item.staff_id === emp.id) return true;
           const itemStr = JSON.stringify(item).toLowerCase();
           return itemStr.includes(emp.id.toLowerCase()) || (emp.full_name && itemStr.includes(emp.full_name.toLowerCase()));
@@ -141,21 +345,52 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
       return false;
     });
 
-    const totalSales = empTransactions.reduce((acc, tx) => {
+    const getPreTaxItemPrice = (item: any, tx: any) => {
+      if (!item) return 0;
+      let price = Number(item.finalPrice !== undefined ? item.finalPrice : item.price) || 0;
+      if (item.finalPrice === undefined && item.discountType && item.discountValue) {
+        if (item.discountType === 'percent') {
+          price = price * (1 - item.discountValue / 100);
+        } else {
+          price = price - item.discountValue;
+        }
+        price = Math.max(0, Math.round((price + Number.EPSILON) * 100) / 100);
+      }
+      
+      const vatRateVal = tx.vatRate || tx.vat_rate || 0;
+      const vatInclusive = tx.details?.vatInclusive !== undefined ? tx.details.vatInclusive : true;
+      const hasVat = vatRateVal > 0 || (tx.vatAmount || tx.vat_amount || 0) > 0;
+      
+      if (hasVat && vatInclusive) {
+        return price * 100 / (100 + vatRateVal);
+      }
+      return price;
+    };
+
+    const totalSales = empTransactions.reduce((acc, tx: any) => {
+      const vatRateVal = tx.vatRate || tx.vat_rate || 0;
+      const vatInclusive = tx.details?.vatInclusive !== undefined ? tx.details.vatInclusive : true;
+
       if (tx.staff_id === emp.id) {
-        return acc + (Number(tx.amount) || 0);
+        let baseAmount = tx.subtotal !== undefined ? Number(tx.subtotal) : (Number(tx.amount) || 0);
+        if (tx.subtotal === undefined && vatRateVal > 0 && vatInclusive) {
+          const taxVal = Number(tx.vatAmount || tx.vat_amount || 0);
+          baseAmount = baseAmount - taxVal;
+        }
+        return acc + baseAmount;
       }
       if (Array.isArray(tx.items)) {
         const empItemsSum = tx.items
           .filter((item: any) => {
+            if (!item) return false;
             if (item.staffId === emp.id || item.staff_id === emp.id) return true;
             const itemStr = JSON.stringify(item).toLowerCase();
             return itemStr.includes(emp.id.toLowerCase()) || (emp.full_name && itemStr.includes(emp.full_name.toLowerCase()));
           })
           .reduce((sum: number, item: any) => {
-            const price = Number(item.price) || Number(item.amount) || 0;
+            const preTaxPrice = getPreTaxItemPrice(item, tx);
             const qty = Number(item.quantity) || 1;
-            return sum + (price * qty);
+            return sum + (preTaxPrice * qty);
           }, 0);
         return acc + empItemsSum;
       }
@@ -165,26 +400,27 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
     const commission = (totalSales * (Number(emp.commission_rate) || 0)) / 100;
 
     const existingRecord = payrollRecords.find((r: any) => r.staff_id === emp.id);
-    const isPaid = !!existingRecord;
+    const isPaid = existingRecord?.status === 'paid';
+    const isDraft = existingRecord?.status === 'draft';
 
-    const bonus = isPaid ? (existingRecord.bonus || 0) : (bonuses[emp.id] || 0);
-    const deduction = isPaid ? (existingRecord.deductions || 0) : (deductions[emp.id] || 0);
+    const bonus = existingRecord ? (existingRecord.bonus || 0) : 0;
+    const deduction = existingRecord ? (existingRecord.deductions || 0) : 0;
+    const basicSalary = existingRecord ? (existingRecord.basic_salary || baseSalary) : baseSalary;
 
-    const netPayout = isPaid
-      ? (existingRecord.basic_salary + existingRecord.commission + (existingRecord.bonus || 0) - (existingRecord.deductions || 0))
-      : (baseSalary + commission + bonus - deduction);
+    const netPayout = basicSalary + commission + bonus - deduction;
 
     return {
       id: emp.id,
       name: emp.full_name || emp.email?.split('@')[0] || "Staff",
       avatarUrl: emp.avatar_url,
       role: emp.role,
-      baseSalary,
+      baseSalary: basicSalary,
       commission,
       bonus,
       deduction,
       netPayout,
       isPaid,
+      isDraft,
       payrollRecordId: existingRecord?.id || null
     };
   });
@@ -212,16 +448,6 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
     if (window.confirm(`ยืนยันการอนุมัติจ่ายเงินเดือนให้คุณ "${record.name}" เป็นจำนวน ${currency}${record.netPayout.toLocaleString()}?`)) {
       approveMutation.mutate([record]);
     }
-  };
-
-  const handleBonusChange = (staffId: string, val: string) => {
-    const num = parseFloat(val) || 0;
-    setBonuses(prev => ({ ...prev, [staffId]: num }));
-  };
-
-  const handleDeductionChange = (staffId: string, val: string) => {
-    const num = parseFloat(val) || 0;
-    setDeductions(prev => ({ ...prev, [staffId]: num }));
   };
 
   if (empLoading || txLoading || recordsLoading) {
@@ -299,8 +525,6 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
                 value={selectedMonth} 
                 onChange={(e) => {
                   setSelectedMonth(e.target.value);
-                  setBonuses({});
-                  setDeductions({});
                 }} 
                 className="bg-transparent border-none outline-none text-[#1A1F3D] font-bold text-xs cursor-pointer focus:ring-0 w-28"
               />
@@ -356,42 +580,89 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-right text-xs font-black text-[#1A1F3D]">
-                      {currency}{record.baseSalary.toLocaleString()}
+                    <td className="px-6 py-5 text-right">
+                      {record.isPaid ? (
+                        <span className="text-xs font-black text-[#1A1F3D]">
+                          {currency}{record.baseSalary.toLocaleString()}
+                        </span>
+                      ) : (
+                        editingSalaryStaffId === record.id ? (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <span className="text-xs text-gray-400 font-bold">{currency}</span>
+                            <input 
+                              type="number"
+                              min="0"
+                              autoFocus
+                              value={localSalaries[record.id] !== undefined ? localSalaries[record.id] : record.baseSalary}
+                              onChange={(e) => setLocalSalaries(prev => ({ ...prev, [record.id]: e.target.value }))}
+                              onBlur={() => handleSalaryBlur(record.id)}
+                              className="w-24 bg-[#F5F6FA] border-none rounded-xl px-2.5 py-1.5 text-right text-xs font-black focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                            />
+                          </div>
+                        ) : (
+                          <span 
+                            onClick={() => {
+                              setEditingSalaryStaffId(record.id);
+                              setLocalSalaries(prev => ({ ...prev, [record.id]: String(record.baseSalary) }));
+                            }}
+                            className="cursor-pointer hover:underline hover:text-indigo-600 transition-all font-black text-xs text-[#1A1F3D]"
+                          >
+                            {currency}{record.baseSalary.toLocaleString()}
+                          </span>
+                        )
+                      )}
                     </td>
                     <td className="px-6 py-5 text-right text-xs font-black text-blue-600">
                       {currency}{record.commission.toLocaleString()}
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5 text-center">
                       {record.isPaid ? (
-                        <div className="text-center text-xs font-black text-[#1A1F3D]">
+                        <span className="text-xs font-black text-[#1A1F3D]">
                           +{currency}{record.bonus.toLocaleString()}
-                        </div>
+                        </span>
                       ) : (
-                        <input 
-                          type="number"
-                          min="0"
-                          value={bonuses[record.id] !== undefined ? bonuses[record.id] : ""}
-                          onChange={(e) => handleBonusChange(record.id, e.target.value)}
-                          placeholder="0.00"
-                          className="w-full bg-[#F5F6FA] border-none rounded-xl px-3 py-2 text-center text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
-                        />
+                        editingBonusStaffId === record.id ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-xs text-gray-400 font-bold">{currency}</span>
+                            <input 
+                              type="number"
+                              min="0"
+                              autoFocus
+                              value={localBonuses[record.id] !== undefined ? localBonuses[record.id] : record.bonus}
+                              onChange={(e) => setLocalBonuses(prev => ({ ...prev, [record.id]: e.target.value }))}
+                              onBlur={() => handleBonusBlur(record.id)}
+                              className="w-24 bg-[#F5F6FA] border-none rounded-xl px-2.5 py-1.5 text-center text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                            />
+                          </div>
+                        ) : (
+                          <span 
+                            onClick={() => {
+                              setEditingBonusStaffId(record.id);
+                              setLocalBonuses(prev => ({ ...prev, [record.id]: String(record.bonus) }));
+                            }}
+                            className="cursor-pointer hover:underline hover:text-indigo-600 transition-all font-bold text-xs text-[#1A1F3D]"
+                          >
+                            +{currency}{record.bonus.toLocaleString()}
+                          </span>
+                        )
                       )}
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5 text-center">
                       {record.isPaid ? (
-                        <div className="text-center text-xs font-black text-red-500">
+                        <span className="text-xs font-black text-red-500">
                           -{currency}{record.deduction.toLocaleString()}
-                        </div>
+                        </span>
                       ) : (
-                        <input 
-                          type="number"
-                          min="0"
-                          value={deductions[record.id] !== undefined ? deductions[record.id] : ""}
-                          onChange={(e) => handleDeductionChange(record.id, e.target.value)}
-                          placeholder="0.00"
-                          className="w-full bg-[#F5F6FA] border-none rounded-xl px-3 py-2 text-center text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
-                        />
+                        <span 
+                          onClick={() => {
+                            setEditingDeductionStaffId(record.id);
+                            setManualDeductionName('');
+                            setManualDeductionAmount('');
+                          }}
+                          className="cursor-pointer hover:underline hover:text-red-600 transition-all font-black text-xs text-red-500"
+                        >
+                          -{currency}{record.deduction.toLocaleString()}
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-5 text-right">
@@ -431,6 +702,135 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
           </table>
         </div>
       </div>
+
+      {/* Deduction detailed popup modal */}
+      <Dialog open={!!editingDeductionStaffId} onOpenChange={(open) => { if (!open) setEditingDeductionStaffId(null); }}>
+        <DialogContent className="rounded-[32px] max-w-lg p-8 bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-[#1A1F3D]">
+              รายละเอียดรายการหักเงินเดือน - {employees.find(emp => emp.id === editingDeductionStaffId)?.full_name || "พนักงาน"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 mt-4">
+            {/* Presets template list */}
+            <div>
+              <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2 block">เลือกรายการหักจากพรีเซต (Preset Templates)</label>
+              <div className="flex flex-wrap gap-2">
+                {(staffSettings?.payroll?.deductionPresets || []).map(preset => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => addDeductionItem(preset.name, preset.amount)}
+                    className="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-black px-3.5 py-2 rounded-xl border border-red-200/40 transition-colors flex items-center gap-1"
+                  >
+                    + {preset.name} (-{currency}{preset.amount.toLocaleString()})
+                  </button>
+                ))}
+                {(staffSettings?.payroll?.deductionPresets || []).length === 0 && (
+                  <p className="text-xs text-gray-400 font-bold italic">ไม่มีพรีเซตรายการหักเงินเดือน (ตั้งค่าได้ที่เมนู "ตั้งค่าระบบพนักงาน" แท็บการเงิน)</p>
+                )}
+              </div>
+            </div>
+
+            {/* Manual entry */}
+            <div className="flex gap-3 bg-gray-50/50 p-4 rounded-2xl border border-dashed border-gray-200">
+              <div className="flex-1">
+                <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider block mb-1">ชื่อรายการหัก (ระบุเอง)</label>
+                <input 
+                  type="text" 
+                  placeholder="เช่น หักค่าคีย์ข้อมูลผิด, ยืมเงินล่วงหน้า" 
+                  value={manualDeductionName}
+                  onChange={e => setManualDeductionName(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+              <div className="w-28">
+                <label className="text-[9px] font-black uppercase text-gray-400 tracking-wider block mb-1">ยอดหัก (บาท)</label>
+                <input 
+                  type="number" 
+                  placeholder="0.00" 
+                  value={manualDeductionAmount}
+                  onChange={e => setManualDeductionAmount(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+              <button 
+                type="button" 
+                onClick={() => {
+                  const amt = parseFloat(manualDeductionAmount) || 0;
+                  if (!manualDeductionName.trim()) {
+                    toast.error("กรุณากรอกชื่อรายการหัก");
+                    return;
+                  }
+                  if (amt <= 0) {
+                    toast.error("กรุณากรอกจำนวนเงินมากกว่า 0");
+                    return;
+                  }
+                  addDeductionItem(manualDeductionName, amt);
+                  setManualDeductionName('');
+                  setManualDeductionAmount('');
+                }}
+                className="bg-[#1A1F3D] text-white px-4 rounded-xl text-xs font-black hover:bg-[#2A3152] transition-colors shrink-0 h-9 self-end"
+              >
+                เพิ่ม
+              </button>
+            </div>
+
+            {/* Current deduction items list */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider block">รายการหักในรอบนี้</label>
+              <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto pr-2">
+                {(staffDeductionsList[editingDeductionStaffId || ''] || []).length === 0 ? (
+                  <p className="text-xs text-gray-400 font-bold italic py-4 text-center">ยังไม่มีรายการหักเงินเดือน</p>
+                ) : (
+                  (staffDeductionsList[editingDeductionStaffId || ''] || []).map(item => (
+                    <div key={item.id} className="flex justify-between items-center py-2.5">
+                      <span className="text-xs font-black text-[#1A1F3D]">{item.name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-red-500">-{currency}{item.amount.toLocaleString()}</span>
+                        <button 
+                          type="button" 
+                          onClick={() => removeDeductionItem(item.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Total and Actions */}
+            <div className="flex justify-between items-center border-t border-gray-100 pt-5">
+              <div>
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">ยอดหักรวมทั้งหมด</span>
+                <h4 className="text-lg font-black text-red-500">
+                  -{currency}{(staffDeductionsList[editingDeductionStaffId || ''] || []).reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                </h4>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingDeductionStaffId(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-colors"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleConfirmDeductions(editingDeductionStaffId || '')}
+                  className="bg-[#1A1F3D] text-white px-6 py-2.5 rounded-xl text-xs font-black hover:bg-[#2A3152] transition-colors"
+                >
+                  บันทึกรายการ
+                </button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
