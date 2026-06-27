@@ -186,20 +186,11 @@ const Inventory = () => {
     }
   };
 
-  const reportItems = useMemo(() => {
+  const reportItems = useMemo<InventoryItem[]>(() => {
     if (repShowOnlySold) {
       const inRangeTransactions = transactions.filter(tx => tx.date >= repStartDate && tx.date <= repEndDate);
 
-      const agg: Record<string, {
-        id: string;
-        name: string;
-        barcode: string;
-        stock: number;
-        price: number;
-        partnerId?: string;
-        isConsignment?: boolean;
-        category?: string;
-      }> = {};
+      const agg: Record<string, InventoryItem> = {};
 
       inRangeTransactions.forEach(tx => {
         tx.items.forEach(item => {
@@ -219,10 +210,13 @@ const Inventory = () => {
                 name: item.title,
                 barcode: item.barcode || invItem?.barcode || '',
                 stock: 0,
+                minStock: invItem?.minStock || 0,
                 price: item.price,
-                partnerId,
-                isConsignment,
+                costPrice: invItem?.costPrice || 0,
+                unit: invItem?.unit || 'ชิ้น',
                 category,
+                isConsignment: !!isConsignment,
+                partnerId,
               };
             }
             agg[key].stock += (item.quantity || 1);
