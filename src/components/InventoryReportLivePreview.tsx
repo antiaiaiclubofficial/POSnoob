@@ -17,6 +17,9 @@ interface InventoryReportLivePreviewProps {
   companyPhone?: string;
   companyEmail?: string;
   currency: string;
+  repStartDate?: string;
+  repEndDate?: string;
+  repShowOnlySold?: boolean;
 }
 
 const InventoryReportLivePreview = ({
@@ -30,6 +33,9 @@ const InventoryReportLivePreview = ({
   companyPhone,
   companyEmail,
   currency,
+  repStartDate,
+  repEndDate,
+  repShowOnlySold,
 }: InventoryReportLivePreviewProps) => {
   const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
 
@@ -51,8 +57,12 @@ const InventoryReportLivePreview = ({
 
       {/* Document Title */}
       <div className="text-right space-y-1">
-        <h1 className="text-2xl font-black text-[#1A1F3D] uppercase tracking-tight">Sales Report</h1>
-        <p className="text-sm font-bold text-gray-400">เอกสารแจ้งยอดฝากขาย</p>
+        <h1 className="text-2xl font-black text-[#1A1F3D] uppercase tracking-tight">
+          {repShowOnlySold ? "Sales Report" : "Inventory Report"}
+        </h1>
+        <p className="text-sm font-bold text-gray-400">
+          {repShowOnlySold ? `รายงานยอดขาย (${repStartDate} ถึง ${repEndDate})` : "เอกสารแจ้งยอดฝากขาย"}
+        </p>
       </div>
 
       <div className="border-t border-gray-200 my-6" />
@@ -85,7 +95,9 @@ const InventoryReportLivePreview = ({
             <tr className="bg-[#1A1F3D] text-white">
               <th className="px-4 py-3 font-black text-[10px] uppercase">ชื่อสินค้า</th>
               <th className="px-4 py-3 font-black text-[10px] uppercase text-center">SKU</th>
-              <th className="px-4 py-3 font-black text-[10px] uppercase text-center">จำนวนที่ขาย</th>
+              <th className="px-4 py-3 font-black text-[10px] uppercase text-center">
+                {repShowOnlySold ? "จำนวนที่ขาย" : "จำนวนคงเหลือ"}
+              </th>
               <th className="px-4 py-3 font-black text-[10px] uppercase text-right">ราคาสินค้า</th>
               <th className="px-4 py-3 font-black text-[10px] uppercase text-right">ราคาหลังหัก GP</th>
               <th className="px-4 py-3 font-black text-[10px] uppercase text-right">รวม</th>

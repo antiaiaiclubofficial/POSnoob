@@ -4,6 +4,7 @@ import React from 'react';
 import { Package, Plus, ShoppingBag } from 'lucide-react';
 import { useStore, InventoryItem } from '@/store/useStore';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
   product: InventoryItem;
@@ -59,7 +60,17 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
       <div className="mb-6 flex-1">
         <h3 className="text-lg font-black text-[#1A1F3D] mb-1 line-clamp-1">{product.name}</h3>
-        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{product.category}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{product.category}</p>
+          <span className={cn(
+            "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border",
+            product.isConsignment 
+              ? "bg-indigo-50 text-indigo-600 border-indigo-100/50" 
+              : "bg-gray-50 text-gray-500 border-gray-100/50"
+          )}>
+            {product.isConsignment ? "ฝากขาย" : "ขายเอง"}
+          </span>
+        </div>
         <div className="mt-4 flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${product.stock > product.minStock ? 'bg-green-500' : 'bg-orange-500'}`} />
           <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">

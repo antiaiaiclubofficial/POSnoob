@@ -400,13 +400,14 @@ export const useStore = create<AppState>()((set, get) => ({
         stock: item.stock || 0,
         min_stock: item.minStock || item.min_stock || 5,
         price: item.price || 0,
-        cost_price: item.costPrice || item.cost_price || 0,
+        cost_price: 0,
         unit: item.unit || 'ชิ้น',
         category: item.category || 'ทั่วไป',
         image_url: item.image || '',
         is_consignment: item.isConsignment || false,
         partner_id: item.partnerId || null,
-        consignment_rate: item.consignmentRate || item.consignment_rate || resolvedRate || 0
+        consignment_rate: item.consignmentRate || item.consignment_rate || resolvedRate || 0,
+        fifo_batches: []
       }])
       .select()
       .single();
@@ -425,7 +426,8 @@ export const useStore = create<AppState>()((set, get) => ({
         image: data.image_url || '',
         isConsignment: data.is_consignment || false,
         partnerId: data.partner_id || '',
-        consignmentRate: Number(data.consignment_rate || 0)
+        consignmentRate: Number(data.consignment_rate || 0),
+        fifoBatches: data.fifo_batches || []
       };
       set(s => ({ inventory: [...s.inventory, newItem] }));
     } else {
@@ -482,16 +484,102 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
 
-  adjustStock: async (id, qty, mode, reason) => {
+  adjustStock: async (id, qty, mode, reason, replenishmentCostPrice) => {
     const item = get().inventory.find(i => i.id === id);
     if (!item) return;
     const oldQty = item.stock;
-    const newQty = mode === 'Add' || mode === 'In' ? oldQty + qty : mode === 'Out' ? oldQty - qty : qty;
     const currentStoreId = get().storeId;
+
+    let newQty = oldQty;
+    let currentBatches = [...(item.fifoBatches || [])];
+
+    // Initialize batches for backward compatibility
+    if (currentBatches.length === 0 && oldQty > 0) {
+      currentBatches = [{
+        id: 'initial-' + id + '-' + Date.now(),
+        quantity: oldQty,
+        costPrice: item.costPrice || 0,
+        created_at: new Date().toISOString()
+      }];
+    }
+
+    let logCostPrice = 0;
+
+    if (mode === 'Add' || mode === 'In') {
+      newQty = oldQty + qty;
+      const cost = replenishmentCostPrice !== undefined ? replenishmentCostPrice : (item.costPrice || 0);
+      currentBatches.push({
+        id: 'batch-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+        quantity: qty,
+        costPrice: cost,
+        created_at: new Date().toISOString()
+      });
+      logCostPrice = cost;
+    } else if (mode === 'Out') {
+      newQty = Math.max(0, oldQty - qty);
+      let toConsume = qty;
+      let totalConsumedCost = 0;
+      let actualConsumedQty = 0;
+      while (toConsume > 0 && currentBatches.length > 0) {
+        const batch = currentBatches[0];
+        const consumed = Math.min(batch.quantity, toConsume);
+        totalConsumedCost += consumed * batch.costPrice;
+        actualConsumedQty += consumed;
+        toConsume -= consumed;
+        if (batch.quantity <= consumed) {
+          currentBatches.shift();
+        } else {
+          batch.quantity -= consumed;
+        }
+      }
+      logCostPrice = actualConsumedQty > 0 ? (totalConsumedCost / actualConsumedQty) : (item.costPrice || 0);
+    } else if (mode === 'Set') {
+      newQty = qty;
+      if (qty < oldQty) {
+        let toConsume = oldQty - qty;
+        let totalConsumedCost = 0;
+        let actualConsumedQty = 0;
+        while (toConsume > 0 && currentBatches.length > 0) {
+          const batch = currentBatches[0];
+          const consumed = Math.min(batch.quantity, toConsume);
+          totalConsumedCost += consumed * batch.costPrice;
+          actualConsumedQty += consumed;
+          toConsume -= consumed;
+          if (batch.quantity <= consumed) {
+            currentBatches.shift();
+          } else {
+            batch.quantity -= consumed;
+          }
+        }
+        logCostPrice = actualConsumedQty > 0 ? (totalConsumedCost / actualConsumedQty) : (item.costPrice || 0);
+      } else if (qty > oldQty) {
+        const diff = qty - oldQty;
+        const cost = replenishmentCostPrice !== undefined ? replenishmentCostPrice : (item.costPrice || 0);
+        currentBatches.push({
+          id: 'batch-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+          quantity: diff,
+          costPrice: cost,
+          created_at: new Date().toISOString()
+        });
+        logCostPrice = cost;
+      }
+    }
+
+    // Calculate dynamic average cost price from remaining batches
+    let newAverageCost = item.costPrice;
+    const totalRemainingQty = currentBatches.reduce((acc, b) => acc + b.quantity, 0);
+    if (totalRemainingQty > 0) {
+      const totalRemainingCost = currentBatches.reduce((acc, b) => acc + (b.quantity * b.costPrice), 0);
+      newAverageCost = totalRemainingCost / totalRemainingQty;
+    }
 
     const { error: updateError } = await supabase
       .from('products')
-      .update({ stock: newQty })
+      .update({ 
+        stock: newQty,
+        cost_price: newAverageCost,
+        fifo_batches: currentBatches
+      })
       .eq('id', id);
 
     if (updateError) {
@@ -500,6 +588,7 @@ export const useStore = create<AppState>()((set, get) => ({
     }
 
     const staffName = get().currentUser?.name || 'System';
+
     const { data: logData, error: logError } = await supabase
       .from('stock_logs')
       .insert([{
@@ -509,7 +598,8 @@ export const useStore = create<AppState>()((set, get) => ({
         old_qty: oldQty,
         new_qty: newQty,
         reason: reason,
-        staff_name: staffName
+        staff_name: staffName,
+        cost_price: logCostPrice
       }])
       .select()
       .single();
@@ -524,16 +614,27 @@ export const useStore = create<AppState>()((set, get) => ({
         newQty: newQty,
         reason: logData.reason || '',
         staffName: logData.staff_name || 'System',
-        timestamp: logData.created_at
+        timestamp: logData.created_at,
+        costPrice: Number(logData.cost_price || 0)
       };
       set(s => ({ 
         stockLogs: [newLog, ...s.stockLogs],
-        inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i)
+        inventory: s.inventory.map(i => i.id === id ? { 
+          ...i, 
+          stock: newQty,
+          costPrice: newAverageCost,
+          fifoBatches: currentBatches
+        } : i)
       }));
     } else {
       console.error("Error adding stock log to Supabase:", logError);
       set(s => ({
-        inventory: s.inventory.map(i => i.id === id ? { ...i, stock: newQty } : i)
+        inventory: s.inventory.map(i => i.id === id ? { 
+          ...i, 
+          stock: newQty,
+          costPrice: newAverageCost,
+          fifoBatches: currentBatches
+        } : i)
       }));
     }
   },
@@ -1037,6 +1138,7 @@ export const useStore = create<AppState>()((set, get) => ({
       const newTx: Transaction = {
         id: data.id,
         date: data.created_at.split('T')[0],
+        createdAt: data.created_at,
         amount: Number(data.amount || 0),
         discountAmount: Number(data.discount_amount || 0),
         subtotal: Number(data.subtotal || 0),

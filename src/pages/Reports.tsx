@@ -17,14 +17,46 @@ import {
 import { toast } from 'sonner';
 
 const Reports = () => {
-  const { transactions, currency, verifyPassword, deleteTransaction, language, partners } = useStore();
+  const { transactions, currency, verifyPassword, deleteTransaction, language, partners, inventory } = useStore();
   const t = translations[language];
   
   const [dateRange, setDateRange] = useState<'today' | '7days' | 'month' | 'all'>('all');
   const [activeReport, setActiveTab] = useState<'general' | 'consignment'>('general');
 
+  // Processed transactions to filter only products (exclude services),
+  // and set price to negative for products deleted from inventory.
+  const processedTransactions = useMemo(() => {
+    return transactions.map(t => {
+      const productItems = (t.items || [])
+        .filter((item: any) => item.type === 'Product')
+        .map((item: any) => {
+          const exists = (inventory || []).some((inv: any) => inv.id === item.id);
+          const price = item.finalPrice !== undefined ? item.finalPrice : item.price;
+          // If deleted, price/finalPrice should be negative
+          const adjustedPrice = exists ? price : -Math.abs(price);
+          return {
+            ...item,
+            price: adjustedPrice,
+            finalPrice: adjustedPrice
+          };
+        });
+
+      // Recalculate amount as sum of adjusted product items
+      const newAmount = productItems.reduce((sum, item) => {
+        const qty = item.quantity || 1;
+        return sum + (item.finalPrice * qty);
+      }, 0);
+
+      return {
+        ...t,
+        items: productItems,
+        amount: newAmount
+      };
+    }).filter(t => t.items.length > 0);
+  }, [transactions, inventory]);
+
   const filteredData = useMemo(() => {
-    let data = [...transactions];
+    let data = [...processedTransactions];
     const today = new Date().toISOString().split('T')[0];
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -36,7 +68,7 @@ const Reports = () => {
     if (dateRange === 'month') data = data.filter(t => new Date(t.date) >= monthAgo);
 
     return data;
-  }, [transactions, dateRange]);
+  }, [processedTransactions, dateRange]);
 
   const consignmentStats = useMemo(() => {
     const report: Record<string, { total: number, payout: number, profit: number, items: number }> = {};
@@ -100,6 +132,23 @@ const Reports = () => {
     return { totalRevenue, totalDiscounts, totalOrders, chartData };
   }, [filteredData]);
 
+  const bestSellers = useMemo(() => {
+    const counts: Record<string, { id: string; title: string; quantity: number; totalRevenue: number }> = {};
+    filteredData.forEach(tx => {
+      tx.items.forEach(item => {
+        if (!counts[item.id]) {
+          counts[item.id] = { id: item.id, title: item.title || 'Unknown Product', quantity: 0, totalRevenue: 0 };
+        }
+        const qty = item.quantity || 1;
+        counts[item.id].quantity += qty;
+        counts[item.id].totalRevenue += (item.finalPrice || item.price || 0) * qty;
+      });
+    });
+    return Object.values(counts)
+      .sort((a, b) => b.quantity - a.quantity || b.totalRevenue - a.totalRevenue)
+      .slice(0, 5);
+  }, [filteredData]);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <header className="px-6 lg:px-12 py-8 shrink-0 bg-white border-b border-gray-100">
@@ -154,7 +203,9 @@ const Reports = () => {
                 <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                   <div className="w-12 h-12 bg-green-50 text-green-500 rounded-2xl flex items-center justify-center mb-6"><DollarSign size={24} /></div>
                   <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">{t.totalRevenue}</p>
-                  <h2 className="text-4xl font-black text-[#1A1F3D]">{currency}{stats.totalRevenue.toLocaleString()}</h2>
+                  <h2 className={cn("text-4xl font-black", stats.totalRevenue < 0 ? "text-red-500" : "text-[#1A1F3D]")}>
+                    {stats.totalRevenue < 0 ? `-${currency}${Math.abs(stats.totalRevenue).toLocaleString()}` : `${currency}${stats.totalRevenue.toLocaleString()}`}
+                  </h2>
                 </div>
                 <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                   <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mb-6"><ArrowDownCircle size={24} /></div>
@@ -168,24 +219,87 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
-                <h3 className="text-xl font-black text-[#1A1F3D] mb-10">Revenue Trend</h3>
-                <div className="h-[350px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={stats.chartData}>
-                      <defs>
-                        <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#1A1F3D" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#1A1F3D" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10, fontWeight: 700}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10, fontWeight: 700}} />
-                      <Tooltip contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)'}} />
-                      <Area type="monotone" dataKey="amount" stroke="#1A1F3D" strokeWidth={4} fillOpacity={1} fill="url(#colorAmt)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Revenue Trend - Reduced to Half Width */}
+                <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xl font-black text-[#1A1F3D] mb-10">Revenue Trend</h3>
+                  </div>
+                  <div className="h-[350px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={stats.chartData}>
+                        <defs>
+                          <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#1A1F3D" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#1A1F3D" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10, fontWeight: 700}} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10, fontWeight: 700}} />
+                        <Tooltip contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)'}} />
+                        <Area type="monotone" dataKey="amount" stroke="#1A1F3D" strokeWidth={4} fillOpacity={1} fill="url(#colorAmt)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Best-Selling Products Ranking */}
+                <div className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm flex flex-col">
+                  <div className="mb-6">
+                    <h3 className="text-xl font-black text-[#1A1F3D]">
+                      {language === 'th' ? 'ลำดับสินค้าขายดี' : 'Best-Selling Products'}
+                    </h3>
+                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+                      {language === 'th' ? '5 อันดับสินค้าที่ขายได้มากที่สุด' : 'Top 5 products by sales volume'}
+                    </p>
+                  </div>
+
+                  <div className="flex-1 flex flex-col justify-start space-y-4">
+                    {bestSellers.length === 0 ? (
+                      <div className="text-center py-20 opacity-25">
+                        <Package size={48} className="mx-auto mb-4" />
+                        <p className="font-black text-sm">{language === 'th' ? 'ไม่มีข้อมูลการขายสินค้า' : 'No product sales recorded'}</p>
+                      </div>
+                    ) : (
+                      bestSellers.map((item, index) => {
+                        const rankColors = [
+                          'bg-amber-100 text-amber-700 border-amber-200', // 1st
+                          'bg-slate-100 text-slate-700 border-slate-200', // 2nd
+                          'bg-orange-100 text-orange-700 border-orange-200', // 3rd
+                          'bg-gray-50 text-gray-500 border-gray-100', // 4th
+                          'bg-gray-50 text-gray-500 border-gray-100', // 5th
+                        ];
+
+                        return (
+                          <div 
+                            key={item.id} 
+                            className="flex items-center gap-4 p-4 rounded-3xl border border-gray-50 hover:border-gray-100 hover:bg-[#F8F9FD]/50 transition-all group"
+                          >
+                            <div className={cn(
+                              "w-10 h-10 rounded-2xl flex items-center justify-center font-black border text-sm shrink-0",
+                              rankColors[index]
+                            )}>
+                              {index + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-black text-[#1A1F3D] text-sm truncate group-hover:text-indigo-600 transition-colors">
+                                {item.title}
+                              </h4>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase">
+                                {language === 'th' ? 'ยอดขายรวม' : 'Total Revenue'}: {currency}{item.totalRevenue.toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="bg-indigo-50 text-indigo-700 font-black text-xs px-3.5 py-1.5 rounded-full">
+                                {item.quantity} {language === 'th' ? 'ชิ้น' : 'Units'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
             </>
@@ -264,7 +378,9 @@ const Reports = () => {
                         </div>
                       </td>
                       <td className="px-10 py-8 font-black text-sm">{tx.customerName}</td>
-                      <td className="px-10 py-8 text-right font-black">{currency}{tx.amount.toFixed(2)}</td>
+                      <td className={cn("px-10 py-8 text-right font-black", tx.amount < 0 ? "text-red-500" : "text-[#1A1F3D]")}>
+                        {tx.amount < 0 ? `-${currency}${Math.abs(tx.amount).toFixed(2)}` : `${currency}${tx.amount.toFixed(2)}`}
+                      </td>
                       <td className="px-10 py-8 text-center">
                         <button onClick={() => { if(confirm('Delete?')) deleteTransaction(tx.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-xl"><Trash2 size={16}/></button>
                       </td>

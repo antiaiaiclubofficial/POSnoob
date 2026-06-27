@@ -11,9 +11,10 @@ interface InventoryModalProps {
   item?: InventoryItem | null;
   onClose: () => void;
   initialPartnerId?: string;
+  defaultIsConsignment?: boolean;
 }
 
-const InventoryModal = ({ item, onClose, initialPartnerId }: InventoryModalProps) => {
+const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment }: InventoryModalProps) => {
   const { addInventoryItem, updateInventoryItem, partners, currency } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,7 +29,7 @@ const InventoryModal = ({ item, onClose, initialPartnerId }: InventoryModalProps
     unit: 'ชิ้น',
     category: 'ทั่วไป',
     image: '',
-    isConsignment: !!initialPartnerId,
+    isConsignment: defaultIsConsignment !== undefined ? defaultIsConsignment : !!initialPartnerId,
     partnerId: initialPartnerId || ''
   });
 
@@ -68,6 +69,11 @@ const InventoryModal = ({ item, onClose, initialPartnerId }: InventoryModalProps
       return;
     }
 
+    if (formData.isConsignment && !formData.partnerId) {
+      toast.error("กรุณาเลือกคู่ค้าสำหรับสินค้าฝากขาย");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       if (item) {
@@ -98,7 +104,13 @@ const InventoryModal = ({ item, onClose, initialPartnerId }: InventoryModalProps
               <Package size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-black text-[#1A1F3D]">{item ? 'แก้ไขข้อมูลสินค้า' : 'เพิ่มสินค้าใหม่'}</h3>
+              <h3 className="text-xl font-black text-[#1A1F3D]">
+                {item 
+                  ? 'แก้ไขข้อมูลสินค้า' 
+                  : defaultIsConsignment 
+                    ? 'เพิ่มสินค้าฝากขายใหม่' 
+                    : 'เพิ่มสินค้าใหม่ (ขายเอง)'}
+              </h3>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Product Specification</p>
             </div>
           </div>
@@ -158,11 +170,7 @@ const InventoryModal = ({ item, onClose, initialPartnerId }: InventoryModalProps
            </div>
 
            {/* Section 3: Pricing & Stock Row */}
-           <div className="grid grid-cols-3 gap-6">
-              <div className="space-y-2">
-                 <label className={labelClasses}><DollarSign size={12}/> ต้นทุน ({currency})</label>
-                 <input type="number" className={inputClasses} value={formData.costPrice} onChange={e => setFormData({...formData, costPrice: Number(e.target.value)})} />
-              </div>
+           <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                  <label className={labelClasses}><DollarSign size={12}/> ราคาขาย ({currency})</label>
                  <input type="number" className={inputClasses} value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} />
@@ -173,29 +181,50 @@ const InventoryModal = ({ item, onClose, initialPartnerId }: InventoryModalProps
               </div>
            </div>
 
-           {/* Section 4: Consignment */}
-           <div className="bg-indigo-50/30 p-8 rounded-[40px] space-y-6 border border-indigo-100/50 mt-4">
-              <div className="flex items-center justify-between">
+            {/* Section 4: Consignment */}
+            {!item && defaultIsConsignment === false ? null : !item && defaultIsConsignment === true ? (
+              <div className="bg-indigo-50/50 p-8 rounded-[40px] space-y-4 border border-indigo-100 mt-4">
                  <div>
                     <span className="text-sm font-black text-indigo-900">สินค้าฝากขาย (Consignment)</span>
-                    <p className="text-[10px] text-indigo-400 font-bold uppercase mt-1">แบ่งเปอร์เซ็นต์ยอดขายให้คู่ค้า</p>
+                    <p className="text-[10px] text-indigo-400 font-bold uppercase mt-1">กรุณาระบุคู่ค้าผู้ฝากขาย</p>
                  </div>
-                 <Switch checked={formData.isConsignment} onCheckedChange={val => setFormData({...formData, isConsignment: val})} className="data-[state=checked]:bg-indigo-600" />
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-indigo-600 px-2">คู่ค้าฝากขาย <span className="text-red-500">*</span></label>
+                    <select 
+                      className="w-full bg-white border-none rounded-2xl px-6 py-4 font-bold text-sm shadow-sm h-[58px] appearance-none" 
+                      value={formData.partnerId}
+                      onChange={e => setFormData({...formData, partnerId: e.target.value})}
+                      required
+                    >
+                       <option value="">-- เลือกคู่ค้า --</option>
+                       {partners.map(p => <option key={p.id} value={p.id}>{p.companyName} (GP {p.gpRate}%)</option>)}
+                    </select>
+                 </div>
               </div>
-              {formData.isConsignment && (
-                <div className="space-y-2 animate-in fade-in zoom-in-95">
-                   <label className="text-[10px] font-black uppercase text-indigo-600 px-2">เลือกคู่ค้า</label>
-                   <select 
-                     className="w-full bg-white border-none rounded-2xl px-6 py-4 font-bold text-sm shadow-sm h-[58px] appearance-none" 
-                     value={formData.partnerId}
-                     onChange={e => setFormData({...formData, partnerId: e.target.value})}
-                   >
-                      <option value="">-- เลือกคู่ค้า --</option>
-                      {partners.map(p => <option key={p.id} value={p.id}>{p.companyName} (GP {p.gpRate}%)</option>)}
-                   </select>
-                </div>
-              )}
-           </div>
+            ) : (
+              <div className="bg-indigo-50/30 p-8 rounded-[40px] space-y-6 border border-indigo-100/50 mt-4">
+                 <div className="flex items-center justify-between">
+                    <div>
+                       <span className="text-sm font-black text-indigo-900">สินค้าฝากขาย (Consignment)</span>
+                       <p className="text-[10px] text-indigo-400 font-bold uppercase mt-1">แบ่งเปอร์เซ็นต์ยอดขายให้คู่ค้า</p>
+                    </div>
+                    <Switch checked={formData.isConsignment} onCheckedChange={val => setFormData({...formData, isConsignment: val})} className="data-[state=checked]:bg-indigo-600" />
+                 </div>
+                 {formData.isConsignment && (
+                   <div className="space-y-2 animate-in fade-in zoom-in-95">
+                      <label className="text-[10px] font-black uppercase text-indigo-600 px-2">เลือกคู่ค้า</label>
+                      <select 
+                        className="w-full bg-white border-none rounded-2xl px-6 py-4 font-bold text-sm shadow-sm h-[58px] appearance-none" 
+                        value={formData.partnerId}
+                        onChange={e => setFormData({...formData, partnerId: e.target.value})}
+                      >
+                         <option value="">-- เลือกคู่ค้า --</option>
+                         {partners.map(p => <option key={p.id} value={p.id}>{p.companyName} (GP {p.gpRate}%)</option>)}
+                      </select>
+                   </div>
+                 )}
+              </div>
+            )}
 
            <button 
              type="submit" 

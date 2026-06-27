@@ -98,6 +98,13 @@ export interface Service {
   coatType?: 'Short' | 'Long';
 }
 
+export interface FifoBatch {
+  id: string;
+  quantity: number;
+  costPrice: number;
+  created_at: string;
+}
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -112,6 +119,7 @@ export interface InventoryItem {
   isConsignment: boolean;
   partnerId?: string;
   consignmentRate?: number;
+  fifoBatches?: FifoBatch[];
 }
 
 export interface Partner {
@@ -137,6 +145,7 @@ export interface StockLog {
   reason: string;
   staffName: string;
   timestamp: string;
+  costPrice?: number;
 }
 
 export interface ReportHistory {
@@ -150,6 +159,7 @@ export interface ReportHistory {
 export interface Transaction {
   id: string;
   date: string;
+  createdAt?: string;
   amount: number;
   discountAmount: number;
   subtotal?: number;
@@ -368,7 +378,7 @@ export interface AppState {
   addInventoryItem: (item: any) => void;
   updateInventoryItem: (id: string, item: any) => void;
   deleteInventoryItem: (id: string) => void;
-  adjustStock: (id: string, qty: number, mode: 'Add' | 'Set' | 'In' | 'Out', reason: string) => void;
+  adjustStock: (id: string, qty: number, mode: 'Add' | 'Set' | 'In' | 'Out', reason: string, replenishmentCostPrice?: number) => void;
   
   addPartner: (partner: any) => void;
   updatePartner: (id: string, partner: any) => void;

@@ -137,7 +137,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
           </button>
         </div>
         
-        <div className="bg-[#F5F6FA] p-3 rounded-2xl flex items-center gap-3 overflow-hidden whitespace-nowrap">
+        <div className="bg-[#F3F3F3] p-3 rounded-2xl flex items-center gap-3 overflow-hidden whitespace-nowrap">
           <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-[10px] font-black border border-gray-100 shrink-0 overflow-hidden">
             {userAvatar ? (
               <img src={userAvatar} alt="User Avatar" className="w-full h-full object-cover" />

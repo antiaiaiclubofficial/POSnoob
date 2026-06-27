@@ -501,21 +501,39 @@ const AuthInitializer = () => {
         if (productsError) throw productsError;
 
         if (productsData) {
-          const formattedInventory = productsData.map(p => ({
-            id: p.id,
-            name: p.name,
-            barcode: p.barcode || '',
-            stock: p.stock || 0,
-            minStock: p.min_stock || 5,
-            price: Number(p.price || 0),
-            costPrice: Number(p.cost_price || 0),
-            unit: p.unit || 'ชิ้น',
-            category: p.category || 'ทั่วไป',
-            image: p.image_url || '',
-            isConsignment: p.is_consignment || false,
-            partnerId: p.partner_id || '',
-            consignmentRate: Number(p.consignment_rate || 0)
-          }));
+          const formattedInventory = productsData.map(p => {
+            const stock = p.stock || 0;
+            const costPrice = Number(p.cost_price || 0);
+            let fifoBatches = p.fifo_batches;
+            if (!Array.isArray(fifoBatches) || fifoBatches.length === 0) {
+              if (stock > 0) {
+                fifoBatches = [{
+                  id: 'initial-' + p.id,
+                  quantity: stock,
+                  costPrice: costPrice,
+                  created_at: p.created_at || new Date().toISOString()
+                }];
+              } else {
+                fifoBatches = [];
+              }
+            }
+            return {
+              id: p.id,
+              name: p.name,
+              barcode: p.barcode || '',
+              stock: stock,
+              minStock: p.min_stock || 5,
+              price: Number(p.price || 0),
+              costPrice: costPrice,
+              unit: p.unit || 'ชิ้น',
+              category: p.category || 'ทั่วไป',
+              image: p.image_url || '',
+              isConsignment: p.is_consignment || false,
+              partnerId: p.partner_id || '',
+              consignmentRate: Number(p.consignment_rate || 0),
+              fifoBatches: fifoBatches
+            };
+          });
           useStore.setState({ inventory: formattedInventory });
         } else {
           useStore.setState({ inventory: [] });
@@ -544,7 +562,8 @@ const AuthInitializer = () => {
             newQty: l.new_qty,
             reason: l.reason || '',
             staffName: l.staff_name || 'System',
-            timestamp: l.created_at
+            timestamp: l.created_at,
+            costPrice: Number(l.cost_price || 0)
           }));
           useStore.setState({ stockLogs: formattedLogs });
         } else {
@@ -566,6 +585,7 @@ const AuthInitializer = () => {
           const formattedTransactions = txData.map((tx: any) => ({
             id: tx.id,
             date: tx.created_at.split('T')[0],
+            createdAt: tx.created_at,
             amount: Number(tx.amount || 0),
             discountAmount: Number(tx.discount_amount || 0),
             subtotal: Number(tx.subtotal || 0),

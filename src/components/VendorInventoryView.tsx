@@ -140,6 +140,7 @@ const VendorInventoryView = ({ vendor, onClose }: VendorInventoryViewProps) => {
         <InventoryModal 
           item={null} 
           initialPartnerId={vendor.id} 
+          defaultIsConsignment={true}
           onClose={() => setIsAddProductOpen(false)} 
         />
       )}
