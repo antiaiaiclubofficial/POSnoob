@@ -19,7 +19,10 @@ import VendorInventoryView from '@/components/VendorInventoryView';
 import InventoryReportLivePreview from '@/components/InventoryReportLivePreview';
 import QuickAdjustModal from '@/components/QuickAdjustModal';
 import InventoryDashboard from '@/components/InventoryDashboard';
+import POSystem from '@/components/POSystem';
+import QuotationSystem from '@/components/QuotationSystem';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
+import { motion } from 'framer-motion';
 
 type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashboard';
 
@@ -38,6 +41,8 @@ const Inventory = () => {
   const [repStartDate, setRepStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [repEndDate, setRepEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [repShowOnlySold, setRepShowOnlySold] = useState(false);
+  const [docSubTab, setDocSubTab] = useState<'report' | 'po' | 'quotation'>('report');
+  const [reorderItem, setReorderItem] = useState<InventoryItem | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -70,7 +75,7 @@ const Inventory = () => {
     { id: 'master', label: 'สินค้าทั้งหมด', icon: LayoutGrid },
     { id: 'check', label: 'เช็คสต็อก/แจ้งเตือน', icon: AlertTriangle },
     { id: 'adjust', label: 'เติม/ปรับยอด', icon: PlusCircle },
-    { id: 'report', label: 'รายงาน Word', icon: FileText },
+    { id: 'report', label: 'เอกสาร', icon: FileText },
     { id: 'consignment', label: 'คู่ค้าฝากขาย', icon: Users },
   ];
 
@@ -426,7 +431,7 @@ const Inventory = () => {
         staffName: currentUser?.name || 'Admin'
       });
 
-      toast.success("ดาวน์โหลดรายงาน Word (.docx) เรียบร้อยแล้ว!", { id: toastId });
+      toast.success("ดาวน์โหลดเอกสาร (.docx) เรียบร้อยแล้ว!", { id: toastId });
     } catch (error: any) {
       console.error(error);
       toast.error("เกิดข้อผิดพลาดในการสร้างเอกสาร Word: " + error.message, { id: toastId });
@@ -487,26 +492,30 @@ const Inventory = () => {
                   <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">คู่ค้า</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold shadow-inner appearance-none" value={partnerFilter} onChange={e => setPartnerFilter(e.target.value)}><option value="">ทั้งหมด</option>{partners.map(p => <option key={p.id} value={p.id}>{p.companyName}</option>)}</select></div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setEditingItem(null);
                       setDefaultIsConsignment(false);
                       setIsItemModalOpen(true);
                     }}
-                    className="bg-[#1A1F3D] hover:bg-[#2A3152] text-white px-6 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 whitespace-nowrap animate-all"
+                    className="bg-[#1A1F3D] hover:bg-[#2A3152] text-white px-6 py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 whitespace-nowrap"
                   >
                     <Plus size={18} /> เพิ่มสินค้าขายเอง
-                  </button>
-                  <button
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setEditingItem(null);
                       setDefaultIsConsignment(true);
                       setIsItemModalOpen(true);
                     }}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 whitespace-nowrap animate-all"
+                    className="bg-[#EAFD69] hover:brightness-95 text-[#18234A] px-6 py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 whitespace-nowrap"
                   >
                     <Plus size={18} /> เพิ่มสินค้าฝากขาย
-                  </button>
+                  </motion.button>
                 </div>
               </div>
             </div>
@@ -564,10 +573,19 @@ const Inventory = () => {
                               ? "bg-red-50 text-red-700 border-red-100"
                               : item.stock <= item.minStock
                                 ? "bg-amber-50 text-amber-700 border-amber-100"
-                                : "bg-emerald-50 text-emerald-700 border-emerald-100"
-                          )}>
+                                : "bg-emerald-50 text-emerald-700 border-emerald-100",
+                            (item.stock <= item.minStock) && "cursor-pointer hover:opacity-80 transition-opacity"
+                          )}
+                          onClick={() => {
+                            if (item.stock <= item.minStock) {
+                              setReorderItem(item);
+                              setActiveTab('report');
+                              setDocSubTab('po');
+                            }
+                          }}
+                          >
                             {item.stock === 0
-                              ? "สินค้าหมด"
+                              ? "สินค้าหมด (สั่งเพิ่ม)"
                               : item.stock <= item.minStock
                                 ? `สั่งเพิ่ม (Min ${item.minStock})`
                                 : "ปกติ"}
@@ -712,6 +730,21 @@ const Inventory = () => {
                         >
                           <RotateCcw size={12} /> ปรับยอด
                         </button>
+                        {(status === 'Out' || status === 'Low') && (
+                          <button
+                            onClick={() => {
+                              setReorderItem(item);
+                              setActiveTab('report');
+                              setDocSubTab('po');
+                            }}
+                            className={cn(
+                              "flex-1 font-black text-[9px] uppercase py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm",
+                              "bg-[#1A1F3D] text-white hover:bg-gray-900 border border-[#1A1F3D]"
+                            )}
+                          >
+                            <Plus size={12} /> Reorder
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -819,8 +852,42 @@ const Inventory = () => {
         )}
 
         {activeTab === 'report' && (
-          <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-500">
-            <div className="lg:col-span-4 space-y-6">
+          <div className="space-y-6">
+            <div className="max-w-[1600px] mx-auto">
+              <div className="flex bg-white p-2 rounded-2xl border border-gray-100 shadow-sm w-max space-x-2">
+              <button
+                onClick={() => setDocSubTab('report')}
+                className={cn(
+                  "px-8 py-3 rounded-xl font-bold text-sm transition-all duration-300",
+                  docSubTab === 'report' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                )}
+              >
+                รายงานสต็อก
+              </button>
+              <button
+                onClick={() => setDocSubTab('po')}
+                className={cn(
+                  "px-8 py-3 rounded-xl font-bold text-sm transition-all duration-300",
+                  docSubTab === 'po' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                )}
+              >
+                ใบสั่งซื้อ (PO)
+              </button>
+              <button
+                onClick={() => setDocSubTab('quotation')}
+                className={cn(
+                  "px-8 py-3 rounded-xl font-bold text-sm transition-all duration-300",
+                  docSubTab === 'quotation' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                )}
+              >
+                ใบเสนอราคา
+              </button>
+            </div>
+          </div>
+
+            {docSubTab === 'report' ? (
+              <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-500">
+                <div className="lg:col-span-4 space-y-6">
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
@@ -889,12 +956,13 @@ const Inventory = () => {
                 </div>
 
                 <div className="space-y-3 pt-2">
-                  <button onClick={handleDownloadWordReport} className="w-full bg-[#1A1F3D] text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-                    <Download size={18} /> Download Word Report (.docx)
+                  <button onClick={handleDownloadWordReport} className="w-full bg-[#1A1F3D] text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all hover:bg-gray-900">
+                    <Download size={18} /> Preview & Export Word (.docx)
                   </button>
                 </div>
               </div>
             </div>
+            
             <div className="lg:col-span-8">
               <InventoryReportLivePreview
                 reportItems={reportItems}
@@ -912,6 +980,7 @@ const Inventory = () => {
                 repShowOnlySold={repShowOnlySold}
               />
             </div>
+
             <div className="lg:col-span-12">
               <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
                 <div className="p-8 border-b border-gray-50 bg-gray-50/20 flex items-center justify-between">
@@ -954,6 +1023,12 @@ const Inventory = () => {
                 </div>
               </div>
             </div>
+          </div>
+            ) : docSubTab === 'po' ? (
+              <POSystem reorderItem={reorderItem} clearReorderItem={() => setReorderItem(null)} />
+            ) : docSubTab === 'quotation' ? (
+              <QuotationSystem />
+            ) : null}
           </div>
         )}
 

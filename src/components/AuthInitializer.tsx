@@ -531,6 +531,7 @@ const AuthInitializer = () => {
               isConsignment: p.is_consignment || false,
               partnerId: p.partner_id || '',
               consignmentRate: Number(p.consignment_rate || 0),
+              reorderQuantity: p.reorder_quantity || 20,
               fifoBatches: fifoBatches
             };
           });
@@ -701,6 +702,34 @@ const AuthInitializer = () => {
         }
       } catch (err) {
         console.warn("Failed to fetch report history from Supabase:", err);
+      }
+
+      // 11. Fetch Purchase Orders
+      try {
+        let poQuery = supabase.from('purchase_orders').select('*').order('created_at', { ascending: false });
+        if (storeId && storeId !== 'default-store') {
+          poQuery = poQuery.eq('store_id', storeId);
+        }
+        const { data: poData, error: poError } = await poQuery;
+
+        if (poError) throw poError;
+
+        if (poData) {
+          const formattedPOs = poData.map(po => ({
+            id: po.id,
+            date: po.date,
+            partnerId: po.partner_id,
+            items: po.items,
+            status: po.status,
+            totalAmount: Number(po.total_amount || 0),
+            createdBy: po.created_by
+          }));
+          useStore.setState({ purchaseOrders: formattedPOs });
+        } else {
+          useStore.setState({ purchaseOrders: [] });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch purchase orders from Supabase:", err);
       }
     };
 

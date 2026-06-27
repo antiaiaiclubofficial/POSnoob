@@ -30,7 +30,8 @@ const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment 
     category: 'ทั่วไป',
     image: '',
     isConsignment: defaultIsConsignment !== undefined ? defaultIsConsignment : !!initialPartnerId,
-    partnerId: initialPartnerId || ''
+    partnerId: initialPartnerId || '',
+    reorderQuantity: 20
   });
 
   useEffect(() => {
@@ -46,7 +47,8 @@ const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment 
         category: item.category,
         image: item.image || '',
         isConsignment: item.isConsignment,
-        partnerId: item.partnerId || ''
+        partnerId: item.partnerId || '',
+        reorderQuantity: item.reorderQuantity || 20
       });
     }
   }, [item]);
@@ -170,7 +172,7 @@ const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment 
            </div>
 
            {/* Section 3: Pricing & Stock Row */}
-           <div className="grid grid-cols-2 gap-6">
+           <div className="grid grid-cols-3 gap-6">
               <div className="space-y-2">
                  <label className={labelClasses}><DollarSign size={12}/> ราคาขาย ({currency})</label>
                  <input type="number" className={inputClasses} value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} />
@@ -178,6 +180,10 @@ const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment 
               <div className="space-y-2">
                  <label className={cn(labelClasses, "text-orange-400")}><Bell size={12}/> แจ้งเตือนขั้นต่ำ</label>
                  <input type="number" className={cn(inputClasses, "bg-orange-50/50 text-orange-600")} value={formData.minStock} onChange={e => setFormData({...formData, minStock: Number(e.target.value)})} />
+              </div>
+              <div className="space-y-2">
+                 <label className={cn(labelClasses, "text-blue-400")}><Package size={12}/> จำนวน Reorder</label>
+                 <input type="number" className={cn(inputClasses, "bg-blue-50/50 text-blue-600")} value={formData.reorderQuantity} onChange={e => setFormData({...formData, reorderQuantity: Number(e.target.value)})} />
               </div>
            </div>
 

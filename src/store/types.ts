@@ -120,6 +120,7 @@ export interface InventoryItem {
   partnerId?: string;
   consignmentRate?: number;
   fifoBatches?: FifoBatch[];
+  reorderQuantity?: number;
 }
 
 export interface Partner {
@@ -176,6 +177,42 @@ export interface Transaction {
   species: string[];
   actualDuration?: number;
   bookingType: BookingType;
+}
+
+export interface PurchaseOrderItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  date: string;
+  partnerId: string;
+  items: PurchaseOrderItem[];
+  status: 'Pending' | 'To Order' | 'On Order' | 'Completed' | 'Cancelled';
+  totalAmount: number;
+  createdBy: string;
+}
+
+export interface QuotationItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface Quotation {
+  id: string;
+  date: string;
+  partnerId: string;
+  items: QuotationItem[];
+  status: 'Pending' | 'Completed' | 'Cancelled';
+  totalAmount: number;
+  createdBy: string;
 }
 
 export interface Role {
@@ -379,6 +416,16 @@ export interface AppState {
   updateInventoryItem: (id: string, item: any) => void;
   deleteInventoryItem: (id: string) => void;
   adjustStock: (id: string, qty: number, mode: 'Add' | 'Set' | 'In' | 'Out', reason: string, replenishmentCostPrice?: number) => void;
+  
+  purchaseOrders: PurchaseOrder[];
+  addPurchaseOrder: (po: Omit<PurchaseOrder, 'id'>) => void;
+  updatePurchaseOrder: (id: string, updates: Partial<Omit<PurchaseOrder, 'id'>>) => void;
+  updatePurchaseOrderStatus: (id: string, status: 'Pending' | 'To Order' | 'On Order' | 'Completed' | 'Cancelled') => void;
+  
+  quotations: Quotation[];
+  addQuotation: (qt: Omit<Quotation, 'id'>) => void;
+  updateQuotation: (id: string, updates: Partial<Omit<Quotation, 'id'>>) => void;
+  updateQuotationStatus: (id: string, status: 'Pending' | 'Completed' | 'Cancelled') => void;
   
   addPartner: (partner: any) => void;
   updatePartner: (id: string, partner: any) => void;

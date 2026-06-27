@@ -73,7 +73,7 @@ const COLORS = {
 const PIE_COLORS = [COLORS.primary, COLORS.purple, COLORS.accentPeach, COLORS.accentRed, '#4F46E5'];
 
 export default function InventoryDashboard() {
-  const { inventory, currency, adjustStock, stockLogs, language, transactions, partners } = useStore();
+  const { inventory, currency, adjustStock, stockLogs, language, transactions, partners, addPurchaseOrder } = useStore();
   const [reorderingId, setReorderingId] = useState<string | null>(null);
   const [kpiDateRange, setKpiDateRange] = useState<'today' | 'yesterday' | '7days' | '30days' | 'all'>('all');
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
@@ -183,19 +183,27 @@ export default function InventoryDashboard() {
     const totalSKUs = activeInventory.length;
     const totalValue = activeInventory.reduce((acc, item) => acc + (item.stock * item.costPrice), 0);
     const potentialRevenue = activeInventory.reduce((acc, item) => acc + (item.stock * item.price), 0);
-    const lowStockAlerts = activeInventory.filter(item => item.stock > 0 && item.stock <= item.minStock).length;
-    const outOfStock = activeInventory.filter(item => item.stock === 0).length;
 
-    return { totalSKUs, totalValue, potentialRevenue, lowStockAlerts, outOfStock };
-  }, [activeInventory]);
-
-  // Dead Stock computation: items with stock > 0 but no sales recorded in stockLogs
-  const deadStock = useMemo(() => {
-    return activeInventory.filter(item => {
+    const lowStockAlerts = activeInventory.filter(item => item.stock > 0 && item.stock <= item.minStock);
+    const outOfStock = activeInventory.filter(item => item.stock === 0);
+    const deadStockItems = activeInventory.filter(item => {
       if (item.stock === 0) return false;
       const hasOutbound = stockLogs.some(log => log.productId === item.id && log.newQty < log.oldQty);
       return !hasOutbound;
-    }).length;
+    });
+
+    const lowIds = new Set(lowStockAlerts.map(i => i.id));
+    const outIds = new Set(outOfStock.map(i => i.id));
+    const deadIds = new Set(deadStockItems.map(i => i.id));
+
+    const normalItems = activeInventory.filter(item =>
+      !lowIds.has(item.id) && !outIds.has(item.id) && !deadIds.has(item.id)
+    );
+
+    return {
+      totalSKUs, totalValue, potentialRevenue,
+      lowStockAlerts, outOfStock, deadStockItems, normalItems
+    };
   }, [activeInventory, stockLogs]);
 
   // Processed transactions to filter only products (exclude services),
@@ -336,7 +344,7 @@ export default function InventoryDashboard() {
     } else if (kpiDateRange === '30days' || kpiDateRange === 'all') {
       const thirtyDaysAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
       const sixtyDaysAgo = new Date(startOfToday.getTime() - 60 * 24 * 60 * 60 * 1000);
-      
+
       const currentPeriodTxs = processedTransactions.filter(t => {
         const txDate = new Date(t.date);
         return txDate >= thirtyDaysAgo;
@@ -375,7 +383,7 @@ export default function InventoryDashboard() {
     for (let i = 0; i < 7; i++) {
       const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 0, 0, 0, 0);
       const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1, 0, 0, 0, 0);
-      
+
       const dayTransactions = processedTransactions.filter(t => {
         if (!t.date) return false;
         let txDate: Date;
@@ -394,7 +402,7 @@ export default function InventoryDashboard() {
       const totalAmount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
 
       const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const label = i === 0 
+      const label = i === 0
         ? (language === 'th' ? 'วันนี้' : 'Today')
         : i === 1
           ? (language === 'th' ? 'เมื่อวาน' : 'Yesterday')
@@ -541,7 +549,7 @@ export default function InventoryDashboard() {
     } else if (kpiDateRange === '30days' || kpiDateRange === 'all') {
       const thirtyDaysAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
       const sixtyDaysAgo = new Date(startOfToday.getTime() - 60 * 24 * 60 * 60 * 1000);
-      
+
       const currentPeriodTxs = processedTransactions.filter(t => {
         const txDate = new Date(t.date);
         return txDate >= thirtyDaysAgo;
@@ -597,7 +605,7 @@ export default function InventoryDashboard() {
     for (let i = 0; i < 7; i++) {
       const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 0, 0, 0, 0);
       const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1, 0, 0, 0, 0);
-      
+
       const dayTransactions = processedTransactions.filter(t => {
         if (!t.date) return false;
         let txDate: Date;
@@ -617,7 +625,7 @@ export default function InventoryDashboard() {
       const dayGP = getGP(dayTransactions);
 
       const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const label = i === 0 
+      const label = i === 0
         ? (language === 'th' ? 'วันนี้' : 'Today')
         : i === 1
           ? (language === 'th' ? 'เมื่อวาน' : 'Yesterday')
@@ -861,7 +869,7 @@ export default function InventoryDashboard() {
     for (let i = 0; i < 7; i++) {
       const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 0, 0, 0, 0);
       const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1, 0, 0, 0, 0);
-      
+
       const count = transactions.filter(t => {
         if (!t.date) return false;
         let txDate: Date;
@@ -879,7 +887,7 @@ export default function InventoryDashboard() {
       }).length;
 
       const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const label = i === 0 
+      const label = i === 0
         ? (language === 'th' ? 'วันนี้' : 'Today')
         : i === 1
           ? (language === 'th' ? 'เมื่อวาน' : 'Yesterday')
@@ -1008,16 +1016,31 @@ export default function InventoryDashboard() {
     setReorderingId(productId);
     // Simulate API request to order stock
     await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const item = inventory.find(i => i.id === productId);
+    const orderQty = item?.reorderQuantity || 20;
 
-    // In actual database, we could increase stock or mark as ordered.
-    // For visual simulation, let's add 20 units to the product in store
-    if (inventory.some(i => i.id === productId)) {
-      adjustStock(productId, 20, 'Add', 'ระบบสั่งซื้อสินค้าอัตโนมัติ (Reorder)');
+    if (item) {
+      // Instead of adding stock directly, create a pending PO
+      addPurchaseOrder({
+        date: new Date().toISOString(),
+        partnerId: item.partnerId || '', // Auto select vendor if available
+        items: [{
+          productId: item.id,
+          productName: item.name,
+          quantity: orderQty,
+          unitPrice: item.costPrice || 0,
+          total: (item.costPrice || 0) * orderQty,
+        }],
+        status: 'Pending',
+        totalAmount: (item.costPrice || 0) * orderQty,
+        createdBy: 'ระบบสั่งซื้ออัตโนมัติ (Reorder)'
+      });
     }
 
     setReorderingId(null);
-    toast.success(`ส่งใบสั่งซื้อ ${name} จำนวน 20 ชิ้น เรียบร้อยแล้ว!`, {
-      description: 'ระบบดำเนินการสร้างเอกสารใบสั่งซื้อเรียบร้อย',
+    toast.success(`สร้างใบสั่งซื้อ ${name} จำนวน ${orderQty} ชิ้นในสถานะ Pending เรียบร้อยแล้ว!`, {
+      description: 'สามารถตรวจสอบและยืนยันการรับสินค้าได้ที่หน้า Purchase Order',
       icon: <CheckCircle2 className="text-[#EAFD69] w-5 h-5" />,
       style: {
         background: COLORS.primary,
@@ -1178,7 +1201,7 @@ export default function InventoryDashboard() {
                 className="bg-white p-6 rounded-[32px] shadow-[0_20px_40px_rgba(24,35,74,0.02)] flex flex-col justify-between relative overflow-hidden group transition-shadow duration-300 hover:shadow-[0_30px_60px_rgba(24,35,74,0.06)] border border-gray-50 h-[200px]"
               >
                 <div className="absolute -top-24 -left-24 w-52 h-52 rounded-full bg-blue-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
-                
+
                 <AnimatePresence>
                   {showSalesHistory && (
                     <motion.div
@@ -1191,7 +1214,7 @@ export default function InventoryDashboard() {
                         <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">
                           {language === 'th' ? 'ประวัติยอดขาย' : 'Sales History'}
                         </span>
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowSalesHistory(false);
@@ -1238,8 +1261,8 @@ export default function InventoryDashboard() {
                   <div className="flex items-center gap-2">
                     <div className={cn(
                       "w-7 h-7 rounded-full flex items-center justify-center transition-colors shrink-0",
-                      salesRevenueGrowth >= 0 
-                        ? "bg-emerald-50 text-emerald-600" 
+                      salesRevenueGrowth >= 0
+                        ? "bg-emerald-50 text-emerald-600"
                         : "bg-rose-50 text-rose-600"
                     )}>
                       {salesRevenueGrowth >= 0 ? (
@@ -1262,7 +1285,7 @@ export default function InventoryDashboard() {
                     <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
                       <DollarSign size={14} />
                     </div>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowSalesHistory(true);
@@ -1294,7 +1317,7 @@ export default function InventoryDashboard() {
                             <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">
                               {language === 'th' ? 'ประวัติออเดอร์' : 'Order History'}
                             </span>
-                            <button 
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setShowOrderHistory(false);
@@ -1338,8 +1361,8 @@ export default function InventoryDashboard() {
                       <div className="flex items-center gap-2">
                         <div className={cn(
                           "w-7 h-7 rounded-full flex items-center justify-center transition-colors shrink-0",
-                          orderGrowthPercent >= 0 
-                            ? "bg-emerald-500/10 text-emerald-400" 
+                          orderGrowthPercent >= 0
+                            ? "bg-emerald-500/10 text-emerald-400"
                             : "bg-rose-500/10 text-rose-400"
                         )}>
                           {orderGrowthPercent >= 0 ? (
@@ -1357,9 +1380,9 @@ export default function InventoryDashboard() {
                           </span>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowOrderHistory(true);
@@ -1380,7 +1403,7 @@ export default function InventoryDashboard() {
                   className="bg-white p-6 rounded-[32px] shadow-[0_20px_40px_rgba(24,35,74,0.02)] flex flex-col justify-between relative overflow-hidden group transition-shadow duration-300 hover:shadow-[0_30px_60px_rgba(24,35,74,0.06)] border border-gray-50 w-full md:w-[200px] h-[200px] shrink-0"
                 >
                   <div className="absolute -top-24 -left-24 w-52 h-52 rounded-full bg-purple-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
-                  
+
                   <AnimatePresence>
                     {showGPHistory && (
                       <motion.div
@@ -1393,7 +1416,7 @@ export default function InventoryDashboard() {
                           <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">
                             {language === 'th' ? 'ประวัติรายได้ GP' : 'GP History'}
                           </span>
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowGPHistory(false);
@@ -1434,8 +1457,8 @@ export default function InventoryDashboard() {
                     <div className="flex items-center gap-2">
                       <div className={cn(
                         "w-7 h-7 rounded-full flex items-center justify-center transition-colors shrink-0",
-                        consignmentGPGrowth >= 0 
-                          ? "bg-emerald-50 text-emerald-600" 
+                        consignmentGPGrowth >= 0
+                          ? "bg-emerald-50 text-emerald-600"
                           : "bg-rose-50 text-rose-600"
                       )}>
                         {consignmentGPGrowth >= 0 ? (
@@ -1455,7 +1478,7 @@ export default function InventoryDashboard() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <button 
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setShowGPHistory(true);
@@ -1486,6 +1509,9 @@ export default function InventoryDashboard() {
                       <h3 className="text-base font-black text-[#18234A] tracking-wide uppercase">
                         {language === 'th' ? 'รายการขาย' : 'Total Sales'}
                       </h3>
+                      <span className="text-[10px] text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded-full shrink-0 ml-1">
+                        {dateRangeLabel}
+                      </span>
                     </div>
                   </div>
                   <button
@@ -1574,12 +1600,12 @@ export default function InventoryDashboard() {
             <motion.div
               variants={cardVariants}
               whileHover={{ y: -4, scale: 1.01 }}
-              className="bg-[#EAFD69] text-[#18234A] p-5 rounded-[24px] shadow-[0_10px_25px_rgba(234,253,105,0.06)] relative overflow-hidden flex flex-col justify-between group/val h-[95px]"
+              className="bg-[#EAFD69] text-[#18234A] p-5 rounded-[24px] shadow-[0_10px_25px_rgba(234,253,105,0.06)] relative overflow-hidden flex flex-col justify-between group/val h-[105px]"
             >
               <div className="absolute right-0 top-0 w-24 h-24 rounded-full bg-[#18234A]/5 blur-xl group-hover/val:scale-125 transition-transform duration-500 pointer-events-none" />
               <div className="z-10">
-                <span className="text-[8px] font-black text-[#18234A]/60 uppercase tracking-widest block mb-0.5">
-                  {language === 'th' ? 'มูลค่าคลังสินค้า' : 'Valuation'}
+                <span className="text-[10px] font-black text-[#18234A]/60 uppercase tracking-widest block mb-1">
+                  {language === 'th' ? 'มูลค่าสินค้าคงคลัง' : 'Inventory Value'}
                 </span>
                 <span className="text-xl font-black font-sans block tracking-tight leading-none">
                   {currency}{stats.totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -1603,33 +1629,45 @@ export default function InventoryDashboard() {
             <motion.div
               variants={cardVariants}
               whileHover={{ y: -4, scale: 1.01 }}
-              className="bg-[#18234A] text-white p-5 rounded-[24px] shadow-[0_10px_25px_rgba(24,35,74,0.1)] relative overflow-hidden flex flex-col justify-between group/rev h-[95px]"
+              className="bg-[#E2DFFF] text-[#18234A] p-5 rounded-[24px] shadow-[0_10px_25px_rgba(226,223,255,0.4)] relative overflow-hidden flex flex-col justify-between group/rev h-[105px]"
             >
-              <div className="absolute left-0 bottom-0 w-24 h-24 rounded-full bg-[#B5A2F2]/10 blur-xl group-hover/rev:scale-125 transition-transform duration-500 pointer-events-none" />
+              <div className="absolute left-0 bottom-0 w-24 h-24 rounded-full bg-white/40 blur-xl group-hover/rev:scale-125 transition-transform duration-500 pointer-events-none" />
               <div className="z-10">
-                <span className="text-[8px] font-black text-white/50 uppercase tracking-widest block mb-0.5">
-                  {language === 'th' ? 'รายได้ที่อาจเกิด' : 'Potential Rev'}
+                <span className="text-[10px] font-black text-[#18234A]/60 uppercase tracking-widest block mb-1">
+                  {language === 'th' ? 'มูลค่าเมื่อขายหมด' : 'Total Sell Value'}
                 </span>
-                <span className="text-xl font-black font-sans block tracking-tight text-white leading-none">
+                <span className="text-xl font-black font-sans block tracking-tight text-[#18234A] leading-none">
                   {currency}{stats.potentialRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
               </div>
 
-              <div className="z-10 flex justify-between items-center mt-auto">
+              <div className="z-10 flex items-center gap-2 mt-auto pt-2">
+                <div className="w-5 h-5 rounded-full bg-white/60 flex items-center justify-center shadow-sm shrink-0">
+                  {stats.totalValue > 0 && ((stats.potentialRevenue - stats.totalValue) / stats.totalValue) * 100 >= 0 ? (
+                    <TrendingUp className="w-3 h-3 text-emerald-600" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3 text-rose-600" />
+                  )}
+                </div>
                 {stats.potentialRevenue > 0 && (
-                  <span className="text-[7px] font-black text-[#B5A2F2]/80 uppercase tracking-widest whitespace-nowrap">
-                    {Math.round(((stats.potentialRevenue - stats.totalValue) / stats.potentialRevenue) * 100)}% {language === 'th' ? 'กำไร' : 'Margin'}
+                  <span className={cn(
+                    "text-[9px] font-black uppercase tracking-widest whitespace-nowrap",
+                    stats.totalValue > 0 && ((stats.potentialRevenue - stats.totalValue) / stats.totalValue) * 100 >= 0 
+                      ? "text-emerald-600" 
+                      : "text-rose-600"
+                  )}>
+                    {stats.totalValue > 0 ? Math.abs(Math.round(((stats.potentialRevenue - stats.totalValue) / stats.totalValue) * 100)) : 100}% {language === 'th' ? 'กำไรจากทุน' : 'Margin'}
                   </span>
                 )}
-                <div className="w-6 h-6 rounded-full bg-[#B5A2F2]/25 flex items-center justify-center">
-                  <TrendingUp className="w-2.5 h-2.5 text-[#B5A2F2]" />
-                </div>
               </div>
             </motion.div>
           </div>
 
           {/* Widget 7: Status Capsules */}
-          <div className="bg-white p-6 rounded-[32px] shadow-[0_20px_40px_rgba(24,35,74,0.02)] border border-gray-50 flex flex-col justify-between flex-1 min-h-[250px]">
+          <motion.div 
+            variants={cardVariants}
+            className="bg-white p-6 rounded-[32px] shadow-[0_20px_40px_rgba(24,35,74,0.02)] border border-gray-50 flex flex-col justify-between flex-1 min-h-[250px]"
+          >
             <div className="flex items-center gap-2 mb-2">
               <div className="w-[3px] h-5 bg-[#10B981] rounded-full" />
               <h3 className="text-xs font-extrabold text-[#18234A] tracking-wider uppercase">
@@ -1639,7 +1677,7 @@ export default function InventoryDashboard() {
             <div className="grid grid-cols-4 gap-3 flex-1 items-stretch mt-2">
               {(() => {
                 const totalVolume = stats.totalSKUs || 1;
-                const normalCount = Math.max(0, stats.totalSKUs - stats.lowStockAlerts - stats.outOfStock);
+                const normalCount = stats.normalItems.length;
 
                 const capsules = [
                   {
@@ -1647,57 +1685,88 @@ export default function InventoryDashboard() {
                     label: language === 'th' ? 'ปกติ' : 'In Stock',
                     textColor: 'text-[#10B981]',
                     pillBg: 'bg-gradient-to-t from-[#10B981] to-[#34D399]/40',
-                    volumePercent: Math.round((normalCount / totalVolume) * 100)
+                    volumePercent: Math.round((normalCount / totalVolume) * 100),
+                    items: stats.normalItems
                   },
                   {
-                    value: stats.lowStockAlerts,
+                    value: stats.lowStockAlerts.length,
                     label: language === 'th' ? 'ใกล้หมด' : 'Low Stock',
                     textColor: 'text-[#D97706]',
                     pillBg: 'bg-gradient-to-t from-[#F59E0B] to-[#FBBF24]/50',
-                    volumePercent: Math.round((stats.lowStockAlerts / totalVolume) * 100)
+                    volumePercent: Math.round((stats.lowStockAlerts.length / totalVolume) * 100),
+                    items: stats.lowStockAlerts
                   },
                   {
-                    value: stats.outOfStock,
+                    value: stats.outOfStock.length,
                     label: language === 'th' ? 'หมดเกลี้ยง' : 'Out of Stock',
                     textColor: 'text-[#EF4444]',
                     pillBg: 'bg-gradient-to-t from-[#EF4444] to-[#F87171]/40',
-                    volumePercent: Math.round((stats.outOfStock / totalVolume) * 100)
+                    volumePercent: Math.round((stats.outOfStock.length / totalVolume) * 100),
+                    items: stats.outOfStock
                   },
                   {
-                    value: deadStock,
-                    label: language === 'th' ? 'ค้างนาน' : 'Dead Stock',
+                    value: stats.deadStockItems.length,
+                    label: language === 'th' ? 'ยังขายไม่ได้' : 'Dead Stock',
                     textColor: 'text-[#6B7280]',
                     pillBg: 'bg-gradient-to-t from-[#6B7280] to-[#9CA3AF]/40',
-                    volumePercent: Math.round((deadStock / totalVolume) * 100)
+                    volumePercent: Math.round((stats.deadStockItems.length / totalVolume) * 100),
+                    items: stats.deadStockItems
                   }
                 ];
 
                 return capsules.map((cap, idx) => (
-                  <div
+                  <motion.div
                     key={idx}
-                    className="bg-gray-50/50 rounded-[20px] p-3 flex flex-col justify-between items-center text-center relative overflow-hidden group hover:shadow-md transition-all duration-300"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + idx * 0.1, duration: 0.4, type: "spring", stiffness: 100 }}
+                    className="bg-gray-50/50 rounded-[20px] p-3 flex flex-col justify-between items-center text-center relative group hover:shadow-md transition-all duration-300"
                   >
                     <div className="z-10 mt-1">
-                      <span className={cn("text-lg font-black block tracking-tight font-sans", cap.textColor)}>
+                      <motion.span 
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.2 + idx * 0.1, type: "spring", stiffness: 200, damping: 12 }}
+                        className={cn("text-2xl font-black block tracking-tight font-sans", cap.textColor)}
+                      >
                         {cap.value}
-                      </span>
-                      <span className="text-[8px] font-bold text-gray-400 block mt-1 leading-tight whitespace-nowrap">
+                      </motion.span>
+                      <span className="text-[10px] font-bold text-gray-400 block mt-1.5 leading-tight whitespace-nowrap">
                         {cap.label}
                       </span>
                     </div>
 
                     {/* Capsule Glass Shape at Bottom */}
-                    <div className="w-full h-[55%] flex items-end justify-center px-1 mb-1 pointer-events-none">
-                      <div
-                        className={cn("w-full rounded-full opacity-90 group-hover:scale-105 transition-all duration-500", cap.pillBg)}
-                        style={{ height: `${cap.value > 0 ? Math.max(15, cap.volumePercent) : 0}%` }}
-                      />
+                    <div className="w-full h-[55%] flex items-end justify-center px-1 mb-1 rounded-[20px] absolute bottom-0 left-0 pointer-events-none">
+                      <motion.div
+                        initial={{ height: "0%" }}
+                        animate={{ height: `${cap.value > 0 ? Math.max(15, cap.volumePercent) : 0}%` }}
+                        transition={{ delay: 0.3 + idx * 0.1, duration: 0.8, type: "spring", bounce: 0.4 }}
+                        className={cn("w-[80%] mx-auto rounded-t-[20px] rounded-b-[4px] opacity-90 group-hover:scale-105 transition-transform duration-500 relative", cap.pillBg)}
+                      >
+                        {/* Tooltip for items */}
+                        {cap.items.length > 0 && (
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%+8px)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 bg-gray-900 text-white text-[10px] rounded-lg p-2.5 shadow-xl whitespace-nowrap w-max max-w-[200px]">
+                            <div className="font-bold mb-1.5 border-b border-gray-700 pb-1.5 text-center text-gray-100">{cap.label} ({cap.value})</div>
+                            <ul className="text-left flex flex-col gap-1">
+                              {cap.items.slice(0, 5).map(item => (
+                                <li key={item.id} className="truncate text-gray-300">• {item.name}</li>
+                              ))}
+                              {cap.items.length > 5 && (
+                                <li className="text-gray-400 italic text-center mt-1">... {language === 'th' ? `และอีก ${cap.items.length - 5} รายการ` : `and ${cap.items.length - 5} more`}</li>
+                              )}
+                            </ul>
+                            {/* Triangle pointing down */}
+                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-gray-900" />
+                          </div>
+                        )}
+                      </motion.div>
                     </div>
-                  </div>
+                  </motion.div>
                 ));
               })()}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
