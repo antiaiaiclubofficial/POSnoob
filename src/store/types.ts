@@ -178,6 +178,26 @@ export interface Transaction {
   actualDuration?: number;
   bookingType: BookingType;
 }
+export interface GoodsReceiptItem {
+  productId: string;
+  productName: string;
+  quantityExpected: number;
+  quantityReceived: number;
+  unitPrice: number;
+  total: number;
+  remarks?: string;
+}
+
+export interface GoodsReceipt {
+  id: string;
+  date: string;
+  poId?: string;
+  partnerId: string;
+  items: GoodsReceiptItem[];
+  status: 'Pending' | 'Completed' | 'Cancelled';
+  totalAmount: number;
+  receiverName: string;
+}
 
 export interface PurchaseOrderItem {
   productId: string;
@@ -197,7 +217,7 @@ export interface PurchaseOrder {
   createdBy: string;
 }
 
-export interface QuotationItem {
+export interface PurchaseRequestItem {
   productId: string;
   productName: string;
   quantity: number;
@@ -205,11 +225,52 @@ export interface QuotationItem {
   total: number;
 }
 
-export interface Quotation {
+export interface PurchaseRequest {
   id: string;
   date: string;
   partnerId: string;
+  items: PurchaseRequestItem[];
+  status: 'Pending' | 'Approved' | 'Cancelled';
+  totalAmount: number;
+  createdBy: string;
+}
+
+export interface QuotationItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  itemType?: 'product' | 'service' | 'addon' | 'package' | 'credit';
+}
+
+export interface Quotation {
+  id: string;
+  date: string;
+  partnerId?: string;
+  customerName?: string;
+  customerAddress?: string;
+  customerTaxId?: string;
+  customerPhone?: string;
   items: QuotationItem[];
+  status: 'Pending' | 'Completed' | 'Cancelled';
+  totalAmount: number;
+  createdBy: string;
+}
+
+export interface SalesOrderItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface SalesOrder {
+  id: string;
+  date: string;
+  partnerId: string; // Or customerId if it makes sense, but we'll use partnerId to match Quotation clone for now
+  items: SalesOrderItem[];
   status: 'Pending' | 'Completed' | 'Cancelled';
   totalAmount: number;
   createdBy: string;
@@ -297,7 +358,7 @@ export interface AppState {
   isUserSuspended?: boolean;
   isStoreSuspended?: boolean;
   storeId: string | null;
-  
+
   // Business Profile
   shopName: string;
   shopLogo: string | null;
@@ -326,7 +387,7 @@ export interface AppState {
   liffChannelId: string;
   liffChannelSecret: string;
   liffEnabled: boolean;
-  
+
   // Lists
   customers: Customer[];
   selectedOwner: Customer | null;
@@ -367,12 +428,12 @@ export interface AppState {
   setSession: (user: any, navigate: any) => void; // Add navigate
   addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
   addReportLog: (log: Omit<ReportHistory, 'id' | 'timestamp'>) => void;
-  
+
   updateBusinessProfile: (profile: any) => void;
   updateBookingSettings: (settings: any) => void;
   updateTierRules: (rules: TierRule[]) => void;
   updateRolePermissions: (role: StaffRole, permissions: string[]) => void;
-  
+
   setCustomers: (customers: Customer[]) => void;
   selectOwner: (owner: Customer | null) => void;
   setActivePet: (pet: Pet | null) => void;
@@ -381,12 +442,12 @@ export interface AppState {
   updateCustomer: (id: string, data: any) => void;
   deleteCustomer: (id: string) => void;
   bindLineToCustomer: (customerId: string, lineId: string) => void;
-  
+
   addPet: (customerId: string, pet: any) => void;
   updatePet: (customerId: string, petId: string, data: any) => void;
   updatePetWeight: (customerId: string, petId: string, weight: number) => void;
   saveIntakeRecord: (customerId: string, petId: string, record: any) => void;
-  
+
   addBooking: (booking: any) => void;
   updateQueueStatus: (id: string, status: QueueStatus) => void;
   removeQueueItem: (id: string) => void;
@@ -407,30 +468,46 @@ export interface AppState {
   updateService: (id: string, service: any) => void;
   deleteService: (id: string) => void;
   toggleServiceActive: (id: string) => void;
-  
+
   addAddon: (addon: any) => void;
   updateAddon: (id: string, addon: any) => void;
   deleteAddon: (id: string) => void;
-  
+
   addInventoryItem: (item: any) => void;
   updateInventoryItem: (id: string, item: any) => void;
   deleteInventoryItem: (id: string) => void;
   adjustStock: (id: string, qty: number, mode: 'Add' | 'Set' | 'In' | 'Out', reason: string, replenishmentCostPrice?: number) => void;
-  
+
   purchaseOrders: PurchaseOrder[];
   addPurchaseOrder: (po: Omit<PurchaseOrder, 'id'>) => void;
   updatePurchaseOrder: (id: string, updates: Partial<Omit<PurchaseOrder, 'id'>>) => void;
   updatePurchaseOrderStatus: (id: string, status: 'Pending' | 'To Order' | 'On Order' | 'Completed' | 'Cancelled') => void;
-  
+
+  goodsReceipts: GoodsReceipt[];
+  addGoodsReceipt: (gr: Omit<GoodsReceipt, 'id'>) => void;
+  updateGoodsReceipt: (id: string, updates: Partial<Omit<GoodsReceipt, 'id'>>) => void;
+  updateGoodsReceiptStatus: (id: string, status: 'Pending' | 'Completed' | 'Cancelled') => void;
+
+  purchaseRequests: PurchaseRequest[];
+  addPurchaseRequest: (pr: Omit<PurchaseRequest, 'id'>) => void;
+  updatePurchaseRequest: (id: string, updates: Partial<Omit<PurchaseRequest, 'id'>>) => void;
+  updatePurchaseRequestStatus: (id: string, status: 'Pending' | 'Approved' | 'Cancelled') => void;
+  approvePurchaseRequestToPO: (id: string) => void;
+
   quotations: Quotation[];
   addQuotation: (qt: Omit<Quotation, 'id'>) => void;
   updateQuotation: (id: string, updates: Partial<Omit<Quotation, 'id'>>) => void;
   updateQuotationStatus: (id: string, status: 'Pending' | 'Completed' | 'Cancelled') => void;
-  
+
+  salesOrders: SalesOrder[];
+  addSalesOrder: (so: Omit<SalesOrder, 'id'>) => void;
+  updateSalesOrder: (id: string, updates: Partial<Omit<SalesOrder, 'id'>>) => void;
+  updateSalesOrderStatus: (id: string, status: 'Pending' | 'Completed' | 'Cancelled') => void;
+
   addPartner: (partner: any) => void;
   updatePartner: (id: string, partner: any) => void;
   deletePartner: (id: string) => void;
-  
+
   addStaff: (staff: any) => void;
   updateStaff: (id: string, staff: any) => void;
   deleteStaff: (id: string) => void;
@@ -438,12 +515,12 @@ export interface AppState {
   addRole: (role: Omit<Role, 'id' | 'created_at'>) => Promise<void>; // Add role actions
   updateRole: (id: string, role: Partial<Omit<Role, 'id' | 'created_at'>>) => Promise<void>;
   deleteRole: (id: string) => Promise<void>;
-  
+
   addPackageTemplate: (pkg: any) => void;
   updatePackageTemplate: (id: string, pkg: any) => void;
   deletePackageTemplate: (id: string) => void;
   assignPackageToCustomer: (customerId: string, templateId: string) => void;
-  
+
   addCreditPackage: (pkg: any) => void;
   updateCreditPackage: (id: string, pkg: any) => void;
   deleteCreditPackage: (id: string) => void;

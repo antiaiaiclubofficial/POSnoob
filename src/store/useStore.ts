@@ -3,11 +3,11 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { 
-  AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer, 
-  QueueItem, Service, InventoryItem, Partner, StockLog, Transaction, 
-  Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate, 
-  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory, Role 
+import {
+  AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer,
+  QueueItem, Service, InventoryItem, Partner, StockLog, Transaction,
+  Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate,
+  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory, Role
 } from './types';
 import { createAuthSlice } from './slices/authSlice';
 import { createCRMSlice } from './slices/crmSlice';
@@ -42,7 +42,7 @@ export const useStore = create<AppState>()((set, get) => ({
   maxStaff: 10,
   pointsEarnRate: 10,
   pointsRedeemRate: 1,
-  
+
   // Lists
   services: [],
   addons: [],
@@ -56,8 +56,11 @@ export const useStore = create<AppState>()((set, get) => ({
   logs: [],
   reportHistory: [],
   roles: [], // Initialize roles array
+  goodsReceipts: [],
   purchaseOrders: [],
+  purchaseRequests: [],
   quotations: [],
+  salesOrders: [],
   staffSettings: {
     attendance: {
       requireGps: false,
@@ -87,7 +90,7 @@ export const useStore = create<AppState>()((set, get) => ({
   disabledSlots: [],
   recurringHolidays: [],
   specificHolidays: [],
-  
+
   rolePermissions: {
     'superadmin': ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings'],
     'Admin': ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings'],
@@ -100,8 +103,8 @@ export const useStore = create<AppState>()((set, get) => ({
 
   setLanguage: (lang) => set({ language: lang }),
 
-  addLog: (log) => set(s => ({ 
-    logs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() } as ActivityLog, ...s.logs] 
+  addLog: (log) => set(s => ({
+    logs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() } as ActivityLog, ...s.logs]
   })),
 
   addReportLog: async (log) => {
@@ -203,7 +206,7 @@ export const useStore = create<AppState>()((set, get) => ({
     }
     toast.success("Booking settings updated successfully!");
   },
-  
+
   updateTierRules: async (rules) => {
     try {
       for (const rule of rules) {
@@ -465,8 +468,8 @@ export const useStore = create<AppState>()((set, get) => ({
 
     if (!error) {
       set(s => ({
-        inventory: s.inventory.map(itemObj => itemObj.id === id ? { 
-          ...itemObj, 
+        inventory: s.inventory.map(itemObj => itemObj.id === id ? {
+          ...itemObj,
           ...item,
           consignmentRate: item.consignmentRate || item.consignment_rate || resolvedRate || 0
         } : itemObj)
@@ -580,7 +583,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
     const { error: updateError } = await supabase
       .from('products')
-      .update({ 
+      .update({
         stock: newQty,
         cost_price: newAverageCost,
         fifo_batches: currentBatches
@@ -622,10 +625,10 @@ export const useStore = create<AppState>()((set, get) => ({
         timestamp: logData.created_at,
         costPrice: Number(logData.cost_price || 0)
       };
-      set(s => ({ 
+      set(s => ({
         stockLogs: [newLog, ...s.stockLogs],
-        inventory: s.inventory.map(i => i.id === id ? { 
-          ...i, 
+        inventory: s.inventory.map(i => i.id === id ? {
+          ...i,
           stock: newQty,
           costPrice: newAverageCost,
           fifoBatches: currentBatches
@@ -634,8 +637,8 @@ export const useStore = create<AppState>()((set, get) => ({
     } else {
       console.error("Error adding stock log to Supabase:", logError);
       set(s => ({
-        inventory: s.inventory.map(i => i.id === id ? { 
-          ...i, 
+        inventory: s.inventory.map(i => i.id === id ? {
+          ...i,
           stock: newQty,
           costPrice: newAverageCost,
           fifoBatches: currentBatches
@@ -648,7 +651,7 @@ export const useStore = create<AppState>()((set, get) => ({
     const currentStoreId = get().storeId;
     const newId = `PO${Date.now().toString().slice(-6)}`;
     const fullPo = { ...po, id: newId };
-    
+
     // Optimistic update
     set(s => ({
       purchaseOrders: [fullPo, ...s.purchaseOrders]
@@ -681,10 +684,10 @@ export const useStore = create<AppState>()((set, get) => ({
 
   updatePurchaseOrder: async (id, updates) => {
     const previousOrders = get().purchaseOrders;
-    
+
     // Optimistic update
     set(s => ({
-      purchaseOrders: s.purchaseOrders.map(po => 
+      purchaseOrders: s.purchaseOrders.map(po =>
         po.id === id ? { ...po, ...updates } : po
       )
     }));
@@ -740,27 +743,310 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
 
-  addQuotation: (qt) => {
+  addGoodsReceipt: async (gr) => {
+    const currentStoreId = get().storeId;
+    const newId = `GR${Date.now().toString().slice(-6)}`;
+    const fullGr = { ...gr, id: newId };
+
+    set(s => ({
+      goodsReceipts: [fullGr, ...s.goodsReceipts]
+    }));
+
+    const { error } = await supabase
+      .from('goods_receipts')
+      .insert({
+        store_id: currentStoreId,
+        data: fullGr
+      });
+
+    if (error) {
+      console.error("Error inserting GR to Supabase:", error);
+      toast.error("เกิดข้อผิดพลาดในการบันทึก GR ไปยังฐานข้อมูล");
+      set(s => ({
+        goodsReceipts: s.goodsReceipts.filter(g => g.id !== newId)
+      }));
+    }
+  },
+
+  updateGoodsReceipt: async (id, updates) => {
+    const previousReceipts = get().goodsReceipts;
+    const currentStoreId = get().storeId;
+    set(s => ({
+      goodsReceipts: s.goodsReceipts.map(gr =>
+        gr.id === id ? { ...gr, ...updates } : gr
+      )
+    }));
+
+    const updatedGr = get().goodsReceipts.find(gr => gr.id === id);
+    if (!updatedGr) return;
+
+    const { error } = await supabase
+      .from('goods_receipts')
+      .update({ data: updatedGr })
+      .eq('store_id', currentStoreId)
+      .eq("data->>id", id);
+
+    if (error) {
+      console.error("Error updating GR in Supabase:", error);
+      toast.error("เกิดข้อผิดพลาดในการอัปเดต GR");
+      set({ goodsReceipts: previousReceipts });
+    }
+  },
+
+  updateGoodsReceiptStatus: async (id, status) => {
+    const previousReceipts = get().goodsReceipts;
+    const currentStoreId = get().storeId;
+    const gr = previousReceipts.find(g => g.id === id);
+
+    set(s => ({
+      goodsReceipts: s.goodsReceipts.map(g => g.id === id ? { ...g, status } : g)
+    }));
+
+    const { error } = await supabase
+      .from('goods_receipts')
+      .update({ data: get().goodsReceipts.find(g => g.id === id) })
+      .eq('store_id', currentStoreId)
+      .eq("data->>id", id);
+
+    if (error) {
+      console.error("Error updating GR status in Supabase:", error);
+      toast.error("เกิดข้อผิดพลาดในการอัปเดตสถานะ GR");
+      set({ goodsReceipts: previousReceipts });
+    } else {
+      if (status === 'Completed' && gr && gr.status !== 'Completed') {
+        for (const item of gr.items) {
+          await get().adjustStock(item.productId, item.quantityReceived, 'Add', `Received from GR #${id}`, item.unitPrice);
+        }
+        toast.success("รับสินค้าเข้าสต็อกและอัปเดตสินค้าเรียบร้อยแล้ว");
+      }
+    }
+  },
+
+  addPurchaseRequest: async (pr) => {
+    const currentStoreId = get().storeId;
+    const newId = `PR${Date.now().toString().slice(-6)}`;
+    const fullPr = { ...pr, id: newId };
+
+    // Optimistic update
+    set(s => ({
+      purchaseRequests: [fullPr, ...s.purchaseRequests]
+    }));
+
+    const { error } = await supabase
+      .from('purchase_requests')
+      .insert([{
+        id: newId,
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+        date: fullPr.date,
+        partner_id: fullPr.partnerId,
+        items: fullPr.items,
+        status: fullPr.status,
+        total_amount: fullPr.totalAmount,
+        created_by: fullPr.createdBy
+      }]);
+
+    if (error) {
+      console.error("Error adding PR to Supabase:", error);
+      toast.error("เกิดข้อผิดพลาดในการบันทึก PR ลงฐานข้อมูล");
+      // Rollback
+      set(s => ({
+        purchaseRequests: s.purchaseRequests.filter(p => p.id !== newId)
+      }));
+    } else {
+      toast.success("สร้างใบขอสั่งซื้อ (PR) เรียบร้อยแล้ว");
+    }
+  },
+
+  updatePurchaseRequest: async (id, updates) => {
+    const previousRequests = get().purchaseRequests;
+
+    // Optimistic update
+    set(s => ({
+      purchaseRequests: s.purchaseRequests.map(pr =>
+        pr.id === id ? { ...pr, ...updates } : pr
+      )
+    }));
+
+    const updatePayload: any = {};
+    if (updates.date !== undefined) updatePayload.date = updates.date;
+    if (updates.partnerId !== undefined) updatePayload.partner_id = updates.partnerId;
+    if (updates.items !== undefined) updatePayload.items = updates.items;
+    if (updates.status !== undefined) updatePayload.status = updates.status;
+    if (updates.totalAmount !== undefined) updatePayload.total_amount = updates.totalAmount;
+    if (updates.createdBy !== undefined) updatePayload.created_by = updates.createdBy;
+
+    const { error } = await supabase
+      .from('purchase_requests')
+      .update(updatePayload)
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating PR in Supabase:", error);
+      toast.error("เกิดข้อผิดพลาดในการแก้ไข PR");
+      // Rollback
+      set({ purchaseRequests: previousRequests });
+    } else {
+      toast.success("อัปเดตใบขอสั่งซื้อเรียบร้อยแล้ว");
+    }
+  },
+
+  updatePurchaseRequestStatus: async (id, status) => {
+    const previousRequests = get().purchaseRequests;
+
+    // Optimistic update
+    set(s => ({
+      purchaseRequests: s.purchaseRequests.map(pr => pr.id === id ? { ...pr, status } : pr)
+    }));
+
+    const { error } = await supabase
+      .from('purchase_requests')
+      .update({ status })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating PR status in Supabase:", error);
+      toast.error("เกิดข้อผิดพลาดในการอัปเดตสถานะ PR");
+      // Rollback
+      set({ purchaseRequests: previousRequests });
+    }
+  },
+
+  approvePurchaseRequestToPO: (id) => {
+    const state = get();
+    const pr = state.purchaseRequests.find(p => p.id === id);
+    if (!pr) return;
+
+    // 1. Update PR Status
+    state.updatePurchaseRequestStatus(id, 'Approved');
+
+    // 2. Create New PO
+    const newPoItems = pr.items.map(item => ({
+      productId: item.productId,
+      productName: item.productName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      total: item.total
+    }));
+
+    state.addPurchaseOrder({
+      date: new Date().toISOString(),
+      partnerId: pr.partnerId,
+      items: newPoItems,
+      status: 'Pending',
+      totalAmount: pr.totalAmount,
+      createdBy: state.currentUser?.name || 'Admin'
+    });
+  },
+
+  addQuotation: async (qt) => {
+    const currentStoreId = get().storeId;
     const newId = `QT${Date.now().toString().slice(-6)}`;
     const fullQt = { ...qt, id: newId };
+
+    // Optimistic update
     set(s => ({
       quotations: [fullQt, ...s.quotations]
     }));
-    toast.success("สร้างใบเสนอราคาเรียบร้อยแล้ว");
+
+    const { error } = await supabase
+      .from('quotations')
+      .insert([{
+        id: newId,
+        store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+        date: fullQt.date,
+        partner_id: fullQt.partnerId || null,
+        customer_name: fullQt.customerName || null,
+        customer_address: fullQt.customerAddress || null,
+        customer_tax_id: fullQt.customerTaxId || null,
+        customer_phone: fullQt.customerPhone || null,
+        items: fullQt.items,
+        status: fullQt.status,
+        total_amount: fullQt.totalAmount,
+        created_by: fullQt.createdBy
+      }]);
+
+    if (error) {
+      console.error("Error adding Quotation to Supabase:", error);
+      toast.error("เกิดข้อผิดพลาดในการบันทึกใบเสนอราคาลงฐานข้อมูล");
+      // Rollback
+      set(s => ({
+        quotations: s.quotations.filter(q => q.id !== newId)
+      }));
+    } else {
+      toast.success("สร้างใบเสนอราคาเรียบร้อยแล้ว");
+    }
   },
 
-  updateQuotation: (id, updates) => {
+  updateQuotation: async (id, updates) => {
+    // Optimistic update
     set(s => ({
-      quotations: s.quotations.map(qt => 
+      quotations: s.quotations.map(qt =>
         qt.id === id ? { ...qt, ...updates } : qt
       )
     }));
-    toast.success("อัปเดตใบเสนอราคาเรียบร้อยแล้ว");
+
+    const updatePayload: any = {};
+    if (updates.date !== undefined) updatePayload.date = updates.date;
+    if (updates.partnerId !== undefined) updatePayload.partner_id = updates.partnerId;
+    if (updates.customerName !== undefined) updatePayload.customer_name = updates.customerName;
+    if (updates.customerAddress !== undefined) updatePayload.customer_address = updates.customerAddress;
+    if (updates.customerTaxId !== undefined) updatePayload.customer_tax_id = updates.customerTaxId;
+    if (updates.customerPhone !== undefined) updatePayload.customer_phone = updates.customerPhone;
+    if (updates.items !== undefined) updatePayload.items = updates.items;
+    if (updates.status !== undefined) updatePayload.status = updates.status;
+    if (updates.totalAmount !== undefined) updatePayload.total_amount = updates.totalAmount;
+
+    const { error } = await supabase
+      .from('quotations')
+      .update(updatePayload)
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating Quotation in Supabase:", error);
+      toast.error("เกิดข้อผิดพลาดในการอัปเดตใบเสนอราคา");
+      // Note: Full rollback requires keeping old state, keeping it simple for now
+    } else {
+      toast.success("อัปเดตใบเสนอราคาเรียบร้อยแล้ว");
+    }
   },
 
-  updateQuotationStatus: (id, status) => {
+  updateQuotationStatus: async (id, status) => {
     set(s => ({
       quotations: s.quotations.map(qt => qt.id === id ? { ...qt, status } : qt)
+    }));
+
+    const { error } = await supabase
+      .from('quotations')
+      .update({ status })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating Quotation status in Supabase:", error);
+      toast.error("เกิดข้อผิดพลาดในการอัปเดตสถานะใบเสนอราคา");
+    }
+  },
+
+  addSalesOrder: (so) => {
+    const newId = `SO${Date.now().toString().slice(-6)}`;
+    const fullSo = { ...so, id: newId };
+    set(s => ({
+      salesOrders: [fullSo, ...s.salesOrders]
+    }));
+    toast.success("สร้างใบสั่งขายเรียบร้อยแล้ว");
+  },
+
+  updateSalesOrder: (id, updates) => {
+    set(s => ({
+      salesOrders: s.salesOrders.map(so =>
+        so.id === id ? { ...so, ...updates } : so
+      )
+    }));
+    toast.success("อัปเดตใบสั่งขายเรียบร้อยแล้ว");
+  },
+
+  updateSalesOrderStatus: (id, status) => {
+    set(s => ({
+      salesOrders: s.salesOrders.map(so => so.id === id ? { ...so, status } : so)
     }));
   },
 
@@ -846,19 +1132,19 @@ export const useStore = create<AppState>()((set, get) => ({
     const activeStaffCount = get().staff.filter(s => !s.isPendingInvite && s.status === 'Active').length;
 
     if (st.status === 'Active' && activeStaffCount >= maxStaff) {
-      toast.error(get().language === 'th' 
-        ? `ไม่สามารถเพิ่มพนักงานได้เนื่องจากจำนวนบัญชีพนักงานเต็มแล้ว (${activeStaffCount}/${maxStaff} บัญชี)` 
+      toast.error(get().language === 'th'
+        ? `ไม่สามารถเพิ่มพนักงานได้เนื่องจากจำนวนบัญชีพนักงานเต็มแล้ว (${activeStaffCount}/${maxStaff} บัญชี)`
         : `Cannot add staff. Staff account limit reached (${activeStaffCount}/${maxStaff} accounts)`
       );
       return;
     }
-    
+
     // Generate unique invite link using a valid UUID
     const generateUUID = () => {
       if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         return crypto.randomUUID();
       }
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
         const r = Math.random() * 16 | 0;
         const v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
@@ -866,7 +1152,7 @@ export const useStore = create<AppState>()((set, get) => ({
     };
 
     const inviteId = generateUUID();
-    
+
     // Encode invitation details into a secure token to bypass foreign key constraints
     const inviteData = {
       inviteId,
@@ -886,7 +1172,7 @@ export const useStore = create<AppState>()((set, get) => ({
     // Save pending invite locally to localStorage so it displays in the staff list
     const pendingInvitesStr = localStorage.getItem('pending_staff_invites');
     const pendingInvites = pendingInvitesStr ? JSON.parse(pendingInvitesStr) : [];
-    
+
     const newPendingInvite = {
       id: `invite-${inviteId}`,
       name: st.name,
@@ -926,8 +1212,8 @@ export const useStore = create<AppState>()((set, get) => ({
     const activeStaffCount = get().staff.filter(s => s.status === 'Active' && s.id !== id).length;
 
     if (st.status === 'Active' && currentStaff?.status !== 'Active' && activeStaffCount >= maxStaff) {
-      toast.error(get().language === 'th' 
-        ? `ไม่สามารถเปิดใช้งานพนักงานได้เนื่องจากจำนวนบัญชีพนักงานเต็มแล้ว (${activeStaffCount}/${maxStaff} บัญชี)` 
+      toast.error(get().language === 'th'
+        ? `ไม่สามารถเปิดใช้งานพนักงานได้เนื่องจากจำนวนบัญชีพนักงานเต็มแล้ว (${activeStaffCount}/${maxStaff} บัญชี)`
         : `Cannot activate staff. Staff account limit reached (${activeStaffCount}/${maxStaff} accounts)`
       );
       return;

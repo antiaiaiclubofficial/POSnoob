@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   BarChart3, 
@@ -16,7 +16,9 @@ import {
   CalendarDays,
   Target,
   Megaphone,
-  Package
+  Package,
+  Calculator,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -36,26 +38,96 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   const { shopName, shopLogo, logout, language, currentUser, rolePermissions } = useStore();
   const t = translations[language];
 
-  const menuItems = [
+  const menuGroups = [
     { icon: LayoutDashboard, label: t.dashboard, path: '/' },
     { icon: ShoppingBag, label: t.pos, path: '/pos' },
     { icon: CalendarDays, label: t.queue, path: '/queue' },
     { icon: Users, label: t.customers, path: '/customers' },
-    { icon: Package, label: t.inventory, path: '/inventory' },
-    { icon: Megaphone, label: t.marketing, path: '/marketing' },
-    { icon: ShieldCheck, label: t.staff, path: '/staff' },
-    { icon: Target, label: t.performance, path: '/staff/performance' },
-    { icon: History, label: t.logs, path: '/logs' },
-    { icon: BarChart3, label: t.reports, path: '/reports' },
-    { icon: SettingsIcon, label: t.settings, path: '/settings' },
+    {
+      icon: Package, 
+      label: 'สต๊อก & บัญชี',
+      submenu: [
+        { icon: Package, label: t.inventory, path: '/inventory' },
+        { icon: Calculator, label: t.accounting || 'Sales & Procurement', path: '/accounting' },
+      ]
+    },
+    {
+      icon: ShieldCheck, 
+      label: 'พนักงาน',
+      submenu: [
+        { icon: ShieldCheck, label: t.staff, path: '/staff' },
+        { icon: Target, label: t.performance, path: '/staff/performance' },
+      ]
+    },
+    {
+      icon: BarChart3, 
+      label: 'รายงาน & ระบบ',
+      submenu: [
+        { icon: Megaphone, label: t.marketing, path: '/marketing' },
+        { icon: BarChart3, label: t.reports, path: '/reports' },
+        { icon: History, label: t.logs, path: '/logs' }
+      ]
+    }
   ];
 
   // ตรวจสอบสิทธิ์การเข้าถึงเมนูตามบทบาทของผู้ใช้
   const userRole = currentUser?.role || 'Assistant';
-  const allowedPaths = rolePermissions[userRole] || ['/', '/queue', '/customers'];
+  let allowedPaths = rolePermissions[userRole] || ['/', '/queue', '/customers'];
   
-  // กรองเมนูตามสิทธิ์ที่กำหนดไว้ใน useStore (ไม่รวม /superadmin ในแถบเมนู)
-  const filteredMenuItems = menuItems.filter(item => allowedPaths.includes(item.path));
+  // Ensure accounting is available for Admin and superadmin even if DB roles aren't updated yet
+  if (userRole === 'Admin' || userRole === 'superadmin') {
+    if (!allowedPaths.includes('/accounting')) {
+      allowedPaths = [...allowedPaths, '/accounting'];
+    }
+  }
+
+  // กรองเมนูตามสิทธิ์ที่กำหนดไว้ใน useStore
+  const filteredMenuGroups = menuGroups.map(group => {
+    if (group.submenu) {
+      const filteredSubmenu = group.submenu.filter(sub => allowedPaths.includes(sub.path));
+      return { ...group, submenu: filteredSubmenu };
+    }
+    return group;
+  }).filter(group => {
+    if (group.submenu) {
+      return group.submenu.length > 0;
+    }
+    return allowedPaths.includes(group.path as string);
+  });
+
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
+    const initialState: Record<string, boolean> = {};
+    filteredMenuGroups.forEach(group => {
+      if (group.submenu) {
+        if (group.submenu.some(sub => location.pathname === sub.path)) {
+          initialState[group.label] = true;
+        } else {
+          initialState[group.label] = false;
+        }
+      }
+    });
+    return initialState;
+  });
+
+  useEffect(() => {
+    setOpenMenus(prev => {
+      const next = { ...prev };
+      let changed = false;
+      filteredMenuGroups.forEach(group => {
+        if (group.submenu && group.submenu.some(sub => location.pathname === sub.path)) {
+          if (!next[group.label]) {
+            next[group.label] = true;
+            changed = true;
+          }
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [location.pathname]);
+
+  const toggleMenu = (label: string) => {
+    setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
+  };
 
   const handleLogout = () => {
     logout();
@@ -93,13 +165,72 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-2 px-4 overflow-y-auto scrollbar-hide">
-        {filteredMenuItems.map((item) => {
-          const isActive = location.pathname === item.path;
+      <nav className="flex-1 space-y-2 px-4 overflow-y-auto scrollbar-hide pb-4">
+        {filteredMenuGroups.map((group) => {
+          if (group.submenu) {
+            const isOpen = openMenus[group.label];
+            const hasActiveChild = group.submenu.some(sub => location.pathname === sub.path);
+            
+            return (
+              <div key={group.label} className="space-y-1">
+                <button
+                  onClick={() => toggleMenu(group.label)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 group overflow-hidden whitespace-nowrap",
+                    hasActiveChild 
+                      ? "bg-gray-100/50 text-[#1A1F3D] font-bold" 
+                      : "text-gray-400 hover:bg-gray-50 hover:text-[#1A1F3D]"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <group.icon size={20} className={cn("shrink-0 transition-transform group-hover:scale-110", hasActiveChild ? "text-[#1A1F3D]" : "")} />
+                    <span className="text-xs font-medium opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+                      {group.label}
+                    </span>
+                  </div>
+                  <ChevronDown 
+                    size={16} 
+                    className={cn(
+                      "shrink-0 opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-all duration-300",
+                      isOpen ? "rotate-180" : ""
+                    )} 
+                  />
+                </button>
+                
+                {isOpen && (
+                  <div className="pl-4 space-y-1 block lg:hidden lg:group-hover/sidebar:block mt-1">
+                    {group.submenu.map(sub => {
+                      const isActive = location.pathname === sub.path;
+                      return (
+                        <Link
+                          key={sub.path}
+                          to={sub.path}
+                          onClick={onClose}
+                          className={cn(
+                            "flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 group overflow-hidden whitespace-nowrap",
+                            isActive 
+                              ? "bg-[#1A1F3D] text-white shadow-xl shadow-[#1A1F3D]/10 font-bold" 
+                              : "text-gray-400 hover:bg-gray-50 hover:text-[#1A1F3D]"
+                          )}
+                        >
+                          <sub.icon size={18} className={cn("shrink-0 transition-transform group-hover:scale-110", isActive ? "text-[#D9ED5F]" : "")} />
+                          <span className="text-xs">
+                            {sub.label}
+                          </span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          const isActive = location.pathname === group.path;
           return (
             <Link
-              key={item.path}
-              to={item.path}
+              key={group.path}
+              to={group.path as string}
               onClick={onClose}
               className={cn(
                 "flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group overflow-hidden whitespace-nowrap",
@@ -108,9 +239,9 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
                   : "text-gray-400 hover:bg-gray-50 hover:text-[#1A1F3D]"
               )}
             >
-              <item.icon size={20} className={cn("shrink-0 transition-transform group-hover:scale-110", isActive ? "text-[#D9ED5F]" : "")} />
-              <span className="text-xs opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
-                {item.label}
+              <group.icon size={20} className={cn("shrink-0 transition-transform group-hover:scale-110", isActive ? "text-[#D9ED5F]" : "")} />
+              <span className="text-xs font-medium opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+                {group.label}
               </span>
             </Link>
           );
@@ -119,6 +250,16 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
 
       <div className="mt-auto space-y-4 px-4 pb-8 shrink-0">
         <div className="pt-6 border-t border-gray-50 space-y-1">
+          {allowedPaths.includes('/settings') && (
+            <Link 
+              to="/settings"
+              onClick={onClose}
+              className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-[#1A1F3D] transition-colors group overflow-hidden whitespace-nowrap"
+            >
+              <SettingsIcon size={20} className="shrink-0 group-hover:rotate-90 transition-transform duration-300" />
+              <span className="text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.settings}</span>
+            </Link>
+          )}
           <a 
             href="https://lin.ee/wU8azb5" 
             target="_blank" 

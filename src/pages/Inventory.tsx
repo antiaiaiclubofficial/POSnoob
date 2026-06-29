@@ -19,10 +19,9 @@ import VendorInventoryView from '@/components/VendorInventoryView';
 import InventoryReportLivePreview from '@/components/InventoryReportLivePreview';
 import QuickAdjustModal from '@/components/QuickAdjustModal';
 import InventoryDashboard from '@/components/InventoryDashboard';
-import POSystem from '@/components/POSystem';
-import QuotationSystem from '@/components/QuotationSystem';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashboard';
 
@@ -41,8 +40,9 @@ const Inventory = () => {
   const [repStartDate, setRepStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [repEndDate, setRepEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [repShowOnlySold, setRepShowOnlySold] = useState(false);
-  const [docSubTab, setDocSubTab] = useState<'report' | 'po' | 'quotation'>('report');
-  const [reorderItem, setReorderItem] = useState<InventoryItem | null>(null);
+  const [docSubTab, setDocSubTab] = useState<'report'>('report');
+  
+  const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -578,9 +578,7 @@ const Inventory = () => {
                           )}
                           onClick={() => {
                             if (item.stock <= item.minStock) {
-                              setReorderItem(item);
-                              setActiveTab('report');
-                              setDocSubTab('po');
+                              navigate('/accounting', { state: { action: 'pr', reorderItem: item } });
                             }
                           }}
                           >
@@ -733,9 +731,7 @@ const Inventory = () => {
                         {(status === 'Out' || status === 'Low') && (
                           <button
                             onClick={() => {
-                              setReorderItem(item);
-                              setActiveTab('report');
-                              setDocSubTab('po');
+                              navigate('/accounting', { state: { action: 'pr', reorderItem: item } });
                             }}
                             className={cn(
                               "flex-1 font-black text-[9px] uppercase py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm",
@@ -863,24 +859,6 @@ const Inventory = () => {
                 )}
               >
                 รายงานสต็อก
-              </button>
-              <button
-                onClick={() => setDocSubTab('po')}
-                className={cn(
-                  "px-8 py-3 rounded-xl font-bold text-sm transition-all duration-300",
-                  docSubTab === 'po' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:bg-gray-50 hover:text-gray-600"
-                )}
-              >
-                ใบสั่งซื้อ (PO)
-              </button>
-              <button
-                onClick={() => setDocSubTab('quotation')}
-                className={cn(
-                  "px-8 py-3 rounded-xl font-bold text-sm transition-all duration-300",
-                  docSubTab === 'quotation' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400 hover:bg-gray-50 hover:text-gray-600"
-                )}
-              >
-                ใบเสนอราคา
               </button>
             </div>
           </div>
@@ -1024,10 +1002,6 @@ const Inventory = () => {
               </div>
             </div>
           </div>
-            ) : docSubTab === 'po' ? (
-              <POSystem reorderItem={reorderItem} clearReorderItem={() => setReorderItem(null)} />
-            ) : docSubTab === 'quotation' ? (
-              <QuotationSystem />
             ) : null}
           </div>
         )}

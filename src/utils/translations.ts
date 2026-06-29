@@ -18,6 +18,7 @@ export const translations = {
     marketing: "Marketing & Rewards",
     promotions: "Promotions",
     coupons: "Coupons",
+    accounting: "Sales & Procurement",
     
     // Inventory Sub-modules
     allInventory: "All Inventory",
@@ -277,6 +278,7 @@ export const translations = {
     marketing: "การตลาดและรางวัล",
     promotions: "โปรโมชั่น",
     coupons: "คูปอง",
+    accounting: "ฝ่ายขายและจัดซื้อ",
 
     // Inventory Sub-modules
     allInventory: "คลังสินค้าทั้งหมด",

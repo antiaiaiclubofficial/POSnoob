@@ -7,22 +7,80 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, VerticalAlign } from 'docx';
 import { formatBahtText } from '@/lib/bahttext';
 
-const QuotationSystem = () => {
+interface QuotationSystemProps {
+  initialView?: 'list' | 'create';
+  onViewChange?: (view: 'list' | 'create') => void;
+}
+
+const QuotationSystem: React.FC<QuotationSystemProps> = ({ initialView = 'list', onViewChange }) => {
   const {
-    quotations, partners, inventory, currentUser, addQuotation, updateQuotation, updateQuotationStatus,
+    quotations, partners, inventory, services, addons, packageTemplates, creditPackages,
+    currentUser, addQuotation, updateQuotation, updateQuotationStatus,
     companyName, companyAddress, companyTaxId, companyPhone, companyEmail, shopName, shopAddress, shopPhone
   } = useStore();
-  const [view, setView] = useState<'list' | 'create'>('list');
+  const [view, setView] = useState<'list' | 'create'>(initialView);
+
+  React.useEffect(() => {
+    setView(initialView);
+  }, [initialView]);
+
+  const handleViewChange = (newView: 'list' | 'create') => {
+    setView(newView);
+    if (onViewChange) onViewChange(newView);
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [previewQT, setPreviewQT] = useState<Quotation | null>(null);
 
-  // Create PO State
+  // Create QT State
   const [editingQTId, setEditingQTId] = useState<string | null>(null);
+
+  // Customer State
+  const [isManualCustomer, setIsManualCustomer] = useState(false);
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
+  const [manualCustomer, setManualCustomer] = useState({
+    name: '',
+    address: '',
+    taxId: '',
+    phone: ''
+  });
+
+  // Item State
   const [qtItems, setQtItems] = useState<QuotationItem[]>([]);
-  const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedItemType, setSelectedItemType] = useState<'product' | 'service' | 'addon' | 'package' | 'credit'>('product');
+  const [selectedItemId, setSelectedItemId] = useState('');
   const [qtyInput, setQtyInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
+
+  React.useEffect(() => {
+    if (!selectedItemId) {
+      setPriceInput('');
+      return;
+    }
+
+    let defaultPrice = 0;
+    if (selectedItemType === 'product') {
+      const product = inventory.find(i => i.id === selectedItemId);
+      if (product) defaultPrice = product.price;
+    } else if (selectedItemType === 'service') {
+      const service = services.find(s => s.id === selectedItemId);
+      if (service && service.prices) {
+        const firstPrice = Object.values(service.prices)[0];
+        if (firstPrice) defaultPrice = firstPrice.price;
+      }
+    } else if (selectedItemType === 'addon') {
+      const addon = addons.find(a => a.id === selectedItemId);
+      if (addon) defaultPrice = addon.price;
+    } else if (selectedItemType === 'package') {
+      const pkg = packageTemplates.find(p => p.id === selectedItemId);
+      if (pkg) defaultPrice = pkg.price;
+    } else if (selectedItemType === 'credit') {
+      const credit = creditPackages.find(c => c.id === selectedItemId);
+      if (credit) defaultPrice = credit.price;
+    }
+
+    setPriceInput(defaultPrice.toString());
+  }, [selectedItemId, selectedItemType, inventory, services, addons, packageTemplates, creditPackages]);
 
   const totalQTs = quotations.length;
   const pendingQTs = quotations.filter(qt => qt.status === 'Pending').length;
@@ -31,7 +89,8 @@ const QuotationSystem = () => {
 
   const filteredQTs = quotations.filter(qt =>
     qt.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    partners.find(p => p.id === qt.partnerId)?.companyName.toLowerCase().includes(searchQuery.toLowerCase())
+    (qt.partnerId ? partners.find(p => p.id === qt.partnerId)?.companyName.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
+    (qt.customerName && qt.customerName.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const getStatusColor = (status: string) => {
@@ -51,54 +110,85 @@ const QuotationSystem = () => {
   };
 
   const handleAddItem = () => {
-    if (!selectedProductId || !qtyInput || !priceInput) return;
-    const product = inventory.find(i => i.id === selectedProductId);
-    if (!product) return;
+    if (!selectedItemId || !qtyInput || !priceInput) return;
+
+    let itemName = '';
+
+    if (selectedItemType === 'product') {
+      const product = inventory.find(i => i.id === selectedItemId);
+      if (!product) return;
+      itemName = product.name;
+    } else if (selectedItemType === 'service') {
+      const service = services.find(s => s.id === selectedItemId);
+      if (!service) return;
+      itemName = service.title;
+    } else if (selectedItemType === 'addon') {
+      const addon = addons.find(a => a.id === selectedItemId);
+      if (!addon) return;
+      itemName = addon.name;
+    } else if (selectedItemType === 'package') {
+      const pkg = packageTemplates.find(p => p.id === selectedItemId);
+      if (!pkg) return;
+      itemName = pkg.name;
+    } else if (selectedItemType === 'credit') {
+      const credit = creditPackages.find(c => c.id === selectedItemId);
+      if (!credit) return;
+      itemName = credit.name;
+    }
 
     const qty = parseInt(qtyInput);
     const price = parseFloat(priceInput);
 
     if (qty <= 0 || price < 0) return;
 
-    const existingItem = qtItems.find(i => i.productId === selectedProductId);
+    const existingItem = qtItems.find(i => i.productId === selectedItemId && i.itemType === selectedItemType);
     if (existingItem) {
-      setQtItems(qtItems.map(i => i.productId === selectedProductId ? {
+      setQtItems(qtItems.map(i => (i.productId === selectedItemId && i.itemType === selectedItemType) ? {
         ...i,
         quantity: i.quantity + qty,
         total: (i.quantity + qty) * i.unitPrice
       } : i));
     } else {
       setQtItems([...qtItems, {
-        productId: product.id,
-        productName: product.name,
+        productId: selectedItemId,
+        productName: itemName,
         quantity: qty,
         unitPrice: price,
-        total: qty * price
+        total: qty * price,
+        itemType: selectedItemType
       }]);
     }
 
-    setSelectedProductId('');
+    setSelectedItemId('');
     setQtyInput('');
     setPriceInput('');
   };
 
-  const handleRemoveItem = (productId: string) => {
-    setQtItems(qtItems.filter(i => i.productId !== productId));
+  const handleRemoveItem = (productId: string, itemType?: string) => {
+    setQtItems(qtItems.filter(i => !(i.productId === productId && i.itemType === itemType)));
   };
 
   const handleSaveQT = () => {
-    if (!selectedPartnerId || qtItems.length === 0) return;
+    if ((!isManualCustomer && !selectedPartnerId) || (isManualCustomer && !manualCustomer.name) || qtItems.length === 0) return;
 
     if (editingQTId) {
       updateQuotation(editingQTId, {
-        partnerId: selectedPartnerId,
+        partnerId: isManualCustomer ? undefined : selectedPartnerId,
+        customerName: isManualCustomer ? manualCustomer.name : undefined,
+        customerAddress: isManualCustomer ? manualCustomer.address : undefined,
+        customerTaxId: isManualCustomer ? manualCustomer.taxId : undefined,
+        customerPhone: isManualCustomer ? manualCustomer.phone : undefined,
         items: qtItems,
         totalAmount: qtItems.reduce((sum, item) => sum + item.total, 0),
       });
     } else {
       addQuotation({
         date: new Date().toISOString(),
-        partnerId: selectedPartnerId,
+        partnerId: isManualCustomer ? undefined : selectedPartnerId,
+        customerName: isManualCustomer ? manualCustomer.name : undefined,
+        customerAddress: isManualCustomer ? manualCustomer.address : undefined,
+        customerTaxId: isManualCustomer ? manualCustomer.taxId : undefined,
+        customerPhone: isManualCustomer ? manualCustomer.phone : undefined,
         items: qtItems,
         status: 'Pending',
         totalAmount: qtItems.reduce((sum, item) => sum + item.total, 0),
@@ -106,8 +196,10 @@ const QuotationSystem = () => {
       });
     }
 
-    setView('list');
+    handleViewChange('list');
     setSelectedPartnerId('');
+    setIsManualCustomer(false);
+    setManualCustomer({ name: '', address: '', taxId: '', phone: '' });
     setQtItems([]);
     setEditingQTId(null);
   };
@@ -118,11 +210,11 @@ const QuotationSystem = () => {
         <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-2xl font-black text-[#1A1F3D]">{editingQTId ? 'แก้ไขใบเสนอราคา' : 'สร้างใบเสนอราคาใหม่ (New PO)'}</h2>
+              <h2 className="text-2xl font-black text-[#1A1F3D]">{editingQTId ? 'แก้ไขใบเสนอราคา' : 'สร้างใบเสนอราคา (Quotation)'}</h2>
               <p className="text-gray-400 font-bold text-sm">ระบุคู่ค้าและรายการสินค้าที่ต้องการสั่งซื้อ</p>
             </div>
             <button onClick={() => {
-              setView('list');
+              handleViewChange('list');
               setEditingQTId(null);
               setSelectedPartnerId('');
               setQtItems([]);
@@ -133,32 +225,101 @@ const QuotationSystem = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 px-1">ผู้จัดจำหน่าย (Vendor)</label>
-                <select
-                  className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold"
-                  value={selectedPartnerId}
-                  onChange={(e) => setSelectedPartnerId(e.target.value)}
-                >
-                  <option value="">-- เลือกคู่ค้า --</option>
-                  {partners.map(p => (
-                    <option key={p.id} value={p.id}>{p.companyName}</option>
-                  ))}
-                </select>
+              <div className="space-y-4 bg-gray-50 p-6 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-black text-[#1A1F3D]">ข้อมูลลูกค้า / คู่ค้า</label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="text-xs font-bold text-gray-500">กรอกข้อมูลเอง</span>
+                    <input
+                      type="checkbox"
+                      className="rounded text-indigo-600 focus:ring-indigo-500 border-gray-300 w-4 h-4"
+                      checked={isManualCustomer}
+                      onChange={(e) => setIsManualCustomer(e.target.checked)}
+                    />
+                  </label>
+                </div>
+
+                {isManualCustomer ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="ชื่อลูกค้า / บริษัท"
+                      className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
+                      value={manualCustomer.name}
+                      onChange={(e) => setManualCustomer({ ...manualCustomer, name: e.target.value })}
+                    />
+                    <textarea
+                      placeholder="ที่อยู่"
+                      className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold resize-none"
+                      rows={2}
+                      value={manualCustomer.address}
+                      onChange={(e) => setManualCustomer({ ...manualCustomer, address: e.target.value })}
+                    />
+                    <input
+                      type="text"
+                      placeholder="เลขประจำตัวผู้เสียภาษี"
+                      className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
+                      value={manualCustomer.taxId}
+                      onChange={(e) => setManualCustomer({ ...manualCustomer, taxId: e.target.value })}
+                    />
+                    <input
+                      type="text"
+                      placeholder="เบอร์โทรศัพท์"
+                      className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
+                      value={manualCustomer.phone}
+                      onChange={(e) => setManualCustomer({ ...manualCustomer, phone: e.target.value })}
+                    />
+                  </div>
+                ) : (
+                  <select
+                    className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
+                    value={selectedPartnerId}
+                    onChange={(e) => setSelectedPartnerId(e.target.value)}
+                  >
+                    <option value="">-- เลือกลูกค้า/คู่ค้าจากระบบ --</option>
+                    {partners.map(p => (
+                      <option key={p.id} value={p.id}>{p.companyName}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="bg-gray-50 p-6 rounded-2xl space-y-4">
-                <h3 className="font-black text-[#1A1F3D]">เพิ่มรายการสินค้า</h3>
+                <h3 className="font-black text-[#1A1F3D]">เพิ่มรายการในใบเสนอราคา</h3>
 
                 <div className="space-y-3">
                   <select
                     className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
-                    value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
+                    value={selectedItemType}
+                    onChange={(e) => setSelectedItemType(e.target.value as any)}
                   >
-                    <option value="">-- เลือกสินค้า --</option>
-                    {inventory.map(i => (
+                    <option value="product">สินค้า (Product)</option>
+                    <option value="service">บริการ (Service)</option>
+                    <option value="addon">บริการเสริม (Add-on)</option>
+                    <option value="package">แพ็กเกจ (Package Template)</option>
+                    <option value="credit">เครดิตแพ็กเกจ (Credit Package)</option>
+                  </select>
+
+                  <select
+                    className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
+                    value={selectedItemId}
+                    onChange={(e) => setSelectedItemId(e.target.value)}
+                  >
+                    <option value="">-- เลือกรายการ --</option>
+                    {selectedItemType === 'product' && inventory.map(i => (
                       <option key={i.id} value={i.id}>{i.name} (ในสต็อก: {i.stock})</option>
+                    ))}
+                    {selectedItemType === 'service' && services.map(s => (
+                      <option key={s.id} value={s.id}>{s.title}</option>
+                    ))}
+                    {selectedItemType === 'addon' && addons.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                    {selectedItemType === 'package' && packageTemplates.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                    {selectedItemType === 'credit' && creditPackages.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
 
@@ -181,7 +342,7 @@ const QuotationSystem = () => {
 
                   <button
                     onClick={handleAddItem}
-                    disabled={!selectedProductId || !qtyInput || !priceInput}
+                    disabled={!selectedItemId || !qtyInput || !priceInput}
                     className="w-full bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-sm hover:bg-indigo-100 transition-colors disabled:opacity-50"
                   >
                     เพิ่มเข้าใบเสนอราคา
@@ -219,7 +380,7 @@ const QuotationSystem = () => {
                             <td className="py-4 px-2 text-right font-bold text-sm">฿{item.unitPrice.toLocaleString()}</td>
                             <td className="py-4 px-2 text-right font-black text-indigo-600">฿{item.total.toLocaleString()}</td>
                             <td className="py-4 px-2 text-center">
-                              <button onClick={() => handleRemoveItem(item.productId)} className="text-red-400 hover:text-red-600 p-1">
+                              <button onClick={() => handleRemoveItem(item.productId, item.itemType)} className="text-red-400 hover:text-red-600 p-1">
                                 <Trash2 size={16} />
                               </button>
                             </td>
@@ -239,7 +400,7 @@ const QuotationSystem = () => {
                   </div>
                   <button
                     onClick={handleSaveQT}
-                    disabled={!selectedPartnerId || qtItems.length === 0}
+                    disabled={(!isManualCustomer && !selectedPartnerId) || (isManualCustomer && !manualCustomer.name) || qtItems.length === 0}
                     className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-gray-900 transition-colors disabled:opacity-50"
                   >
                     <Save size={18} /> บันทึกใบเสนอราคา
@@ -352,14 +513,16 @@ const QuotationSystem = () => {
               rowSpan: 4,
               margins: { top: 100, bottom: 100, left: 100, right: 100 },
               children: [
-                new Paragraph({ children: [new TextRun({ text: "ผู้ขาย : ", bold: true, size: szSmall }), new TextRun({ text: `${partner?.companyName || 'Unknown'}`, size: szSmall })] }),
-                new Paragraph({ children: [new TextRun({ text: "Supplier", size: szTiny })] }),
+                new Paragraph({ children: [new TextRun({ text: "ผู้ซื้อ : ", bold: true, size: szSmall }), new TextRun({ text: `${partner?.companyName || qt.customerName || 'Unknown'}`, size: szSmall })] }),
+                new Paragraph({ children: [new TextRun({ text: "Customer", size: szTiny })] }),
                 new Paragraph({ text: "" }),
-                new Paragraph({ children: [new TextRun({ text: "เลขที่ผู้เสียภาษี : ", bold: true, size: szSmall }), new TextRun({ text: `${partner?.taxId || '-'} (สำนักงานใหญ่)`, size: szSmall })] }),
+                new Paragraph({ children: [new TextRun({ text: "เลขที่ผู้เสียภาษี : ", bold: true, size: szSmall }), new TextRun({ text: `${partner?.taxId || qt.customerTaxId || '-'} (สำนักงานใหญ่)`, size: szSmall })] }),
                 new Paragraph({ children: [new TextRun({ text: "Tax ID", size: szTiny })] }),
                 new Paragraph({ text: "" }),
-                new Paragraph({ children: [new TextRun({ text: "ที่อยู่ : ", bold: true, size: szSmall }), new TextRun({ text: `${partner?.address || '-'}`, size: szSmall })] }),
+                new Paragraph({ children: [new TextRun({ text: "ที่อยู่ : ", bold: true, size: szSmall }), new TextRun({ text: `${partner?.address || qt.customerAddress || '-'}`, size: szSmall })] }),
                 new Paragraph({ children: [new TextRun({ text: "Address", size: szTiny })] }),
+                new Paragraph({ children: [new TextRun({ text: "เบอร์โทรศัพท์ : ", bold: true, size: szSmall }), new TextRun({ text: `${partner?.phone || qt.customerPhone || '-'}`, size: szSmall })] }),
+                new Paragraph({ children: [new TextRun({ text: "Phone", size: szTiny })] }),
               ]
             }),
             new TableCell({
@@ -650,17 +813,6 @@ const QuotationSystem = () => {
                   className="pl-9 pr-4 py-3 bg-[#F5F6FA] border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-100 transition-all w-[250px]"
                 />
               </div>
-              <button
-                onClick={() => {
-                  setEditingQTId(null);
-                  setSelectedPartnerId('');
-                  setQtItems([]);
-                  setView('create');
-                }}
-                className="bg-gradient-to-br from-[#18234a] to-[#020d35] text-white px-6 py-3 rounded-[3rem] font-black text-sm flex items-center gap-2 hover:opacity-90 transition-all shadow-[0_20px_40px_rgba(24,35,74,0.1)] active:scale-95"
-              >
-                <Plus size={18} /> สร้างใบเสนอราคา
-              </button>
             </div>
           </div>
 
@@ -670,7 +822,7 @@ const QuotationSystem = () => {
                 <thead>
                   <tr className="bg-white border-b border-gray-100">
                     <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Quotation Number / Date</th>
-                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Vendor</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Customer</th>
                     <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Items</th>
                     <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Total Amount</th>
                     <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Status</th>
@@ -693,7 +845,7 @@ const QuotationSystem = () => {
                         </td>
                         <td className="px-8 py-6">
                           <p className="text-sm font-bold text-gray-700">
-                            {partners.find(p => p.id === qt.partnerId)?.companyName || 'Unknown Vendor'}
+                            {qt.partnerId ? (partners.find(p => p.id === qt.partnerId)?.companyName || 'Unknown Vendor') : (qt.customerName || 'Unknown Customer')}
                           </p>
                           <p className="text-[10px] text-gray-400 font-medium">By: {qt.createdBy}</p>
                         </td>
@@ -746,7 +898,7 @@ const QuotationSystem = () => {
                                   setEditingQTId(qt.id);
                                   setSelectedPartnerId(qt.partnerId);
                                   setQtItems(qt.items);
-                                  setView('create');
+                                  handleViewChange('create');
                                 }}
                                 className="bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-orange-100 transition-colors shadow-sm"
                               >
@@ -862,9 +1014,10 @@ const QuotationSystem = () => {
                 {/* Info Boxes */}
                 <div className="grid grid-cols-12 border border-black mb-4">
                   <div className="col-span-6 border-r border-black p-3 space-y-2">
-                    <div className="flex"><span className="w-24 font-bold shrink-0">ผู้ขาย<br /><span className="text-[8px] font-normal">Supplier</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewQT.partnerId)?.companyName || 'Unknown Vendor'}</span></div>
-                    <div className="flex"><span className="w-24 font-bold shrink-0">เลขที่ผู้เสียภาษี<br /><span className="text-[8px] font-normal">Tax ID</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewQT.partnerId)?.taxId || '-'} (สำนักงานใหญ่)</span></div>
-                    <div className="flex"><span className="w-24 font-bold shrink-0">ที่อยู่<br /><span className="text-[8px] font-normal">Address</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewQT.partnerId)?.address || '-'}</span></div>
+                    <div className="flex"><span className="w-24 font-bold shrink-0">ผู้ซื้อ<br /><span className="text-[8px] font-normal">Customer</span></span> <span className="flex-1 break-words">{previewQT.partnerId ? (partners.find(p => p.id === previewQT.partnerId)?.companyName || 'Unknown Vendor') : (previewQT.customerName || 'Unknown Customer')}</span></div>
+                    <div className="flex"><span className="w-24 font-bold shrink-0">เลขที่ผู้เสียภาษี<br /><span className="text-[8px] font-normal">Tax ID</span></span> <span className="flex-1 break-words">{previewQT.partnerId ? (partners.find(p => p.id === previewQT.partnerId)?.taxId || '-') : (previewQT.customerTaxId || '-')} {previewQT.partnerId || previewQT.customerTaxId ? '(สำนักงานใหญ่)' : ''}</span></div>
+                    <div className="flex"><span className="w-24 font-bold shrink-0">ที่อยู่<br /><span className="text-[8px] font-normal">Address</span></span> <span className="flex-1 break-words">{previewQT.partnerId ? (partners.find(p => p.id === previewQT.partnerId)?.address || '-') : (previewQT.customerAddress || '-')}</span></div>
+                    <div className="flex"><span className="w-24 font-bold shrink-0">เบอร์โทรศัพท์<br /><span className="text-[8px] font-normal">Phone</span></span> <span className="flex-1 break-words">{previewQT.partnerId ? (partners.find(p => p.id === previewQT.partnerId)?.phone || '-') : (previewQT.customerPhone || '-')}</span></div>
                   </div>
                   <div className="col-span-3 border-r border-black p-3 space-y-2">
                     <div className="flex"><span className="w-16 font-bold shrink-0">วันที่<br /><span className="text-[8px] font-normal">Issue Date</span></span> <span className="flex-1 break-words">{format(new Date(previewQT.date), 'dd/MM/yyyy')}</span></div>

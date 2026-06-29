@@ -16,6 +16,7 @@ import StaffPerformance from "@/pages/StaffPerformance";
 import Logs from "@/pages/Logs";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import SalesAndProcurement from "@/pages/SalesAndProcurement";
 import Login from "@/pages/Login";
 import SuperAdmin from "@/pages/SuperAdmin";
 import LiffRegister from "@/pages/LiffRegister";
@@ -34,8 +35,8 @@ const HomeRedirect = () => {
 };
 
 const AuthInitializer = () => {
-  const { 
-    language, isAuthenticated, setSession, setCustomers, setServices, storeId, currentUser, logout 
+  const {
+    language, isAuthenticated, setSession, setCustomers, setServices, storeId, currentUser, logout
   } = useStore();
   const navigate = useNavigate();
 
@@ -186,7 +187,7 @@ const AuthInitializer = () => {
             .select('*')
             .eq('id', storeId)
             .single();
-          
+
           if (storeError) throw storeError;
           if (storeData) {
             useStore.setState({
@@ -388,15 +389,15 @@ const AuthInitializer = () => {
             const pet = app.pets || {};
             const customer = pet.customers || {};
             const ownerName = customer.display_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Walk-in';
-            
+
             const dateObj = new Date(app.start_time);
             const date = dateObj.toISOString().split('T')[0];
             const time = dateObj.toTimeString().slice(0, 5);
-            
+
             let status: QueueStatus = 'Waiting';
             if (app.status === 'confirmed') status = 'Checked-in';
             else if (app.status === 'completed') status = 'Completed';
-            
+
             return {
               id: app.id,
               petId: app.pet_id,
@@ -731,6 +732,34 @@ const AuthInitializer = () => {
       } catch (err) {
         console.warn("Failed to fetch purchase orders from Supabase:", err);
       }
+
+      // 12. Fetch Purchase Requests
+      try {
+        let prQuery = supabase.from('purchase_requests').select('*').order('created_at', { ascending: false });
+        if (storeId && storeId !== 'default-store') {
+          prQuery = prQuery.eq('store_id', storeId);
+        }
+        const { data: prData, error: prError } = await prQuery;
+
+        if (prError) throw prError;
+
+        if (prData) {
+          const formattedPRs = prData.map(pr => ({
+            id: pr.id,
+            date: pr.date,
+            partnerId: pr.partner_id,
+            items: pr.items,
+            status: pr.status,
+            totalAmount: Number(pr.total_amount || 0),
+            createdBy: pr.created_by
+          }));
+          useStore.setState({ purchaseRequests: formattedPRs });
+        } else {
+          useStore.setState({ purchaseRequests: [] });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch purchase requests from Supabase:", err);
+      }
     };
 
     if (isAuthenticated) {
@@ -755,6 +784,7 @@ const AuthInitializer = () => {
         <Route path="/staff/performance" element={<StaffPerformance />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/accounting" element={<SalesAndProcurement />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<NotFound />} />

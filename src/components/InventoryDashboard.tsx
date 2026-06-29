@@ -73,7 +73,7 @@ const COLORS = {
 const PIE_COLORS = [COLORS.primary, COLORS.purple, COLORS.accentPeach, COLORS.accentRed, '#4F46E5'];
 
 export default function InventoryDashboard() {
-  const { inventory, currency, adjustStock, stockLogs, language, transactions, partners, addPurchaseOrder } = useStore();
+  const { inventory, currency, adjustStock, stockLogs, language, transactions, partners, addPurchaseRequest } = useStore();
   const [reorderingId, setReorderingId] = useState<string | null>(null);
   const [kpiDateRange, setKpiDateRange] = useState<'today' | 'yesterday' | '7days' | '30days' | 'all'>('all');
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
@@ -1021,8 +1021,8 @@ export default function InventoryDashboard() {
     const orderQty = item?.reorderQuantity || 20;
 
     if (item) {
-      // Instead of adding stock directly, create a pending PO
-      addPurchaseOrder({
+      // Instead of adding PO directly, create a pending PR
+      addPurchaseRequest({
         date: new Date().toISOString(),
         partnerId: item.partnerId || '', // Auto select vendor if available
         items: [{
@@ -1039,8 +1039,8 @@ export default function InventoryDashboard() {
     }
 
     setReorderingId(null);
-    toast.success(`สร้างใบสั่งซื้อ ${name} จำนวน ${orderQty} ชิ้นในสถานะ Pending เรียบร้อยแล้ว!`, {
-      description: 'สามารถตรวจสอบและยืนยันการรับสินค้าได้ที่หน้า Purchase Order',
+    toast.success(`สร้างใบขอสั่งซื้อ (PR) ${name} จำนวน ${orderQty} ชิ้นเรียบร้อยแล้ว!`, {
+      description: 'สามารถตรวจสอบและอนุมัติ PR ได้ที่หน้า Inventory > เอกสาร',
       icon: <CheckCircle2 className="text-[#EAFD69] w-5 h-5" />,
       style: {
         background: COLORS.primary,

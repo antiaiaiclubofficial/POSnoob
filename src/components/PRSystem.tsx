@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useStore, PurchaseOrder, PurchaseOrderItem, InventoryItem } from '@/store/useStore';
+import { useStore, PurchaseRequest, PurchaseRequestItem, InventoryItem } from '@/store/useStore';
 import { format } from 'date-fns';
 import { Plus, Search, FileText, CheckCircle, XCircle, Clock, Trash2, Save, X, Download, Printer, Edit, Truck, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -7,16 +7,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, VerticalAlign } from 'docx';
 import { formatBahtText } from '@/lib/bahttext';
 
-interface POSystemProps {
+interface PRSystemProps {
   reorderItem?: InventoryItem | null;
   clearReorderItem?: () => void;
   initialView?: 'list' | 'create';
   onViewChange?: (view: 'list' | 'create') => void;
 }
 
-const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, initialView = 'list', onViewChange }) => {
+const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, initialView = 'list', onViewChange }) => {
   const {
-    purchaseOrders, partners, inventory, currentUser, addPurchaseOrder, updatePurchaseOrder, updatePurchaseOrderStatus,
+    purchaseRequests, partners, inventory, currentUser, addPurchaseRequest, updatePurchaseRequest, updatePurchaseRequestStatus,
     companyName, companyAddress, companyTaxId, companyPhone, companyEmail, shopName, shopAddress, shopPhone
   } = useStore();
   const [view, setView] = useState<'list' | 'create'>(initialView);
@@ -34,12 +34,12 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [previewPO, setPreviewPO] = useState<PurchaseOrder | null>(null);
+  const [previewPR, setPreviewPR] = useState<PurchaseRequest | null>(null);
 
   // Create PO State
-  const [editingPOId, setEditingPOId] = useState<string | null>(null);
+  const [editingPRId, setEditingPRId] = useState<string | null>(null);
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
-  const [poItems, setPoItems] = useState<PurchaseOrderItem[]>([]);
+  const [prItems, setPrItems] = useState<PurchaseRequestItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [qtyInput, setQtyInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
@@ -48,7 +48,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
     if (reorderItem) {
       handleViewChange('create');
       const qty = Math.max(reorderItem.minStock - reorderItem.stock, 1);
-      setPoItems([{
+      setPrItems([{
         productId: reorderItem.id,
         productName: reorderItem.name,
         quantity: qty,
@@ -62,25 +62,21 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
     }
   }, [reorderItem, clearReorderItem]);
 
-  const totalPOs = purchaseOrders.length;
-  const pendingPOs = purchaseOrders.filter(po => po.status === 'Pending').length;
-  const toOrderPOs = purchaseOrders.filter(po => po.status === 'To Order').length;
-  const onOrderPOs = purchaseOrders.filter(po => po.status === 'On Order').length;
-  const completedPOs = purchaseOrders.filter(po => po.status === 'Completed').length;
-  const cancelledPOs = purchaseOrders.filter(po => po.status === 'Cancelled').length;
+  const totalPRs = purchaseRequests.length;
+  const pendingPRs = purchaseRequests.filter(pr => pr.status === 'Pending').length;
+  const approvedPRs = purchaseRequests.filter(pr => pr.status === 'Approved').length;
+  const cancelledPRs = purchaseRequests.filter(pr => pr.status === 'Cancelled').length;
 
-  const filteredPOs = purchaseOrders.filter(po => {
-    const matchesSearch = po.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      partners.find(p => p.id === po.partnerId)?.companyName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter ? po.status === statusFilter : true;
+  const filteredPRs = purchaseRequests.filter(pr => {
+    const matchesSearch = pr.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      partners.find(p => p.id === pr.partnerId)?.companyName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter ? pr.status === statusFilter : true;
     return matchesSearch && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Completed': return 'bg-green-50 text-green-600';
-      case 'On Order': return 'bg-blue-50 text-blue-600';
-      case 'To Order': return 'bg-indigo-50 text-indigo-600';
+      case 'Approved': return 'bg-green-50 text-green-600';
       case 'Cancelled': return 'bg-red-50 text-red-600';
       default: return 'bg-orange-50 text-orange-600';
     }
@@ -88,9 +84,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'Completed': return <CheckCircle size={14} />;
-      case 'On Order': return <Truck size={14} />;
-      case 'To Order': return <Check size={14} />;
+      case 'Approved': return <CheckCircle size={14} />;
       case 'Cancelled': return <XCircle size={14} />;
       default: return <Clock size={14} />;
     }
@@ -106,15 +100,15 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
 
     if (qty <= 0 || price < 0) return;
 
-    const existingItem = poItems.find(i => i.productId === selectedProductId);
+    const existingItem = prItems.find(i => i.productId === selectedProductId);
     if (existingItem) {
-      setPoItems(poItems.map(i => i.productId === selectedProductId ? {
+      setPrItems(prItems.map(i => i.productId === selectedProductId ? {
         ...i,
         quantity: i.quantity + qty,
         total: (i.quantity + qty) * i.unitPrice
       } : i));
     } else {
-      setPoItems([...poItems, {
+      setPrItems([...prItems, {
         productId: product.id,
         productName: product.name,
         quantity: qty,
@@ -129,33 +123,33 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
   };
 
   const handleRemoveItem = (productId: string) => {
-    setPoItems(poItems.filter(i => i.productId !== productId));
+    setPrItems(prItems.filter(i => i.productId !== productId));
   };
 
-  const handleSavePO = () => {
-    if (!selectedPartnerId || poItems.length === 0) return;
+  const handleSavePR = () => {
+    if (!selectedPartnerId || prItems.length === 0) return;
 
-    if (editingPOId) {
-      updatePurchaseOrder(editingPOId, {
+    if (editingPRId) {
+      updatePurchaseRequest(editingPRId, {
         partnerId: selectedPartnerId,
-        items: poItems,
-        totalAmount: poItems.reduce((sum, item) => sum + item.total, 0),
+        items: prItems,
+        totalAmount: prItems.reduce((sum, item) => sum + item.total, 0),
       });
     } else {
-      addPurchaseOrder({
+      addPurchaseRequest({
         date: new Date().toISOString(),
         partnerId: selectedPartnerId,
-        items: poItems,
+        items: prItems,
         status: 'Pending',
-        totalAmount: poItems.reduce((sum, item) => sum + item.total, 0),
+        totalAmount: prItems.reduce((sum, item) => sum + item.total, 0),
         createdBy: currentUser?.name || 'Admin'
       });
     }
 
     handleViewChange('list');
     setSelectedPartnerId('');
-    setPoItems([]);
-    setEditingPOId(null);
+    setPrItems([]);
+    setEditingPRId(null);
   };
 
   if (view === 'create') {
@@ -164,14 +158,14 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
         <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-2xl font-black text-[#1A1F3D]">{editingPOId ? 'แก้ไขใบสั่งซื้อ' : 'สร้างใบสั่งซื้อใหม่ (New PO)'}</h2>
+              <h2 className="text-2xl font-black text-[#1A1F3D]">{editingPRId ? 'แก้ไขใบขอสั่งซื้อ' : 'สร้างใบขอสั่งซื้อใหม่ (New PR)'}</h2>
               <p className="text-gray-400 font-bold text-sm">ระบุคู่ค้าและรายการสินค้าที่ต้องการสั่งซื้อ</p>
             </div>
             <button onClick={() => {
               handleViewChange('list');
-              setEditingPOId(null);
+              setEditingPRId(null);
               setSelectedPartnerId('');
-              setPoItems([]);
+              setPrItems([]);
             }} className="p-3 bg-gray-50 text-gray-400 hover:bg-gray-100 rounded-xl transition-colors">
               <X size={20} />
             </button>
@@ -230,7 +224,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     disabled={!selectedProductId || !qtyInput || !priceInput}
                     className="w-full bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-sm hover:bg-indigo-100 transition-colors disabled:opacity-50"
                   >
-                    เพิ่มเข้าใบสั่งซื้อ
+                    เพิ่มเข้าใบขอสั่งซื้อ
                   </button>
                 </div>
               </div>
@@ -241,7 +235,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                 <h3 className="font-black text-[#1A1F3D] mb-4">รายการที่สั่งซื้อ</h3>
 
                 <div className="flex-1 overflow-y-auto">
-                  {poItems.length === 0 ? (
+                  {prItems.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-50 space-y-3 py-12">
                       <FileText size={48} />
                       <p className="font-black">ยังไม่มีรายการสินค้า</p>
@@ -258,7 +252,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {poItems.map((item, idx) => (
+                        {prItems.map((item, idx) => (
                           <tr key={idx}>
                             <td className="py-4 px-2 font-black text-sm">{item.productName}</td>
                             <td className="py-4 px-2 text-right font-bold text-sm">{item.quantity}</td>
@@ -280,15 +274,15 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                   <div>
                     <p className="text-sm font-bold text-gray-400">ยอดรวมทั้งสิ้น</p>
                     <p className="text-3xl font-black text-[#1A1F3D]">
-                      ฿{poItems.reduce((s, i) => s + i.total, 0).toLocaleString()}
+                      ฿{prItems.reduce((s, i) => s + i.total, 0).toLocaleString()}
                     </p>
                   </div>
                   <button
-                    onClick={handleSavePO}
-                    disabled={!selectedPartnerId || poItems.length === 0}
+                    onClick={handleSavePR}
+                    disabled={!selectedPartnerId || prItems.length === 0}
                     className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-gray-900 transition-colors disabled:opacity-50"
                   >
-                    <Save size={18} /> บันทึกใบสั่งซื้อ
+                    <Save size={18} /> บันทึกใบขอสั่งซื้อ
                   </button>
                 </div>
               </div>
@@ -299,8 +293,8 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
     );
   }
 
-  const handleExportDocx = async (po: PurchaseOrder) => {
-    const partner = partners.find(p => p.id === po.partnerId);
+  const handleExportDocx = async (po: PurchaseRequest) => {
+    const partner = partners.find(p => p.id === pr.partnerId);
     const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
     const compName = companyName || shopName || "Company Name";
     const compAddr = companyAddress || shopAddress || "111 อาคารเอไอเอ แคปปิตอล เซ็นเตอร์ แขวงดินแดง เขตดินแดง กรุงเทพฯ 10400";
@@ -360,8 +354,8 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                           verticalAlign: VerticalAlign.CENTER,
                           rowSpan: 2,
                           children: [
-                            new Paragraph({ children: [new TextRun({ text: "Purchase Order", bold: true, size: 24, color: "FFFFFF" })], alignment: AlignmentType.CENTER }),
-                            new Paragraph({ children: [new TextRun({ text: "ใบสั่งซื้อ", size: szNormal, color: "FFFFFF" })], alignment: AlignmentType.CENTER }),
+                            new Paragraph({ children: [new TextRun({ text: "Purchase Requisition", bold: true, size: 24, color: "FFFFFF" })], alignment: AlignmentType.CENTER }),
+                            new Paragraph({ children: [new TextRun({ text: "ใบขอสั่งซื้อ", size: szNormal, color: "FFFFFF" })], alignment: AlignmentType.CENTER }),
                           ]
                         }),
                         new TableCell({
@@ -374,7 +368,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                       children: [
                         new TableCell({
                           verticalAlign: VerticalAlign.CENTER,
-                          children: [new Paragraph({ children: [new TextRun({ text: po.id, bold: true, size: szHeader })], alignment: AlignmentType.CENTER })]
+                          children: [new Paragraph({ children: [new TextRun({ text: pr.id, bold: true, size: szHeader })], alignment: AlignmentType.CENTER })]
                         })
                       ]
                     })
@@ -412,7 +406,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
               width: { size: 25, type: WidthType.PERCENTAGE },
               margins: { top: 100, bottom: 100, left: 100, right: 100 },
               children: [
-                new Paragraph({ children: [new TextRun({ text: "วันที่ : ", bold: true, size: szSmall }), new TextRun({ text: `${format(new Date(po.date), 'dd/MM/yyyy')}`, size: szSmall })] }),
+                new Paragraph({ children: [new TextRun({ text: "วันที่ : ", bold: true, size: szSmall }), new TextRun({ text: `${format(new Date(pr.date), 'dd/MM/yyyy')}`, size: szSmall })] }),
                 new Paragraph({ children: [new TextRun({ text: "Issue Date", size: szTiny })] }),
               ]
             }),
@@ -421,7 +415,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
               rowSpan: 4,
               margins: { top: 100, bottom: 100, left: 100, right: 100 },
               children: [
-                new Paragraph({ children: [new TextRun({ text: "ผู้จัดทำ : ", bold: true, size: szSmall }), new TextRun({ text: `${po.createdBy}`, size: szSmall })] }),
+                new Paragraph({ children: [new TextRun({ text: "ผู้จัดทำ : ", bold: true, size: szSmall }), new TextRun({ text: `${pr.createdBy}`, size: szSmall })] }),
                 new Paragraph({ children: [new TextRun({ text: "Prepared By", size: szTiny })] }),
               ]
             })
@@ -464,7 +458,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
     });
 
     // Items Table
-    const itemRows = po.items.map((item, idx) => {
+    const itemRows = pr.items.map((item, idx) => {
       return new TableRow({
         children: [
           new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (idx + 1).toString(), size: szSmall })], alignment: AlignmentType.CENTER })], margins: { top: 100, bottom: 100 } }),
@@ -477,7 +471,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
       });
     });
 
-    for (let i = po.items.length; i < 5; i++) {
+    for (let i = pr.items.length; i < 5; i++) {
       itemRows.push(new TableRow({
         children: Array(6).fill(0).map(() => new TableCell({ children: [new Paragraph({ text: "" })], margins: { top: 200, bottom: 200 } }))
       }));
@@ -515,7 +509,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                 new Paragraph({
                   children: [
                     new TextRun({ text: "จำนวนเงิน\t\t\t", bold: true, size: szSmall }),
-                    new TextRun({ text: formatBahtText(po.totalAmount), bold: true, size: szSmall })
+                    new TextRun({ text: formatBahtText(pr.totalAmount), bold: true, size: szSmall })
                   ]
                 }),
                 new Paragraph({ children: [new TextRun({ text: "Amount", size: szTiny })] })
@@ -531,7 +525,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     new TableRow({
                       children: [
                         new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "รวมเป็นเงิน", bold: true, size: szSmall })] }), new Paragraph({ children: [new TextRun({ text: "Subtotal", size: 8 })] })], margins: { top: 50, bottom: 50, left: 50 } }),
-                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }), size: szSmall })], alignment: AlignmentType.RIGHT })], margins: { top: 50, bottom: 50, right: 50 }, verticalAlign: VerticalAlign.CENTER }),
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: pr.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }), size: szSmall })], alignment: AlignmentType.RIGHT })], margins: { top: 50, bottom: 50, right: 50 }, verticalAlign: VerticalAlign.CENTER }),
                       ]
                     }),
                     new TableRow({
@@ -543,7 +537,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     new TableRow({
                       children: [
                         new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "ยอดรวมหลังหักส่วนลด", bold: true, size: szSmall })] }), new Paragraph({ children: [new TextRun({ text: "After Discount", size: 8 })] })], margins: { top: 50, bottom: 50, left: 50 } }),
-                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }), size: szSmall })], alignment: AlignmentType.RIGHT })], margins: { top: 50, bottom: 50, right: 50 }, verticalAlign: VerticalAlign.CENTER }),
+                        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: pr.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }), size: szSmall })], alignment: AlignmentType.RIGHT })], margins: { top: 50, bottom: 50, right: 50 }, verticalAlign: VerticalAlign.CENTER }),
                       ]
                     }),
                     new TableRow({
@@ -555,7 +549,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     new TableRow({
                       children: [
                         new TableCell({ shading: { fill: "000000" }, children: [new Paragraph({ children: [new TextRun({ text: "จำนวนเงินรวมทั้งสิ้น", bold: true, color: "FFFFFF", size: szSmall })] }), new Paragraph({ children: [new TextRun({ text: "Total", color: "FFFFFF", size: 8 })] })], margins: { top: 50, bottom: 50, left: 50 } }),
-                        new TableCell({ shading: { fill: "000000" }, children: [new Paragraph({ children: [new TextRun({ text: po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }), bold: true, color: "FFFFFF", size: szSmall })], alignment: AlignmentType.RIGHT })], margins: { top: 50, bottom: 50, right: 50 }, verticalAlign: VerticalAlign.CENTER }),
+                        new TableCell({ shading: { fill: "000000" }, children: [new Paragraph({ children: [new TextRun({ text: pr.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }), bold: true, color: "FFFFFF", size: szSmall })], alignment: AlignmentType.RIGHT })], margins: { top: 50, bottom: 50, right: 50 }, verticalAlign: VerticalAlign.CENTER }),
                       ]
                     })
                   ]
@@ -646,7 +640,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `PO_${po.id}.docx`;
+    a.download = `PR_${pr.id}.docx`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -660,8 +654,8 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl"><FileText size={20} /></div>
                 <div>
-                  <h3 className="text-xl font-black text-[#1A1F3D]">Purchase Orders</h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">จัดการใบสั่งซื้อสินค้า</p>
+                  <h3 className="text-xl font-black text-[#1A1F3D]">Purchase Requests</h3>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">จัดการใบขอสั่งซื้อสินค้า</p>
                 </div>
               </div>
 
@@ -671,42 +665,28 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === null ? 'bg-[#EAFD69]/40 border-[#EAFD69] ring-2 ring-[#EAFD69]/50 shadow-sm' : 'bg-[#EAFD69]/20 border-[#EAFD69]/30 hover:bg-[#EAFD69]/30'}`}
                 >
                   <span className="text-[10px] font-bold text-[#1A1F3D] uppercase tracking-wider">Total</span>
-                  <span className="text-sm font-black text-[#1A1F3D]">{totalPOs}</span>
+                  <span className="text-sm font-black text-[#1A1F3D]">{totalPRs}</span>
                 </button>
                 <button 
                   onClick={() => setStatusFilter(statusFilter === 'Pending' ? null : 'Pending')}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'Pending' ? 'bg-orange-100 border-orange-300 ring-2 ring-orange-200 shadow-sm' : 'bg-orange-50 border-orange-100/50 hover:bg-orange-100'}`}
                 >
                   <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Pending</span>
-                  <span className="text-sm font-black text-orange-600">{pendingPOs}</span>
+                  <span className="text-sm font-black text-orange-600">{pendingPRs}</span>
                 </button>
                 <button 
-                  onClick={() => setStatusFilter(statusFilter === 'To Order' ? null : 'To Order')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'To Order' ? 'bg-indigo-100 border-indigo-300 ring-2 ring-indigo-200 shadow-sm' : 'bg-indigo-50 border-indigo-100/50 hover:bg-indigo-100'}`}
+                  onClick={() => setStatusFilter(statusFilter === 'Approved' ? null : 'Approved')}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'Approved' ? 'bg-green-100 border-green-300 ring-2 ring-green-200 shadow-sm' : 'bg-green-50 border-green-100/50 hover:bg-green-100'}`}
                 >
-                  <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">To Order</span>
-                  <span className="text-sm font-black text-indigo-600">{toOrderPOs}</span>
-                </button>
-                <button 
-                  onClick={() => setStatusFilter(statusFilter === 'On Order' ? null : 'On Order')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'On Order' ? 'bg-blue-100 border-blue-300 ring-2 ring-blue-200 shadow-sm' : 'bg-blue-50 border-blue-100/50 hover:bg-blue-100'}`}
-                >
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">On Order</span>
-                  <span className="text-sm font-black text-blue-600">{onOrderPOs}</span>
-                </button>
-                <button 
-                  onClick={() => setStatusFilter(statusFilter === 'Completed' ? null : 'Completed')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'Completed' ? 'bg-green-100 border-green-300 ring-2 ring-green-200 shadow-sm' : 'bg-green-50 border-green-100/50 hover:bg-green-100'}`}
-                >
-                  <span className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Completed</span>
-                  <span className="text-sm font-black text-green-600">{completedPOs}</span>
+                  <span className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Approved</span>
+                  <span className="text-sm font-black text-green-600">{approvedPRs}</span>
                 </button>
                 <button 
                   onClick={() => setStatusFilter(statusFilter === 'Cancelled' ? null : 'Cancelled')}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'Cancelled' ? 'bg-red-100 border-red-300 ring-2 ring-red-200 shadow-sm' : 'bg-red-50 border-red-100/50 hover:bg-red-100'}`}
                 >
                   <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider">Cancelled</span>
-                  <span className="text-sm font-black text-red-600">{cancelledPOs}</span>
+                  <span className="text-sm font-black text-red-600">{cancelledPRs}</span>
                 </button>
               </div>
             </div>
@@ -716,7 +696,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                 <input
                   type="text"
-                  placeholder="ค้นหาใบสั่งซื้อ..."
+                  placeholder="ค้นหาใบขอสั่งซื้อ..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="pl-9 pr-4 py-3 bg-[#F5F6FA] border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-100 transition-all w-[250px]"
@@ -730,7 +710,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
               <table className="w-full">
                 <thead>
                   <tr className="bg-white border-b border-gray-100">
-                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">PO Number / Date</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">PR Number / Date</th>
                     <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Vendor</th>
                     <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Items</th>
                     <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Total Amount</th>
@@ -740,95 +720,76 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   <AnimatePresence>
-                    {filteredPOs.map(po => (
+                    {filteredPRs.map(pr => (
                       <motion.tr
-                        key={po.id}
+                        key={pr.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
                         className="hover:bg-gray-50/50"
                       >
                         <td className="px-8 py-6">
-                          <p className="text-sm font-black text-[#1A1F3D]">{po.id}</p>
-                          <p className="text-[10px] text-gray-400 font-bold">{format(new Date(po.date), 'dd MMM yyyy HH:mm')}</p>
+                          <p className="text-sm font-black text-[#1A1F3D]">{pr.id}</p>
+                          <p className="text-[10px] text-gray-400 font-bold">{format(new Date(pr.date), 'dd MMM yyyy HH:mm')}</p>
                         </td>
                         <td className="px-8 py-6">
                           <p className="text-sm font-bold text-gray-700">
-                            {partners.find(p => p.id === po.partnerId)?.companyName || 'Unknown Vendor'}
+                            {partners.find(p => p.id === pr.partnerId)?.companyName || 'Unknown Vendor'}
                           </p>
-                          <p className="text-[10px] text-gray-400 font-medium">By: {po.createdBy}</p>
+                          <p className="text-[10px] text-gray-400 font-medium">By: {pr.createdBy}</p>
                         </td>
                         <td className="px-8 py-6 text-center">
                           <span className="inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-lg px-3 py-1 font-black text-xs">
-                            {po.items.length} รายการ
+                            {pr.items.length} รายการ
                           </span>
                         </td>
                         <td className="px-8 py-6 text-right font-black text-[#1A1F3D]">
-                          ฿{po.totalAmount.toLocaleString()}
+                          ฿{pr.totalAmount.toLocaleString()}
                         </td>
                         <td className="px-8 py-6 text-center">
                           <span className={cn(
                             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider",
-                            getStatusColor(po.status)
+                            getStatusColor(pr.status)
                           )}>
-                            {getStatusIcon(po.status)}
-                            {po.status}
+                            {getStatusIcon(pr.status)}
+                            {pr.status}
                           </span>
                         </td>
                         <td className="px-8 py-6 text-center">
-                          {po.status === 'Pending' && (
+                          {pr.status === 'Pending' && (
                             <div className="flex items-center justify-center gap-2 mb-2">
                               <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'To Order')}
+                                onClick={() => {
+                                  const { approvePurchaseRequestToPO } = useStore.getState();
+                                  approvePurchaseRequestToPO(pr.id);
+                                }}
                                 className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100"
-                                title="Mark as To Order"
+                                title="Approve to PO"
                               >
                                 <Check size={16} />
                               </button>
                               <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'Cancelled')}
+                                onClick={() => updatePurchaseRequestStatus(pr.id, 'Cancelled')}
                                 className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                                title="Cancel PO"
+                                title="Cancel PR"
                               >
                                 <XCircle size={16} />
                               </button>
                             </div>
                           )}
-                          {po.status === 'To Order' && (
-                            <div className="flex items-center justify-center gap-2 mb-2">
-                              <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'On Order')}
-                                className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
-                                title="Mark as On Order"
-                              >
-                                <Truck size={16} />
-                              </button>
-                            </div>
-                          )}
-                          {po.status === 'On Order' && (
-                            <div className="flex items-center justify-center gap-2 mb-2">
-                              <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'Completed')}
-                                className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
-                                title="Mark as Completed (Received)"
-                              >
-                                <CheckCircle size={16} />
-                              </button>
-                            </div>
-                          )}
                           <div className="flex justify-center gap-2">
                             <button
-                              onClick={() => setPreviewPO(po)}
+                              onClick={() => setPreviewPR(pr)}
                               className="bg-[#1A1F3D] text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-gray-900 transition-colors shadow-sm"
                             >
                               <FileText size={12} /> Preview
                             </button>
-                            {po.status === 'Pending' && (
+                            {pr.status === 'Pending' && (
                               <button
                                 onClick={() => {
-                                  setEditingPOId(po.id);
-                                  setSelectedPartnerId(po.partnerId);
-                                  setPoItems(po.items);
+                                  setEditingPRId(pr.id);
+                                  setSelectedPartnerId(pr.partnerId);
+                                  setPrItems(pr.items);
                                   handleViewChange('create');
                                 }}
                                 className="bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-orange-100 transition-colors shadow-sm"
@@ -841,11 +802,11 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                       </motion.tr>
                     ))}
                   </AnimatePresence>
-                  {filteredPOs.length === 0 && (
+                  {filteredPRs.length === 0 && (
                     <tr>
                       <td colSpan={6} className="py-20 text-center opacity-40">
                         <FileText size={48} className="mx-auto mb-4 text-gray-400" />
-                        <p className="font-black text-gray-500">ไม่พบข้อมูลใบสั่งซื้อ</p>
+                        <p className="font-black text-gray-500">ไม่พบข้อมูลใบขอสั่งซื้อ</p>
                       </td>
                     </tr>
                   )}
@@ -857,27 +818,27 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
       </div>
 
       {/* PO Preview Modal */}
-      {previewPO && (
+      {previewPR && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-[40px] w-[90vw] max-w-[800px] max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <h2 className="text-xl font-black text-[#1A1F3D]">Preview Purchase Order</h2>
+                <h2 className="text-xl font-black text-[#1A1F3D]">Preview Purchase Requisition</h2>
 
                 <span className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider",
-                  getStatusColor(previewPO.status)
+                  getStatusColor(previewPR.status)
                 )}>
-                  {getStatusIcon(previewPO.status)}
-                  {previewPO.status}
+                  {getStatusIcon(previewPR.status)}
+                  {previewPR.status}
                 </span>
 
-                {previewPO.status === 'Pending' && (
+                {previewPR.status === 'Pending' && (
                   <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
                     <button
                       onClick={() => {
-                        updatePurchaseOrderStatus(previewPO.id, 'To Order');
-                        setPreviewPO({ ...previewPO, status: 'To Order' });
+                        updatePurchaseRequestStatus(previewPR.id, 'To Order');
+                        setPreviewPR({ ...previewPR, status: 'To Order' });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors text-xs font-bold"
                       title="Mark as To Order"
@@ -886,8 +847,8 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     </button>
                     <button
                       onClick={() => {
-                        updatePurchaseOrderStatus(previewPO.id, 'Cancelled');
-                        setPreviewPO({ ...previewPO, status: 'Cancelled' });
+                        updatePurchaseRequestStatus(previewPR.id, 'Cancelled');
+                        setPreviewPR({ ...previewPR, status: 'Cancelled' });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-xs font-bold"
                       title="Cancel PO"
@@ -896,12 +857,12 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     </button>
                   </div>
                 )}
-                {previewPO.status === 'To Order' && (
+                {previewPR.status === 'To Order' && (
                   <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
                     <button
                       onClick={() => {
-                        updatePurchaseOrderStatus(previewPO.id, 'On Order');
-                        setPreviewPO({ ...previewPO, status: 'On Order' });
+                        updatePurchaseRequestStatus(previewPR.id, 'On Order');
+                        setPreviewPR({ ...previewPR, status: 'On Order' });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-xs font-bold"
                       title="Mark as On Order"
@@ -910,12 +871,12 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     </button>
                   </div>
                 )}
-                {previewPO.status === 'On Order' && (
+                {previewPR.status === 'On Order' && (
                   <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
                     <button
                       onClick={() => {
-                        updatePurchaseOrderStatus(previewPO.id, 'Completed');
-                        setPreviewPO({ ...previewPO, status: 'Completed' });
+                        updatePurchaseRequestStatus(previewPR.id, 'Completed');
+                        setPreviewPR({ ...previewPR, status: 'Completed' });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-xs font-bold"
                       title="Mark as Completed"
@@ -927,7 +888,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
               </div>
 
               <button
-                onClick={() => setPreviewPO(null)}
+                onClick={() => setPreviewPR(null)}
                 className="p-2 text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"
               >
                 <X size={20} />
@@ -959,12 +920,12 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                   <div className="w-[300px] border border-black flex flex-col">
                     <div className="flex">
                       <div className="bg-black text-white flex-1 p-3 text-center flex flex-col justify-center">
-                        <h1 className="text-2xl font-bold">Purchase Order</h1>
-                        <p className="text-sm">ใบสั่งซื้อ</p>
+                        <h1 className="text-2xl font-bold">Purchase Requisition</h1>
+                        <p className="text-sm">ใบขอสั่งซื้อ</p>
                       </div>
                       <div className="w-[120px] flex flex-col border-l border-black bg-white">
                         <div className="text-center text-xs p-1 border-b border-black">ต้นฉบับ / Original</div>
-                        <div className="text-center p-3 font-bold">{previewPO.id}</div>
+                        <div className="text-center p-3 font-bold">{previewPR.id}</div>
                       </div>
                     </div>
                   </div>
@@ -973,18 +934,18 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                 {/* Info Boxes */}
                 <div className="grid grid-cols-12 border border-black mb-4">
                   <div className="col-span-6 border-r border-black p-3 space-y-2">
-                    <div className="flex"><span className="w-24 font-bold shrink-0">ผู้ขาย<br /><span className="text-[8px] font-normal">Supplier</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewPO.partnerId)?.companyName || 'Unknown Vendor'}</span></div>
-                    <div className="flex"><span className="w-24 font-bold shrink-0">เลขที่ผู้เสียภาษี<br /><span className="text-[8px] font-normal">Tax ID</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewPO.partnerId)?.taxId || '-'} (สำนักงานใหญ่)</span></div>
-                    <div className="flex"><span className="w-24 font-bold shrink-0">ที่อยู่<br /><span className="text-[8px] font-normal">Address</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewPO.partnerId)?.address || '-'}</span></div>
+                    <div className="flex"><span className="w-24 font-bold shrink-0">ผู้ขาย<br /><span className="text-[8px] font-normal">Supplier</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewPR.partnerId)?.companyName || 'Unknown Vendor'}</span></div>
+                    <div className="flex"><span className="w-24 font-bold shrink-0">เลขที่ผู้เสียภาษี<br /><span className="text-[8px] font-normal">Tax ID</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewPR.partnerId)?.taxId || '-'} (สำนักงานใหญ่)</span></div>
+                    <div className="flex"><span className="w-24 font-bold shrink-0">ที่อยู่<br /><span className="text-[8px] font-normal">Address</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewPR.partnerId)?.address || '-'}</span></div>
                   </div>
                   <div className="col-span-3 border-r border-black p-3 space-y-2">
-                    <div className="flex"><span className="w-16 font-bold shrink-0">วันที่<br /><span className="text-[8px] font-normal">Issue Date</span></span> <span className="flex-1 break-words">{format(new Date(previewPO.date), 'dd/MM/yyyy')}</span></div>
+                    <div className="flex"><span className="w-16 font-bold shrink-0">วันที่<br /><span className="text-[8px] font-normal">Issue Date</span></span> <span className="flex-1 break-words">{format(new Date(previewPR.date), 'dd/MM/yyyy')}</span></div>
                     <div className="flex"><span className="w-16 font-bold shrink-0">การชำระเงิน<br /><span className="text-[8px] font-normal">Credit Term</span></span> <span className="flex-1 break-words">-</span></div>
                     <div className="flex"><span className="w-16 font-bold shrink-0">ผู้ติดต่อ<br /><span className="text-[8px] font-normal">Contact Name</span></span> <span className="flex-1 break-words">-</span></div>
                     <div className="flex"><span className="w-16 font-bold shrink-0">ชื่อโปรเจ็ค<br /><span className="text-[8px] font-normal">Project Name</span></span> <span className="flex-1 break-words">-</span></div>
                   </div>
                   <div className="col-span-3 p-3 space-y-2">
-                    <div className="flex"><span className="w-16 font-bold shrink-0">ผู้จัดทำ<br /><span className="text-[8px] font-normal">Prepared By</span></span> <span className="flex-1 break-words">{previewPO.createdBy}</span></div>
+                    <div className="flex"><span className="w-16 font-bold shrink-0">ผู้จัดทำ<br /><span className="text-[8px] font-normal">Prepared By</span></span> <span className="flex-1 break-words">{previewPR.createdBy}</span></div>
                   </div>
                 </div>
 
@@ -1001,7 +962,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     </tr>
                   </thead>
                   <tbody>
-                    {previewPO.items.map((item, idx) => (
+                    {previewPR.items.map((item, idx) => (
                       <tr key={idx} className="text-[10px]">
                         <td className="border-l border-r border-black p-2 text-center align-top">{idx + 1}</td>
                         <td className="border-l border-r border-black p-2 align-top">{item.productName}</td>
@@ -1012,7 +973,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                       </tr>
                     ))}
                     {/* Fill empty rows */}
-                    {Array.from({ length: Math.max(0, 5 - previewPO.items.length) }).map((_, i) => (
+                    {Array.from({ length: Math.max(0, 5 - previewPR.items.length) }).map((_, i) => (
                       <tr key={`empty-${i}`}>
                         <td className="border-l border-r border-black p-2 text-center text-transparent">.</td>
                         <td className="border-l border-r border-black p-2 text-transparent">.</td>
@@ -1030,13 +991,13 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                   <div className="flex-1 p-3 bg-[#F8F9FA] flex flex-col justify-end border-r border-black">
                     <div className="flex items-center gap-4">
                       <div className="font-bold text-xs">จำนวนเงิน<br /><span className="text-[10px] font-normal">Amount</span></div>
-                      <div className="font-bold text-sm bg-gray-200 px-4 py-1 rounded-sm w-full text-center">{formatBahtText(previewPO.totalAmount)}</div>
+                      <div className="font-bold text-sm bg-gray-200 px-4 py-1 rounded-sm w-full text-center">{formatBahtText(previewPR.totalAmount)}</div>
                     </div>
                   </div>
                   <div className="w-[300px]">
                     <div className="flex border-b border-black">
                       <div className="flex-1 p-2 bg-[#F8F9FA] text-xs"><span className="font-bold">รวมเป็นเงิน</span><br /><span className="text-[10px]">Subtotal</span></div>
-                      <div className="w-[120px] p-2 text-right border-l border-black font-bold">{previewPO.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div className="w-[120px] p-2 text-right border-l border-black font-bold">{previewPR.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                     </div>
                     <div className="flex border-b border-black">
                       <div className="flex-1 p-2 bg-[#F8F9FA] text-xs"><span className="font-bold">หักส่วนลดพิเศษ</span><br /><span className="text-[10px]">Special Discount</span></div>
@@ -1044,7 +1005,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     </div>
                     <div className="flex border-b border-black">
                       <div className="flex-1 p-2 bg-[#F8F9FA] text-xs"><span className="font-bold">ยอดรวมหลังหักส่วนลด</span><br /><span className="text-[10px]">After Discount</span></div>
-                      <div className="w-[120px] p-2 text-right border-l border-black font-bold">{previewPO.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div className="w-[120px] p-2 text-right border-l border-black font-bold">{previewPR.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                     </div>
                     <div className="flex border-b border-black">
                       <div className="flex-1 p-2 bg-[#F8F9FA] text-xs"><span className="font-bold">จำนวนภาษีมูลค่าเพิ่ม 7 %</span><br /><span className="text-[10px]">Value Added Tax</span></div>
@@ -1052,7 +1013,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     </div>
                     <div className="flex bg-black text-white">
                       <div className="flex-1 p-2 text-xs"><span className="font-bold">จำนวนเงินรวมทั้งสิ้น</span><br /><span className="text-[10px]">Total</span></div>
-                      <div className="w-[120px] p-2 text-right border-l border-white font-bold">{previewPO.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div className="w-[120px] p-2 text-right border-l border-white font-bold">{previewPR.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                     </div>
                   </div>
                 </div>
@@ -1082,7 +1043,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
 
             <div className="p-6 border-t border-gray-100 bg-white flex justify-end gap-3">
               <button
-                onClick={() => setPreviewPO(null)}
+                onClick={() => setPreviewPR(null)}
                 className="px-8 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50 transition-colors"
               >
                 ปิด
@@ -1090,13 +1051,13 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
               <div className="relative group">
                 <button
                   onClick={() => {
-                    if (previewPO.status !== 'Pending') {
+                    if (previewPR.status !== 'Pending') {
                       window.print();
                     }
                   }}
-                  disabled={previewPO.status === 'Pending'}
+                  disabled={previewPR.status === 'Pending'}
                   className={`px-8 py-3 rounded-xl font-black text-sm shadow-xl flex items-center gap-2 transition-all
-                    ${previewPO.status === 'Pending'
+                    ${previewPR.status === 'Pending'
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-[#1A1F3D] text-white active:scale-95 hover:bg-gray-900'
                     }
@@ -1104,7 +1065,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                 >
                   <Printer size={18} /> Print
                 </button>
-                {previewPO.status === 'Pending' && (
+                {previewPR.status === 'Pending' && (
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max max-w-xs px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
                     ต้องรอสถานะ Completed ก่อนถึงจะพิมพ์ได้
                     <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-gray-900"></div>
@@ -1115,14 +1076,14 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
               <div className="relative group">
                 <button
                   onClick={() => {
-                    if (previewPO.status !== 'Pending') {
-                      handleExportDocx(previewPO);
-                      setPreviewPO(null);
+                    if (previewPR.status !== 'Pending') {
+                      handleExportDocx(previewPR);
+                      setPreviewPR(null);
                     }
                   }}
-                  disabled={previewPO.status === 'Pending'}
+                  disabled={previewPR.status === 'Pending'}
                   className={`px-8 py-3 rounded-xl font-black text-sm shadow-xl flex items-center gap-2 transition-all
-                    ${previewPO.status === 'Pending'
+                    ${previewPR.status === 'Pending'
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-[#1A1F3D] text-white active:scale-95 hover:bg-gray-900'
                     }
@@ -1130,7 +1091,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                 >
                   <Download size={18} /> Export Word (.docx)
                 </button>
-                {previewPO.status === 'Pending' && (
+                {previewPR.status === 'Pending' && (
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max max-w-xs px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
                     ต้องรอสถานะ Completed ก่อนถึงจะดาวน์โหลดได้
                     <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-gray-900"></div>
@@ -1145,4 +1106,4 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
   );
 };
 
-export default POSystem;
+export default PRSystem;
