@@ -156,12 +156,12 @@ const CustomerDashboard = () => {
       }
     });
 
-    const loyaltyDataArray = [
-      { id: 'churned', count: noVisits, color: '#767777', label: language === 'th' ? 'ไม่กลับมาใช้' : 'Churned', labelFull: language === 'th' ? 'ไม่กลับมาใช้ (>2m)' : 'Churned (>2m)', tooltip: 'ไม่ได้มาใช้บริการนานกว่า 2 เดือน' },
-      { id: 'walkin', count: walkInCustomers, color: '#EAFD69', label: language === 'th' ? 'ทั่วไป' : 'Walk-in', labelFull: language === 'th' ? 'ขาจร' : 'Walk-in', tooltip: 'ลูกค้าทั่วไป หรือไม่ได้ระบุตัวตน' },
-      { id: 'onetime', count: oneTime, color: '#C5C3EA', label: language === 'th' ? 'ใหม่' : 'New', labelFull: language === 'th' ? 'หน้าใหม่ (1 ครั้ง)' : 'One-time', tooltip: 'เพิ่งมาใช้บริการ 1 ครั้ง' },
-      { id: 'regular', count: regularCustomers, color: '#4FD1C5', label: language === 'th' ? 'ประจำ' : 'Regular', labelFull: language === 'th' ? 'ขาประจำ (2-4 ครั้ง)' : 'Regular (2-4)', tooltip: 'มาใช้บริการ 2-4 ครั้ง' },
-      { id: 'loyal', count: loyalCustomers, color: '#FF7E67', label: language === 'th' ? 'มาบ่อย' : 'Frequent', labelFull: language === 'th' ? 'มาบ่อย (5+ ครั้ง)' : 'Frequent (5+)', tooltip: 'มาใช้บริการ 5 ครั้งขึ้นไป' },
+    const loyaltyDataArray: any[] = [
+      { id: 'churned', count: noVisits, color: '#767777', label: language === 'th' ? 'ไม่กลับมาใช้' : 'Churned', labelFull: language === 'th' ? 'ไม่กลับมาใช้ (>2m)' : 'Churned (>2m)', tooltip: 'ไม่ได้มาใช้บริการนานกว่า 2 เดือน', percent: 0 },
+      { id: 'walkin', count: walkInCustomers, color: '#EAFD69', label: language === 'th' ? 'ทั่วไป' : 'Walk-in', labelFull: language === 'th' ? 'ขาจร' : 'Walk-in', tooltip: 'ลูกค้าทั่วไป หรือไม่ได้ระบุตัวตน', percent: 0 },
+      { id: 'onetime', count: oneTime, color: '#C5C3EA', label: language === 'th' ? 'ใหม่' : 'New', labelFull: language === 'th' ? 'หน้าใหม่ (1 ครั้ง)' : 'One-time', tooltip: 'เพิ่งมาใช้บริการ 1 ครั้ง', percent: 0 },
+      { id: 'regular', count: regularCustomers, color: '#4FD1C5', label: language === 'th' ? 'ประจำ' : 'Regular', labelFull: language === 'th' ? 'ขาประจำ (2-4 ครั้ง)' : 'Regular (2-4)', tooltip: 'มาใช้บริการ 2-4 ครั้ง', percent: 0 },
+      { id: 'loyal', count: loyalCustomers, color: '#FF7E67', label: language === 'th' ? 'มาบ่อย' : 'Frequent', labelFull: language === 'th' ? 'มาบ่อย (5+ ครั้ง)' : 'Frequent (5+)', tooltip: 'มาใช้บริการ 5 ครั้งขึ้นไป', percent: 0 },
     ];
 
     const totalLoyalty = loyaltyDataArray.reduce((acc, curr) => acc + curr.count, 0);
