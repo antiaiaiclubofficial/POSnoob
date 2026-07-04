@@ -3,6 +3,20 @@
 import { Language } from '@/utils/translations';
 
 // Basic Types
+export interface Organization {
+  id: string;
+  name: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  organization_id?: string;
+  logo_url?: string;
+  address?: string;
+  phone?: string;
+}
+
 export type ServiceIcon = 'grooming' | 'bath' | 'spa' | 'nail' | 'dry' | 'health' | 'brush' | 'hotel' | 'love' | 'food' | 'premium';
 export type MembershipLevel = 'Standard' | 'Silver' | 'Gold' | 'VIP';
 export type QueueStatus = 'Waiting' | 'Checked-in' | 'In Progress' | 'Completed';
@@ -57,6 +71,7 @@ export interface Customer {
   district?: string;
   province?: string;
   postalCode?: string;
+  createdAt?: string;
 }
 
 export interface QueueItem {
@@ -194,7 +209,7 @@ export interface GoodsReceipt {
   poId?: string;
   partnerId: string;
   items: GoodsReceiptItem[];
-  status: 'Pending' | 'Completed' | 'Cancelled';
+  status: 'Pending' | 'On Order' | 'Completed' | 'Cancelled';
   totalAmount: number;
   receiverName: string;
 }
@@ -212,7 +227,7 @@ export interface PurchaseOrder {
   date: string;
   partnerId: string;
   items: PurchaseOrderItem[];
-  status: 'Pending' | 'To Order' | 'On Order' | 'Completed' | 'Cancelled';
+  status: 'Pending' | 'To Order' | 'Completed' | 'Cancelled';
   totalAmount: number;
   createdBy: string;
 }
@@ -276,6 +291,38 @@ export interface SalesOrder {
   createdBy: string;
 }
 
+export type BillingDocumentType = 'receipt' | 'tax_invoice' | 'invoice' | 'short_receipt';
+
+export interface BillingDocumentItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  itemType?: 'product' | 'service' | 'addon' | 'package' | 'credit';
+}
+
+export interface BillingDocument {
+  id: string;
+  documentNo: string;
+  type: BillingDocumentType;
+  date: string;
+  partnerId?: string;
+  customerId?: string;
+  customerName?: string;
+  customerAddress?: string;
+  customerTaxId?: string;
+  items: BillingDocumentItem[];
+  subtotal: number;
+  vatAmount: number;
+  totalAmount: number;
+  paymentMethod?: string;
+  status: 'Pending' | 'Paid' | 'Cancelled';
+  remarks?: string;
+  referenceDocumentNo?: string;
+  createdBy: string;
+}
+
 export interface Role {
   id: string;
   store_id: string | null;
@@ -309,6 +356,14 @@ export interface ActivityLog {
   action: string;
   details: string;
   type: 'info' | 'success' | 'warning' | 'danger';
+}
+
+export interface HeldBill {
+  id: string;
+  customerId: string;
+  customerName: string;
+  items: any[];
+  timestamp: string;
 }
 
 export interface TierRule {
@@ -357,7 +412,11 @@ export interface AppState {
   isPendingApproval?: boolean;
   isUserSuspended?: boolean;
   isStoreSuspended?: boolean;
-  storeId: string | null;
+  storeId: string | null; // This now acts as active Branch ID
+  organizationId: string | null;
+  organizationName?: string;
+  branches: Branch[];
+  setStoreId: (id: string | null) => void;
 
   // Business Profile
   shopName: string;
@@ -408,6 +467,7 @@ export interface AppState {
   logs: ActivityLog[];
   roles: Role[]; // Add roles to AppState
   cart: any[];
+  heldBills: HeldBill[];
   rolePermissions: Record<StaffRole, string[]>;
 
   // Rules & Settings
@@ -462,6 +522,9 @@ export interface AppState {
   clearCart: () => void;
   processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean, redeemedPoints?: number, subtotal?: number, vatAmount?: number, vatRate?: number) => Promise<any>;
   deleteTransaction: (id: string) => void;
+  holdBill: (customerId: string, customerName: string, items: any[]) => void;
+  removeHeldBill: (id: string) => void;
+  setHeldBills: (bills: HeldBill[]) => void;
 
   setServices: (services: Service[]) => void;
   addService: (service: any) => void;
@@ -481,12 +544,12 @@ export interface AppState {
   purchaseOrders: PurchaseOrder[];
   addPurchaseOrder: (po: Omit<PurchaseOrder, 'id'>) => void;
   updatePurchaseOrder: (id: string, updates: Partial<Omit<PurchaseOrder, 'id'>>) => void;
-  updatePurchaseOrderStatus: (id: string, status: 'Pending' | 'To Order' | 'On Order' | 'Completed' | 'Cancelled') => void;
+  updatePurchaseOrderStatus: (id: string, status: 'Pending' | 'To Order' | 'Completed' | 'Cancelled') => void;
 
   goodsReceipts: GoodsReceipt[];
   addGoodsReceipt: (gr: Omit<GoodsReceipt, 'id'>) => void;
   updateGoodsReceipt: (id: string, updates: Partial<Omit<GoodsReceipt, 'id'>>) => void;
-  updateGoodsReceiptStatus: (id: string, status: 'Pending' | 'Completed' | 'Cancelled') => void;
+  updateGoodsReceiptStatus: (id: string, status: 'Pending' | 'On Order' | 'Completed' | 'Cancelled') => void;
 
   purchaseRequests: PurchaseRequest[];
   addPurchaseRequest: (pr: Omit<PurchaseRequest, 'id'>) => void;
@@ -529,6 +592,31 @@ export interface AppState {
   // Staff Settings
   staffSettings: StaffSettings;
   updateStaffSettings: (settings: Partial<StaffSettings>) => Promise<void>;
+
+  // Accounting System
+  accountCodes: AccountCode[];
+  journalEntries: JournalEntry[];
+  taxRecords: TaxRecord[];
+  
+  setAccountCodes: (codes: AccountCode[]) => void;
+  addAccountCode: (code: Omit<AccountCode, 'id'>) => void;
+  updateAccountCode: (id: string, code: Partial<Omit<AccountCode, 'id'>>) => void;
+  deleteAccountCode: (id: string) => void;
+  
+  setJournalEntries: (entries: JournalEntry[]) => void;
+  addJournalEntry: (entry: Omit<JournalEntry, 'id'>) => void;
+  updateJournalEntryStatus: (id: string, status: 'Draft' | 'Posted' | 'Void') => void;
+  
+  setTaxRecords: (records: TaxRecord[]) => void;
+  addTaxRecord: (record: Omit<TaxRecord, 'id'>) => void;
+  updateTaxRecordStatus: (id: string, status: 'Pending' | 'Filed' | 'Cancelled') => void;
+
+  // Billing Documents
+  billingDocuments: BillingDocument[];
+  addBillingDocument: (doc: Omit<BillingDocument, 'id'>) => void;
+  updateBillingDocument: (id: string, updates: Partial<Omit<BillingDocument, 'id'>>) => void;
+  updateBillingDocumentStatus: (id: string, status: 'Pending' | 'Paid' | 'Cancelled') => void;
+  deleteBillingDocument: (id: string) => void;
 }
 
 export interface DeductionPreset {
@@ -555,4 +643,56 @@ export interface StaffSettings {
     socialSecurityRate: number;
     deductionPresets?: DeductionPreset[];
   };
+}
+
+// --- Accounting System Types ---
+export type AccountCategory = 'Assets' | 'Liabilities' | 'Equity' | 'Revenue' | 'Expenses';
+
+export interface AccountCode {
+  id: string;
+  code: string;
+  name: string;
+  category: AccountCategory;
+  description?: string;
+  isActive: boolean;
+}
+
+export type JournalType = 'JV' | 'PJ' | 'SJ' | 'CR' | 'CP';
+
+export interface JournalEntryLine {
+  accountId: string;
+  description: string;
+  debit: number;
+  credit: number;
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  journalType: JournalType;
+  referenceNo?: string;
+  description: string;
+  lines: JournalEntryLine[];
+  status: 'Draft' | 'Posted' | 'Void';
+  totalDebit: number;
+  totalCredit: number;
+  createdBy: string;
+  isOpeningBalance?: boolean;
+  isClosingEntry?: boolean;
+}
+
+export type TaxType = 'Input' | 'Output' | 'Withholding';
+
+export interface TaxRecord {
+  id: string;
+  date: string;
+  type: TaxType;
+  referenceNo: string;
+  partnerName: string;
+  taxId: string;
+  baseAmount: number;
+  taxRate: number;
+  taxAmount: number;
+  journalEntryId?: string;
+  status: 'Pending' | 'Filed' | 'Cancelled';
 }

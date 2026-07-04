@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 "use client";
 
 import { create } from 'zustand';
@@ -42,6 +43,11 @@ export const useStore = create<AppState>()((set, get) => ({
   maxStaff: 10,
   pointsEarnRate: 10,
   pointsRedeemRate: 1,
+  // Multi-branch & Organization
+  organizationId: null,
+  organizationName: '',
+  branches: [],
+  setStoreId: (id) => set({ storeId: id }),
 
   // Lists
   services: [],
@@ -61,6 +67,10 @@ export const useStore = create<AppState>()((set, get) => ({
   purchaseRequests: [],
   quotations: [],
   salesOrders: [],
+  accountCodes: [],
+  journalEntries: [],
+  taxRecords: [],
+  billingDocuments: [],
   staffSettings: {
     attendance: {
       requireGps: false,
@@ -87,6 +97,7 @@ export const useStore = create<AppState>()((set, get) => ({
     { level: 'VIP', label: 'VIP', minSpent: 30000, discount: 15 }
   ],
   cart: [],
+  heldBills: [],
   disabledSlots: [],
   recurringHolidays: [],
   specificHolidays: [],
@@ -104,7 +115,7 @@ export const useStore = create<AppState>()((set, get) => ({
   setLanguage: (lang) => set({ language: lang }),
 
   addLog: (log) => set(s => ({
-    logs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString() } as ActivityLog, ...s.logs]
+    logs: [{ ...log, id: Math.random().toString(36).substr(2, 9), timestamp: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX") } as ActivityLog, ...s.logs]
   })),
 
   addReportLog: async (log) => {
@@ -132,7 +143,7 @@ export const useStore = create<AppState>()((set, get) => ({
     } else {
       console.error("Error adding report log to Supabase:", error);
       set(s => ({
-        reportHistory: [{ ...log, id: `REP-${Math.random().toString(36).substr(2, 5).toUpperCase()}`, timestamp: new Date().toISOString() }, ...s.reportHistory]
+        reportHistory: [{ ...log, id: `REP-${Math.random().toString(36).substr(2, 5).toUpperCase()}`, timestamp: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX") }, ...s.reportHistory]
       }));
     }
   },
@@ -507,7 +518,7 @@ export const useStore = create<AppState>()((set, get) => ({
         id: 'initial-' + id + '-' + Date.now(),
         quantity: oldQty,
         costPrice: item.costPrice || 0,
-        created_at: new Date().toISOString()
+        created_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX")
       }];
     }
 
@@ -520,7 +531,7 @@ export const useStore = create<AppState>()((set, get) => ({
         id: 'batch-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
         quantity: qty,
         costPrice: cost,
-        created_at: new Date().toISOString()
+        created_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX")
       });
       logCostPrice = cost;
     } else if (mode === 'Out') {
@@ -567,7 +578,7 @@ export const useStore = create<AppState>()((set, get) => ({
           id: 'batch-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
           quantity: diff,
           costPrice: cost,
-          created_at: new Date().toISOString()
+          created_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX")
         });
         logCostPrice = cost;
       }
@@ -678,6 +689,26 @@ export const useStore = create<AppState>()((set, get) => ({
         purchaseOrders: s.purchaseOrders.filter(p => p.id !== newId)
       }));
     } else {
+      if (fullPo.status === 'On Order') {
+        const currentUser = get().currentUser;
+        await get().addGoodsReceipt({
+          date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+          poId: fullPo.id,
+          partnerId: fullPo.partnerId,
+          items: fullPo.items.map(item => ({
+            productId: item.productId,
+            productName: item.productName,
+            quantityExpected: item.quantity,
+            quantityReceived: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.quantity * item.unitPrice,
+            remarks: ''
+          })),
+          status: 'Pending',
+          totalAmount: fullPo.totalAmount,
+          receiverName: currentUser?.name || 'System'
+        });
+      }
       toast.success("สร้างใบสั่งซื้อเรียบร้อยแล้ว");
     }
   },
@@ -711,6 +742,30 @@ export const useStore = create<AppState>()((set, get) => ({
       // Rollback
       set({ purchaseOrders: previousOrders });
     } else {
+      const updatedPo = get().purchaseOrders.find(p => p.id === id);
+      if (updates.status === 'On Order' && updatedPo) {
+        const existingGr = get().goodsReceipts.find(gr => gr.poId === id);
+        if (!existingGr) {
+          const currentUser = get().currentUser;
+          await get().addGoodsReceipt({
+            date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+            poId: updatedPo.id,
+            partnerId: updatedPo.partnerId,
+            items: updatedPo.items.map(item => ({
+              productId: item.productId,
+              productName: item.productName,
+              quantityExpected: item.quantity,
+              quantityReceived: item.quantity,
+              unitPrice: item.unitPrice,
+              total: item.quantity * item.unitPrice,
+              remarks: ''
+            })),
+            status: 'Pending',
+            totalAmount: updatedPo.totalAmount,
+            receiverName: currentUser?.name || 'System'
+          });
+        }
+      }
       toast.success("อัปเดตใบสั่งซื้อเรียบร้อยแล้ว");
     }
   },
@@ -735,11 +790,31 @@ export const useStore = create<AppState>()((set, get) => ({
       set({ purchaseOrders: previousOrders });
     } else {
       if (status === 'Completed' && po && po.status !== 'Completed') {
-        for (const item of po.items) {
-          await get().adjustStock(item.productId, item.quantity, 'Add', `Received from PO #${id}`, item.unitPrice);
+        const existingGr = get().goodsReceipts.find(gr => gr.poId === po.id);
+        if (!existingGr) {
+          const currentUser = get().currentUser;
+          await get().addGoodsReceipt({
+            date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+            poId: po.id,
+            partnerId: po.partnerId,
+            items: po.items.map(item => ({
+              productId: item.productId,
+              productName: item.productName,
+              quantityExpected: item.quantity,
+              quantityReceived: item.quantity,
+              unitPrice: item.unitPrice,
+              total: item.quantity * item.unitPrice,
+              remarks: ''
+            })),
+            status: 'On Order',
+            totalAmount: po.totalAmount,
+            receiverName: currentUser?.name || 'System'
+          });
         }
-        toast.success("รับสินค้าเข้าสต็อกเรียบร้อยแล้ว");
+        toast.success("สั่งซื้อเรียบร้อยแล้วและสร้างใบรับสินค้า (Goods Receipt) อัตโนมัติ");
       }
+
+      toast.success("อัปเดตสถานะ PO เรียบร้อยแล้ว");
     }
   },
 
@@ -929,7 +1004,7 @@ export const useStore = create<AppState>()((set, get) => ({
     }));
 
     state.addPurchaseOrder({
-      date: new Date().toISOString(),
+      date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
       partnerId: pr.partnerId,
       items: newPoItems,
       status: 'Pending',
@@ -1349,7 +1424,7 @@ export const useStore = create<AppState>()((set, get) => ({
       bonusType: template.bonusType,
       bonusName: template.bonusName,
       bonusCount: template.bonusCount,
-      purchaseDate: new Date().toISOString().split('T')[0]
+      purchaseDate: format(new Date(), 'yyyy-MM-dd')
     };
 
     set(s => {
@@ -1383,7 +1458,7 @@ export const useStore = create<AppState>()((set, get) => ({
             ...(c.creditHistory || []),
             {
               id: `cr-${Date.now()}`,
-              date: new Date().toISOString().split('T')[0],
+              date: format(new Date(), 'yyyy-MM-dd'),
               amount: pkg.creditValue,
               type: 'Top-up',
               description: `Purchased ${pkg.name}`
@@ -1428,6 +1503,58 @@ export const useStore = create<AppState>()((set, get) => ({
   }),
 
   clearCart: () => set({ cart: [] }),
+  setHeldBills: (bills) => set({ heldBills: bills }),
+  holdBill: async (customerId, customerName, items) => {
+    const currentStoreId = get().storeId;
+    const newBill = {
+      id: Math.random().toString(36).substring(2, 9),
+      customerId,
+      customerName,
+      items,
+      timestamp: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX")
+    };
+    
+    set(state => ({
+      heldBills: [...state.heldBills, newBill],
+      cart: [],
+      selectedOwner: null
+    }));
+
+    if (currentStoreId && currentStoreId !== 'default-store') {
+      const { error } = await supabase
+        .from('held_bills')
+        .insert([{
+          id: newBill.id,
+          store_id: currentStoreId,
+          customer_id: customerId,
+          customer_name: customerName,
+          items: items,
+          timestamp: newBill.timestamp
+        }]);
+      if (error) {
+        console.error("Error saving held bill to Supabase:", error);
+      }
+    }
+  },
+  removeHeldBill: async (id) => {
+    const currentStoreId = get().storeId;
+    
+    set(state => ({
+      heldBills: state.heldBills.filter(bill => bill.id !== id)
+    }));
+
+    if (currentStoreId && currentStoreId !== 'default-store') {
+      const { error } = await supabase
+        .from('held_bills')
+        .delete()
+        .eq('id', id)
+        .eq('store_id', currentStoreId);
+      
+      if (error) {
+        console.error("Error removing held bill from Supabase:", error);
+      }
+    }
+  },
 
   processPayment: async (customerId, total, discount, items, method, details, isTaxInvoice, redeemedPoints, subtotal, vatAmount, vatRate) => {
     const currentStoreId = get().storeId;
@@ -1569,6 +1696,34 @@ export const useStore = create<AppState>()((set, get) => ({
       set(state => ({
         transactions: [newTx, ...state.transactions]
       }));
+
+      // 5. Create a short receipt in the billing system
+      const shortReceiptItems = items.map((item: any) => ({
+        productId: item.id || '',
+        productName: item.title || item.name || 'Unknown',
+        quantity: item.quantity || 1,
+        unitPrice: item.price || 0,
+        total: (item.quantity || 1) * (item.price || 0),
+        itemType: item.type?.toLowerCase() as any
+      }));
+      
+      const newDocNo = `ABB-${format(new Date(), 'yyyy-MM-dd').replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      get().addBillingDocument({
+        documentNo: newDocNo,
+        type: 'short_receipt',
+        date: data.created_at.split('T')[0],
+        customerId: data.customer_id && data.customer_id !== 'walk-in' ? data.customer_id : undefined,
+        customerName: data.customer_name || 'Walk-in Customer',
+        items: shortReceiptItems,
+        subtotal: Number(data.subtotal || total),
+        vatAmount: Number(data.vat_amount || 0),
+        totalAmount: Number(data.amount || total),
+        paymentMethod: data.payment_method,
+        status: 'Paid',
+        createdBy: data.staff_name || 'Admin',
+        remarks: `Auto-generated from POS`
+      });
     }
   },
 
@@ -1614,4 +1769,235 @@ export const useStore = create<AppState>()((set, get) => ({
       }
     }
   },
+
+  // Accounting System Implementations
+  setAccountCodes: (codes) => set({ accountCodes: codes }),
+  
+  addAccountCode: async (code) => {
+    const storeId = get().storeId;
+    if (!storeId || storeId === 'default-store') return;
+    try {
+      const { data, error } = await supabase.from('account_codes').insert({
+        store_id: storeId,
+        code: code.code,
+        name: code.name,
+        category: code.category,
+        description: code.description,
+        is_active: code.isActive
+      }).select().single();
+      if (error) throw error;
+      if (data) {
+        set(s => ({ accountCodes: [...s.accountCodes, { ...code, id: data.id }] }));
+      }
+    } catch (err) {
+      console.error("Failed to add account code:", err);
+    }
+  },
+  
+  updateAccountCode: async (id, code) => {
+    const storeId = get().storeId;
+    if (!storeId || storeId === 'default-store') return;
+    set(s => ({ accountCodes: s.accountCodes.map(c => c.id === id ? { ...c, ...code } : c) }));
+    try {
+      const { error } = await supabase.from('account_codes').update({
+        code: code.code,
+        name: code.name,
+        category: code.category,
+        description: code.description,
+        is_active: code.isActive
+      }).eq('id', id).eq('store_id', storeId);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to update account code:", err);
+    }
+  },
+
+  deleteAccountCode: async (id) => {
+    const storeId = get().storeId;
+    if (!storeId || storeId === 'default-store') {
+      set(s => ({ accountCodes: s.accountCodes.filter(c => c.id !== id) }));
+      return;
+    }
+    set(s => ({ accountCodes: s.accountCodes.filter(c => c.id !== id) }));
+    try {
+      const { error } = await supabase.from('account_codes').delete().eq('id', id).eq('store_id', storeId);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to delete account code:", err);
+    }
+  },
+
+  setJournalEntries: (entries) => set({ journalEntries: entries }),
+  
+  addJournalEntry: async (entry) => {
+    const storeId = get().storeId;
+    if (!storeId || storeId === 'default-store') return;
+    const newId = `JV${Date.now().toString().slice(-6)}`;
+    try {
+      const { data, error } = await supabase.from('journal_entries').insert({
+        id: newId,
+        store_id: storeId,
+        date: entry.date,
+        journal_type: entry.journalType,
+        reference_no: entry.referenceNo,
+        description: entry.description,
+        lines: entry.lines,
+        status: entry.status,
+        total_debit: entry.totalDebit,
+        total_credit: entry.totalCredit,
+        created_by: entry.createdBy,
+        is_opening_balance: entry.isOpeningBalance,
+        is_closing_entry: entry.isClosingEntry
+      }).select().single();
+      if (error) throw error;
+      if (data) {
+        set(s => ({ journalEntries: [{ ...entry, id: data.id }, ...s.journalEntries] }));
+      }
+    } catch (err) {
+      console.error("Failed to add journal entry:", err);
+    }
+  },
+  
+  updateJournalEntryStatus: async (id, status) => {
+    const storeId = get().storeId;
+    if (!storeId || storeId === 'default-store') return;
+    set(s => ({ journalEntries: s.journalEntries.map(e => e.id === id ? { ...e, status } : e) }));
+    try {
+      const { error } = await supabase.from('journal_entries').update({ status }).eq('id', id).eq('store_id', storeId);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to update journal entry status:", err);
+    }
+  },
+
+  setTaxRecords: (records) => set({ taxRecords: records }),
+  
+  addTaxRecord: async (record) => {
+    const storeId = get().storeId;
+    if (!storeId || storeId === 'default-store') return;
+    const newId = `TAX${Date.now().toString().slice(-6)}`;
+    try {
+      const { data, error } = await supabase.from('tax_records').insert({
+        id: newId,
+        store_id: storeId,
+        date: record.date,
+        type: record.type,
+        reference_no: record.referenceNo,
+        partner_name: record.partnerName,
+        tax_id: record.taxId,
+        base_amount: record.baseAmount,
+        tax_rate: record.taxRate,
+        tax_amount: record.taxAmount,
+        journal_entry_id: record.journalEntryId,
+        status: record.status
+      }).select().single();
+      if (error) throw error;
+      if (data) {
+        set(s => ({ taxRecords: [{ ...record, id: data.id }, ...s.taxRecords] }));
+      }
+    } catch (err) {
+      console.error("Failed to add tax record:", err);
+    }
+  },
+  
+  updateTaxRecordStatus: async (id, status) => {
+    const storeId = get().storeId;
+    if (!storeId || storeId === 'default-store') return;
+    set(s => ({ taxRecords: s.taxRecords.map(t => t.id === id ? { ...t, status } : t) }));
+    try {
+      const { error } = await supabase.from('tax_records').update({ status }).eq('id', id).eq('store_id', storeId);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to update tax record status:", err);
+    }
+  },
+
+  addBillingDocument: async (doc) => {
+    const storeId = get().storeId;
+    const newId = doc.type.toUpperCase().substring(0,3) + Date.now().toString().slice(-6);
+    const newDoc = { ...doc, id: newId };
+    set(s => ({ billingDocuments: [newDoc, ...s.billingDocuments] }));
+    if (!storeId || storeId === 'default-store') return;
+    try {
+      const { error } = await supabase.from('billing_documents').insert({
+        id: newId,
+        store_id: storeId,
+        document_no: doc.documentNo,
+        type: doc.type,
+        date: doc.date,
+        partner_id: doc.partnerId || null,
+        customer_id: doc.customerId || null,
+        customer_name: doc.customerName || null,
+        customer_address: doc.customerAddress || null,
+        customer_tax_id: doc.customerTaxId || null,
+        items: doc.items,
+        subtotal: doc.subtotal,
+        vat_amount: doc.vatAmount,
+        total_amount: doc.totalAmount,
+        payment_method: doc.paymentMethod || null,
+        status: doc.status,
+        created_by: doc.createdBy,
+        reference_document_no: doc.referenceDocumentNo || null,
+        remarks: doc.remarks || null
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to add billing document:", err);
+    }
+  },
+
+  updateBillingDocument: async (id, updates) => {
+    const storeId = get().storeId;
+    set(s => ({ billingDocuments: s.billingDocuments.map(d => d.id === id ? { ...d, ...updates } : d) }));
+    if (!storeId || storeId === 'default-store') return;
+    try {
+      const payload: any = {};
+      if (updates.documentNo !== undefined) payload.document_no = updates.documentNo;
+      if (updates.type !== undefined) payload.type = updates.type;
+      if (updates.date !== undefined) payload.date = updates.date;
+      if (updates.partnerId !== undefined) payload.partner_id = updates.partnerId;
+      if (updates.customerId !== undefined) payload.customer_id = updates.customerId;
+      if (updates.customerName !== undefined) payload.customer_name = updates.customerName;
+      if (updates.customerAddress !== undefined) payload.customer_address = updates.customerAddress;
+      if (updates.customerTaxId !== undefined) payload.customer_tax_id = updates.customerTaxId;
+      if (updates.items !== undefined) payload.items = updates.items;
+      if (updates.subtotal !== undefined) payload.subtotal = updates.subtotal;
+      if (updates.vatAmount !== undefined) payload.vat_amount = updates.vatAmount;
+      if (updates.totalAmount !== undefined) payload.total_amount = updates.totalAmount;
+      if (updates.paymentMethod !== undefined) payload.payment_method = updates.paymentMethod;
+      if (updates.status !== undefined) payload.status = updates.status;
+      if (updates.referenceDocumentNo !== undefined) payload.reference_document_no = updates.referenceDocumentNo;
+      if (updates.remarks !== undefined) payload.remarks = updates.remarks;
+
+      const { error } = await supabase.from('billing_documents').update(payload).eq('id', id).eq('store_id', storeId);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to update billing document:", err);
+    }
+  },
+
+  updateBillingDocumentStatus: async (id, status) => {
+    const storeId = get().storeId;
+    set(s => ({ billingDocuments: s.billingDocuments.map(d => d.id === id ? { ...d, status } : d) }));
+    if (!storeId || storeId === 'default-store') return;
+    try {
+      const { error } = await supabase.from('billing_documents').update({ status }).eq('id', id).eq('store_id', storeId);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to update billing document status:", err);
+    }
+  },
+
+  deleteBillingDocument: async (id) => {
+    const storeId = get().storeId;
+    set(s => ({ billingDocuments: s.billingDocuments.filter(d => d.id !== id) }));
+    if (!storeId || storeId === 'default-store') return;
+    try {
+      const { error } = await supabase.from('billing_documents').delete().eq('id', id).eq('store_id', storeId);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to delete billing document:", err);
+    }
+  }
+
 }));

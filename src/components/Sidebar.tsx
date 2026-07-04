@@ -18,6 +18,7 @@ import {
   Megaphone,
   Package,
   Calculator,
+  BookOpen,
   ChevronDown
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ import { useStore } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from 'sonner';
+import { BranchSwitcher } from './BranchSwitcher';
 
 interface SidebarProps {
   className?: string;
@@ -48,7 +50,8 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
       label: 'สต๊อก & บัญชี',
       submenu: [
         { icon: Package, label: t.inventory, path: '/inventory' },
-        { icon: Calculator, label: t.accounting || 'Sales & Procurement', path: '/accounting' },
+        { icon: Calculator, label: t.accounting || 'Sales & Procurement', path: '/sales-procurement' },
+        { icon: BookOpen, label: 'ระบบบัญชี', path: '/accounting' },
       ]
     },
     {
@@ -76,6 +79,9 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   
   // Ensure accounting is available for Admin and superadmin even if DB roles aren't updated yet
   if (userRole === 'Admin' || userRole === 'superadmin') {
+    if (!allowedPaths.includes('/sales-procurement')) {
+      allowedPaths = [...allowedPaths, '/sales-procurement'];
+    }
     if (!allowedPaths.includes('/accounting')) {
       allowedPaths = [...allowedPaths, '/accounting'];
     }
@@ -108,6 +114,9 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     });
     return initialState;
   });
+
+  const [isBranchSelectOpen, setIsBranchSelectOpen] = useState(false);
+  const isExpanded = isBranchSelectOpen;
 
   useEffect(() => {
     setOpenMenus(prev => {
@@ -145,9 +154,10 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     <div className={cn(
       "h-full bg-white flex flex-col border-r border-gray-100 shrink-0 transition-all duration-300 ease-in-out overflow-hidden group/sidebar z-50",
       "w-64 lg:w-[88px] lg:hover:w-64",
+      isExpanded && "lg:!w-64",
       className
     )}>
-      <div className="flex items-center gap-4 mb-10 px-6 pt-8 shrink-0">
+      <div className="flex items-center gap-4 mb-6 px-6 pt-8 shrink-0">
         <div className="w-10 h-10 bg-[#1A1F3D] rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-[#1A1F3D]/10">
           {shopLogo && userRole !== 'superadmin' ? (
             <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" />
@@ -155,7 +165,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
             <Scissors className="text-white w-5 h-5" />
           )}
         </div>
-        <div className="min-w-0 opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+        <div className={cn("min-w-0 opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 whitespace-nowrap", isExpanded && "lg:!opacity-100")}>
           <h1 className="font-black text-[#1A1F3D] leading-tight truncate text-sm">
             {userRole === 'superadmin' ? 'System Central' : shopName}
           </h1>
@@ -163,6 +173,16 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
             {userRole === 'superadmin' ? 'Platform Owner' : 'Premium Care'}
           </p>
         </div>
+      </div>
+
+      <div className={cn(
+        "px-4 transition-all duration-300 overflow-hidden",
+        "max-h-[100px] opacity-100 mb-5 py-1",
+        "lg:max-h-0 lg:opacity-0 lg:mb-0 lg:py-0",
+        "lg:group-hover/sidebar:max-h-[100px] lg:group-hover/sidebar:opacity-100 lg:group-hover/sidebar:mb-5 lg:group-hover/sidebar:py-1",
+        isExpanded && "lg:!max-h-[100px] lg:!opacity-100 lg:!mb-5 lg:!py-1"
+      )}>
+        <BranchSwitcher onOpenChange={setIsBranchSelectOpen} />
       </div>
 
       <nav className="flex-1 space-y-2 px-4 overflow-y-auto scrollbar-hide pb-4">
@@ -184,7 +204,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
                 >
                   <div className="flex items-center gap-4">
                     <group.icon size={20} className={cn("shrink-0 transition-transform group-hover:scale-110", hasActiveChild ? "text-[#1A1F3D]" : "")} />
-                    <span className="text-xs font-medium opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+                    <span className={cn("text-xs font-medium opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300", isExpanded && "lg:!opacity-100")}>
                       {group.label}
                     </span>
                   </div>
@@ -192,13 +212,14 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
                     size={16} 
                     className={cn(
                       "shrink-0 opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-all duration-300",
-                      isOpen ? "rotate-180" : ""
+                      isOpen ? "rotate-180" : "",
+                      isExpanded && "lg:!opacity-100"
                     )} 
                   />
                 </button>
                 
                 {isOpen && (
-                  <div className="pl-4 space-y-1 block lg:hidden lg:group-hover/sidebar:block mt-1">
+                  <div className={cn("pl-4 space-y-1 block lg:hidden lg:group-hover/sidebar:block mt-1", isExpanded && "lg:!block")}>
                     {group.submenu.map(sub => {
                       const isActive = location.pathname === sub.path;
                       return (
@@ -240,7 +261,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
               )}
             >
               <group.icon size={20} className={cn("shrink-0 transition-transform group-hover:scale-110", isActive ? "text-[#D9ED5F]" : "")} />
-              <span className="text-xs font-medium opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">
+              <span className={cn("text-xs font-medium opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300", isExpanded && "lg:!opacity-100")}>
                 {group.label}
               </span>
             </Link>
@@ -257,7 +278,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
               className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-[#1A1F3D] transition-colors group overflow-hidden whitespace-nowrap"
             >
               <SettingsIcon size={20} className="shrink-0 group-hover:rotate-90 transition-transform duration-300" />
-              <span className="text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.settings}</span>
+              <span className={cn("text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300", isExpanded && "lg:!opacity-100")}>{t.settings}</span>
             </Link>
           )}
           <a 
@@ -267,14 +288,14 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
             className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-[#1A1F3D] transition-colors group overflow-hidden whitespace-nowrap"
           >
             <HelpCircle size={20} className="shrink-0 group-hover:rotate-12 transition-transform" />
-            <span className="text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.support}</span>
+            <span className={cn("text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300", isExpanded && "lg:!opacity-100")}>{t.support}</span>
           </a>
           <button 
             onClick={handleLogout}
             className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-red-500 transition-colors w-full group overflow-hidden whitespace-nowrap"
           >
             <LogOut size={20} className="shrink-0 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300">{t.logout}</span>
+            <span className={cn("text-xs font-bold opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300", isExpanded && "lg:!opacity-100")}>{t.logout}</span>
           </button>
         </div>
         
@@ -286,7 +307,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
               userInitial
             )}
           </div>
-          <div className="opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 min-w-0">
+          <div className={cn("opacity-100 lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity duration-300 min-w-0", isExpanded && "lg:!opacity-100")}>
             <p className="text-[10px] font-black text-[#1A1F3D] truncate">{userDisplayName}</p>
             <p className="text-[8px] text-gray-400 font-bold uppercase">{userDisplayRole}</p>
           </div>

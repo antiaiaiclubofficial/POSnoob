@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 "use client";
 
 import { StateCreator } from 'zustand';
@@ -137,6 +138,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
           phone: data.phone || '',
           email: data.email || '',
           membership: 'Standard',
+          createdAt: data.created_at,
           points: 0,
           totalSpent: 0,
           creditBalance: 0,
@@ -374,7 +376,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         await supabase.from('pet_weight_history').insert([{
           pet_id: data.id,
           weight: Number(petData.initialWeight),
-          date: new Date().toISOString().split('T')[0]
+          date: format(new Date(), 'yyyy-MM-dd')
         }]);
       }
 
@@ -384,7 +386,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         species: data.type,
         breed: data.breed,
         birthday: data.birth_date,
-        weightHistory: data.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(data.weight) }] : [],
+        weightHistory: data.weight ? [{ date: format(new Date(), 'yyyy-MM-dd'), value: Number(data.weight) }] : [],
         serviceHistory: [],
         notes: data.medical_condition || '',
         image: data.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop',
@@ -461,7 +463,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       .insert([{
         pet_id: petId,
         weight: weight,
-        date: new Date().toISOString().split('T')[0]
+        date: format(new Date(), 'yyyy-MM-dd')
       }]);
 
     if (error) {
@@ -478,7 +480,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
                 p.id === petId
                   ? {
                       ...p,
-                      weightHistory: [...(p.weightHistory || []), { date: new Date().toISOString().split('T')[0], value: weight }]
+                      weightHistory: [...(p.weightHistory || []), { date: format(new Date(), 'yyyy-MM-dd'), value: weight }]
                     }
                   : p
               )
@@ -494,7 +496,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       .insert([{
         pet_id: petId,
         type: 'intake',
-        date: record.date || new Date().toISOString().split('T')[0],
+        date: record.date || format(new Date(), 'yyyy-MM-dd'),
         description: JSON.stringify(record.details),
         staff_name: record.staffName,
         signature_url: record.signature,
@@ -518,7 +520,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
                       intakeHistory: [...(p.intakeHistory || []), {
                         id: `intake-${Date.now()}`,
                         queueItemId: record.queueItemId,
-                        date: record.date || new Date().toISOString().split('T')[0],
+                        date: record.date || format(new Date(), 'yyyy-MM-dd'),
                         weight: record.weight,
                         details: record.details,
                         signature: record.signature,

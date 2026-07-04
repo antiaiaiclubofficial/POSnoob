@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText, Landmark, Percent, Tag
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText, Landmark, Percent, Tag, Save, ClipboardList
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -14,15 +15,20 @@ import { Switch } from "@/components/ui/switch";
 
 interface OrderSummaryProps {
   isMobile?: boolean;
+  onOpenSavedBills?: () => void;
 }
 
-const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
+const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
   const { 
     cart, removeFromCart, updateCartQuantity, updateCartItemDiscount, clearCart, 
     selectedOwner, activePet, markAsPaid, processPayment, tierRules, inventory, 
     addToCart, currency, language, shopName, shopLogo, shopAddress, shopPhone,
-    receiptHeader, receiptFooter, receiptPaperSize, vatEnabled, vatRate, vatInclusive
+    receiptHeader, receiptFooter, receiptPaperSize, vatEnabled, vatRate, vatInclusive,
+    holdBill, heldBills, queue
   } = useStore();
+  
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const todayQueue = queue?.filter(q => q.date === today && !q.isPaid) || [];
   
   const t = translations[language];
   
@@ -147,6 +153,14 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
     setIsPaymentModalOpen(true);
   };
 
+  const handleHoldBill = () => {
+    if (cart.length === 0) return;
+    const customerId = selectedOwner?.id || 'walk-in';
+    const customerName = selectedOwner?.name || 'Walk-in Customer';
+    holdBill(customerId, customerName, cart);
+    toast.success(language === 'th' ? "พักบิลสำเร็จ" : "Bill put on hold");
+  };
+
   const handleCompletePayment = (details: any) => {
     if (!selectedOwner) return;
     const finalDetails = {
@@ -163,7 +177,7 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
     const txId = `TX-${Date.now()}`;
     const txData = {
       id: txId,
-      date: new Date().toISOString(),
+      date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
       customerName: selectedOwner.name,
       items: finalCart,
       amount: total,
@@ -253,11 +267,26 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
             </div>
           )}
         </div>
-        {cart.length > 0 && (
-          <button onClick={clearCart} className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors">
-            {t.clearAll}
+        <div className="flex items-center gap-2">
+          {cart.length > 0 && (
+            <button onClick={clearCart} className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors">
+              {t.clearAll}
+            </button>
+          )}
+          
+          <button 
+            onClick={onOpenSavedBills}
+            className="flex items-center gap-2 bg-[#D9ED5F] text-[#1A1F3D] px-3 py-2 rounded-xl shadow-sm text-[10px] font-black hover:brightness-95 hover:scale-105 active:scale-95 transition-all"
+          >
+            <ClipboardList size={14} />
+            <span className="hidden sm:inline">{language === 'th' ? 'บิลที่พัก/คิว' : 'Saved Bills/Queue'}</span>
+            {((heldBills?.length || 0) > 0 || todayQueue.length > 0) && (
+              <span className="bg-red-500 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full ml-0.5">
+                {(heldBills?.length || 0) + todayQueue.length}
+              </span>
+            )}
           </button>
-        )}
+        </div>
       </div>
 
       {/* Barcode Input */}
@@ -461,9 +490,22 @@ const OrderSummary = ({ isMobile }: OrderSummaryProps) => {
         </div>
       </div>
 
-      <button onClick={handleInitiatePayment} disabled={cart.length === 0} className="w-full bg-[#D9ED5F] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 mt-6 shadow-xl transition-all">
-        <Banknote size={20} /> {paymentMethod === 'Package' ? "Deduct from Package" : paymentMethod === 'Store Credit' ? "Deduct Credit" : t.checkout}
-      </button>
+      <div className="flex gap-2 mt-6">
+        <button 
+          onClick={handleHoldBill} 
+          disabled={cart.length === 0} 
+          className="flex-1 bg-white border border-[#1A1F3D] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-all"
+        >
+          <Save size={20} /> {language === 'th' ? 'พักบิล' : 'Hold'}
+        </button>
+        <button 
+          onClick={handleInitiatePayment} 
+          disabled={cart.length === 0} 
+          className="flex-[2] bg-[#D9ED5F] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 shadow-xl transition-all"
+        >
+          <Banknote size={20} /> {paymentMethod === 'Package' ? "Deduct from Package" : paymentMethod === 'Store Credit' ? "Deduct Credit" : t.checkout}
+        </button>
+      </div>
 
       {isPaymentModalOpen && <PaymentModal total={paymentMethod === 'Package' || paymentMethod === 'Store Credit' ? 0 : total} method={paymentMethod === 'Store Credit' ? 'Cash' : paymentMethod} onClose={() => setIsPaymentModalOpen(false)} onComplete={handleCompletePayment} />}
       

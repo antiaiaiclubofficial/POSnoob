@@ -11,7 +11,7 @@ import AddOnModal from '@/components/AddOnModal';
 import ManageServicesModal from '@/components/ManageServicesModal';
 import { 
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
-  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath, Wallet, Plus, AlertCircle, ArrowRight
+  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath, Wallet, Plus, AlertCircle, ArrowRight, History
 } from 'lucide-react';
 import { useStore, QueueItem, ServiceIcon, Customer } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 const getIcon = (iconName: ServiceIcon) => {
   switch(iconName) {
@@ -52,7 +53,7 @@ const walkInCustomer: Customer = {
       name: 'สุนัขทั่วไป',
       species: 'Dog',
       breed: 'Mixed Breed',
-      birthday: new Date().toISOString().split('T')[0],
+      birthday: format(new Date(), 'yyyy-MM-dd'),
       weightHistory: [],
       serviceHistory: [],
       notes: '',
@@ -63,7 +64,7 @@ const walkInCustomer: Customer = {
       name: 'แมวทั่วไป',
       species: 'Cat',
       breed: 'Mixed Breed',
-      birthday: new Date().toISOString().split('T')[0],
+      birthday: format(new Date(), 'yyyy-MM-dd'),
       weightHistory: [],
       serviceHistory: [],
       notes: '',
@@ -76,6 +77,7 @@ const walkInCustomer: Customer = {
 
 const Index = () => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const { 
     selectedOwner, 
     activePet, 
@@ -91,8 +93,12 @@ const Index = () => {
     setActiveQueueItem,
     cart,
     addToCart,
+    clearCart,
+    heldBills,
+    removeHeldBill,
     currency,
-    language
+    language,
+    transactions
   } = useStore();
 
   const t = translations[language];
@@ -104,6 +110,9 @@ const Index = () => {
   const [productSearch, setProductQuery] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isManageServicesOpen, setIsManageServicesOpen] = useState(false);
+  const [isSavedBillsSheetOpen, setIsSavedBillsSheetOpen] = useState(false);
+  const [isTransactionHistoryOpen, setIsTransactionHistoryOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
   const [selectedAddOn, setSelectedAddOn] = useState<any>(null);
 
@@ -114,6 +123,7 @@ const Index = () => {
   }, [activePet]);
 
   const todayQueue = queue.filter(q => q.date === today && !q.isPaid);
+  const todayTransactions = transactions.filter(t => t.date === today);
 
   const handleQuickSelectFromQueue = (item: QueueItem) => {
     const owner = customers.find(c => c.name === item.ownerName);
@@ -125,8 +135,27 @@ const Index = () => {
         setActiveQueueItem(item.id);
         toast.success(`Active Session: ${item.petName}`);
         setPosTab('services');
+        setIsSavedBillsSheetOpen(false);
       }
     }
+  };
+
+  const handleLoadHeldBill = (bill: any) => {
+    // 1. Clear current cart
+    clearCart();
+    // 2. Select Owner
+    const owner = customers.find(c => c.id === bill.customerId);
+    if (owner) {
+      selectOwner(owner);
+    } else if (bill.customerId === 'walk-in') {
+      selectOwner(walkInCustomer);
+    }
+    // 3. Add items to cart
+    bill.items.forEach((item: any) => addToCart(item));
+    // 4. Remove from heldBills
+    removeHeldBill(bill.id);
+    setIsSavedBillsSheetOpen(false);
+    toast.success(language === 'th' ? "ดึงบิลสำเร็จ" : "Bill loaded");
   };
 
   const handleQuickSale = () => {
@@ -159,6 +188,173 @@ const Index = () => {
             <h1 className="text-2xl lg:text-3xl font-black text-[#1A1F3D]">{t.pos}</h1>
           </div>
           <div className="flex gap-3">
+            <Sheet open={isSavedBillsSheetOpen} onOpenChange={setIsSavedBillsSheetOpen}>
+              <SheetContent className="w-[400px] sm:w-[540px] border-l-0 rounded-l-[40px] p-8 shadow-2xl flex flex-col">
+                <div>
+                  <h2 className="text-2xl font-black text-[#1A1F3D] mb-1">{language === 'th' ? 'บิลที่พักไว้ และ คิววันนี้' : 'Saved Bills & Today\'s Queue'}</h2>
+                  <p className="text-gray-400 text-sm font-bold mb-6">{language === 'th' ? 'เลือกบิลหรือคิวเพื่อชำระเงิน' : 'Select a bill or queue to checkout'}</p>
+                </div>
+                
+                <Tabs defaultValue="held" className="flex-1 flex flex-col overflow-hidden">
+                  <TabsList className="grid w-full grid-cols-2 bg-gray-50 p-1 rounded-2xl mb-4 shrink-0">
+                    <TabsTrigger value="held" className="rounded-xl font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      {language === 'th' ? 'บิลที่พักไว้' : 'Held Bills'} ({heldBills?.length || 0})
+                    </TabsTrigger>
+                    <TabsTrigger value="queue" className="rounded-xl font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      {language === 'th' ? 'คิววันนี้' : 'Today Queue'} ({todayQueue.length})
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="held" className="flex-1 overflow-y-auto pr-2 space-y-3">
+                    {!heldBills || heldBills.length === 0 ? (
+                      <div className="text-center py-10 text-gray-400 font-bold">
+                        {language === 'th' ? 'ไม่มีบิลที่พักไว้' : 'No held bills'}
+                      </div>
+                    ) : (
+                      heldBills.map(bill => (
+                        <div key={bill.id} className="bg-white border border-gray-100 p-4 rounded-2xl flex items-center justify-between hover:border-[#D9ED5F] transition-all group">
+                          <div>
+                            <p className="font-black text-[#1A1F3D]">{bill.customerName}</p>
+                            <p className="text-xs text-gray-400 font-bold">{format(new Date(bill.timestamp), 'HH:mm')} • {bill.items.length} items</p>
+                          </div>
+                          <button 
+                            onClick={() => handleLoadHeldBill(bill)}
+                            className="bg-gray-50 text-[#1A1F3D] px-4 py-2 rounded-xl text-xs font-black group-hover:bg-[#1A1F3D] group-hover:text-[#D9ED5F] transition-all"
+                          >
+                            {language === 'th' ? 'เลือกชำระ' : 'Checkout'}
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="queue" className="flex-1 overflow-y-auto pr-2 space-y-3">
+                    {todayQueue.length === 0 ? (
+                      <div className="text-center py-10 text-gray-400 font-bold">
+                        {language === 'th' ? 'ไม่มีคิวที่รอชำระเงิน' : 'No pending queue'}
+                      </div>
+                    ) : (
+                      todayQueue.map(item => (
+                        <div key={item.id} className="bg-white border border-gray-100 p-4 rounded-2xl flex items-center justify-between hover:border-[#D9ED5F] transition-all group">
+                          <div className="flex items-center gap-3">
+                            <img src={item.image} alt={item.petName} className="w-10 h-10 rounded-full object-cover" />
+                            <div>
+                              <p className="font-black text-[#1A1F3D]">{item.petName}</p>
+                              <p className="text-xs text-gray-400 font-bold">{item.ownerName} • {item.serviceName}</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => handleQuickSelectFromQueue(item)}
+                            className="bg-gray-50 text-[#1A1F3D] px-4 py-2 rounded-xl text-xs font-black group-hover:bg-[#1A1F3D] group-hover:text-[#D9ED5F] transition-all"
+                          >
+                            {language === 'th' ? 'เลือกชำระ' : 'Checkout'}
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </SheetContent>
+            </Sheet>
+
+            <Sheet open={isTransactionHistoryOpen} onOpenChange={(open) => {
+              setIsTransactionHistoryOpen(open);
+              if (!open) setSelectedTransaction(null);
+            }}>
+              <SheetContent className="w-[95vw] sm:max-w-[700px] border-l-0 rounded-l-[40px] p-8 shadow-2xl flex flex-col">
+                {selectedTransaction ? (
+                  <div className="flex flex-col h-full animate-in slide-in-from-right-4 duration-300">
+                    <div className="flex items-center gap-3 mb-6">
+                      <button 
+                        onClick={() => setSelectedTransaction(null)}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                      >
+                        <ArrowRight size={20} className="rotate-180 text-gray-500" />
+                      </button>
+                      <div>
+                        <h2 className="text-2xl font-black text-[#1A1F3D] mb-1">{language === 'th' ? 'รายละเอียดรายการขาย' : 'Transaction Details'}</h2>
+                        <p className="text-gray-400 text-sm font-bold">{format(new Date(selectedTransaction.createdAt || new Date()), 'HH:mm')} • {selectedTransaction.customerName}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+                      <div className="bg-gray-50 p-4 rounded-2xl space-y-3">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500 font-bold">{language === 'th' ? 'ช่องทางการชำระ' : 'Payment Method'}</span>
+                          <span className="font-black text-[#1A1F3D]">{selectedTransaction.paymentMethod}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500 font-bold">{language === 'th' ? 'ยอดรวม' : 'Total Amount'}</span>
+                          <span className="font-black text-[#1A1F3D] text-lg">{currency} {selectedTransaction.amount.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      <h3 className="font-black text-[#1A1F3D] mt-6 mb-3">{language === 'th' ? 'รายการสินค้า/บริการ' : 'Items'}</h3>
+                      <div className="space-y-3">
+                        {selectedTransaction.items.map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl">
+                            <div>
+                              <p className="font-bold text-[#1A1F3D] text-sm">{item.title || item.name}</p>
+                              <p className="text-xs text-gray-400">{item.quantity} x {currency} {item.price.toLocaleString()}</p>
+                            </div>
+                            <p className="font-black text-[#1A1F3D]">{currency} {(item.quantity * item.price).toLocaleString()}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <h2 className="text-2xl font-black text-[#1A1F3D] mb-1">{language === 'th' ? 'ประวัติการขายวันนี้' : "Today's Transactions"}</h2>
+                      <p className="text-gray-400 text-sm font-bold mb-6">{language === 'th' ? 'รายการชำระเงินที่เสร็จสิ้น' : 'Completed transactions'}</p>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+                      {todayTransactions.length === 0 ? (
+                        <div className="text-center py-10 text-gray-400 font-bold">
+                          {language === 'th' ? 'ไม่มีรายการขายวันนี้' : 'No transactions today'}
+                        </div>
+                      ) : (
+                        todayTransactions.map(tx => (
+                          <div 
+                            key={tx.id} 
+                            onClick={() => setSelectedTransaction(tx)}
+                            className="bg-white border border-gray-100 p-4 rounded-2xl flex flex-col hover:border-[#D9ED5F] transition-all cursor-pointer group gap-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-black text-[#1A1F3D] group-hover:text-[#1A1F3D]">{tx.customerName}</p>
+                                <p className="text-xs text-gray-400 font-bold">
+                                  {format(new Date(tx.createdAt), 'HH:mm')} • {tx.paymentMethod}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-black text-[#1A1F3D]">{currency} {tx.amount.toLocaleString()}</p>
+                                <p className="text-[10px] text-gray-400 font-bold">{tx.items?.length || 0} items</p>
+                              </div>
+                            </div>
+                            {tx.items && tx.items.length > 0 && (
+                              <div className="text-xs text-gray-500 font-medium truncate w-full text-left bg-gray-50 p-2 rounded-xl border border-gray-100/50">
+                                {tx.items.map((item: any) => item.title || item.name).join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </>
+                )}
+              </SheetContent>
+            </Sheet>
+
+            <button 
+              onClick={() => setIsTransactionHistoryOpen(true)}
+              className="hidden sm:flex items-center gap-2 bg-white border border-gray-100 text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
+            >
+              <History size={16} />
+              {language === 'th' ? 'รายการขายวันนี้' : 'Today\'s Sales'}
+            </button>
             <button 
               onClick={() => setIsManageServicesOpen(true)}
               className="flex items-center gap-2 bg-white border border-gray-100 text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
@@ -502,7 +698,7 @@ const Index = () => {
       </main>
 
       <div className="hidden lg:block">
-        <OrderSummary />
+        <OrderSummary onOpenSavedBills={() => setIsSavedBillsSheetOpen(true)} />
       </div>
 
       {cart.length > 0 && (
@@ -523,7 +719,7 @@ const Index = () => {
               </button>
             </SheetTrigger>
             <SheetContent side="right" className="p-0 w-full sm:max-w-md border-none">
-              <OrderSummary isMobile />
+              <OrderSummary isMobile onOpenSavedBills={() => setIsSavedBillsSheetOpen(true)} />
             </SheetContent>
           </Sheet>
         </div>

@@ -311,7 +311,7 @@ export default function PayrollTab({ storeId }: PayrollTabProps) {
               bonus: r.bonus,
               deductions: r.deduction,
               status: 'paid',
-              created_at: new Date().toISOString()
+              created_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX")
             }]);
           if (error) throw error;
         }

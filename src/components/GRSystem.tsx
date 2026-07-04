@@ -42,6 +42,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
 
   const totalGRs = goodsReceipts.length;
   const pendingGRs = goodsReceipts.filter(gr => gr.status === 'Pending').length;
+  const onOrderGRs = goodsReceipts.filter(gr => gr.status === 'On Order').length;
   const completedGRs = goodsReceipts.filter(gr => gr.status === 'Completed').length;
   const cancelledGRs = goodsReceipts.filter(gr => gr.status === 'Cancelled').length;
 
@@ -55,6 +56,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Completed': return 'bg-green-50 text-green-600';
+      case 'On Order': return 'bg-blue-50 text-blue-600';
       case 'Cancelled': return 'bg-red-50 text-red-600';
       default: return 'bg-orange-50 text-orange-600';
     }
@@ -63,6 +65,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'Completed': return <CheckCircle size={14} />;
+      case 'On Order': return <Clock size={14} />;
       case 'Cancelled': return <XCircle size={14} />;
       default: return <Clock size={14} />;
     }
@@ -160,7 +163,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
       });
     } else {
       addGoodsReceipt({
-        date: new Date().toISOString(),
+        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         poId: selectedPOId || undefined,
         partnerId: selectedPartnerId,
         items: grItems,
@@ -420,6 +423,13 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                   <span className="text-sm font-black text-orange-600">{pendingGRs}</span>
                 </button>
                 <button 
+                  onClick={() => setStatusFilter(statusFilter === 'On Order' ? null : 'On Order')}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'On Order' ? 'bg-blue-100 border-blue-300 ring-2 ring-blue-200 shadow-sm' : 'bg-blue-50 border-blue-100/50 hover:bg-blue-100'}`}
+                >
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">On Order</span>
+                  <span className="text-sm font-black text-blue-600">{onOrderGRs}</span>
+                </button>
+                <button 
                   onClick={() => setStatusFilter(statusFilter === 'Completed' ? null : 'Completed')}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'Completed' ? 'bg-green-100 border-green-300 ring-2 ring-green-200 shadow-sm' : 'bg-green-50 border-green-100/50 hover:bg-green-100'}`}
                 >
@@ -494,26 +504,24 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                           {getStatusIcon(gr.status)} {gr.status}
                         </span>
                       </td>
-                      <td className="px-8 py-5 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button 
-                            onClick={() => setPreviewGR(gr)}
-                            className="p-2 text-gray-400 hover:bg-gray-100 hover:text-[#1A1F3D] rounded-xl transition-all"
-                            title="ดูรายละเอียด"
-                          >
-                            <FileText size={18} />
-                          </button>
-                          {gr.status === 'Pending' && (
-                            <button 
-                              onClick={() => updateGoodsReceiptStatus(gr.id, 'Completed')}
-                              className="p-2 text-gray-400 hover:bg-green-50 hover:text-green-500 rounded-xl transition-all"
-                              title="รับสินค้าเข้าสต็อก"
+                        <td className="px-8 py-5 text-center">
+                          <div className="flex flex-wrap items-center justify-center gap-2">
+                            <button
+                              onClick={() => setPreviewGR(gr)}
+                              className="bg-[#1A1F3D] text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-gray-900 transition-colors shadow-sm"
                             >
-                              <CheckCircle size={18} />
+                              <FileText size={14} /> Preview
                             </button>
-                          )}
-                        </div>
-                      </td>
+                            {(gr.status === 'Pending' || gr.status === 'On Order') && (
+                              <button
+                                onClick={() => updateGoodsReceiptStatus(gr.id, 'Completed')}
+                                className="bg-green-50 text-green-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-green-100 transition-colors shadow-sm"
+                              >
+                                <CheckCircle size={14} /> รับเข้าสต็อก
+                              </button>
+                            )}
+                          </div>
+                        </td>
                     </tr>
                   ))}
                   {filteredGRs.length === 0 && (
@@ -561,83 +569,142 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                 </button>
               </div>
 
-              <div className="p-8 overflow-y-auto bg-white flex-1">
-                {/* Details layout (Company, Vendor, Items, Summary) */}
-                <div className="space-y-8">
-                  <div className="flex justify-between items-start border-b border-gray-100 pb-6">
-                     <div>
-                       <h4 className="font-black text-[#1A1F3D] text-lg">{companyName || 'My Company'}</h4>
-                       <p className="text-sm text-gray-500 whitespace-pre-wrap mt-1">{companyAddress}</p>
-                       <p className="text-sm text-gray-500 mt-1">Tax ID: {companyTaxId}</p>
-                     </div>
-                     <div className="text-right">
-                       <h2 className="text-3xl font-black text-gray-200 uppercase tracking-wider mb-2">GOODS RECEIPT</h2>
-                       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-2 bg-gray-100">
-                          {getStatusIcon(previewGR.status)} {previewGR.status}
-                       </div>
-                       <p className="text-sm font-bold text-gray-600">No: <span className="text-[#1A1F3D]">{previewGR.id}</span></p>
-                       <p className="text-sm font-bold text-gray-600">Date: <span className="text-[#1A1F3D]">{format(new Date(previewGR.date), 'dd/MM/yyyy')}</span></p>
-                       {previewGR.poId && <p className="text-sm font-bold text-gray-600">Ref PO: <span className="text-[#1A1F3D]/60">{previewGR.poId}</span></p>}
-                     </div>
+              <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
+                <style type="text/css" media="print">
+                  {`
+                    body * { visibility: hidden; }
+                    #printable-gr, #printable-gr * { visibility: visible; }
+                    #printable-gr { position: absolute; left: 0; top: 0; width: 100%; background: white; margin: 0; padding: 20px; }
+                    @page { size: A4; margin: 0; }
+                  `}
+                </style>
+                <div id="printable-gr" className="bg-white p-8 shadow-sm border border-gray-200 mx-auto max-w-[800px] text-[10px] font-sans text-black">
+                  {/* Header */}
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="text-2xl font-black tracking-tighter text-[#1A1F3D]">{companyName || "Company Name"}</div>
+                    <div className="text-right text-[10px] text-gray-600 space-y-1">
+                      <p className="font-bold">{companyName || "Company Name"}</p>
+                      <p>{companyAddress || "111 อาคารเอไอเอ แคปปิตอล เซ็นเตอร์ แขวงดินแดง เขตดินแดง กรุงเทพฯ 10400"}</p>
+                      <p>เลขที่ผู้เสียภาษี {companyTaxId || "0105555555555"} (สำนักงานใหญ่)</p>
+                    </div>
                   </div>
 
-                  <div>
-                     <h5 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">ผู้จัดจำหน่าย (Vendor)</h5>
-                     <div className="bg-gray-50 p-4 rounded-2xl">
-                       <p className="font-black text-[#1A1F3D]">{partners.find(p => p.id === previewGR.partnerId)?.companyName || 'Unknown Vendor'}</p>
-                     </div>
+                  {/* Title Box */}
+                  <div className="flex justify-end mb-4">
+                    <div className="w-[300px] border border-black flex flex-col">
+                      <div className="flex">
+                        <div className="bg-black text-white flex-1 p-3 text-center flex flex-col justify-center">
+                          <h1 className="text-2xl font-bold">Goods Receipt</h1>
+                          <p className="text-sm">ใบรับสินค้า</p>
+                        </div>
+                        <div className="w-[120px] flex flex-col border-l border-black bg-white">
+                          <div className="text-center text-xs p-1 border-b border-black">ต้นฉบับ / Original</div>
+                          <div className="text-center p-3 font-bold">{previewGR.id}</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-y border-gray-100">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-black text-gray-500">รายการสินค้า</th>
-                        <th className="px-4 py-3 text-right text-xs font-black text-gray-500">สั่ง</th>
-                        <th className="px-4 py-3 text-right text-xs font-black text-gray-500">รับจริง</th>
-                        <th className="px-4 py-3 text-right text-xs font-black text-gray-500">ราคาต่อหน่วย</th>
-                        <th className="px-4 py-3 text-right text-xs font-black text-gray-500">รวม</th>
+                  {/* Info Boxes */}
+                  <div className="grid grid-cols-12 border border-black mb-4">
+                    <div className="col-span-6 border-r border-black p-3 space-y-2">
+                      <div className="flex"><span className="w-24 font-bold shrink-0">ผู้ขาย<br /><span className="text-[8px] font-normal">Supplier</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewGR.partnerId)?.companyName || 'Unknown Vendor'}</span></div>
+                      <div className="flex"><span className="w-24 font-bold shrink-0">เลขที่ผู้เสียภาษี<br /><span className="text-[8px] font-normal">Tax ID</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewGR.partnerId)?.taxId || '-'} (สำนักงานใหญ่)</span></div>
+                      <div className="flex"><span className="w-24 font-bold shrink-0">ที่อยู่<br /><span className="text-[8px] font-normal">Address</span></span> <span className="flex-1 break-words">{partners.find(p => p.id === previewGR.partnerId)?.address || '-'}</span></div>
+                    </div>
+                    <div className="col-span-3 border-r border-black p-3 space-y-2">
+                      <div className="flex"><span className="w-16 font-bold shrink-0">วันที่<br /><span className="text-[8px] font-normal">Date</span></span> <span className="flex-1 break-words">{format(new Date(previewGR.date), 'dd/MM/yyyy')}</span></div>
+                      <div className="flex"><span className="w-16 font-bold shrink-0">อ้างอิง PO<br /><span className="text-[8px] font-normal">Ref PO</span></span> <span className="flex-1 break-words">{previewGR.poId || '-'}</span></div>
+                    </div>
+                    <div className="col-span-3 p-3 space-y-2">
+                      <div className="flex"><span className="w-16 font-bold shrink-0">ผู้รับ<br /><span className="text-[8px] font-normal">Receiver</span></span> <span className="flex-1 break-words">{previewGR.receiverName}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Items Table */}
+                  <table className="w-full border-collapse border border-black mb-4">
+                    <thead>
+                      <tr className="bg-black text-white text-[10px]">
+                        <th className="border border-black p-2 font-normal w-12">เลขที่<br />No.</th>
+                        <th className="border border-black p-2 font-normal text-left">รายการ<br />Description</th>
+                        <th className="border border-black p-2 font-normal w-16">จำนวนสั่ง<br />Expected</th>
+                        <th className="border border-black p-2 font-normal w-16">จำนวนรับ<br />Received</th>
+                        <th className="border border-black p-2 font-normal w-24">ราคา/หน่วย<br />Unit Price</th>
+                        <th className="border border-black p-2 font-normal w-24">จำนวนเงิน (THB)<br />Amount</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody>
                       {previewGR.items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td className="px-4 py-4">
-                            <p className="font-bold text-[#1A1F3D]">{item.productName}</p>
-                            {item.remarks && <p className="text-xs text-red-500">หมายเหตุ: {item.remarks}</p>}
-                          </td>
-                          <td className="px-4 py-4 text-right font-bold text-gray-500">{item.quantityExpected}</td>
-                          <td className="px-4 py-4 text-right font-black text-[#1A1F3D]">{item.quantityReceived}</td>
-                          <td className="px-4 py-4 text-right font-bold text-gray-600">฿{item.unitPrice.toLocaleString()}</td>
-                          <td className="px-4 py-4 text-right font-black text-[#1A1F3D]">฿{item.total.toLocaleString()}</td>
+                        <tr key={idx} className="text-[10px]">
+                          <td className="border-l border-r border-black p-2 text-center align-top">{idx + 1}</td>
+                          <td className="border-l border-r border-black p-2 align-top">{item.productName} {item.remarks && <span className="text-gray-500 block">หมายเหตุ: {item.remarks}</span>}</td>
+                          <td className="border-l border-r border-black p-2 text-center align-top text-gray-500">{item.quantityExpected}</td>
+                          <td className="border-l border-r border-black p-2 text-center align-top font-bold">{item.quantityReceived}</td>
+                          <td className="border-l border-r border-black p-2 text-right align-top">{item.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          <td className="border-l border-r border-black p-2 text-right align-top">{item.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      ))}
+                      {/* Fill empty rows */}
+                      {Array.from({ length: Math.max(0, 5 - previewGR.items.length) }).map((_, i) => (
+                        <tr key={`empty-${i}`}>
+                          <td className="border-l border-r border-black p-2 text-center text-transparent">.</td>
+                          <td className="border-l border-r border-black p-2 text-transparent">.</td>
+                          <td className="border-l border-r border-black p-2 text-transparent">.</td>
+                          <td className="border-l border-r border-black p-2 text-transparent">.</td>
+                          <td className="border-l border-r border-black p-2 text-transparent">.</td>
+                          <td className="border-l border-r border-black p-2 text-transparent">.</td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="border-t-2 border-gray-100">
-                      <tr>
-                        <td colSpan={3} className="px-4 py-4"></td>
-                        <td className="px-4 py-4 text-right font-black text-gray-500">ยอดรวมทั้งสิ้น</td>
-                        <td className="px-4 py-4 text-right font-black text-xl text-[#1A1F3D]">฿{previewGR.totalAmount.toLocaleString()}</td>
-                      </tr>
-                    </tfoot>
                   </table>
-                  
-                  <div className="flex justify-between text-sm font-bold text-gray-500 mt-10 px-8">
-                     <div className="text-center">
-                       <div className="w-40 border-b border-gray-300 mb-2"></div>
-                       <p>ผู้ส่งมอบสินค้า</p>
-                     </div>
-                     <div className="text-center">
-                       <div className="w-40 border-b border-gray-300 mb-2 mt-4 text-[#1A1F3D] font-black">{previewGR.receiverName}</div>
-                       <p>ผู้รับสินค้า</p>
-                       <p className="text-xs font-normal mt-1">{format(new Date(previewGR.date), 'dd/MM/yyyy')}</p>
-                     </div>
+
+                  {/* Summary Table */}
+                  <div className="flex border border-black mb-4">
+                    <div className="flex-1 p-3 bg-[#F8F9FA] flex flex-col justify-end border-r border-black">
+                      <div className="flex items-center gap-4">
+                        <div className="font-bold text-xs">จำนวนเงิน<br /><span className="text-[10px] font-normal">Amount</span></div>
+                        <div className="font-bold text-sm bg-gray-200 px-4 py-1 rounded-sm w-full text-center">{formatBahtText(previewGR.totalAmount)}</div>
+                      </div>
+                    </div>
+                    <div className="w-[300px]">
+                      <div className="flex border-b border-black">
+                        <div className="flex-1 p-2 bg-[#F8F9FA] text-xs"><span className="font-bold">รวมเป็นเงิน</span><br /><span className="text-[10px]">Subtotal</span></div>
+                        <div className="w-[120px] p-2 text-right border-l border-black font-bold">{previewGR.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      </div>
+                      <div className="flex border-b border-black">
+                        <div className="flex-1 p-2 bg-[#F8F9FA] text-xs"><span className="font-bold">จำนวนภาษีมูลค่าเพิ่ม 7 %</span><br /><span className="text-[10px]">Value Added Tax</span></div>
+                        <div className="w-[120px] p-2 text-right border-l border-black font-bold">0.00</div>
+                      </div>
+                      <div className="flex bg-black text-white">
+                        <div className="flex-1 p-2 text-xs"><span className="font-bold">จำนวนเงินรวมทั้งสิ้น</span><br /><span className="text-[10px]">Total</span></div>
+                        <div className="w-[120px] p-2 text-right border-l border-white font-bold">{previewGR.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      </div>
+                    </div>
                   </div>
 
+                  {/* Signatures */}
+                  <div className="grid grid-cols-2 gap-8 border border-black p-4 text-center text-xs">
+                    <div className="flex flex-col justify-end pt-12 space-y-2">
+                      <div className="border-b border-dashed border-gray-400 mx-8"></div>
+                      <div><span className="font-bold">ผู้ส่งมอบสินค้า / Delivered By</span></div>
+                      <div>วันที่ / Date ........................................</div>
+                    </div>
+                    <div className="flex flex-col justify-end pt-12 space-y-2">
+                      <div className="text-lg font-black mb-2">{previewGR.receiverName}</div>
+                      <div className="border-b border-dashed border-gray-400 mx-8"></div>
+                      <div><span className="font-bold">ผู้รับสินค้า / Received By</span></div>
+                      <div>วันที่ / Date ....{format(new Date(previewGR.date), 'dd/MM/yyyy')}....</div>
+                    </div>
+                  </div>
+
+                  <div className="text-center text-[10px] text-gray-500 mt-4 bg-black text-white py-1">
+                    {companyName || "Company Name"} {companyAddress || "111 อาคารเอไอเอ แคปปิตอล เซ็นเตอร์ แขวงดินแดง เขตดินแดง กรุงเทพฯ 10400"}
+                  </div>
                 </div>
               </div>
 
               <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-                <button className="px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-50 transition-colors">
+                <button onClick={() => window.print()} className="px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-50 transition-colors">
                    <Printer size={18} /> พิมพ์
                 </button>
                 <button onClick={() => setPreviewGR(null)} className="px-6 py-3 bg-[#1A1F3D] text-white rounded-xl font-black">

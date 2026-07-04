@@ -137,7 +137,7 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
       });
     } else {
       addPurchaseRequest({
-        date: new Date().toISOString(),
+        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         partnerId: selectedPartnerId,
         items: prItems,
         status: 'Pending',
@@ -756,33 +756,12 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                           </span>
                         </td>
                         <td className="px-8 py-6 text-center">
-                          {pr.status === 'Pending' && (
-                            <div className="flex items-center justify-center gap-2 mb-2">
-                              <button
-                                onClick={() => {
-                                  const { approvePurchaseRequestToPO } = useStore.getState();
-                                  approvePurchaseRequestToPO(pr.id);
-                                }}
-                                className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100"
-                                title="Approve to PO"
-                              >
-                                <Check size={16} />
-                              </button>
-                              <button
-                                onClick={() => updatePurchaseRequestStatus(pr.id, 'Cancelled')}
-                                className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                                title="Cancel PR"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            </div>
-                          )}
-                          <div className="flex justify-center gap-2">
+                          <div className="flex flex-wrap items-center justify-center gap-2">
                             <button
                               onClick={() => setPreviewPR(pr)}
                               className="bg-[#1A1F3D] text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-gray-900 transition-colors shadow-sm"
                             >
-                              <FileText size={12} /> Preview
+                              <FileText size={14} /> Preview
                             </button>
                             {pr.status === 'Pending' && (
                               <button
@@ -794,8 +773,27 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                                 }}
                                 className="bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-orange-100 transition-colors shadow-sm"
                               >
-                                <Edit size={12} /> แก้ไข
+                                <Edit size={14} /> แก้ไข
                               </button>
+                            )}
+                            {pr.status === 'Pending' && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    const { approvePurchaseRequestToPO } = useStore.getState();
+                                    approvePurchaseRequestToPO(pr.id);
+                                  }}
+                                  className="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-indigo-100 transition-colors shadow-sm"
+                                >
+                                  <Check size={14} /> อนุมัติ (PO)
+                                </button>
+                                <button
+                                  onClick={() => updatePurchaseRequestStatus(pr.id, 'Cancelled')}
+                                  className="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-red-100 transition-colors shadow-sm"
+                                >
+                                  <XCircle size={14} /> ยกเลิก
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>

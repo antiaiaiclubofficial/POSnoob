@@ -578,7 +578,7 @@ const Inventory = () => {
                           )}
                           onClick={() => {
                             if (item.stock <= item.minStock) {
-                              navigate('/accounting', { state: { action: 'pr', reorderItem: item } });
+                              navigate('/sales-procurement', { state: { action: 'pr', reorderItem: item } });
                             }
                           }}
                           >
@@ -731,7 +731,7 @@ const Inventory = () => {
                         {(status === 'Out' || status === 'Low') && (
                           <button
                             onClick={() => {
-                              navigate('/accounting', { state: { action: 'pr', reorderItem: item } });
+                              navigate('/sales-procurement', { state: { action: 'pr', reorderItem: item } });
                             }}
                             className={cn(
                               "flex-1 font-black text-[9px] uppercase py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm",

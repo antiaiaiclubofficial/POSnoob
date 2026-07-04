@@ -1,12 +1,14 @@
+import { format } from 'date-fns';
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2, Package, Clock, Star, Gift } from 'lucide-react';
+import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2, Package, Clock, Star, Gift, LayoutDashboard } from 'lucide-react';
 import { useStore, Customer, Pet, MembershipLevel } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import CustomerModal from '@/components/CustomerModal';
 import PetModal from '@/components/PetModal';
 import PetProfileRecord from '@/components/PetProfileRecord';
+import CustomerDashboard from '@/components/customers/CustomerDashboard';
 import LineBindingModal from '@/components/LineBindingModal';
 import PackageModal from '@/components/PackageModal';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -145,6 +147,7 @@ const Customers = () => {
           district: item.district || '',
           province: item.province || '',
           postalCode: item.postal_code || '',
+          createdAt: item.created_at || '',
           creditHistory: [],
           packages: [],
           pets: (item.pets || []).map((p: any) => ({
@@ -153,7 +156,7 @@ const Customers = () => {
             species: (p.type || 'Dog') as 'Dog' | 'Cat' | 'Other',
             breed: p.breed || '-',
             birthday: p.birth_date || '',
-            weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
+            weightHistory: p.weight ? [{ date: format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }] : [],
             serviceHistory: serviceHistoryMap[p.id] || [], // แมปประวัติการใช้บริการจริงจาก Supabase
             notes: p.medical_condition || '',
             image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
@@ -166,11 +169,6 @@ const Customers = () => {
     }
   });
 
-  useEffect(() => {
-    if (customers.length > 0 && !selectedCustomerId) {
-      setSelectedCustomerId(customers[0].id);
-    }
-  }, [customers, selectedCustomerId]);
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -232,6 +230,23 @@ const Customers = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
+          <button
+            onClick={() => { setSelectedCustomerId(null); if (isMobile) setShowDetailOnMobile(true); }}
+            className={cn(
+              "w-full text-left p-4 rounded-2xl mb-4 transition-all flex items-center justify-between group",
+              selectedCustomerId === null ? "bg-[#1A1F3D] text-white shadow-lg" : "bg-[#F5F6FA] hover:bg-gray-100 text-[#1A1F3D]"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                selectedCustomerId === null ? "bg-white/10 text-white" : "bg-white text-gray-500 shadow-sm"
+              )}>
+                <LayoutDashboard size={20} />
+              </div>
+              <p className="font-bold text-sm">{language === 'th' ? 'ภาพรวม (Dashboard)' : 'Dashboard'}</p>
+            </div>
+          </button>
           {filteredCustomers.map(customer => (
             <button
               key={customer.id}
@@ -386,10 +401,7 @@ const Customers = () => {
             </div>
           </div>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center opacity-20">
-            <User size={64} className="mb-4" />
-            <p className="font-black text-xl">Select a client profile</p>
-          </div>
+          <CustomerDashboard />
         )}
       </div>
 

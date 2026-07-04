@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 "use client";
 
 import { StateCreator } from 'zustand';
@@ -144,7 +145,7 @@ export const createAuthSlice: StateCreator<
       try {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('role, store_id, is_approved, is_suspended, status, full_name, avatar_url')
+          .select('role, store_id, organization_id, is_approved, is_suspended, status, full_name, avatar_url')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -273,10 +274,33 @@ export const createAuthSlice: StateCreator<
 
         let userRole = profile.role;
         let storeId = profile.store_id;
+        let organizationId = profile.organization_id || null;
+        let organizationName = '';
+        let branches = [];
 
         if (shouldBeSuperAdmin) {
           userRole = 'superadmin';
           storeId = null;
+        } else if (organizationId) {
+          // Fetch organization name
+          const { data: org } = await supabase
+            .from('organizations')
+            .select('name')
+            .eq('id', organizationId)
+            .maybeSingle();
+          if (org) organizationName = org.name;
+
+          // Fetch branches for this organization
+          const { data: orgBranches } = await supabase
+            .from('stores')
+            .select('id, name, logo_url, address, phone')
+            .eq('organization_id', organizationId);
+          if (orgBranches) branches = orgBranches;
+          
+          // If the user doesn't have a storeId but has branches, select the first one
+          if (!storeId && branches.length > 0) {
+            storeId = branches[0].id;
+          }
         }
 
         // Upsert active session to prevent immediate logout
@@ -287,7 +311,7 @@ export const createAuthSlice: StateCreator<
               .upsert({
                 user_id: user.id,
                 store_id: storeId,
-                last_active_at: new Date().toISOString()
+                last_active_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX")
               });
           } catch (err) {
             console.error("Failed to upsert active session:", err);
@@ -304,6 +328,9 @@ export const createAuthSlice: StateCreator<
             avatar: googleAvatar || profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
           },
           storeId: storeId,
+          organizationId,
+          organizationName,
+          branches,
           isAuthLoading: false,
           isPendingApproval: false,
           isUserSuspended: false,
@@ -318,6 +345,9 @@ export const createAuthSlice: StateCreator<
         isAuthenticated: false,
         currentUser: null,
         storeId: null,
+        organizationId: null,
+        organizationName: '',
+        branches: [],
         isAuthLoading: false,
         isPendingApproval: false,
         isUserSuspended: false,
@@ -344,6 +374,9 @@ export const createAuthSlice: StateCreator<
       isAuthenticated: false,
       currentUser: null,
       storeId: null,
+      organizationId: null,
+      organizationName: '',
+      branches: [],
       isAuthLoading: false,
       isPendingApproval: false,
       isUserSuspended: false,

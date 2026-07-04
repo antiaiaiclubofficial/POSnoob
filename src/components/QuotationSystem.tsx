@@ -183,7 +183,7 @@ const QuotationSystem: React.FC<QuotationSystemProps> = ({ initialView = 'list',
       });
     } else {
       addQuotation({
-        date: new Date().toISOString(),
+        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         partnerId: isManualCustomer ? undefined : selectedPartnerId,
         customerName: isManualCustomer ? manualCustomer.name : undefined,
         customerAddress: isManualCustomer ? manualCustomer.address : undefined,

@@ -112,7 +112,7 @@ const SOSystem: React.FC<SOSystemProps> = ({ initialView = 'list', onViewChange 
       });
     } else {
       addSalesOrder({
-        date: new Date().toISOString(),
+        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         partnerId: selectedPartnerId,
         items: soItems,
         status: 'Pending',

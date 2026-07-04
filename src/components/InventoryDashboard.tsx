@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -1023,7 +1024,7 @@ export default function InventoryDashboard() {
     if (item) {
       // Instead of adding PO directly, create a pending PR
       addPurchaseRequest({
-        date: new Date().toISOString(),
+        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         partnerId: item.partnerId || '', // Auto select vendor if available
         items: [{
           productId: item.id,

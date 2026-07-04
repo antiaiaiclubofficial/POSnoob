@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 "use client";
 
 import { useEffect } from "react";
@@ -17,6 +18,7 @@ import Logs from "@/pages/Logs";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import SalesAndProcurement from "@/pages/SalesAndProcurement";
+import Accounting from "@/pages/Accounting";
 import Login from "@/pages/Login";
 import SuperAdmin from "@/pages/SuperAdmin";
 import LiffRegister from "@/pages/LiffRegister";
@@ -83,7 +85,7 @@ const AuthInitializer = () => {
           // Session is valid, update last_active_at to keep it alive
           await supabase
             .from('active_sessions')
-            .update({ last_active_at: new Date().toISOString() })
+            .update({ last_active_at: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX") })
             .eq('user_id', currentUser.id);
         }
       } catch (err) {
@@ -339,7 +341,7 @@ const AuthInitializer = () => {
                 species: (p.type || 'Dog') as BookingType,
                 breed: p.breed || '-',
                 birthday: p.birth_date || '',
-                weightHistory: p.weight ? [{ date: new Date().toISOString().split('T')[0], value: Number(p.weight) }] : [],
+                weightHistory: p.weight ? [{ date: format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }] : [],
                 serviceHistory: [],
                 intakeHistory: [],
                 notes: p.medical_condition || '',
@@ -512,7 +514,7 @@ const AuthInitializer = () => {
                   id: 'initial-' + p.id,
                   quantity: stock,
                   costPrice: costPrice,
-                  created_at: p.created_at || new Date().toISOString()
+                  created_at: p.created_at || format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX")
                 }];
               } else {
                 fifoBatches = [];
@@ -733,6 +735,35 @@ const AuthInitializer = () => {
         console.warn("Failed to fetch purchase orders from Supabase:", err);
       }
 
+      // 11.5 Fetch Goods Receipts
+      try {
+        let grQuery = supabase.from('goods_receipts').select('*').order('created_at', { ascending: false });
+        if (storeId && storeId !== 'default-store') {
+          grQuery = grQuery.eq('store_id', storeId);
+        }
+        const { data: grData, error: grError } = await grQuery;
+
+        if (grError) throw grError;
+
+        if (grData) {
+          const formattedGRs = grData.map(gr => ({
+            id: gr.data.id || gr.id,
+            date: gr.data.date,
+            poId: gr.data.poId,
+            partnerId: gr.data.partnerId,
+            items: gr.data.items || [],
+            status: gr.data.status || 'Pending',
+            totalAmount: Number(gr.data.totalAmount || 0),
+            receiverName: gr.data.receiverName || 'System'
+          }));
+          useStore.setState({ goodsReceipts: formattedGRs });
+        } else {
+          useStore.setState({ goodsReceipts: [] });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch goods receipts from Supabase:", err);
+      }
+
       // 12. Fetch Purchase Requests
       try {
         let prQuery = supabase.from('purchase_requests').select('*').order('created_at', { ascending: false });
@@ -760,6 +791,131 @@ const AuthInitializer = () => {
       } catch (err) {
         console.warn("Failed to fetch purchase requests from Supabase:", err);
       }
+
+      // 13. Fetch Accounting Data
+      try {
+        let accountsQuery = supabase.from('account_codes').select('*');
+        if (storeId && storeId !== 'default-store') {
+          accountsQuery = accountsQuery.eq('store_id', storeId);
+        }
+        const { data: accountsData } = await accountsQuery;
+        if (accountsData) {
+          useStore.setState({
+            accountCodes: accountsData.map(a => ({
+              id: a.id,
+              code: a.code,
+              name: a.name,
+              category: a.category,
+              description: a.description || '',
+              isActive: a.is_active
+            }))
+          });
+        }
+
+        let journalsQuery = supabase.from('journal_entries').select('*').order('date', { ascending: false });
+        if (storeId && storeId !== 'default-store') {
+          journalsQuery = journalsQuery.eq('store_id', storeId);
+        }
+        const { data: journalsData } = await journalsQuery;
+        if (journalsData) {
+          useStore.setState({
+            journalEntries: journalsData.map(j => ({
+              id: j.id,
+              date: j.date,
+              journalType: j.journal_type,
+              referenceNo: j.reference_no,
+              description: j.description,
+              lines: j.lines,
+              status: j.status,
+              totalDebit: Number(j.total_debit),
+              totalCredit: Number(j.total_credit),
+              createdBy: j.created_by,
+              isOpeningBalance: j.is_opening_balance,
+              isClosingEntry: j.is_closing_entry
+            }))
+          });
+        }
+
+        let taxesQuery = supabase.from('tax_records').select('*').order('date', { ascending: false });
+        if (storeId && storeId !== 'default-store') {
+          taxesQuery = taxesQuery.eq('store_id', storeId);
+        }
+        const { data: taxesData } = await taxesQuery;
+        if (taxesData) {
+          useStore.setState({
+            taxRecords: taxesData.map(t => ({
+              id: t.id,
+              date: t.date,
+              type: t.type,
+              referenceNo: t.reference_no,
+              partnerName: t.partner_name,
+              taxId: t.tax_id || '',
+              baseAmount: Number(t.base_amount),
+              taxRate: Number(t.tax_rate),
+              taxAmount: Number(t.tax_amount),
+              journalEntryId: t.journal_entry_id,
+              status: t.status
+            }))
+          });
+        }
+
+        let billingQuery = supabase.from('billing_documents').select('*').order('date', { ascending: false });
+        if (storeId && storeId !== 'default-store') {
+          billingQuery = billingQuery.eq('store_id', storeId);
+        }
+        const { data: billingData } = await billingQuery;
+        if (billingData) {
+          useStore.setState({
+            billingDocuments: billingData.map(b => ({
+              id: b.id,
+              documentNo: b.document_no,
+              type: b.type as any,
+              date: b.date,
+              partnerId: b.partner_id || undefined,
+              customerId: b.customer_id || undefined,
+              customerName: b.customer_name || undefined,
+              customerAddress: b.customer_address || undefined,
+              customerTaxId: b.customer_tax_id || undefined,
+              items: b.items || [],
+              subtotal: Number(b.subtotal),
+              vatAmount: Number(b.vat_amount),
+              totalAmount: Number(b.total_amount),
+              paymentMethod: b.payment_method || undefined,
+              status: b.status,
+              createdBy: b.created_by,
+              referenceDocumentNo: b.reference_document_no || undefined,
+              remarks: b.remarks || undefined
+            }))
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch accounting data from Supabase:", err);
+      }
+
+      // 14. Fetch Held Bills
+      try {
+        let heldBillsQuery = supabase.from('held_bills').select('*').order('timestamp', { ascending: false });
+        if (storeId && storeId !== 'default-store') {
+          heldBillsQuery = heldBillsQuery.eq('store_id', storeId);
+        }
+        const { data: heldBillsData, error: heldBillsError } = await heldBillsQuery;
+        
+        if (heldBillsError) throw heldBillsError;
+
+        if (heldBillsData) {
+          useStore.setState({
+            heldBills: heldBillsData.map(b => ({
+              id: b.id,
+              customerId: b.customer_id,
+              customerName: b.customer_name,
+              items: b.items,
+              timestamp: b.timestamp
+            }))
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch held bills from Supabase:", err);
+      }
     };
 
     if (isAuthenticated) {
@@ -784,7 +940,8 @@ const AuthInitializer = () => {
         <Route path="/staff/performance" element={<StaffPerformance />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/reports" element={<Reports />} />
-        <Route path="/accounting" element={<SalesAndProcurement />} />
+        <Route path="/sales-procurement" element={<SalesAndProcurement />} />
+        <Route path="/accounting" element={<Accounting />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<NotFound />} />

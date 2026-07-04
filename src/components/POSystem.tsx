@@ -65,22 +65,26 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
   const totalPOs = purchaseOrders.length;
   const pendingPOs = purchaseOrders.filter(po => po.status === 'Pending').length;
   const toOrderPOs = purchaseOrders.filter(po => po.status === 'To Order').length;
-  const onOrderPOs = purchaseOrders.filter(po => po.status === 'On Order').length;
   const completedPOs = purchaseOrders.filter(po => po.status === 'Completed').length;
   const cancelledPOs = purchaseOrders.filter(po => po.status === 'Cancelled').length;
 
-  const filteredPOs = purchaseOrders.filter(po => {
-    const matchesSearch = po.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      partners.find(p => p.id === po.partnerId)?.companyName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter ? po.status === statusFilter : true;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredPOs = purchaseOrders
+    .filter(po => {
+      if (statusFilter && po.status !== statusFilter) return false;
+      if (searchQuery) {
+        const search = searchQuery.toLowerCase();
+        return po.id.toLowerCase().includes(search) || 
+               partners.find(p => p.id === po.partnerId)?.companyName.toLowerCase().includes(search);
+      }
+      return true;
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Completed': return 'bg-green-50 text-green-600';
-      case 'On Order': return 'bg-blue-50 text-blue-600';
-      case 'To Order': return 'bg-indigo-50 text-indigo-600';
+      case 'On Order': return 'bg-blue-50 text-blue-600'; // Legacy
+      case 'To Order': return 'bg-purple-50 text-purple-600';
       case 'Cancelled': return 'bg-red-50 text-red-600';
       default: return 'bg-orange-50 text-orange-600';
     }
@@ -89,7 +93,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'Completed': return <CheckCircle size={14} />;
-      case 'On Order': return <Truck size={14} />;
+      case 'On Order': return <Truck size={14} />; // Legacy
       case 'To Order': return <Check size={14} />;
       case 'Cancelled': return <XCircle size={14} />;
       default: return <Clock size={14} />;
@@ -143,7 +147,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
       });
     } else {
       addPurchaseOrder({
-        date: new Date().toISOString(),
+        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         partnerId: selectedPartnerId,
         items: poItems,
         status: 'Pending',
@@ -682,17 +686,10 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                 </button>
                 <button 
                   onClick={() => setStatusFilter(statusFilter === 'To Order' ? null : 'To Order')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'To Order' ? 'bg-indigo-100 border-indigo-300 ring-2 ring-indigo-200 shadow-sm' : 'bg-indigo-50 border-indigo-100/50 hover:bg-indigo-100'}`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'To Order' ? 'bg-purple-100 border-purple-300 ring-2 ring-purple-200 shadow-sm' : 'bg-purple-50 border-purple-100/50 hover:bg-purple-100'}`}
                 >
-                  <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">To Order</span>
-                  <span className="text-sm font-black text-indigo-600">{toOrderPOs}</span>
-                </button>
-                <button 
-                  onClick={() => setStatusFilter(statusFilter === 'On Order' ? null : 'On Order')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'On Order' ? 'bg-blue-100 border-blue-300 ring-2 ring-blue-200 shadow-sm' : 'bg-blue-50 border-blue-100/50 hover:bg-blue-100'}`}
-                >
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">On Order</span>
-                  <span className="text-sm font-black text-blue-600">{onOrderPOs}</span>
+                  <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">To Order</span>
+                  <span className="text-sm font-black text-purple-600">{toOrderPOs}</span>
                 </button>
                 <button 
                   onClick={() => setStatusFilter(statusFilter === 'Completed' ? null : 'Completed')}
@@ -776,52 +773,12 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                           </span>
                         </td>
                         <td className="px-8 py-6 text-center">
-                          {po.status === 'Pending' && (
-                            <div className="flex items-center justify-center gap-2 mb-2">
-                              <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'To Order')}
-                                className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100"
-                                title="Mark as To Order"
-                              >
-                                <Check size={16} />
-                              </button>
-                              <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'Cancelled')}
-                                className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                                title="Cancel PO"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            </div>
-                          )}
-                          {po.status === 'To Order' && (
-                            <div className="flex items-center justify-center gap-2 mb-2">
-                              <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'On Order')}
-                                className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
-                                title="Mark as On Order"
-                              >
-                                <Truck size={16} />
-                              </button>
-                            </div>
-                          )}
-                          {po.status === 'On Order' && (
-                            <div className="flex items-center justify-center gap-2 mb-2">
-                              <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'Completed')}
-                                className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
-                                title="Mark as Completed (Received)"
-                              >
-                                <CheckCircle size={16} />
-                              </button>
-                            </div>
-                          )}
-                          <div className="flex justify-center gap-2">
+                          <div className="flex flex-wrap items-center justify-center gap-2">
                             <button
                               onClick={() => setPreviewPO(po)}
                               className="bg-[#1A1F3D] text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-gray-900 transition-colors shadow-sm"
                             >
-                              <FileText size={12} /> Preview
+                              <FileText size={14} /> Preview
                             </button>
                             {po.status === 'Pending' && (
                               <button
@@ -833,7 +790,31 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                                 }}
                                 className="bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-orange-100 transition-colors shadow-sm"
                               >
-                                <Edit size={12} /> แก้ไข
+                                <Edit size={14} /> แก้ไข
+                              </button>
+                            )}
+                            {po.status === 'Pending' && (
+                              <>
+                                <button
+                                  onClick={() => updatePurchaseOrderStatus(po.id, 'To Order')}
+                                  className="bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-purple-100 transition-colors shadow-sm"
+                                >
+                                  <Clock size={14} /> สั่งซื้อ
+                                </button>
+                                <button
+                                  onClick={() => updatePurchaseOrderStatus(po.id, 'Cancelled')}
+                                  className="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-red-100 transition-colors shadow-sm"
+                                >
+                                  <XCircle size={14} /> ยกเลิก
+                                </button>
+                              </>
+                            )}
+                            {(po.status === 'To Order' || (po.status as string) === 'On Order') && (
+                              <button
+                                onClick={() => updatePurchaseOrderStatus(po.id, 'Completed')}
+                                className="bg-green-50 text-green-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-green-100 transition-colors shadow-sm"
+                              >
+                                <CheckCircle size={14} /> สั่งซื้อเสร็จสิ้น
                               </button>
                             )}
                           </div>

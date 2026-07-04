@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -57,7 +58,7 @@ const Reports = () => {
 
   const filteredData = useMemo(() => {
     let data = [...processedTransactions];
-    const today = new Date().toISOString().split('T')[0];
+    const today = format(new Date(), 'yyyy-MM-dd');
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const monthAgo = new Date();

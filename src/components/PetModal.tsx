@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -103,7 +104,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
       medicalCondition: formData.medicalCondition,
       notes: formData.notes,
       image: formData.image,
-      weightHistory: pet ? undefined : [{ date: new Date().toISOString().split('T')[0], value: Number(formData.initialWeight || 0) }]
+      weightHistory: pet ? undefined : [{ date: format(new Date(), 'yyyy-MM-dd'), value: Number(formData.initialWeight || 0) }]
     };
 
     try {

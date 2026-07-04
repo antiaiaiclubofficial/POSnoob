@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -159,7 +160,7 @@ const LiffRegister = () => {
             .insert([{
               pet_id: petData.id,
               weight: Number(petForm.weight),
-              date: new Date().toISOString().split('T')[0]
+              date: format(new Date(), 'yyyy-MM-dd')
             }]);
         }
 
