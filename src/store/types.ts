@@ -227,7 +227,7 @@ export interface PurchaseOrder {
   date: string;
   partnerId: string;
   items: PurchaseOrderItem[];
-  status: 'Pending' | 'To Order' | 'Completed' | 'Cancelled';
+  status: 'Pending' | 'To Order' | 'On Order' | 'Completed' | 'Cancelled';
   totalAmount: number;
   createdBy: string;
 }
@@ -489,8 +489,8 @@ export interface AppState {
   addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => void;
   addReportLog: (log: Omit<ReportHistory, 'id' | 'timestamp'>) => void;
 
-  updateBusinessProfile: (profile: any) => void;
-  updateBookingSettings: (settings: any) => void;
+  updateBusinessProfile: (profile: any, showToast?: boolean) => void;
+  updateBookingSettings: (settings: any, showToast?: boolean) => void;
   updateTierRules: (rules: TierRule[]) => void;
   updateRolePermissions: (role: StaffRole, permissions: string[]) => void;
 
@@ -544,7 +544,7 @@ export interface AppState {
   purchaseOrders: PurchaseOrder[];
   addPurchaseOrder: (po: Omit<PurchaseOrder, 'id'>) => void;
   updatePurchaseOrder: (id: string, updates: Partial<Omit<PurchaseOrder, 'id'>>) => void;
-  updatePurchaseOrderStatus: (id: string, status: 'Pending' | 'To Order' | 'Completed' | 'Cancelled') => void;
+  updatePurchaseOrderStatus: (id: string, status: 'Pending' | 'To Order' | 'On Order' | 'Completed' | 'Cancelled') => void;
 
   goodsReceipts: GoodsReceipt[];
   addGoodsReceipt: (gr: Omit<GoodsReceipt, 'id'>) => void;
@@ -567,7 +567,7 @@ export interface AppState {
   updateSalesOrder: (id: string, updates: Partial<Omit<SalesOrder, 'id'>>) => void;
   updateSalesOrderStatus: (id: string, status: 'Pending' | 'Completed' | 'Cancelled') => void;
 
-  addPartner: (partner: any) => void;
+  addPartner: (partner: any) => Promise<any>;
   updatePartner: (id: string, partner: any) => void;
   deletePartner: (id: string) => void;
 

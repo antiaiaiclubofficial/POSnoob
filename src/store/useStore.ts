@@ -148,7 +148,7 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
 
-  updateBusinessProfile: async (profile) => {
+  updateBusinessProfile: async (profile, showToast = true) => {
     set(s => ({ ...s, ...profile }));
     if (typeof window !== 'undefined') {
       if (profile.companyName !== undefined) localStorage.setItem('company_name', profile.companyName);
@@ -193,10 +193,10 @@ export const useStore = create<AppState>()((set, get) => ({
         console.error("Failed to update store profile in Supabase:", err);
       }
     }
-    toast.success("Business profile updated successfully!");
+    if (showToast) toast.success("Business profile updated successfully!");
   },
 
-  updateBookingSettings: async (settings) => {
+  updateBookingSettings: async (settings, showToast = true) => {
     set(s => ({ ...s, ...settings }));
     const storeId = get().storeId;
     if (storeId && storeId !== 'default-store') {
@@ -208,6 +208,8 @@ export const useStore = create<AppState>()((set, get) => ({
             max_capacity: settings.maxCapacity !== undefined ? settings.maxCapacity : undefined,
             open_time: settings.openTime !== undefined ? settings.openTime : undefined,
             close_time: settings.closeTime !== undefined ? settings.closeTime : undefined,
+            recurring_holidays: settings.recurringHolidays !== undefined ? settings.recurringHolidays : undefined,
+            specific_holidays: settings.specificHolidays !== undefined ? settings.specificHolidays : undefined,
           })
           .eq('id', storeId);
         if (error) throw error;
@@ -215,7 +217,7 @@ export const useStore = create<AppState>()((set, get) => ({
         console.error("Failed to update store booking settings in Supabase:", err);
       }
     }
-    toast.success("Booking settings updated successfully!");
+    if (showToast) toast.success("Booking settings updated successfully!");
   },
 
   updateTierRules: async (rules) => {
@@ -1158,8 +1160,10 @@ export const useStore = create<AppState>()((set, get) => ({
         gpRate: Number(data.gp_rate || 0)
       };
       set(s => ({ partners: [...s.partners, newPartner] }));
+      return newPartner;
     } else {
       console.error("Error adding partner:", error);
+      return null;
     }
   },
 

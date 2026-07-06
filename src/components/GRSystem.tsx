@@ -5,6 +5,7 @@ import { Plus, Search, FileText, CheckCircle, XCircle, Clock, Trash2, Save, X, D
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatBahtText } from '@/lib/bahttext';
+import { toast } from 'sonner';
 
 interface GRSystemProps {
   initialView?: 'list' | 'create';
@@ -33,15 +34,19 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
   const [editingGRId, setEditingGRId] = useState<string | null>(null);
   const [selectedPOId, setSelectedPOId] = useState('');
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
+  const [manualVendorName, setManualVendorName] = useState('');
   const [grItems, setGrItems] = useState<GoodsReceiptItem[]>([]);
   
   // Custom item addition state (if not using PO)
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [manualItemName, setManualItemName] = useState('');
   const [qtyInput, setQtyInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
 
+  const [vendorInputMode, setVendorInputMode] = useState<'system' | 'manual'>('system');
+  const [itemInputMode, setItemInputMode] = useState<'system' | 'manual'>('system');
+
   const totalGRs = goodsReceipts.length;
-  const pendingGRs = goodsReceipts.filter(gr => gr.status === 'Pending').length;
   const onOrderGRs = goodsReceipts.filter(gr => gr.status === 'On Order').length;
   const completedGRs = goodsReceipts.filter(gr => gr.status === 'Completed').length;
   const cancelledGRs = goodsReceipts.filter(gr => gr.status === 'Cancelled').length;
@@ -76,6 +81,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
     const po = purchaseOrders.find(p => p.id === poId);
     if (po) {
       setSelectedPartnerId(po.partnerId);
+      setVendorInputMode('system');
       setGrItems(po.items.map(item => ({
         productId: item.productId,
         productName: item.productName,
@@ -113,18 +119,34 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
   };
 
   const handleAddItem = () => {
-    if (!selectedProductId || !qtyInput || !priceInput) return;
-    const product = inventory.find(i => i.id === selectedProductId);
-    if (!product) return;
+    if (!qtyInput || !priceInput) return;
+    
+    let productId = '';
+    let productName = '';
+    
+    if (itemInputMode === 'manual') {
+      if (!manualItemName.trim()) {
+         toast.error('กรุณาระบุชื่อสินค้า');
+         return;
+      }
+      productId = `MANUAL_${Date.now()}`;
+      productName = manualItemName;
+    } else {
+      if (!selectedProductId) return;
+      const product = inventory.find(i => i.id === selectedProductId);
+      if (!product) return;
+      productId = product.id;
+      productName = product.name;
+    }
 
     const qty = parseInt(qtyInput);
     const price = parseFloat(priceInput);
 
     if (qty <= 0 || price < 0) return;
 
-    const existingItem = grItems.find(i => i.productId === selectedProductId);
+    const existingItem = grItems.find(i => i.productId === productId);
     if (existingItem) {
-      setGrItems(grItems.map(i => i.productId === selectedProductId ? {
+      setGrItems(grItems.map(i => i.productId === productId ? {
         ...i,
         quantityExpected: i.quantityExpected + qty,
         quantityReceived: i.quantityReceived + qty,
@@ -132,8 +154,8 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
       } : i));
     } else {
       setGrItems([...grItems, {
-        productId: product.id,
-        productName: product.name,
+        productId: productId,
+        productName: productName,
         quantityExpected: qty,
         quantityReceived: qty,
         unitPrice: price,
@@ -143,6 +165,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
     }
 
     setSelectedProductId('');
+    setManualItemName('');
     setQtyInput('');
     setPriceInput('');
   };
@@ -151,13 +174,33 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
     setGrItems(grItems.filter(i => i.productId !== productId));
   };
 
-  const handleSaveGR = () => {
-    if (!selectedPartnerId || grItems.length === 0) return;
+  const handleSaveGR = async () => {
+    let finalPartnerId = selectedPartnerId;
+    
+    if (!selectedPOId && vendorInputMode === 'manual') {
+      if (!manualVendorName.trim()) {
+        toast.error('กรุณาระบุชื่อคู่ค้า');
+        return;
+      }
+      const newPartner = await useStore.getState().addPartner({
+        companyName: manualVendorName,
+        type: 'Vendor',
+      });
+      if (newPartner) {
+        finalPartnerId = newPartner.id;
+      } else {
+        toast.error('ไม่สามารถสร้างคู่ค้าใหม่ได้');
+        return;
+      }
+    }
+
+    if (!selectedPOId && vendorInputMode === 'system' && !finalPartnerId) return;
+    if (!finalPartnerId || grItems.length === 0) return;
 
     if (editingGRId) {
       updateGoodsReceipt(editingGRId, {
         poId: selectedPOId || undefined,
-        partnerId: selectedPartnerId,
+        partnerId: finalPartnerId,
         items: grItems,
         totalAmount: grItems.reduce((sum, item) => sum + item.total, 0),
       });
@@ -165,9 +208,9 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
       addGoodsReceipt({
         date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
         poId: selectedPOId || undefined,
-        partnerId: selectedPartnerId,
+        partnerId: finalPartnerId,
         items: grItems,
-        status: 'Pending',
+        status: 'On Order',
         totalAmount: grItems.reduce((sum, item) => sum + item.total, 0),
         receiverName: currentUser?.name || 'Admin'
       });
@@ -176,6 +219,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
     handleViewChange('list');
     setSelectedPOId('');
     setSelectedPartnerId('');
+    setManualVendorName('');
     setGrItems([]);
     setEditingGRId(null);
   };
@@ -194,6 +238,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
               setEditingGRId(null);
               setSelectedPOId('');
               setSelectedPartnerId('');
+              setManualVendorName('');
               setGrItems([]);
             }} className="p-3 bg-gray-50 text-gray-400 hover:bg-gray-100 rounded-xl transition-colors">
               <X size={20} />
@@ -210,31 +255,60 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                   onChange={(e) => handlePOSelection(e.target.value)}
                 >
                   <option value="">-- ไม่ระบุ (รับโดยตรง) --</option>
-                  {purchaseOrders.filter(po => po.status !== 'Cancelled').map(p => (
+                  {purchaseOrders.filter(po => {
+                    if (po.status === 'Cancelled') return false;
+                    if (editingGRId) {
+                      const currentGR = goodsReceipts.find(gr => gr.id === editingGRId);
+                      if (currentGR && currentGR.poId === po.id) return true;
+                    }
+                    return !goodsReceipts.some(gr => gr.poId === po.id && gr.status !== 'Cancelled');
+                  }).map(p => (
                     <option key={p.id} value={p.id}>{p.id} - {partners.find(pt => pt.id === p.partnerId)?.companyName}</option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 px-1">ผู้จัดจำหน่าย (Vendor)</label>
-                <select
-                  className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold"
-                  value={selectedPartnerId}
-                  onChange={(e) => {
-                    setSelectedPartnerId(e.target.value);
-                    if (selectedPOId) {
-                       setSelectedPOId('');
-                       setGrItems([]);
-                    }
-                  }}
-                  disabled={!!selectedPOId}
-                >
-                  <option value="">-- เลือกคู่ค้า --</option>
-                  {partners.map(p => (
-                    <option key={p.id} value={p.id}>{p.companyName}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between px-1">
+                  <label className="text-[10px] font-black uppercase text-gray-400">ผู้จัดจำหน่าย (Vendor)</label>
+                </div>
+                
+                {!selectedPOId && (
+                  <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
+                    <button onClick={() => setVendorInputMode('system')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${vendorInputMode === 'system' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>เลือกจากระบบ</button>
+                    <button onClick={() => setVendorInputMode('manual')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${vendorInputMode === 'manual' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>ระบุเอง (สร้างใหม่)</button>
+                  </div>
+                )}
+
+                {vendorInputMode === 'system' || selectedPOId ? (
+                  <select
+                    className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold disabled:opacity-50"
+                    value={selectedPartnerId}
+                    onChange={(e) => {
+                      setSelectedPartnerId(e.target.value);
+                      setSelectedProductId('');
+                      if (selectedPOId) {
+                         setSelectedPOId('');
+                         setGrItems([]);
+                      }
+                    }}
+                    disabled={!!selectedPOId}
+                  >
+                    <option value="">-- เลือกคู่ค้า --</option>
+                    {partners.map(p => (
+                      <option key={p.id} value={p.id}>{p.companyName}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="ระบุชื่อคู่ค้าใหม่"
+                    className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-100 transition-all"
+                    value={manualVendorName}
+                    onChange={(e) => setManualVendorName(e.target.value)}
+                    autoFocus
+                  />
+                )}
               </div>
 
               {!selectedPOId && (
@@ -242,22 +316,43 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                   <h3 className="font-black text-[#1A1F3D]">เพิ่มรายการสินค้าด้วยตนเอง</h3>
 
                   <div className="space-y-3">
-                    <select
-                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold"
-                      value={selectedProductId}
-                      onChange={(e) => {
-                        setSelectedProductId(e.target.value);
-                        const p = inventory.find(i => i.id === e.target.value);
-                        if (p) {
-                          setPriceInput(p.costPrice?.toString() || '0');
-                        }
-                      }}
-                    >
-                      <option value="">-- เลือกสินค้า --</option>
-                      {inventory.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
+                    <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
+                      <button onClick={() => setItemInputMode('system')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${itemInputMode === 'system' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>เลือกจากระบบ</button>
+                      <button onClick={() => setItemInputMode('manual')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${itemInputMode === 'manual' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>ระบุเอง (ชั่วคราว)</button>
+                    </div>
+
+                    {itemInputMode === 'system' ? (
+                      <select
+                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold"
+                        value={selectedProductId}
+                        onChange={(e) => {
+                          setSelectedProductId(e.target.value);
+                          const p = inventory.find(i => i.id === e.target.value);
+                          if (p) setPriceInput(p.costPrice.toString());
+                        }}
+                      >
+                        <option value="">-- เลือกสินค้า --</option>
+                        {inventory
+                          .filter(i => {
+                            if (vendorInputMode === 'system' && selectedPartnerId) {
+                              return i.partnerId === selectedPartnerId;
+                            }
+                            return true;
+                          })
+                          .map(i => (
+                          <option key={i.id} value={i.id}>{i.name} (ในสต็อก: {i.stock})</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="ระบุชื่อสินค้าใหม่"
+                        className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-100 transition-all"
+                        value={manualItemName}
+                        onChange={(e) => setManualItemName(e.target.value)}
+                        autoFocus
+                      />
+                    )}
 
                     <div className="grid grid-cols-2 gap-3">
                       <input
@@ -279,9 +374,10 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                     </div>
                     <button
                       onClick={handleAddItem}
-                      className="w-full bg-[#1A1F3D] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-900 transition-colors"
+                      disabled={(itemInputMode === 'system' && !selectedProductId) || (itemInputMode === 'manual' && !manualItemName.trim()) || !qtyInput || !priceInput}
+                      className="w-full bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-sm hover:bg-indigo-100 transition-colors disabled:opacity-50"
                     >
-                      <Plus size={16} /> เพิ่มรายการ
+                      เพิ่มรายการ
                     </button>
                   </div>
                 </div>
@@ -380,10 +476,10 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={handleSaveGR}
-                  disabled={grItems.length === 0 || !selectedPartnerId}
-                  className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                  disabled={(!selectedPOId && vendorInputMode === 'system' && !selectedPartnerId) || (!selectedPOId && vendorInputMode === 'manual' && !manualVendorName.trim()) || grItems.length === 0}
+                  className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-gray-900 transition-colors disabled:opacity-50"
                 >
-                  <Save size={20} /> บันทึกใบรับสินค้า
+                  <Save size={18} /> บันทึกใบรับสินค้า
                 </button>
               </div>
             </div>
@@ -414,13 +510,6 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                 >
                   <span className="text-[10px] font-bold text-[#1A1F3D] uppercase tracking-wider">Total</span>
                   <span className="text-sm font-black text-[#1A1F3D]">{totalGRs}</span>
-                </button>
-                <button 
-                  onClick={() => setStatusFilter(statusFilter === 'Pending' ? null : 'Pending')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${statusFilter === 'Pending' ? 'bg-orange-100 border-orange-300 ring-2 ring-orange-200 shadow-sm' : 'bg-orange-50 border-orange-100/50 hover:bg-orange-100'}`}
-                >
-                  <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Pending</span>
-                  <span className="text-sm font-black text-orange-600">{pendingGRs}</span>
                 </button>
                 <button 
                   onClick={() => setStatusFilter(statusFilter === 'On Order' ? null : 'On Order')}
@@ -476,7 +565,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                     <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Vendor</th>
                     <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Total Amount</th>
                     <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Status</th>
-                    <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Actions</th>
+                    <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -504,8 +593,8 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                           {getStatusIcon(gr.status)} {gr.status}
                         </span>
                       </td>
-                        <td className="px-8 py-5 text-center">
-                          <div className="flex flex-wrap items-center justify-center gap-2">
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
                             <button
                               onClick={() => setPreviewGR(gr)}
                               className="bg-[#1A1F3D] text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-gray-900 transition-colors shadow-sm"

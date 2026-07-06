@@ -470,10 +470,10 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
           </div>
         )}
 
-        {vatEnabled && !vatInclusive && (
+        {vatEnabled && (
           <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
             <span>{language === 'th' ? 'ยอดก่อนภาษี' : 'Subtotal Before VAT'}</span>
-            <span>{currency}{discountableSubtotal.toFixed(2)}</span>
+            <span>{currency}{subtotalBeforeTax.toFixed(2)}</span>
           </div>
         )}
 

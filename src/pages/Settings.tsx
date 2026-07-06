@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Store, Save, Clock, Phone, MessageSquare, Calendar, AlertCircle, Send, Camera, Eye, Globe, ChevronRight, Copy, ShieldCheck, ExternalLink, Building2, Percent, Mail
+  Store, Save, Clock, Phone, MessageSquare, Calendar, AlertCircle, Send, Camera, Eye, Globe, ChevronRight, Copy, ShieldCheck, ExternalLink, Building2, Percent, Mail, CheckCircle2, Loader2
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -68,45 +68,147 @@ const Settings = () => {
   const [localLiffChannelSecret, setLocalLiffChannelSecret] = useState(liffChannelSecret);
   const [localLiffEnabled, setLocalLiffEnabled] = useState(liffEnabled);
 
+  // Sync global state to local state to prevent overwrite on load
+  useEffect(() => {
+    setLocalShopName(shopName);
+    setLocalShopLogo(shopLogo);
+    setLocalShopAddress(shopAddress);
+    setLocalShopPhone(shopPhone);
+    setLocalShopLineId(shopLineId);
+    setLocalCurrency(currency);
+    setLocalShopIsOpen(shopIsOpen);
+    setLocalReceiptHeader(receiptHeader);
+    setLocalReceiptFooter(receiptFooter);
+    setLocalReceiptPaperSize(receiptPaperSize);
+    setLocalSlotDuration(slotDuration);
+    setLocalMaxCapacity(maxCapacity);
+    setLocalOpenTime(openTime);
+    setLocalCloseTime(closeTime);
+    setLocalRecurringHolidays(recurringHolidays);
+    setLocalSpecificHolidays(specificHolidays);
+    setLocalCompanyName(companyName || '');
+    setLocalCompanyAddress(companyAddress || '');
+    setLocalCompanyTaxId(companyTaxId || '');
+    setLocalCompanyPhone(companyPhone || '');
+    setLocalCompanyEmail(companyEmail || '');
+    setLocalVatEnabled(vatEnabled);
+    setLocalVatRate(vatRate || 7);
+    setLocalVatInclusive(vatInclusive !== undefined ? vatInclusive : true);
+    setLocalLiffId(liffId);
+    setLocalLiffChannelId(liffChannelId);
+    setLocalLiffChannelSecret(liffChannelSecret);
+    setLocalLiffEnabled(liffEnabled);
+  }, [
+    shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
+    receiptHeader, receiptFooter, receiptPaperSize, slotDuration, maxCapacity, openTime, closeTime,
+    recurringHolidays, specificHolidays, companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
+    vatEnabled, vatRate, vatInclusive, liffId, liffChannelId, liffChannelSecret, liffEnabled
+  ]);
+
   // Modals
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [isReceiptPreviewOpen, setIsReceiptPreviewOpen] = useState(false);
 
-  const handleSaveAll = () => {
-    updateBusinessProfile({ 
-      shopName: localShopName, 
-      shopLogo: localShopLogo,
-      shopAddress: localShopAddress,
-      shopPhone: localShopPhone,
-      shopLineId: localShopLineId,
-      receiptHeader: localReceiptHeader,
-      receiptFooter: localReceiptFooter,
-      receiptPaperSize: localReceiptPaperSize,
-      currency: localCurrency,
-      shopIsOpen: localShopIsOpen,
-      liffId: localLiffId,
-      liffChannelId: localLiffChannelId,
-      liffChannelSecret: localLiffChannelSecret,
-      liffEnabled: localLiffEnabled,
-      companyName: localCompanyName,
-      companyAddress: localCompanyAddress,
-      companyTaxId: localCompanyTaxId,
-      companyPhone: localCompanyPhone,
-      companyEmail: localCompanyEmail,
-      vatEnabled: localVatEnabled,
-      vatRate: localVatRate,
-      vatInclusive: localVatInclusive,
-    });
-    updateBookingSettings({
-      slotDuration: localSlotDuration,
-      maxCapacity: localMaxCapacity,
-      openTime: localOpenTime,
-      closeTime: localCloseTime,
-      recurringHolidays: localRecurringHolidays,
-      specificHolidays: localSpecificHolidays
-    });
-    toast.success("All settings synchronized successfully!");
-  };
+  // Auto-save effect
+  const isInitialMount = useRef(true);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const hasChanges = 
+      localShopName !== shopName || 
+      localShopLogo !== shopLogo || 
+      localShopAddress !== shopAddress ||
+      localShopPhone !== shopPhone ||
+      localShopLineId !== shopLineId ||
+      localReceiptHeader !== receiptHeader ||
+      localReceiptFooter !== receiptFooter ||
+      localReceiptPaperSize !== receiptPaperSize ||
+      localCurrency !== currency ||
+      localShopIsOpen !== shopIsOpen ||
+      localLiffId !== liffId ||
+      localLiffChannelId !== liffChannelId ||
+      localLiffChannelSecret !== liffChannelSecret ||
+      localLiffEnabled !== liffEnabled ||
+      localCompanyName !== (companyName || '') ||
+      localCompanyAddress !== (companyAddress || '') ||
+      localCompanyTaxId !== (companyTaxId || '') ||
+      localCompanyPhone !== (companyPhone || '') ||
+      localCompanyEmail !== (companyEmail || '') ||
+      localVatEnabled !== vatEnabled ||
+      localVatRate !== (vatRate || 7) ||
+      localVatInclusive !== (vatInclusive !== undefined ? vatInclusive : true) ||
+      localSlotDuration !== slotDuration ||
+      localMaxCapacity !== maxCapacity ||
+      localOpenTime !== openTime ||
+      localCloseTime !== closeTime ||
+      JSON.stringify(localRecurringHolidays) !== JSON.stringify(recurringHolidays) ||
+      JSON.stringify(localSpecificHolidays) !== JSON.stringify(specificHolidays);
+
+    if (!hasChanges) return;
+
+    setSaveStatus('saving');
+    let resetTimer: NodeJS.Timeout;
+
+    const timer = setTimeout(() => {
+      updateBusinessProfile({ 
+        shopName: localShopName, 
+        shopLogo: localShopLogo,
+        shopAddress: localShopAddress,
+        shopPhone: localShopPhone,
+        shopLineId: localShopLineId,
+        receiptHeader: localReceiptHeader,
+        receiptFooter: localReceiptFooter,
+        receiptPaperSize: localReceiptPaperSize,
+        currency: localCurrency,
+        shopIsOpen: localShopIsOpen,
+        liffId: localLiffId,
+        liffChannelId: localLiffChannelId,
+        liffChannelSecret: localLiffChannelSecret,
+        liffEnabled: localLiffEnabled,
+        companyName: localCompanyName,
+        companyAddress: localCompanyAddress,
+        companyTaxId: localCompanyTaxId,
+        companyPhone: localCompanyPhone,
+        companyEmail: localCompanyEmail,
+        vatEnabled: localVatEnabled,
+        vatRate: localVatRate,
+        vatInclusive: localVatInclusive,
+      }, false);
+      updateBookingSettings({
+        slotDuration: localSlotDuration,
+        maxCapacity: localMaxCapacity,
+        openTime: localOpenTime,
+        closeTime: localCloseTime,
+        recurringHolidays: localRecurringHolidays,
+        specificHolidays: localSpecificHolidays
+      }, false);
+      
+      setSaveStatus('saved');
+      resetTimer = setTimeout(() => {
+        setSaveStatus('idle');
+      }, 2000);
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+      if (resetTimer) clearTimeout(resetTimer);
+    };
+  }, [
+    localShopName, localShopLogo, localShopAddress, localShopPhone, localShopLineId,
+    localReceiptHeader, localReceiptFooter, localReceiptPaperSize,
+    localCurrency, localShopIsOpen,
+    localLiffId, localLiffChannelId, localLiffChannelSecret, localLiffEnabled,
+    localCompanyName, localCompanyAddress, localCompanyTaxId, localCompanyPhone, localCompanyEmail,
+    localVatEnabled, localVatRate, localVatInclusive,
+    localSlotDuration, localMaxCapacity, localOpenTime, localCloseTime,
+    localRecurringHolidays, localSpecificHolidays,
+    updateBusinessProfile, updateBookingSettings
+  ]);
 
   const handleCopyLiffUrl = () => {
     const url = `https://liff.line.me/${localLiffId || 'liff-id'}`;
@@ -177,12 +279,18 @@ const Settings = () => {
             )}
             <h2 className="text-lg font-black text-[#1A1F3D] uppercase tracking-tight">{navItems.find(n => n.id === activeTab)?.label}</h2>
           </div>
-          <button 
-            onClick={handleSaveAll}
-            className="bg-[#1A1F3D] text-white px-8 py-3 rounded-xl font-black text-xs flex items-center gap-2 shadow-xl shadow-[#1A1F3D]/10 hover:scale-105 active:scale-95 transition-all"
-          >
-            <Save size={16} /> {t.saveAll}
-          </button>
+          <div className="flex items-center min-h-[36px]">
+            {saveStatus === 'saving' && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-black text-[10px] uppercase tracking-widest animate-pulse">
+                <Loader2 size={14} className="animate-spin" /> Saving...
+              </div>
+            )}
+            {saveStatus === 'saved' && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-xl font-black text-[10px] uppercase tracking-widest animate-in fade-in zoom-in duration-300">
+                <CheckCircle2 size={14} /> Saved
+              </div>
+            )}
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">

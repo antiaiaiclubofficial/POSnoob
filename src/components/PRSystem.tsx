@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, VerticalAlign } from 'docx';
 import { formatBahtText } from '@/lib/bahttext';
+import { toast } from 'sonner';
 
 interface PRSystemProps {
   reorderItem?: InventoryItem | null;
@@ -39,10 +40,15 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
   // Create PO State
   const [editingPRId, setEditingPRId] = useState<string | null>(null);
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
+  const [manualVendorName, setManualVendorName] = useState('');
   const [prItems, setPrItems] = useState<PurchaseRequestItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [manualItemName, setManualItemName] = useState('');
   const [qtyInput, setQtyInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
+  
+  const [vendorInputMode, setVendorInputMode] = useState<'system' | 'manual'>('system');
+  const [itemInputMode, setItemInputMode] = useState<'system' | 'manual'>('system');
 
   useEffect(() => {
     if (reorderItem) {
@@ -91,26 +97,42 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
   };
 
   const handleAddItem = () => {
-    if (!selectedProductId || !qtyInput || !priceInput) return;
-    const product = inventory.find(i => i.id === selectedProductId);
-    if (!product) return;
+    if (!qtyInput || !priceInput) return;
+    
+    let productId = '';
+    let productName = '';
+    
+    if (itemInputMode === 'manual') {
+      if (!manualItemName.trim()) {
+         toast.error('กรุณาระบุชื่อสินค้า');
+         return;
+      }
+      productId = `MANUAL_${Date.now()}`;
+      productName = manualItemName;
+    } else {
+      if (!selectedProductId) return;
+      const product = inventory.find(i => i.id === selectedProductId);
+      if (!product) return;
+      productId = product.id;
+      productName = product.name;
+    }
 
     const qty = parseInt(qtyInput);
     const price = parseFloat(priceInput);
 
     if (qty <= 0 || price < 0) return;
 
-    const existingItem = prItems.find(i => i.productId === selectedProductId);
+    const existingItem = prItems.find(i => i.productId === productId);
     if (existingItem) {
-      setPrItems(prItems.map(i => i.productId === selectedProductId ? {
+      setPrItems(prItems.map(i => i.productId === productId ? {
         ...i,
         quantity: i.quantity + qty,
         total: (i.quantity + qty) * i.unitPrice
       } : i));
     } else {
       setPrItems([...prItems, {
-        productId: product.id,
-        productName: product.name,
+        productId: productId,
+        productName: productName,
         quantity: qty,
         unitPrice: price,
         total: qty * price
@@ -118,6 +140,7 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
     }
 
     setSelectedProductId('');
+    setManualItemName('');
     setQtyInput('');
     setPriceInput('');
   };
@@ -126,19 +149,39 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
     setPrItems(prItems.filter(i => i.productId !== productId));
   };
 
-  const handleSavePR = () => {
-    if (!selectedPartnerId || prItems.length === 0) return;
+  const handleSavePR = async () => {
+    let finalPartnerId = selectedPartnerId;
+    
+    if (vendorInputMode === 'manual') {
+      if (!manualVendorName.trim()) {
+        toast.error('กรุณาระบุชื่อคู่ค้า');
+        return;
+      }
+      const newPartner = await useStore.getState().addPartner({
+        companyName: manualVendorName,
+        type: 'Vendor',
+      });
+      if (newPartner) {
+        finalPartnerId = newPartner.id;
+      } else {
+        toast.error('ไม่สามารถสร้างคู่ค้าใหม่ได้');
+        return;
+      }
+    }
+
+    if (vendorInputMode === 'system' && !finalPartnerId) return;
+    if (!finalPartnerId || prItems.length === 0) return;
 
     if (editingPRId) {
       updatePurchaseRequest(editingPRId, {
-        partnerId: selectedPartnerId,
+        partnerId: finalPartnerId,
         items: prItems,
         totalAmount: prItems.reduce((sum, item) => sum + item.total, 0),
       });
     } else {
       addPurchaseRequest({
         date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        partnerId: selectedPartnerId,
+        partnerId: finalPartnerId,
         items: prItems,
         status: 'Pending',
         totalAmount: prItems.reduce((sum, item) => sum + item.total, 0),
@@ -148,6 +191,7 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
 
     handleViewChange('list');
     setSelectedPartnerId('');
+    setManualVendorName('');
     setPrItems([]);
     setEditingPRId(null);
   };
@@ -165,6 +209,7 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
               handleViewChange('list');
               setEditingPRId(null);
               setSelectedPartnerId('');
+              setManualVendorName('');
               setPrItems([]);
             }} className="p-3 bg-gray-50 text-gray-400 hover:bg-gray-100 rounded-xl transition-colors">
               <X size={20} />
@@ -174,33 +219,78 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 px-1">ผู้จัดจำหน่าย (Vendor)</label>
-                <select
-                  className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold"
-                  value={selectedPartnerId}
-                  onChange={(e) => setSelectedPartnerId(e.target.value)}
-                >
-                  <option value="">-- เลือกคู่ค้า --</option>
-                  {partners.map(p => (
-                    <option key={p.id} value={p.id}>{p.companyName}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between px-1">
+                  <label className="text-[10px] font-black uppercase text-gray-400">ผู้จัดจำหน่าย (Vendor)</label>
+                </div>
+                
+                <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
+                  <button onClick={() => setVendorInputMode('system')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${vendorInputMode === 'system' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>เลือกจากระบบ</button>
+                  <button onClick={() => setVendorInputMode('manual')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${vendorInputMode === 'manual' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>ระบุเอง (สร้างใหม่)</button>
+                </div>
+
+                {vendorInputMode === 'system' ? (
+                  <select
+                    className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold"
+                    value={selectedPartnerId}
+                    onChange={(e) => {
+                      setSelectedPartnerId(e.target.value);
+                      setSelectedProductId('');
+                    }}
+                  >
+                    <option value="">-- เลือกคู่ค้า --</option>
+                    {partners.map(p => (
+                      <option key={p.id} value={p.id}>{p.companyName}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="ระบุชื่อคู่ค้าใหม่"
+                    className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-100 transition-all"
+                    value={manualVendorName}
+                    onChange={(e) => setManualVendorName(e.target.value)}
+                    autoFocus
+                  />
+                )}
               </div>
 
               <div className="bg-gray-50 p-6 rounded-2xl space-y-4">
                 <h3 className="font-black text-[#1A1F3D]">เพิ่มรายการสินค้า</h3>
 
                 <div className="space-y-3">
-                  <select
-                    className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
-                    value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                  >
-                    <option value="">-- เลือกสินค้า --</option>
-                    {inventory.map(i => (
-                      <option key={i.id} value={i.id}>{i.name} (ในสต็อก: {i.stock})</option>
-                    ))}
-                  </select>
+                  <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
+                    <button onClick={() => setItemInputMode('system')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${itemInputMode === 'system' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>เลือกจากระบบ</button>
+                    <button onClick={() => setItemInputMode('manual')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${itemInputMode === 'manual' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>ระบุเอง (ชั่วคราว)</button>
+                  </div>
+
+                  {itemInputMode === 'system' ? (
+                    <select
+                      className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
+                      value={selectedProductId}
+                      onChange={(e) => setSelectedProductId(e.target.value)}
+                    >
+                      <option value="">-- เลือกสินค้า --</option>
+                      {inventory
+                        .filter(i => {
+                          if (vendorInputMode === 'system' && selectedPartnerId) {
+                            return i.partnerId === selectedPartnerId;
+                          }
+                          return true;
+                        })
+                        .map(i => (
+                        <option key={i.id} value={i.id}>{i.name} (ในสต็อก: {i.stock})</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="ระบุชื่อสินค้าใหม่"
+                      className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-100 transition-all"
+                      value={manualItemName}
+                      onChange={(e) => setManualItemName(e.target.value)}
+                      autoFocus
+                    />
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <input
@@ -221,7 +311,7 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
 
                   <button
                     onClick={handleAddItem}
-                    disabled={!selectedProductId || !qtyInput || !priceInput}
+                    disabled={(itemInputMode === 'system' && !selectedProductId) || (itemInputMode === 'manual' && !manualItemName.trim()) || !qtyInput || !priceInput}
                     className="w-full bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-sm hover:bg-indigo-100 transition-colors disabled:opacity-50"
                   >
                     เพิ่มเข้าใบขอสั่งซื้อ
@@ -279,7 +369,7 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                   </div>
                   <button
                     onClick={handleSavePR}
-                    disabled={!selectedPartnerId || prItems.length === 0}
+                    disabled={(vendorInputMode === 'system' && !selectedPartnerId) || (vendorInputMode === 'manual' && !manualVendorName.trim()) || prItems.length === 0}
                     className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-gray-900 transition-colors disabled:opacity-50"
                   >
                     <Save size={18} /> บันทึกใบขอสั่งซื้อ
@@ -293,7 +383,7 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
     );
   }
 
-  const handleExportDocx = async (po: PurchaseRequest) => {
+  const handleExportDocx = async (pr: PurchaseRequest) => {
     const partner = partners.find(p => p.id === pr.partnerId);
     const dateNow = format(new Date(), 'dd/MM/yyyy HH:mm');
     const compName = companyName || shopName || "Company Name";
@@ -715,7 +805,7 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                     <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Items</th>
                     <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Total Amount</th>
                     <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Status</th>
-                    <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Actions</th>
+                    <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -755,8 +845,8 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                             {pr.status}
                           </span>
                         </td>
-                        <td className="px-8 py-6 text-center">
-                          <div className="flex flex-wrap items-center justify-center gap-2">
+                        <td className="px-8 py-6 text-right">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
                             <button
                               onClick={() => setPreviewPR(pr)}
                               className="bg-[#1A1F3D] text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-gray-900 transition-colors shadow-sm"
@@ -835,13 +925,13 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                   <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
                     <button
                       onClick={() => {
-                        updatePurchaseRequestStatus(previewPR.id, 'To Order');
-                        setPreviewPR({ ...previewPR, status: 'To Order' });
+                        updatePurchaseRequestStatus(previewPR.id, 'Approved');
+                        setPreviewPR({ ...previewPR, status: 'Approved' });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors text-xs font-bold"
-                      title="Mark as To Order"
+                      title="Approve"
                     >
-                      <Check size={14} /> รอสั่งซื้อ (To Order)
+                      <Check size={14} /> อนุมัติ (Approve)
                     </button>
                     <button
                       onClick={() => {
@@ -849,37 +939,9 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                         setPreviewPR({ ...previewPR, status: 'Cancelled' });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-xs font-bold"
-                      title="Cancel PO"
+                      title="Reject"
                     >
                       <XCircle size={14} /> ไม่อนุมัติ (Reject)
-                    </button>
-                  </div>
-                )}
-                {previewPR.status === 'To Order' && (
-                  <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
-                    <button
-                      onClick={() => {
-                        updatePurchaseRequestStatus(previewPR.id, 'On Order');
-                        setPreviewPR({ ...previewPR, status: 'On Order' });
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-xs font-bold"
-                      title="Mark as On Order"
-                    >
-                      <Truck size={14} /> สั่งซื้อแล้ว (On Order)
-                    </button>
-                  </div>
-                )}
-                {previewPR.status === 'On Order' && (
-                  <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
-                    <button
-                      onClick={() => {
-                        updatePurchaseRequestStatus(previewPR.id, 'Completed');
-                        setPreviewPR({ ...previewPR, status: 'Completed' });
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-xs font-bold"
-                      title="Mark as Completed"
-                    >
-                      <CheckCircle size={14} /> ได้รับสินค้า (Completed)
                     </button>
                   </div>
                 )}

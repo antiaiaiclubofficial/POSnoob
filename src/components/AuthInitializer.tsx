@@ -213,6 +213,8 @@ const AuthInitializer = () => {
               pointsRedeemRate: storeData.points_redeem_rate || 1,
               maxUsers: storeData.max_users || 5,
               maxStaff: storeData.max_staff || 10,
+              recurringHolidays: storeData.recurring_holidays || [],
+              specificHolidays: storeData.specific_holidays || [],
               staffSettings: storeData.staff_settings ? {
                 attendance: {
                   requireGps: storeData.staff_settings.attendance?.requireGps ?? false,

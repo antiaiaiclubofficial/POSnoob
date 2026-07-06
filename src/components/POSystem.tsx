@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, VerticalAlign } from 'docx';
 import { formatBahtText } from '@/lib/bahttext';
+import { toast } from 'sonner';
 
 interface POSystemProps {
   reorderItem?: InventoryItem | null;
@@ -39,10 +40,15 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
   // Create PO State
   const [editingPOId, setEditingPOId] = useState<string | null>(null);
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
+  const [manualVendorName, setManualVendorName] = useState('');
   const [poItems, setPoItems] = useState<PurchaseOrderItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [manualItemName, setManualItemName] = useState('');
   const [qtyInput, setQtyInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
+  
+  const [vendorInputMode, setVendorInputMode] = useState<'system' | 'manual'>('system');
+  const [itemInputMode, setItemInputMode] = useState<'system' | 'manual'>('system');
 
   useEffect(() => {
     if (reorderItem) {
@@ -101,26 +107,42 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
   };
 
   const handleAddItem = () => {
-    if (!selectedProductId || !qtyInput || !priceInput) return;
-    const product = inventory.find(i => i.id === selectedProductId);
-    if (!product) return;
+    if (!qtyInput || !priceInput) return;
+    
+    let productId = '';
+    let productName = '';
+    
+    if (itemInputMode === 'manual') {
+      if (!manualItemName.trim()) {
+         toast.error('กรุณาระบุชื่อสินค้า');
+         return;
+      }
+      productId = `MANUAL_${Date.now()}`;
+      productName = manualItemName;
+    } else {
+      if (!selectedProductId) return;
+      const product = inventory.find(i => i.id === selectedProductId);
+      if (!product) return;
+      productId = product.id;
+      productName = product.name;
+    }
 
     const qty = parseInt(qtyInput);
     const price = parseFloat(priceInput);
 
     if (qty <= 0 || price < 0) return;
 
-    const existingItem = poItems.find(i => i.productId === selectedProductId);
+    const existingItem = poItems.find(i => i.productId === productId);
     if (existingItem) {
-      setPoItems(poItems.map(i => i.productId === selectedProductId ? {
+      setPoItems(poItems.map(i => i.productId === productId ? {
         ...i,
         quantity: i.quantity + qty,
         total: (i.quantity + qty) * i.unitPrice
       } : i));
     } else {
       setPoItems([...poItems, {
-        productId: product.id,
-        productName: product.name,
+        productId: productId,
+        productName: productName,
         quantity: qty,
         unitPrice: price,
         total: qty * price
@@ -128,6 +150,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
     }
 
     setSelectedProductId('');
+    setManualItemName('');
     setQtyInput('');
     setPriceInput('');
   };
@@ -136,19 +159,39 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
     setPoItems(poItems.filter(i => i.productId !== productId));
   };
 
-  const handleSavePO = () => {
-    if (!selectedPartnerId || poItems.length === 0) return;
+  const handleSavePO = async () => {
+    let finalPartnerId = selectedPartnerId;
+    
+    if (vendorInputMode === 'manual') {
+      if (!manualVendorName.trim()) {
+        toast.error('กรุณาระบุชื่อคู่ค้า');
+        return;
+      }
+      const newPartner = await useStore.getState().addPartner({
+        companyName: manualVendorName,
+        type: 'Vendor',
+      });
+      if (newPartner) {
+        finalPartnerId = newPartner.id;
+      } else {
+        toast.error('ไม่สามารถสร้างคู่ค้าใหม่ได้');
+        return;
+      }
+    }
+
+    if (vendorInputMode === 'system' && !finalPartnerId) return;
+    if (!finalPartnerId || poItems.length === 0) return;
 
     if (editingPOId) {
       updatePurchaseOrder(editingPOId, {
-        partnerId: selectedPartnerId,
+        partnerId: finalPartnerId,
         items: poItems,
         totalAmount: poItems.reduce((sum, item) => sum + item.total, 0),
       });
     } else {
       addPurchaseOrder({
         date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        partnerId: selectedPartnerId,
+        partnerId: finalPartnerId,
         items: poItems,
         status: 'Pending',
         totalAmount: poItems.reduce((sum, item) => sum + item.total, 0),
@@ -158,6 +201,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
 
     handleViewChange('list');
     setSelectedPartnerId('');
+    setManualVendorName('');
     setPoItems([]);
     setEditingPOId(null);
   };
@@ -175,6 +219,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
               handleViewChange('list');
               setEditingPOId(null);
               setSelectedPartnerId('');
+              setManualVendorName('');
               setPoItems([]);
             }} className="p-3 bg-gray-50 text-gray-400 hover:bg-gray-100 rounded-xl transition-colors">
               <X size={20} />
@@ -184,33 +229,78 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 px-1">ผู้จัดจำหน่าย (Vendor)</label>
-                <select
-                  className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold"
-                  value={selectedPartnerId}
-                  onChange={(e) => setSelectedPartnerId(e.target.value)}
-                >
-                  <option value="">-- เลือกคู่ค้า --</option>
-                  {partners.map(p => (
-                    <option key={p.id} value={p.id}>{p.companyName}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between px-1">
+                  <label className="text-[10px] font-black uppercase text-gray-400">ผู้จัดจำหน่าย (Vendor)</label>
+                </div>
+                
+                <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
+                  <button onClick={() => setVendorInputMode('system')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${vendorInputMode === 'system' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>เลือกจากระบบ</button>
+                  <button onClick={() => setVendorInputMode('manual')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${vendorInputMode === 'manual' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>ระบุเอง (สร้างใหม่)</button>
+                </div>
+
+                {vendorInputMode === 'system' ? (
+                  <select
+                    className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-sm font-bold"
+                    value={selectedPartnerId}
+                    onChange={(e) => {
+                      setSelectedPartnerId(e.target.value);
+                      setSelectedProductId('');
+                    }}
+                  >
+                    <option value="">-- เลือกคู่ค้า --</option>
+                    {partners.map(p => (
+                      <option key={p.id} value={p.id}>{p.companyName}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="ระบุชื่อคู่ค้าใหม่"
+                    className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-100 transition-all"
+                    value={manualVendorName}
+                    onChange={(e) => setManualVendorName(e.target.value)}
+                    autoFocus
+                  />
+                )}
               </div>
 
               <div className="bg-gray-50 p-6 rounded-2xl space-y-4">
                 <h3 className="font-black text-[#1A1F3D]">เพิ่มรายการสินค้า</h3>
 
                 <div className="space-y-3">
-                  <select
-                    className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
-                    value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                  >
-                    <option value="">-- เลือกสินค้า --</option>
-                    {inventory.map(i => (
-                      <option key={i.id} value={i.id}>{i.name} (ในสต็อก: {i.stock})</option>
-                    ))}
-                  </select>
+                  <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
+                    <button onClick={() => setItemInputMode('system')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${itemInputMode === 'system' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>เลือกจากระบบ</button>
+                    <button onClick={() => setItemInputMode('manual')} className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${itemInputMode === 'manual' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>ระบุเอง (ชั่วคราว)</button>
+                  </div>
+
+                  {itemInputMode === 'system' ? (
+                    <select
+                      className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
+                      value={selectedProductId}
+                      onChange={(e) => setSelectedProductId(e.target.value)}
+                    >
+                      <option value="">-- เลือกสินค้า --</option>
+                      {inventory
+                        .filter(i => {
+                          if (vendorInputMode === 'system' && selectedPartnerId) {
+                            return i.partnerId === selectedPartnerId;
+                          }
+                          return true;
+                        })
+                        .map(i => (
+                        <option key={i.id} value={i.id}>{i.name} (ในสต็อก: {i.stock})</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="ระบุชื่อสินค้าใหม่"
+                      className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-100 transition-all"
+                      value={manualItemName}
+                      onChange={(e) => setManualItemName(e.target.value)}
+                      autoFocus
+                    />
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <input
@@ -231,7 +321,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
 
                   <button
                     onClick={handleAddItem}
-                    disabled={!selectedProductId || !qtyInput || !priceInput}
+                    disabled={(itemInputMode === 'system' && !selectedProductId) || (itemInputMode === 'manual' && !manualItemName.trim()) || !qtyInput || !priceInput}
                     className="w-full bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-sm hover:bg-indigo-100 transition-colors disabled:opacity-50"
                   >
                     เพิ่มเข้าใบสั่งซื้อ
@@ -289,7 +379,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                   </div>
                   <button
                     onClick={handleSavePO}
-                    disabled={!selectedPartnerId || poItems.length === 0}
+                    disabled={(vendorInputMode === 'system' && !selectedPartnerId) || (vendorInputMode === 'manual' && !manualVendorName.trim()) || poItems.length === 0}
                     className="bg-[#1A1F3D] text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-gray-900 transition-colors disabled:opacity-50"
                   >
                     <Save size={18} /> บันทึกใบสั่งซื้อ
@@ -732,7 +822,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Items</th>
                     <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Total Amount</th>
                     <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Status</th>
-                    <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Actions</th>
+                    <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -772,8 +862,8 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                             {po.status}
                           </span>
                         </td>
-                        <td className="px-8 py-6 text-center">
-                          <div className="flex flex-wrap items-center justify-center gap-2">
+                        <td className="px-8 py-6 text-right">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
                             <button
                               onClick={() => setPreviewPO(po)}
                               className="bg-[#1A1F3D] text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-gray-900 transition-colors shadow-sm"

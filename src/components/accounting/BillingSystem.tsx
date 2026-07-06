@@ -21,7 +21,8 @@ const BillingSystem = () => {
     updateBillingDocumentStatus,
     companyName, companyAddress, companyTaxId,
     shopName, shopLogo, shopAddress, shopPhone,
-    receiptHeader, receiptFooter, receiptPaperSize
+    receiptHeader, receiptFooter, receiptPaperSize,
+    vatEnabled: globalVatEnabled, vatRate, vatInclusive
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<string>('receipt_all');
@@ -194,10 +195,27 @@ const BillingSystem = () => {
   };
 
   const calculateTotals = () => {
-    const subtotal = docItems.reduce((sum, item) => sum + item.total, 0);
+    const rawSubtotal = docItems.reduce((sum, item) => sum + item.total, 0);
     const isVatForced = createType === 'tax_invoice';
-    const vatAmount = (vatEnabled || isVatForced) ? subtotal * 0.07 : 0;
-    const totalAmount = subtotal + vatAmount;
+    const isTaxable = vatEnabled || isVatForced;
+    const currentVatRate = vatRate || 7;
+
+    let subtotal = rawSubtotal;
+    let vatAmount = 0;
+    let totalAmount = rawSubtotal;
+
+    if (isTaxable) {
+      if (vatInclusive) {
+        totalAmount = rawSubtotal;
+        vatAmount = totalAmount * currentVatRate / (100 + currentVatRate);
+        subtotal = totalAmount - vatAmount;
+      } else {
+        vatAmount = rawSubtotal * currentVatRate / 100;
+        totalAmount = rawSubtotal + vatAmount;
+        subtotal = rawSubtotal;
+      }
+    }
+
     return { subtotal, vatAmount, totalAmount };
   };
 
@@ -404,7 +422,7 @@ const BillingSystem = () => {
               }),
               new TableRow({
                 children: [
-                  new TableCell({ columnSpan: 4, children: [new Paragraph({ children: [new TextRun({ text: "ภาษีมูลค่าเพิ่ม 7%", bold: true })], alignment: AlignmentType.RIGHT })] }),
+                  new TableCell({ columnSpan: 4, children: [new Paragraph({ children: [new TextRun({ text: `ภาษีมูลค่าเพิ่ม ${vatRate || 7}%`, bold: true })], alignment: AlignmentType.RIGHT })] }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: docData.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }), bold: true })], alignment: AlignmentType.RIGHT })] }),
                 ]
               }),
@@ -837,17 +855,17 @@ const BillingSystem = () => {
                 <div className="w-80 bg-gray-50 p-6 rounded-[24px] border border-gray-100 space-y-3">
                   <label className="flex items-center gap-2 mb-4 cursor-pointer">
                     <input type="checkbox" checked={vatEnabled || createType === 'tax_invoice'} disabled={createType === 'tax_invoice'} onChange={(e) => setVatEnabled(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 disabled:opacity-50" />
-                    <span className="text-sm font-bold text-gray-600">คำนวณ VAT 7%</span>
+                    <span className="text-sm font-bold text-gray-600">คำนวณ VAT {vatRate || 7}%</span>
                     {createType === 'tax_invoice' && <span className="text-[10px] text-red-500 ml-1">(บังคับสำหรับใบกำกับภาษี)</span>}
                   </label>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-bold text-gray-500">มูลค่ารวม</span>
-                    <span className="text-sm font-bold text-[#1A1F3D]">฿{calculateTotals().subtotal.toLocaleString()}</span>
+                    <span className="text-sm font-bold text-[#1A1F3D]">฿{calculateTotals().subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                   {(vatEnabled || createType === 'tax_invoice') && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-gray-500">ภาษีมูลค่าเพิ่ม 7%</span>
-                      <span className="text-sm font-bold text-[#1A1F3D]">฿{calculateTotals().vatAmount.toLocaleString()}</span>
+                      <span className="text-sm font-bold text-gray-500">ภาษีมูลค่าเพิ่ม {vatRate || 7}%</span>
+                      <span className="text-sm font-bold text-[#1A1F3D]">฿{calculateTotals().vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
                   <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
@@ -1036,7 +1054,7 @@ const BillingSystem = () => {
                       <div className="w-[120px] p-2 text-right border-l border-black font-bold">{previewDoc.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                     </div>
                     <div className="flex border-b border-black bg-white">
-                      <div className="flex-1 p-2 text-xs"><span className="font-bold">จำนวนภาษีมูลค่าเพิ่ม 7 %</span><br /><span className="text-[10px]">Value Added Tax</span></div>
+                      <div className="flex-1 p-2 text-xs"><span className="font-bold">จำนวนภาษีมูลค่าเพิ่ม {vatRate || 7}%</span><br /><span className="text-[10px]">Value Added Tax</span></div>
                       <div className="w-[120px] p-2 text-right border-l border-black font-bold">{previewDoc.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                     </div>
                     <div className="flex bg-black text-white">
