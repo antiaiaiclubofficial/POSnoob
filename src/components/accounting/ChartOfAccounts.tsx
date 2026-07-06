@@ -189,7 +189,6 @@ const ChartOfAccounts = () => {
                   onClick={() => {
                     if (!newCode.code || !newCode.name) return;
                     addAccountCode({
-                      id: '',
                       code: newCode.code,
                       name: newCode.name,
                       category: newCode.category,

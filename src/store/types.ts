@@ -62,6 +62,7 @@ export interface Customer {
   packages?: any[];
   creditHistory?: any[];
   taxId?: string;
+  address?: string;
   branchName?: string;
   houseNo?: string;
   villageNo?: string;
