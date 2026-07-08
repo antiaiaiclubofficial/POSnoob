@@ -76,7 +76,7 @@ const PIE_COLORS = [COLORS.primary, COLORS.purple, COLORS.accentPeach, COLORS.ac
 export default function InventoryDashboard() {
   const { inventory, currency, adjustStock, stockLogs, language, transactions, partners, addPurchaseRequest } = useStore();
   const [reorderingId, setReorderingId] = useState<string | null>(null);
-  const [kpiDateRange, setKpiDateRange] = useState<'today' | 'yesterday' | '7days' | '30days' | 'all'>('all');
+  const [kpiDateRange, setKpiDateRange] = useState<'today' | 'yesterday' | '7days' | '30days' | 'q1' | 'q2' | 'q3' | 'q4' | 'yearly' | 'all'>('all');
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
   const [selectedSalesDate, setSelectedSalesDate] = useState<string | null>(null);
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
@@ -108,6 +108,10 @@ export default function InventoryDashboard() {
       daysToGenerate = 2;
     } else if (kpiDateRange === '30days') {
       daysToGenerate = 30;
+    } else if (['q1', 'q2', 'q3', 'q4'].includes(kpiDateRange)) {
+      daysToGenerate = 90;
+    } else if (kpiDateRange === 'yearly') {
+      daysToGenerate = 365;
     } else if (kpiDateRange === 'all') {
       // Find oldest stock log timestamp
       let oldestDate = new Date();
@@ -247,6 +251,13 @@ export default function InventoryDashboard() {
     const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const currentYear = startOfToday.getFullYear();
+    const q1Start = new Date(currentYear, 0, 1);
+    const q2Start = new Date(currentYear, 3, 1);
+    const q3Start = new Date(currentYear, 6, 1);
+    const q4Start = new Date(currentYear, 9, 1);
+    const nextYearStart = new Date(currentYear + 1, 0, 1);
+    const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
 
     return processedTransactions.filter(t => {
       if (!t.date) return false;
@@ -273,6 +284,12 @@ export default function InventoryDashboard() {
           return txDate >= sevenDaysAgo;
         case '30days':
           return txDate >= thirtyDaysAgo;
+        case 'q1': return txDate >= q1Start && txDate < q2Start;
+        case 'q2': return txDate >= q2Start && txDate < q3Start;
+        case 'q3': return txDate >= q3Start && txDate < q4Start;
+        case 'q4': return txDate >= q4Start && txDate < nextYearStart;
+        case 'yearly':
+          return txDate >= yearlyAgo;
         case 'all':
         default:
           return true;
@@ -344,6 +361,13 @@ export default function InventoryDashboard() {
       prevRevenue = getRevenue(prevPeriodTxs);
     } else if (kpiDateRange === '30days' || kpiDateRange === 'all') {
       const thirtyDaysAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const currentYear = startOfToday.getFullYear();
+    const q1Start = new Date(currentYear, 0, 1);
+    const q2Start = new Date(currentYear, 3, 1);
+    const q3Start = new Date(currentYear, 6, 1);
+    const q4Start = new Date(currentYear, 9, 1);
+    const nextYearStart = new Date(currentYear + 1, 0, 1);
+    const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
       const sixtyDaysAgo = new Date(startOfToday.getTime() - 60 * 24 * 60 * 60 * 1000);
 
       const currentPeriodTxs = processedTransactions.filter(t => {
@@ -435,6 +459,13 @@ export default function InventoryDashboard() {
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
+    const currentYear = today.getFullYear();
+    const q1Start = new Date(currentYear, 0, 1);
+    const q2Start = new Date(currentYear, 3, 1);
+    const q3Start = new Date(currentYear, 6, 1);
+    const q4Start = new Date(currentYear, 9, 1);
+    const nextYearStart = new Date(currentYear + 1, 0, 1);
+    const yearlyAgo = new Date(today.getTime() - 364 * 24 * 60 * 60 * 1000);
 
     switch (kpiDateRange) {
       case 'today':
@@ -445,6 +476,12 @@ export default function InventoryDashboard() {
         return `${formatDate(sevenDaysAgo)} - ${formatDate(today)}`;
       case '30days':
         return `${formatDate(thirtyDaysAgo)} - ${formatDate(today)}`;
+      case 'q1': return `${formatDate(q1Start)} - ${formatDate(new Date(currentYear, 2, 31))}`;
+      case 'q2': return `${formatDate(q2Start)} - ${formatDate(new Date(currentYear, 5, 30))}`;
+      case 'q3': return `${formatDate(q3Start)} - ${formatDate(new Date(currentYear, 8, 30))}`;
+      case 'q4': return `${formatDate(q4Start)} - ${formatDate(new Date(currentYear, 11, 31))}`;
+      case 'yearly':
+        return `${formatDate(yearlyAgo)} - ${formatDate(today)}`;
       case 'all':
       default:
         if (processedTransactions.length > 0) {
@@ -549,6 +586,13 @@ export default function InventoryDashboard() {
       prevGP = getGP(prevPeriodTxs);
     } else if (kpiDateRange === '30days' || kpiDateRange === 'all') {
       const thirtyDaysAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const currentYear = startOfToday.getFullYear();
+    const q1Start = new Date(currentYear, 0, 1);
+    const q2Start = new Date(currentYear, 3, 1);
+    const q3Start = new Date(currentYear, 6, 1);
+    const q4Start = new Date(currentYear, 9, 1);
+    const nextYearStart = new Date(currentYear + 1, 0, 1);
+    const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
       const sixtyDaysAgo = new Date(startOfToday.getTime() - 60 * 24 * 60 * 60 * 1000);
 
       const currentPeriodTxs = processedTransactions.filter(t => {
@@ -649,6 +693,13 @@ export default function InventoryDashboard() {
     const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const currentYear = startOfToday.getFullYear();
+    const q1Start = new Date(currentYear, 0, 1);
+    const q2Start = new Date(currentYear, 3, 1);
+    const q3Start = new Date(currentYear, 6, 1);
+    const q4Start = new Date(currentYear, 9, 1);
+    const nextYearStart = new Date(currentYear + 1, 0, 1);
+    const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
 
     return transactions.filter(t => {
       if (!t.date) return false;
@@ -675,6 +726,12 @@ export default function InventoryDashboard() {
           return txDate >= sevenDaysAgo;
         case '30days':
           return txDate >= thirtyDaysAgo;
+        case 'q1': return txDate >= q1Start && txDate < q2Start;
+        case 'q2': return txDate >= q2Start && txDate < q3Start;
+        case 'q3': return txDate >= q3Start && txDate < q4Start;
+        case 'q4': return txDate >= q4Start && txDate < nextYearStart;
+        case 'yearly':
+          return txDate >= yearlyAgo;
         case 'all':
         default:
           return true;
@@ -691,9 +748,16 @@ export default function InventoryDashboard() {
       case '7days':
         return language === 'th' ? 'เทียบกับ 7 วันก่อนหน้า' : 'vs last 7 days';
       case '30days':
+        return language === 'th' ? 'เทียบกับ 30 วันก่อนหน้า' : 'vs last 30 days';
+      case 'q1':
+      case 'q2':
+      case 'q3':
+      case 'q4':
+        return language === 'th' ? 'เทียบกับไตรมาสก่อนหน้า' : 'vs last quarter';
+      case 'yearly':
       case 'all':
       default:
-        return language === 'th' ? 'เทียบกับ 30 วันก่อนหน้า' : 'vs last 30 days';
+        return language === 'th' ? 'เทียบกับ 1 ปีก่อนหน้า' : 'vs last 365 days';
     }
   }, [kpiDateRange, language]);
 
@@ -707,6 +771,13 @@ export default function InventoryDashboard() {
     const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const currentYear = startOfToday.getFullYear();
+    const q1Start = new Date(currentYear, 0, 1);
+    const q2Start = new Date(currentYear, 3, 1);
+    const q3Start = new Date(currentYear, 6, 1);
+    const q4Start = new Date(currentYear, 9, 1);
+    const nextYearStart = new Date(currentYear + 1, 0, 1);
+    const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
     const sixtyDaysAgo = new Date(startOfToday.getTime() - 60 * 24 * 60 * 60 * 1000);
 
     // Calculate Growth dynamically based on the selected period
@@ -741,6 +812,37 @@ export default function InventoryDashboard() {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= fourteenDaysAgoDate && txDate < sevenDaysAgoDate;
+      }).length;
+    } else if (kpiDateRange === 'quarterly') {
+      const currentYear = startOfToday.getFullYear();
+    const q1Start = new Date(currentYear, 0, 1);
+    const q2Start = new Date(currentYear, 3, 1);
+    const q3Start = new Date(currentYear, 6, 1);
+    const q4Start = new Date(currentYear, 9, 1);
+    const nextYearStart = new Date(currentYear + 1, 0, 1);
+      const oneEightyDaysAgo = new Date(startOfToday.getTime() - 180 * 24 * 60 * 60 * 1000);
+      currentCount = transactions.filter(t => {
+        if (!t.date) return false;
+        const txDate = new Date(t.date);
+        return txDate >= ninetyDaysAgo;
+      }).length;
+      prevCount = transactions.filter(t => {
+        if (!t.date) return false;
+        const txDate = new Date(t.date);
+        return txDate >= oneEightyDaysAgo && txDate < ninetyDaysAgo;
+      }).length;
+    } else if (kpiDateRange === 'yearly') {
+      const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
+      const twoYearsAgo = new Date(startOfToday.getTime() - 730 * 24 * 60 * 60 * 1000);
+      currentCount = transactions.filter(t => {
+        if (!t.date) return false;
+        const txDate = new Date(t.date);
+        return txDate >= yearlyAgo;
+      }).length;
+      prevCount = transactions.filter(t => {
+        if (!t.date) return false;
+        const txDate = new Date(t.date);
+        return txDate >= twoYearsAgo && txDate < yearlyAgo;
       }).length;
     } else if (kpiDateRange === '30days' || kpiDateRange === 'all') {
       currentCount = transactions.filter(t => {
@@ -811,6 +913,55 @@ export default function InventoryDashboard() {
           count,
           amount,
           rawDate: dateStr
+        });
+      }
+      labels = trend.map(t => t.date);
+    } else if (['q1', 'q2', 'q3', 'q4'].includes(kpiDateRange)) {
+      const cy = now.getFullYear();
+      let cStart, cEnd;
+      if (kpiDateRange === 'q1') {
+        cStart = new Date(cy, 0, 1); cEnd = new Date(cy, 3, 1);
+      } else if (kpiDateRange === 'q2') {
+        cStart = new Date(cy, 3, 1); cEnd = new Date(cy, 6, 1);
+      } else if (kpiDateRange === 'q3') {
+        cStart = new Date(cy, 6, 1); cEnd = new Date(cy, 9, 1);
+      } else {
+        cStart = new Date(cy, 9, 1); cEnd = new Date(cy + 1, 0, 1);
+      }
+
+      // Generate weeks in quarter roughly or months? A quarter is 3 months. Let's do month/weeks.
+      // Easiest is to group by 3 months.
+      let currentMonthStart = new Date(cStart);
+      while (currentMonthStart < cEnd) {
+        const nextMonthStart = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth() + 1, 1);
+        const monthTx = allKpiFilteredTransactions.filter(t => {
+          if (!t.date) return false;
+          const txDate = new Date(t.date);
+          return txDate >= currentMonthStart && txDate < nextMonthStart;
+        });
+        trend.push({
+          date: `${months[currentMonthStart.getMonth()]} ${currentMonthStart.getFullYear() + (language === 'th' ? 543 : 0)}`,
+          count: monthTx.length,
+          amount: monthTx.reduce((sum, t) => sum + t.amount, 0),
+          rawDate: currentMonthStart.toISOString()
+        });
+        currentMonthStart = nextMonthStart;
+      }
+      labels = trend.map(t => t.date);
+    } else if (kpiDateRange === 'yearly') {
+      for (let i = 11; i >= 0; i--) {
+        const targetMonth = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthTx = allKpiFilteredTransactions.filter(t => {
+          if (!t.date) return false;
+          const d = new Date(t.date);
+          return d.getMonth() === targetMonth.getMonth() && d.getFullYear() === targetMonth.getFullYear();
+        });
+
+        trend.push({
+          date: `${months[targetMonth.getMonth()]} ${targetMonth.getFullYear() + (language === 'th' ? 543 : 0)}`,
+          count: monthTx.length,
+          amount: monthTx.reduce((sum, t) => sum + t.amount, 0),
+          rawDate: targetMonth.toISOString()
         });
       }
       labels = trend.map(t => t.date);
@@ -1166,7 +1317,7 @@ export default function InventoryDashboard() {
 
             {/* KPI Period Filter Pills */}
             <div className="flex bg-[#F3F3F3] p-1 rounded-[16px] border border-gray-50 shadow-inner w-fit">
-              {(['today', 'yesterday', '7days', '30days', 'all'] as const).map((r) => (
+              {(['today', 'yesterday', '7days', '30days'] as const).map((r) => (
                 <button
                   key={r}
                   type="button"
@@ -1184,12 +1335,30 @@ export default function InventoryDashboard() {
                       ? (language === 'th' ? 'เมื่อวาน' : 'Yesterday')
                       : r === '7days'
                         ? (language === 'th' ? '7 วัน' : '7 Days')
-                        : r === '30days'
-                          ? (language === 'th' ? '30 วัน' : '30 Days')
-                          : (language === 'th' ? 'ทั้งหมด' : 'All')
+                        : (language === 'th' ? '30 วัน' : '30 Days')
                   }
                 </button>
               ))}
+              <div className="relative flex items-center">
+                <select
+                  value={['q1', 'q2', 'q3', 'q4', 'yearly', 'all'].includes(kpiDateRange) ? kpiDateRange : 'all'}
+                  onChange={(e) => setKpiDateRange(e.target.value as any)}
+                  className={cn(
+                    "appearance-none bg-transparent outline-none cursor-pointer pl-3 pr-6 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all",
+                    ['q1', 'q2', 'q3', 'q4', 'yearly', 'all'].includes(kpiDateRange)
+                      ? "bg-white text-[#18234A] shadow-sm"
+                      : "text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  <option value="all">{language === 'th' ? 'ทั้งหมด' : 'All'}</option>
+                  <option value="q1">{language === 'th' ? 'ไตรมาส 1 (Q1)' : 'Quarter 1 (Q1)'}</option>
+                  <option value="q2">{language === 'th' ? 'ไตรมาส 2 (Q2)' : 'Quarter 2 (Q2)'}</option>
+                  <option value="q3">{language === 'th' ? 'ไตรมาส 3 (Q3)' : 'Quarter 3 (Q3)'}</option>
+                  <option value="q4">{language === 'th' ? 'ไตรมาส 4 (Q4)' : 'Quarter 4 (Q4)'}</option>
+                  <option value="yearly">{language === 'th' ? 'รายปี' : 'Yearly'}</option>
+                </select>
+                <ChevronDown className="absolute right-2 w-3 h-3 text-gray-400 pointer-events-none" />
+              </div>
             </div>
           </div>
 
@@ -1667,7 +1836,7 @@ export default function InventoryDashboard() {
           {/* Widget 7: Status Capsules */}
           <motion.div 
             variants={cardVariants}
-            className="bg-white p-6 rounded-[32px] shadow-[0_20px_40px_rgba(24,35,74,0.02)] border border-gray-50 flex flex-col justify-between flex-1 min-h-[250px]"
+            className="bg-white/80 backdrop-blur-2xl p-6 rounded-[3rem] border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col justify-between flex-1 min-h-[250px]"
           >
             <div className="flex items-center gap-2 mb-2">
               <div className="w-[3px] h-5 bg-[#10B981] rounded-full" />
@@ -1777,7 +1946,7 @@ export default function InventoryDashboard() {
         {/* Chart 1: Inbound vs Outbound Trend (Line/Area Chart) */}
         <motion.div
           variants={cardVariants}
-          className="lg:col-span-4 bg-white p-8 rounded-[48px] shadow-[0_20px_40px_rgba(24,35,74,0.04)] flex flex-col justify-between relative"
+          className="lg:col-span-4 bg-white/80 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col justify-between relative"
         >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div>
@@ -1794,7 +1963,11 @@ export default function InventoryDashboard() {
                       ? (language === 'th' ? 'การเคลื่อนไหวของสินค้า 7 วันย้อนหลัง' : 'Product movement (last 7 days)')
                       : kpiDateRange === '30days'
                         ? (language === 'th' ? 'การเคลื่อนไหวของสินค้า 30 วันย้อนหลัง' : 'Product movement (last 30 days)')
-                        : (language === 'th' ? 'การเคลื่อนไหวของสินค้าทั้งหมด' : 'All-time product movement')
+                        : ['q1','q2','q3','q4'].includes(kpiDateRange)
+                          ? (language === 'th' ? `การเคลื่อนไหวของสินค้าไตรมาส ${kpiDateRange.replace('q','')}` : `Product movement (${kpiDateRange.toUpperCase()})`)
+                          : kpiDateRange === 'yearly'
+                            ? (language === 'th' ? 'การเคลื่อนไหวของสินค้ารายปี' : 'Product movement (yearly)')
+                            : (language === 'th' ? 'การเคลื่อนไหวของสินค้าทั้งหมด' : 'All-time product movement')
                 }
               </p>
             </div>
@@ -1875,7 +2048,7 @@ export default function InventoryDashboard() {
         {/* Best-Selling Products Ranking Card */}
         <motion.div
           variants={cardVariants}
-          className="lg:col-span-4 bg-white p-8 rounded-[48px] shadow-[0_20px_40px_rgba(24,35,74,0.04)] flex flex-col justify-between"
+          className="lg:col-span-4 bg-white/80 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col justify-between"
         >
           <div>
             <h3 className="text-xl font-bold text-[#18234A]">
@@ -1936,7 +2109,7 @@ export default function InventoryDashboard() {
         {/* Chart 2: Inventory Value by Category (Pie Chart) */}
         <motion.div
           variants={cardVariants}
-          className="lg:col-span-4 bg-white p-8 rounded-[48px] shadow-[0_20px_40px_rgba(24,35,74,0.04)] flex flex-col justify-between"
+          className="lg:col-span-4 bg-white/80 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col justify-between"
         >
           <div>
             <h3 className="text-xl font-bold text-[#18234A]">Value by Category</h3>
@@ -2002,7 +2175,7 @@ export default function InventoryDashboard() {
       {/* 3. Data Table: Products that need attention */}
       <motion.div
         variants={cardVariants}
-        className="bg-white rounded-[48px] shadow-[0_20px_40px_rgba(24,35,74,0.04)] overflow-hidden"
+        className="bg-white/80 backdrop-blur-2xl rounded-[3rem] border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] overflow-hidden"
       >
         <div className="p-8 pb-5 flex justify-between items-center bg-white">
           <div>

@@ -39,6 +39,8 @@ export const useStore = create<AppState>()((set, get) => ({
   liffChannelId: '',
   liffChannelSecret: '',
   liffEnabled: false,
+  scannerType: (typeof window !== 'undefined' ? localStorage.getItem('scanner_type') as any : null) || 'hid',
+  printerType: (typeof window !== 'undefined' ? localStorage.getItem('printer_type') as any : null) || 'none',
   maxUsers: 5,
   maxStaff: 10,
   pointsEarnRate: 10,
@@ -218,6 +220,14 @@ export const useStore = create<AppState>()((set, get) => ({
       }
     }
     if (showToast) toast.success("Booking settings updated successfully!");
+  },
+
+  updateHardwareSettings: (settings) => {
+    set(s => ({ ...s, ...settings }));
+    if (typeof window !== 'undefined') {
+      if (settings.scannerType !== undefined) localStorage.setItem('scanner_type', settings.scannerType);
+      if (settings.printerType !== undefined) localStorage.setItem('printer_type', settings.printerType);
+    }
   },
 
   updateTierRules: async (rules) => {

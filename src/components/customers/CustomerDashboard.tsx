@@ -256,7 +256,7 @@ const CustomerDashboard = () => {
   const StatCard = ({ title, value, subtitle, icon: Icon, isPrimary = false }: any) => (
     <div className={cn(
       "p-6 rounded-[32px] flex items-center justify-between transition-all",
-      isPrimary ? "bg-gradient-to-br from-[#18234A] to-[#020D35] text-white shadow-xl shadow-indigo-900/20" : "bg-white border border-gray-100 shadow-sm"
+      isPrimary ? "bg-gradient-to-br from-[#18234A] to-[#020D35] text-white shadow-xl shadow-indigo-900/20 rounded-[3rem]" : "bg-white/80 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] rounded-[3rem]"
     )}>
       <div>
         <p className={cn("text-xs font-black uppercase tracking-widest mb-2", isPrimary ? "text-[#EAFD69]" : "text-gray-400")}>
@@ -277,7 +277,7 @@ const CustomerDashboard = () => {
   );
 
   return (
-    <div className="p-6 lg:p-10 max-w-7xl mx-auto animate-in fade-in duration-500">
+    <div className="w-full animate-in fade-in duration-500">
       <div className="mb-8">
         <h2 className="text-3xl font-black text-[#1A1F3D]">
           {language === 'th' ? 'ภาพรวมลูกค้าสัมพันธ์' : 'Customer Overview'}
@@ -316,7 +316,7 @@ const CustomerDashboard = () => {
 
       <div className="flex flex-col lg:flex-row gap-8 mb-8">
         {/* Ratio Chart (Glassmorphic & Gradient UI) */}
-        <div className="w-full lg:w-[55%] bg-white/95 backdrop-blur-2xl p-8 rounded-[40px] shadow-[0_20px_40px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col relative overflow-hidden font-sans">
+        <div className="w-full lg:w-[55%] bg-white/80 backdrop-blur-2xl p-8 rounded-[3rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] border border-white/40 flex flex-col relative overflow-hidden font-sans">
 
           {/* Decorative Background Glows for the card */}
           <div className="absolute -top-20 -left-20 w-[200px] h-[200px] bg-[#4299E1]/10 rounded-full blur-3xl pointer-events-none" />
@@ -426,7 +426,7 @@ const CustomerDashboard = () => {
         </div>
 
         {/* Customer Journey Funnel */}
-        <div className="w-full lg:w-[45%] bg-white shadow-sm p-6 md:p-8 rounded-[40px] border border-gray-100 relative overflow-hidden font-sans">
+        <div className="w-full lg:w-[45%] bg-white/80 backdrop-blur-2xl p-6 md:p-8 rounded-[3rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] border border-white/40 relative overflow-hidden font-sans">
           {/* Exact Image Grid Background */}
           <div className="absolute inset-0 opacity-[0.4]" style={{ backgroundImage: 'linear-gradient(#F1F5F9 1px, transparent 1px), linear-gradient(90deg, #F1F5F9 1px, transparent 1px)', backgroundSize: '40px 40px', backgroundPosition: 'center' }} />
 
@@ -505,7 +505,7 @@ const CustomerDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Most Frequent Customers */}
-        <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100">
+        <div className="bg-white/80 backdrop-blur-2xl p-8 rounded-[3rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] border border-white/40">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <Award size={20} />
@@ -539,7 +539,7 @@ const CustomerDashboard = () => {
         </div>
 
         {/* Highest Paying Customers */}
-        <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100">
+        <div className="bg-white/80 backdrop-blur-2xl p-8 rounded-[3rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] border border-white/40">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Trophy size={20} />

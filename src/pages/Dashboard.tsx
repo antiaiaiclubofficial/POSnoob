@@ -1,21 +1,21 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  CheckCircle2, 
-  Activity, 
-  DollarSign, 
-  Users, 
-  Package, 
-  Bell, 
-  AlertTriangle, 
-  Home, 
-  ChevronRight, 
-  Scissors, 
-  TrendingUp, 
-  UserPlus, 
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  CheckCircle2,
+  Activity,
+  DollarSign,
+  Users,
+  Package,
+  Bell,
+  AlertTriangle,
+  Home,
+  ChevronRight,
+  Scissors,
+  TrendingUp,
+  UserPlus,
   LineChart as LineChartIcon,
   Info,
   Plus,
@@ -37,16 +37,16 @@ import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { translations } from '@/utils/translations';
-import { 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  Cell, 
-  PieChart, 
-  Pie 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Cell,
+  PieChart,
+  Pie
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -54,6 +54,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import CustomerDashboard from '@/components/customers/CustomerDashboard';
+import InventoryDashboard from '@/components/InventoryDashboard';
 import BookingModal from '@/components/BookingModal';
 import CustomerModal from '@/components/CustomerModal';
 import HotelBookingModal from '@/components/HotelBookingModal';
@@ -116,7 +119,7 @@ const Dashboard = () => {
   // Modals State
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
-  
+
   // Hotel Booking States
   const [isHotelBookingOpen, setIsHotelBookingOpen] = useState(false);
   const [selectedRoomForBooking, setSelectedRoomForBooking] = useState<{ name: string; index: number } | null>(null);
@@ -232,7 +235,7 @@ const Dashboard = () => {
     const newCapacity = kennelCapacity + 1;
     // อัปเดตค่าใน Zustand Store
     useStore.setState({ kennelCapacity: newCapacity });
-    
+
     // อัปเดตค่าใน Local Config
     const updated = [...roomsConfig, {
       id: newCapacity - 1,
@@ -253,7 +256,7 @@ const Dashboard = () => {
     const newCapacity = kennelCapacity - 1;
     // อัปเดตค่าใน Zustand Store
     useStore.setState({ kennelCapacity: newCapacity });
-    
+
     // อัปเดตค่าใน Local Config
     const updated = roomsConfig.slice(0, newCapacity);
     setRoomsConfig(updated);
@@ -274,7 +277,7 @@ const Dashboard = () => {
   // เช็คเอาท์ / คืนห้องพักโรงแรมสัตว์เลี้ยง
   const handleCheckOutRoom = (roomIndex: number) => {
     if (!window.confirm("คุณต้องการทำรายการ Check-out และคืนห้องพักนี้ใช่หรือไม่?")) return;
-    
+
     const updatedBookings = hotelBookings.filter(b => b.roomIndex !== roomIndex);
     setHotelBookings(updatedBookings);
     localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
@@ -284,7 +287,7 @@ const Dashboard = () => {
 
   const todayQueue = queue.filter(q => q.date === today);
   const todayTransactions = transactions.filter(t => t.date === today);
-  
+
   const metrics = useMemo(() => {
     const revenue = todayTransactions.reduce((acc, t) => acc + t.amount, 0);
     const avgTicket = todayTransactions.length > 0 ? revenue / todayTransactions.length : 0;
@@ -375,7 +378,7 @@ const Dashboard = () => {
         const qHour = parseInt(hour);
         return qHour >= sHour && qHour < sHour + 2;
       }) || slot;
-      
+
       if (hoursMap[closestSlot] !== undefined) {
         hoursMap[closestSlot]++;
       }
@@ -385,16 +388,17 @@ const Dashboard = () => {
   }, [todayQueue]);
 
   const loyaltyData = useMemo(() => {
-    if (customers.length === 0) return { regulars: 0, new: 0, percentRegular: 0, percentNew: 0 };
+    if (todayTransactions.length === 0) return { regulars: 0, new: 0, percentRegular: 0, percentNew: 0 };
 
+    const todayCustomerIds = [...new Set(todayTransactions.map(t => t.customerId))];
     let regularCount = 0;
     let newCount = 0;
 
-    customers.forEach(customer => {
-      const visitCount = transactions.filter(t => t.customerId === customer.id).length;
-      if (visitCount > 1) {
+    todayCustomerIds.forEach(customerId => {
+      const allVisits = transactions.filter(t => t.customerId === customerId);
+      if (allVisits.length > 1) {
         regularCount++;
-      } else if (visitCount === 1) {
+      } else {
         newCount++;
       }
     });
@@ -406,7 +410,7 @@ const Dashboard = () => {
       percentRegular: Math.round((regularCount / total) * 100),
       percentNew: Math.round((newCount / total) * 100)
     };
-  }, [customers, transactions]);
+  }, [todayTransactions, transactions]);
 
   const lowStockItems = inventory.filter(i => i.stock <= i.minStock);
   const specialCarePets = useMemo(() => {
@@ -435,9 +439,9 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
+    <Tabs defaultValue="overview" className="flex-1 flex flex-col overflow-hidden bg-[#F9F9F9]">
       {/* Header Section */}
-      <header className="px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shrink-0 bg-white border-b border-gray-100 pl-14 lg:pl-12">
+      <header className="px-6 lg:px-12 py-8 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 shrink-0 bg-[#F9F9F9]/80 backdrop-blur-xl border-none pl-14 lg:pl-12 sticky top-0 z-10">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <LineChartIcon size={14} className="text-indigo-500" />
@@ -449,25 +453,35 @@ const Dashboard = () => {
           <p className="text-xs text-gray-400 font-bold mt-1">{t.todayIs} {format(new Date(), 'EEEE, MMMM do')}</p>
         </div>
 
+        {/* Tabs List */}
+        <div className="flex-1 flex xl:justify-center w-full xl:w-auto overflow-x-auto scrollbar-hide">
+          <TabsList className="bg-gray-200/50 p-1.5 rounded-[2rem]">
+            <TabsTrigger value="overview" className="rounded-3xl px-6 py-2.5 text-xs font-black data-[state=active]:bg-white data-[state=active]:text-[#18234A] data-[state=active]:shadow-sm transition-all">{language === 'th' ? 'ภาพรวม' : 'Overview'}</TabsTrigger>
+            <TabsTrigger value="crm" className="rounded-3xl px-6 py-2.5 text-xs font-black data-[state=active]:bg-white data-[state=active]:text-[#18234A] data-[state=active]:shadow-sm transition-all">CRM</TabsTrigger>
+            <TabsTrigger value="inventory" className="rounded-3xl px-6 py-2.5 text-xs font-black data-[state=active]:bg-white data-[state=active]:text-[#18234A] data-[state=active]:shadow-sm transition-all">{language === 'th' ? 'คลังสินค้า' : 'Inventory'}</TabsTrigger>
+          </TabsList>
+        </div>
+
         {/* Quick Actions & Alerts */}
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           {/* Clock In / Out Button */}
           {currentUser?.role !== 'superadmin' && (
-            <button 
+            <button
               onClick={() => clockMutation.mutate()}
               disabled={clockMutation.isPending}
               className={cn(
-                "flex-1 md:flex-none px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 font-black text-xs shadow-lg active:scale-95 transition-all",
-                isClockedIn 
-                  ? "bg-red-500 text-white shadow-red-500/10 hover:bg-red-600" 
-                  : "bg-emerald-500 text-white shadow-emerald-500/10 hover:bg-emerald-600"
+                "flex-1 md:flex-none px-5 py-3.5 rounded-[2rem] flex items-center justify-center gap-2 font-black text-xs shadow-lg active:scale-95 transition-all",
+                isClockedIn
+                  ? "bg-red-500 text-white shadow-red-500/20 hover:bg-red-600"
+                  : "bg-gradient-to-br from-[#18234A] to-[#020D35] text-white shadow-[#18234A]/20 hover:opacity-90 relative overflow-hidden"
               )}
             >
-              <Clock size={16} /> 
-              {clockMutation.isPending 
-                ? "กำลังบันทึก..." 
-                : isClockedIn 
-                  ? (language === 'th' ? 'ลงชื่อออกงาน' : 'Clock Out') 
+              {!isClockedIn && <div className="absolute inset-0 bg-white/10" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)' }} />}
+              <Clock size={16} />
+              {clockMutation.isPending
+                ? "กำลังบันทึก..."
+                : isClockedIn
+                  ? (language === 'th' ? 'ลงชื่อออกงาน' : 'Clock Out')
                   : (language === 'th' ? 'ลงชื่อเข้างาน' : 'Clock In')
               }
             </button>
@@ -524,21 +538,22 @@ const Dashboard = () => {
 
           {/* Quick Action Buttons */}
           <div className="flex gap-2 flex-1 md:flex-none">
-            <button 
+            <button
               onClick={() => setIsBookingOpen(true)}
-              className="flex-1 md:flex-none bg-[#1A1F3D] text-white px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 font-black text-xs shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all"
+              className="flex-1 md:flex-none bg-gradient-to-br from-[#18234A] to-[#020D35] text-white px-5 py-3.5 rounded-[2rem] flex items-center justify-center gap-2 font-black text-xs shadow-lg shadow-[#18234A]/10 active:scale-95 transition-all relative overflow-hidden"
             >
+              <div className="absolute inset-0 bg-white/10" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)' }} />
               <Plus size={16} /> {language === 'th' ? 'จองคิวใหม่' : 'New Appt'}
             </button>
-            <button 
+            <button
               onClick={() => navigate('/pos')}
-              className="flex-1 md:flex-none bg-[#D9ED5F] text-[#1A1F3D] px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 font-black text-xs shadow-lg shadow-[#D9ED5F]/10 active:scale-95 transition-all"
+              className="flex-1 md:flex-none bg-[#EAFD69] text-[#18234A] px-5 py-3.5 rounded-[2rem] flex items-center justify-center gap-2 font-black text-xs shadow-lg shadow-[#EAFD69]/20 active:scale-95 transition-all"
             >
               <ShoppingBag size={16} /> {language === 'th' ? 'ขายหน้าร้าน' : 'POS'}
             </button>
-            <button 
+            <button
               onClick={() => setIsCustomerOpen(true)}
-              className="flex-1 md:flex-none bg-white border border-gray-100 text-[#1A1F3D] px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 font-black text-xs shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
+              className="flex-1 md:flex-none bg-white text-[#18234A] px-5 py-3.5 rounded-[2rem] flex items-center justify-center gap-2 font-black text-xs shadow-sm hover:bg-[#F3F3F3] active:scale-95 transition-all"
             >
               <UserPlus size={16} /> {language === 'th' ? 'เพิ่มลูกค้า' : 'Add Client'}
             </button>
@@ -547,60 +562,60 @@ const Dashboard = () => {
       </header>
 
       {/* Dashboard Content */}
-      <div className="flex-1 overflow-y-auto px-6 lg:px-12 py-10 scrollbar-hide">
-        <div className="max-w-7xl mx-auto space-y-8">
-          
+      <TabsContent value="overview" className="flex-1 overflow-y-auto px-6 lg:px-12 py-10 scrollbar-hide m-0 data-[state=active]:flex flex-col outline-none">
+        <div className="w-full space-y-8">
+
           {/* KPI Cards Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Revenue Card */}
-            <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
-              <div className="flex justify-between items-start mb-6">
-                <div className="w-12 h-12 bg-green-50 text-green-500 rounded-2xl flex items-center justify-center"><DollarSign size={24} /></div>
+            <div className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500">
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-green-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+              <div className="flex justify-between items-start mb-2 relative z-10">
+                <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.dailyRevenue}</h3>
                 <span className="text-[9px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-lg uppercase">Today</span>
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">{t.dailyRevenue}</p>
+              <div className="relative z-10">
                 <h2 className="text-3xl font-black text-[#1A1F3D]">{currency}{metrics.revenue.toLocaleString()}</h2>
-                <p className="text-[9px] text-gray-400 font-bold mt-2">Avg. Ticket: {currency}{Math.round(metrics.avgTicket).toLocaleString()}</p>
+                <p className="text-[9px] text-gray-400 font-bold mt-1">Avg. Revenue per Transaction: {currency}{Math.round(metrics.avgTicket).toLocaleString()}</p>
               </div>
             </div>
 
             {/* Appointments Card */}
-            <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
-              <div className="flex justify-between items-start mb-6">
-                <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center"><CalendarIcon size={24} /></div>
+            <div className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500">
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+              <div className="flex justify-between items-start mb-2 relative z-10">
+                <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.todaysQueue}</h3>
                 <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg uppercase">Schedule</span>
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">{t.todaysQueue}</p>
+              <div className="relative z-10">
                 <h2 className="text-3xl font-black text-[#1A1F3D]">{metrics.totalAppointments} <span className="text-xs text-gray-400 font-bold">คิว</span></h2>
-                <p className="text-[9px] text-gray-400 font-bold mt-2">Completed: {metrics.completed} / {metrics.totalAppointments}</p>
+                <p className="text-[9px] text-gray-400 font-bold mt-1">Completed: {metrics.completed} / {metrics.totalAppointments}</p>
               </div>
             </div>
 
             {/* Active Pets Card */}
-            <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
-              <div className="flex justify-between items-start mb-6">
-                <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center"><Activity size={24} /></div>
+            <div className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500">
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-purple-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+              <div className="flex justify-between items-start mb-2 relative z-10">
+                <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.inShop}</h3>
                 <span className="text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-1 rounded-lg uppercase">In Shop</span>
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">{t.inShop}</p>
+              <div className="relative z-10">
                 <h2 className="text-3xl font-black text-[#1A1F3D]">{metrics.activePets} <span className="text-xs text-gray-400 font-bold">ตัว</span></h2>
-                <p className="text-[9px] text-gray-400 font-bold mt-2">Kennel Occupancy: {Math.round((occupiedKennels / kennelCapacity) * 100)}%</p>
+                <p className="text-[9px] text-gray-400 font-bold mt-1">Kennel Occupancy: {Math.round((occupiedKennels / kennelCapacity) * 100)}%</p>
               </div>
             </div>
 
             {/* Low Stock Alerts Card */}
-            <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
-              <div className="flex justify-between items-start mb-6">
-                <div className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center"><Package size={24} /></div>
+            <div className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500">
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-red-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+              <div className="flex justify-between items-start mb-2 relative z-10">
+                <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">Low Stock Items</h3>
                 <button onClick={() => navigate('/inventory')} className="text-[9px] font-black text-red-600 bg-red-50 px-2 py-1 rounded-lg uppercase hover:underline">Manage</button>
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">Low Stock Items</p>
+              <div className="relative z-10">
                 <h2 className="text-3xl font-black text-[#1A1F3D]">{lowStockItems.length} <span className="text-xs text-gray-400 font-bold">รายการ</span></h2>
-                <p className="text-[9px] text-gray-400 font-bold mt-2">Requires immediate restock</p>
+                <p className="text-[9px] text-gray-400 font-bold mt-1">Requires immediate restock</p>
               </div>
             </div>
           </div>
@@ -608,7 +623,7 @@ const Dashboard = () => {
           {/* Charts & Analytics Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Busy Hours Bar Chart */}
-            <div className="lg:col-span-2 bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm">
+            <div className="lg:col-span-2 bg-white/80 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] p-8 rounded-[3rem]">
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h3 className="text-xl font-black text-[#1A1F3D]">{t.busyHours}</h3>
@@ -633,18 +648,18 @@ const Dashboard = () => {
             </div>
 
             {/* Customer Loyalty Pie Chart */}
-            <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm flex flex-col justify-between">
+            <div className="bg-white/80 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] p-8 rounded-[3rem] flex flex-col justify-between">
               <div>
-                <h3 className="text-xl font-black text-[#1A1F3D]">{t.customerLoyalty}</h3>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1 mb-6">{language === 'th' ? 'วิเคราะห์การกลับมาใช้บริการ' : 'Retention analysis'}</p>
+                <h3 className="text-xl font-black text-[#1A1F3D]">{language === 'th' ? 'สัดส่วนลูกค้าวันนี้' : "Today's Customers"}</h3>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1 mb-6">{language === 'th' ? 'ลูกค้าประจำ vs ลูกค้าใหม่' : 'Regulars vs New'}</p>
               </div>
-              
+
               <div className="flex items-center justify-center h-[180px] relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={[
-                        { name: 'Regulars', value: loyaltyData.percentRegular || 0 }, 
+                        { name: 'Regulars', value: loyaltyData.percentRegular || 0 },
                         { name: 'New', value: loyaltyData.percentNew || 100 }
                       ]}
                       innerRadius={60}
@@ -666,15 +681,15 @@ const Dashboard = () => {
               <div className="space-y-3 mt-6">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                     <div className="w-3 h-3 rounded-full bg-[#1A1F3D]" />
-                     <span className="text-xs font-bold text-gray-500">{language === 'th' ? 'ลูกค้าประจำ' : 'Regulars'}</span>
+                    <div className="w-3 h-3 rounded-full bg-[#1A1F3D]" />
+                    <span className="text-xs font-bold text-gray-500">{language === 'th' ? 'ลูกค้าประจำ' : 'Regulars'}</span>
                   </div>
                   <span className="text-xs font-black text-[#1A1F3D]">{loyaltyData.regulars} คน ({loyaltyData.percentRegular}%)</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                     <div className="w-3 h-3 rounded-full bg-[#D9ED5F]" />
-                     <span className="text-xs font-bold text-gray-500">{language === 'th' ? 'ลูกค้าใหม่' : 'New Clients'}</span>
+                    <div className="w-3 h-3 rounded-full bg-[#D9ED5F]" />
+                    <span className="text-xs font-bold text-gray-500">{language === 'th' ? 'ลูกค้าใหม่' : 'New Clients'}</span>
                   </div>
                   <span className="text-xs font-black text-[#1A1F3D]">{loyaltyData.new} คน ({loyaltyData.percentNew}%)</span>
                 </div>
@@ -682,101 +697,12 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Top Customers Section (Frequent & Spending) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Most Frequent Customers */}
-            <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm flex flex-col">
-              <div className="mb-6">
-                <h3 className="text-xl font-black text-[#1A1F3D] flex items-center gap-2">
-                  <Sparkles className="text-amber-500" size={20} />
-                  {language === 'th' ? 'ลูกค้าที่มาใช้บริการบ่อยที่สุด' : 'Most Frequent Customers'}
-                </h3>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
-                  {language === 'th' ? 'จัดอันดับลูกค้าตามจำนวนครั้งที่มาใช้บริการ' : 'Ranked by total visits'}
-                </p>
-              </div>
 
-              <div className="divide-y divide-gray-50 flex-1">
-                {frequentCustomers.map((customer, idx) => (
-                  <div key={customer.id} className="py-4 flex items-center justify-between first:pt-0 last:pb-0">
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-black text-gray-300 w-6">#{idx + 1}</span>
-                      <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black text-sm">
-                        {customer.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-[#1A1F3D]">{customer.name}</p>
-                        <span className={cn(
-                          "text-[8px] px-2 py-0.5 rounded-md font-black uppercase tracking-wider",
-                          getTierColorClass(customer.membership)
-                        )}>
-                          {customer.membership}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black text-indigo-600">{customer.visits} {language === 'th' ? 'ครั้ง' : 'Visits'}</p>
-                      <p className="text-[9px] text-gray-400 font-bold">{customer.phone}</p>
-                    </div>
-                  </div>
-                ))}
-                {frequentCustomers.length === 0 && (
-                  <div className="py-12 text-center opacity-20 font-black text-xs uppercase">
-                    No visit history recorded yet
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Top 10 Spending Customers */}
-            <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm flex flex-col">
-              <div className="mb-6">
-                <h3 className="text-xl font-black text-[#1A1F3D] flex items-center gap-2">
-                  <Crown className="text-amber-500" size={20} />
-                  {language === 'th' ? 'ลูกค้าที่มียอดชำระมากที่สุด 10 อันดับ' : 'Top 10 Spending Customers'}
-                </h3>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
-                  {language === 'th' ? 'จัดอันดับลูกค้าตามยอดใช้จ่ายสะสมในระบบ' : 'Ranked by total spending'}
-                </p>
-              </div>
-
-              <div className="divide-y divide-gray-50 flex-1 max-h-[350px] overflow-y-auto scrollbar-hide">
-                {topSpendingCustomers.map((customer, idx) => (
-                  <div key={customer.id} className="py-4 flex items-center justify-between first:pt-0 last:pb-0">
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-black text-gray-300 w-6">#{idx + 1}</span>
-                      <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-black text-sm">
-                        {customer.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-[#1A1F3D]">{customer.name}</p>
-                        <span className={cn(
-                          "text-[8px] px-2 py-0.5 rounded-md font-black uppercase tracking-wider",
-                          getTierColorClass(customer.membership)
-                        )}>
-                          {customer.membership}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black text-green-600">{currency}{customer.dynamicSpent.toLocaleString()}</p>
-                      <p className="text-[9px] text-gray-400 font-bold">{customer.phone}</p>
-                    </div>
-                  </div>
-                ))}
-                {topSpendingCustomers.length === 0 && (
-                  <div className="py-12 text-center opacity-20 font-black text-xs uppercase">
-                    No spending history recorded yet
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
 
           {/* Operations & Live Timeline Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Live Timeline */}
-            <div className="lg:col-span-2 bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+            <div className="lg:col-span-2 bg-white/80 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] rounded-[3rem] overflow-hidden flex flex-col">
               <div className="p-8 border-b border-gray-50 flex justify-between items-center">
                 <div>
                   <h3 className="text-xl font-black text-[#1A1F3D]">{t.liveTimeline}</h3>
@@ -786,7 +712,7 @@ const Dashboard = () => {
                   {language === 'th' ? 'ดูทั้งหมด' : 'View All'} <ChevronRight size={14} />
                 </button>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto p-8 space-y-6 max-h-[400px] scrollbar-hide">
                 {todayQueue.length === 0 ? (
                   <div className="py-20 text-center opacity-20">
@@ -794,7 +720,7 @@ const Dashboard = () => {
                     <p className="font-black text-sm">ไม่มีคิวงานสำหรับวันนี้</p>
                   </div>
                 ) : (
-                  [...todayQueue].sort((a,b) => a.time.localeCompare(b.time)).map((item) => (
+                  [...todayQueue].sort((a, b) => a.time.localeCompare(b.time)).map((item) => (
                     <div key={item.id} className="flex gap-6 group">
                       <div className="flex flex-col items-center">
                         <span className="text-xs font-black text-[#1A1F3D] w-12">{item.time}</span>
@@ -814,7 +740,7 @@ const Dashboard = () => {
                         <span className={cn(
                           "px-3 py-1.5 rounded-full text-[9px] font-black uppercase",
                           item.status === 'Waiting' ? "bg-orange-100 text-orange-700" :
-                          item.status === 'In Progress' ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
+                            item.status === 'In Progress' ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
                         )}>
                           {item.status}
                         </span>
@@ -828,7 +754,7 @@ const Dashboard = () => {
             {/* Kennel Status & Special Care */}
             <div className="space-y-8">
               {/* Kennel Occupancy */}
-              <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm">
+              <div className="bg-white/80 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] p-8 rounded-[3rem]">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><Home size={20} /></div>
@@ -836,12 +762,12 @@ const Dashboard = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black text-gray-400">{occupiedKennels}/{kennelCapacity}</span>
-                    <button 
+                    <button
                       onClick={() => setIsEditRoomsMode(!isEditRoomsMode)}
                       className={cn(
                         "p-2 rounded-xl transition-all border",
-                        isEditRoomsMode 
-                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md" 
+                        isEditRoomsMode
+                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
                           : "bg-white border-gray-100 text-gray-400 hover:bg-gray-50"
                       )}
                       title="ตั้งค่าห้องพัก"
@@ -859,16 +785,16 @@ const Dashboard = () => {
                     <div className="flex items-center justify-between pt-2 border-t border-indigo-100/50">
                       <span className="text-[10px] font-black uppercase text-indigo-900">ปรับจำนวนห้องพัก:</span>
                       <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-xl shadow-sm">
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           onClick={handleDecreaseCapacity}
                           className="w-6 h-6 rounded-lg bg-gray-50 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-gray-400 transition-colors"
                         >
                           <Minus size={12} strokeWidth={3} />
                         </button>
                         <span className="text-xs font-black text-[#1A1F3D] w-6 text-center">{kennelCapacity}</span>
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           onClick={handleIncreaseCapacity}
                           className="w-6 h-6 rounded-lg bg-gray-50 hover:bg-green-50 hover:text-green-500 flex items-center justify-center text-gray-400 transition-colors"
                         >
@@ -889,8 +815,8 @@ const Dashboard = () => {
                         className={cn(
                           "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-[10px] font-black relative overflow-hidden",
                           isEditRoomsMode && "animate-pulse border-dashed border-indigo-400",
-                          room.occupiedBy 
-                            ? "bg-[#1A1F3D] text-[#D9ED5F] shadow-sm shadow-[#1A1F3D]/10" 
+                          room.occupiedBy
+                            ? "bg-[#1A1F3D] text-[#D9ED5F] shadow-sm shadow-[#1A1F3D]/10"
                             : colorConfig.bg
                         )}
                         style={{
@@ -912,12 +838,12 @@ const Dashboard = () => {
               </div>
 
               {/* Special Care Alerts */}
-              <div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm space-y-6">
+              <div className="bg-white/80 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] p-8 rounded-[3rem] space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-orange-50 text-orange-500 rounded-2xl"><AlertTriangle size={20} /></div>
                   <h3 className="text-lg font-black text-[#1A1F3D]">Special Care Today</h3>
                 </div>
-                
+
                 <div className="space-y-3 max-h-[180px] overflow-y-auto scrollbar-hide">
                   {specialCarePets.length === 0 ? (
                     <p className="text-xs text-gray-400 font-bold text-center py-4">ไม่มีสัตว์เลี้ยงที่ต้องดูแลเป็นพิเศษวันนี้</p>
@@ -938,15 +864,15 @@ const Dashboard = () => {
           </div>
 
         </div>
-      </div>
+      </TabsContent>
 
       {/* Modals */}
       {isBookingOpen && <BookingModal onClose={() => setIsBookingOpen(false)} />}
       {isCustomerOpen && <CustomerModal onClose={() => setIsCustomerOpen(false)} />}
-      
+
       {/* Dedicated Hotel Booking Modal */}
       {isHotelBookingOpen && selectedRoomForBooking && (
-        <HotelBookingModal 
+        <HotelBookingModal
           roomName={selectedRoomForBooking.name}
           roomIndex={selectedRoomForBooking.index}
           onClose={() => {
@@ -1014,7 +940,7 @@ const Dashboard = () => {
               </div>
 
               {/* Check-out Button */}
-              <button 
+              <button
                 onClick={() => handleCheckOutRoom(selectedOccupiedRoom.roomIndex)}
                 className="w-full bg-red-500 hover:bg-red-600 text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/10 active:scale-95 transition-all"
               >
@@ -1047,7 +973,7 @@ const Dashboard = () => {
             <div className="p-8 space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อห้องพัก (Room Name)</label>
-                <input 
+                <input
                   className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
                   value={tempRoomName}
                   onChange={e => setTempRoomName(e.target.value)}
@@ -1081,13 +1007,13 @@ const Dashboard = () => {
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button 
+                <button
                   onClick={() => setEditingRoomIndex(null)}
                   className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all"
                 >
                   ยกเลิก
                 </button>
-                <button 
+                <button
                   onClick={handleSaveRoomEdit}
                   className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all"
                 >
@@ -1098,7 +1024,15 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-    </div>
+
+      <TabsContent value="crm" className="flex-1 overflow-y-auto px-6 lg:px-12 py-10 m-0 border-none outline-none data-[state=active]:flex flex-col bg-[#F9F9F9]">
+        <CustomerDashboard />
+      </TabsContent>
+
+      <TabsContent value="inventory" className="flex-1 overflow-y-auto px-6 lg:px-12 py-10 m-0 border-none outline-none data-[state=active]:flex flex-col bg-[#F9F9F9]">
+        <InventoryDashboard />
+      </TabsContent>
+    </Tabs>
   );
 };
 

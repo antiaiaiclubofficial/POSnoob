@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Store, Save, Clock, Phone, MessageSquare, Calendar, AlertCircle, Send, Camera, Eye, Globe, ChevronRight, Copy, ShieldCheck, ExternalLink, Building2, Percent, Mail, CheckCircle2, Loader2
+import {
+  Store, Save, Clock, Phone, MessageSquare, Calendar, AlertCircle, Send, Camera, Eye, Globe, ChevronRight, Copy, ShieldCheck, ExternalLink, Building2, Percent, Mail, CheckCircle2, Loader2, MonitorSmartphone, Printer, ScanLine
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -11,10 +11,11 @@ import TimePicker from '@/components/TimePicker';
 import BroadcastModal from '@/components/BroadcastModal';
 import ReceiptPreview from '@/components/ReceiptPreview';
 import StoreHolidaysConfig from '@/components/StoreHolidaysConfig';
+import { thermalPrinter } from '@/lib/hardware/ThermalPrinterService';
 import { cn } from '@/lib/utils';
 import { Switch } from "@/components/ui/switch";
 
-type SettingTab = 'profile' | 'company' | 'operations' | 'integrations' | 'system';
+type SettingTab = 'profile' | 'company' | 'operations' | 'integrations' | 'system' | 'hardware';
 
 const Settings = () => {
   const { 
@@ -26,6 +27,7 @@ const Settings = () => {
     updateBusinessProfile,
     slotDuration, openTime, closeTime, maxCapacity, updateBookingSettings,
     recurringHolidays, specificHolidays,
+    scannerType, printerType, updateHardwareSettings,
     language, setLanguage
   } = useStore();
 
@@ -68,6 +70,10 @@ const Settings = () => {
   const [localLiffChannelSecret, setLocalLiffChannelSecret] = useState(liffChannelSecret);
   const [localLiffEnabled, setLocalLiffEnabled] = useState(liffEnabled);
 
+  // Hardware Local States
+  const [localScannerType, setLocalScannerType] = useState(scannerType);
+  const [localPrinterType, setLocalPrinterType] = useState(printerType);
+
   // Sync global state to local state to prevent overwrite on load
   useEffect(() => {
     setLocalShopName(shopName);
@@ -98,11 +104,14 @@ const Settings = () => {
     setLocalLiffChannelId(liffChannelId);
     setLocalLiffChannelSecret(liffChannelSecret);
     setLocalLiffEnabled(liffEnabled);
+    setLocalScannerType(scannerType);
+    setLocalPrinterType(printerType);
   }, [
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
     receiptHeader, receiptFooter, receiptPaperSize, slotDuration, maxCapacity, openTime, closeTime,
     recurringHolidays, specificHolidays, companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
-    vatEnabled, vatRate, vatInclusive, liffId, liffChannelId, liffChannelSecret, liffEnabled
+    vatEnabled, vatRate, vatInclusive, liffId, liffChannelId, liffChannelSecret, liffEnabled,
+    scannerType, printerType
   ]);
 
   // Modals
@@ -147,7 +156,9 @@ const Settings = () => {
       localOpenTime !== openTime ||
       localCloseTime !== closeTime ||
       JSON.stringify(localRecurringHolidays) !== JSON.stringify(recurringHolidays) ||
-      JSON.stringify(localSpecificHolidays) !== JSON.stringify(specificHolidays);
+      JSON.stringify(localSpecificHolidays) !== JSON.stringify(specificHolidays) ||
+      localScannerType !== scannerType ||
+      localPrinterType !== printerType;
 
     if (!hasChanges) return;
 
@@ -187,6 +198,10 @@ const Settings = () => {
         recurringHolidays: localRecurringHolidays,
         specificHolidays: localSpecificHolidays
       }, false);
+      updateHardwareSettings({
+        scannerType: localScannerType,
+        printerType: localPrinterType
+      });
       
       setSaveStatus('saved');
       resetTimer = setTimeout(() => {
@@ -207,7 +222,8 @@ const Settings = () => {
     localVatEnabled, localVatRate, localVatInclusive,
     localSlotDuration, localMaxCapacity, localOpenTime, localCloseTime,
     localRecurringHolidays, localSpecificHolidays,
-    updateBusinessProfile, updateBookingSettings
+    localScannerType, localPrinterType,
+    updateBusinessProfile, updateBookingSettings, updateHardwareSettings
   ]);
 
   const handleCopyLiffUrl = () => {
@@ -222,6 +238,7 @@ const Settings = () => {
     { id: 'operations', label: 'Operations', icon: Clock, desc: 'Hours & Booking Rules' },
     { id: 'integrations', label: 'LINE Integrations', icon: MessageSquare, desc: 'LIFF & Messaging' },
     { id: 'system', label: 'System', icon: Globe, desc: 'Language & Preferences' },
+    { id: 'hardware', label: 'Hardware & Devices', icon: MonitorSmartphone, desc: 'Scanners & Printers' },
   ];
 
   return (
@@ -348,39 +365,6 @@ const Settings = () => {
                   specificHolidays={localSpecificHolidays}
                   onChangeSpecific={setLocalSpecificHolidays}
                 />
-
-                <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
-                   <div className="flex justify-between items-center mb-10">
-                      <div>
-                        <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Receipt Customization</h3>
-                        <p className="text-xs text-gray-400 font-medium">Fine-tune your printed and digital receipts.</p>
-                      </div>
-                      <button onClick={() => setIsReceiptPreviewOpen(true)} className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-blue-100 transition-all"><Eye size={16} /> Live Preview</button>
-                   </div>
-                   
-                   <div className="space-y-6">
-                      <div className="space-y-3">
-                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Paper Size</label>
-                         <div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2 w-full max-w-sm">
-                            {(['58mm', '80mm'] as const).map(size => (
-                              <button key={size} onClick={() => setLocalReceiptPaperSize(size)} className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all", localReceiptPaperSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{size} Thermal</button>
-                            ))}
-                         </div>
-                      </div>
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Header Title</label>
-                         <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localReceiptHeader} onChange={e => setLocalReceiptHeader(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Shop Address</label>
-                         <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" value={localShopAddress} onChange={e => setLocalShopAddress(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Footer Message</label>
-                         <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" value={localReceiptFooter} onChange={e => setLocalReceiptFooter(e.target.value)} />
-                      </div>
-                   </div>
-                </section>
               </div>
             )}
 
@@ -659,6 +643,158 @@ const Settings = () => {
                    <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localCurrency} onChange={e => setLocalCurrency(e.target.value)} />
                 </div>
               </section>
+            )}
+
+            {/* Tab: Hardware & Devices */}
+            {activeTab === 'hardware' && (
+              <div className="space-y-10">
+                <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-10">
+                  <div>
+                    <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Barcode Scanner</h3>
+                    <p className="text-xs text-gray-400 font-medium">Configure how your barcode scanner connects to the system.</p>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Connection Type</label>
+                      <div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2 max-w-sm">
+                        <button 
+                          onClick={() => setLocalScannerType('hid')} 
+                          className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all flex items-center justify-center gap-2", localScannerType === 'hid' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}
+                        >
+                          <MonitorSmartphone size={14} /> Keyboard (HID)
+                        </button>
+                        <button 
+                          onClick={() => setLocalScannerType('serial')} 
+                          className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all flex items-center justify-center gap-2", localScannerType === 'serial' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}
+                        >
+                          <ScanLine size={14} /> Serial Port
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-medium px-2 mt-2">
+                        {localScannerType === 'hid' 
+                          ? "Most USB scanners act as a keyboard. Ensure your scanner is plugged in and just scan into any search box." 
+                          : "Serial scanners require explicit connection via Web Serial API. (Advanced)"}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 p-6 bg-gray-50 rounded-3xl border border-gray-100">
+                      <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Test Scanner Here</label>
+                      <input 
+                        type="text" 
+                        placeholder="Click here and scan a barcode..." 
+                        className="w-full bg-white border border-gray-200 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-10">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Thermal Printer</h3>
+                      <p className="text-xs text-gray-400 font-medium">Direct connection to receipt printers via Web Serial API.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Connection Type</label>
+                      <div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2 w-full max-w-md">
+                        <button 
+                          onClick={() => setLocalPrinterType('none')} 
+                          className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all", localPrinterType === 'none' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}
+                        >
+                          None
+                        </button>
+                        <button 
+                          onClick={() => setLocalPrinterType('browser')} 
+                          className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all", localPrinterType === 'browser' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}
+                        >
+                          System Print
+                        </button>
+                        <button 
+                          onClick={() => setLocalPrinterType('serial')} 
+                          className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all flex items-center justify-center gap-1.5", localPrinterType === 'serial' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}
+                        >
+                          <Printer size={14} /> Web Serial
+                        </button>
+                      </div>
+                    </div>
+
+                    {localPrinterType === 'serial' && (
+                      <div className="p-8 bg-indigo-50/50 rounded-[32px] border border-indigo-100 space-y-6">
+                        <div className="flex items-start gap-4">
+                           <div className="p-3 bg-white rounded-2xl shadow-sm text-indigo-500"><Printer size={20} /></div>
+                           <div>
+                              <p className="text-sm font-black text-indigo-900 mb-1">ESC/POS Thermal Printer</p>
+                              <p className="text-[11px] text-indigo-800/70 leading-relaxed font-medium">
+                                Connect via USB/COM port. Ensure your browser supports Web Serial API.
+                              </p>
+                           </div>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                          <button 
+                            onClick={async () => {
+                              const success = await thermalPrinter.connect();
+                              if (success) toast.success("Printer connected!");
+                            }}
+                            className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-xs hover:bg-indigo-700 transition-all shadow-md shadow-indigo-500/20"
+                          >
+                            Connect Printer
+                          </button>
+                          <button 
+                            onClick={async () => {
+                              if (!thermalPrinter.isConnected()) {
+                                toast.error("Please connect printer first.");
+                                return;
+                              }
+                              const success = await thermalPrinter.printSampleReceipt(localShopName, localShopAddress);
+                              if (success) toast.success("Sample receipt sent to printer!");
+                            }}
+                            className="bg-white border border-indigo-100 text-indigo-600 px-6 py-3 rounded-2xl font-black text-xs hover:bg-indigo-50 transition-all shadow-sm"
+                          >
+                            Test Print
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm">
+                   <div className="flex justify-between items-center mb-10">
+                      <div>
+                        <h3 className="text-xl font-black text-[#1A1F3D] mb-1">Receipt Customization</h3>
+                        <p className="text-xs text-gray-400 font-medium">Fine-tune your printed and digital receipts.</p>
+                      </div>
+                      <button onClick={() => setIsReceiptPreviewOpen(true)} className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-blue-100 transition-all"><Eye size={16} /> Live Preview</button>
+                   </div>
+                   
+                   <div className="space-y-6">
+                      <div className="space-y-3">
+                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Paper Size</label>
+                         <div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2 w-full max-w-sm">
+                            {(['58mm', '80mm'] as const).map(size => (
+                              <button key={size} onClick={() => setLocalReceiptPaperSize(size)} className={cn("flex-1 py-3 rounded-[18px] text-[10px] font-black transition-all", localReceiptPaperSize === size ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{size} Thermal</button>
+                            ))}
+                         </div>
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Header Title</label>
+                         <input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" value={localReceiptHeader} onChange={e => setLocalReceiptHeader(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Shop Address</label>
+                         <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" value={localShopAddress} onChange={e => setLocalShopAddress(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Footer Message</label>
+                         <textarea className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-bold h-24 resize-none leading-relaxed" value={localReceiptFooter} onChange={e => setLocalReceiptFooter(e.target.value)} />
+                      </div>
+                   </div>
+                </section>
+              </div>
             )}
 
           </div>

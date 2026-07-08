@@ -1020,24 +1020,49 @@ const Inventory = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {partners.map(partner => (
-                <div key={partner.id} className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm group hover:shadow-xl transition-all relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 opacity-5 text-[#1A1F3D] pointer-events-none select-none z-0"><Building2 size={80} /></div>
-                  <div className="flex justify-between items-start mb-6 relative z-10">
-                    <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[20px] flex items-center justify-center"><Building2 size={28} /></div>
-                    <div className="flex gap-1">
-                      <button onClick={() => handleEditPartner(partner)} className="p-2 text-gray-400 hover:text-[#1A1F3D] hover:bg-gray-50 rounded-xl transition-all"><Edit3 size={18} /></button>
-                      <button onClick={() => handleDeletePartner(partner.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
+                <div key={partner.id} className="bg-white p-6 rounded-[32px] shadow-[0_4px_20px_rgba(24,35,74,0.04)] group hover:shadow-[0_8px_30px_rgba(24,35,74,0.08)] transition-all relative overflow-hidden flex flex-col">
+                  {/* Liquid background accent */}
+                  <div className="absolute -right-10 -top-10 w-32 h-32 bg-[#EAFD69]/20 rounded-full blur-3xl pointer-events-none group-hover:bg-[#EAFD69]/30 transition-colors" />
+                  
+                  <div className="flex justify-between items-start mb-5 relative z-10">
+                    <div className="flex items-center gap-3 max-w-[70%]">
+                      <div className="w-12 h-12 bg-gradient-to-br from-[#18234A] to-[#020D35] text-white rounded-[18px] flex items-center justify-center shadow-lg shadow-[#18234A]/20 shrink-0">
+                        <Building2 size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-base md:text-lg font-black text-[#1A1F3D] line-clamp-1">{partner.companyName}</h4>
+                        <p className="text-[9px] text-indigo-600 font-bold uppercase tracking-widest mt-0.5">
+                          GP: <span className="font-black text-indigo-700">{partner.gpRate}%</span> (ส่วนแบ่งคู่ค้า)
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 shrink-0 bg-[#F5F6FA]/80 rounded-xl p-1 backdrop-blur-sm">
+                      <button onClick={() => handleEditPartner(partner)} className="p-1.5 text-gray-400 hover:text-[#18234A] hover:bg-white rounded-lg transition-all"><Edit3 size={14} /></button>
+                      <button onClick={() => handleDeletePartner(partner.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white rounded-lg transition-all"><Trash2 size={14} /></button>
                     </div>
                   </div>
-                  <div className="relative z-10">
-                    <h4 className="text-xl font-black text-[#1A1F3D] mb-1">{partner.companyName}</h4>
-                    <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest mb-6">GP: {partner.gpRate}% (ส่วนแบ่งคู่ค้า)</p>
 
-                    <div className="pt-6 border-t border-gray-50 flex gap-3">
-                      <button onClick={() => setSelectedVendorForView(partner)} className="flex-1 bg-[#F5F6FA] hover:bg-[#1A1F3D] hover:text-white text-[#1A1F3D] font-black text-[10px] uppercase py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
-                        <Eye size={14} /> ดูสต็อกที่นี่
-                      </button>
+                  <div className="relative z-10 flex-1 flex flex-col justify-end">
+                    <div className="bg-[#F5F6FA]/70 rounded-[20px] p-4 flex flex-col gap-2.5 mb-5 backdrop-blur-sm">
+                      <div className="flex items-center gap-2.5 text-xs">
+                        <User size={14} className="text-gray-400 shrink-0" />
+                        <span className="font-bold text-[#1A1F3D] truncate">{partner.contactPerson || 'ไม่ระบุผู้ติดต่อ'}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-xs">
+                        <span className="text-gray-400 shrink-0 font-black text-[9px] uppercase tracking-wider w-[14px] text-center">TEL</span>
+                        <span className="font-medium text-gray-600 truncate">{partner.phone || 'ไม่ระบุเบอร์โทร'}</span>
+                      </div>
+                      {partner.email && (
+                        <div className="flex items-center gap-2.5 text-xs">
+                          <span className="text-gray-400 shrink-0 font-black text-[9px] uppercase tracking-wider w-[14px] text-center">@</span>
+                          <span className="font-medium text-gray-600 truncate">{partner.email}</span>
+                        </div>
+                      )}
                     </div>
+
+                    <button onClick={() => setSelectedVendorForView(partner)} className="w-full bg-[#F5F6FA] hover:bg-gradient-to-r hover:from-[#18234A] hover:to-[#020D35] text-[#18234A] hover:text-white font-black text-[10px] uppercase py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-xl hover:shadow-[#18234A]/20">
+                      <Eye size={14} /> ดูรายละเอียด
+                    </button>
                   </div>
                 </div>
               ))}

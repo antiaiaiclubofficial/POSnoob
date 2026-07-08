@@ -69,6 +69,39 @@ const VendorInventoryView = ({ vendor, onClose }: VendorInventoryViewProps) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-10 space-y-10 scrollbar-hide">
+          {/* Vendor Details */}
+          <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+             <h4 className="text-sm font-black text-[#1A1F3D] uppercase tracking-widest mb-6">Partner Details</h4>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                   <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Contact Person</p>
+                   <p className="text-sm font-bold text-[#1A1F3D]">{vendor.contactPerson || '-'}</p>
+                </div>
+                <div>
+                   <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Phone</p>
+                   <p className="text-sm font-bold text-[#1A1F3D]">{vendor.phone || '-'}</p>
+                </div>
+                <div>
+                   <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Email</p>
+                   <p className="text-sm font-bold text-[#1A1F3D]">{vendor.email || '-'}</p>
+                </div>
+                <div>
+                   <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Tax ID</p>
+                   <p className="text-sm font-bold text-[#1A1F3D]">{vendor.taxId || '-'}</p>
+                </div>
+                <div className="md:col-span-2">
+                   <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Address</p>
+                   <p className="text-sm font-bold text-[#1A1F3D]">{vendor.address || '-'}</p>
+                </div>
+                {vendor.notes && (
+                  <div className="md:col-span-full pt-4 border-t border-gray-50 mt-2">
+                     <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Notes</p>
+                     <p className="text-sm font-medium text-gray-600">{vendor.notes}</p>
+                  </div>
+                )}
+             </div>
+          </div>
+
           {/* Top Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden">

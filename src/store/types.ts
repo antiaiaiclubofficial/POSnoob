@@ -448,6 +448,11 @@ export interface AppState {
   liffChannelSecret: string;
   liffEnabled: boolean;
 
+  // Hardware Settings
+  scannerType: 'hid' | 'serial';
+  printerType: 'none' | 'serial' | 'bluetooth' | 'browser';
+  updateHardwareSettings: (settings: { scannerType?: 'hid' | 'serial', printerType?: 'none' | 'serial' | 'bluetooth' | 'browser' }) => void;
+
   // Lists
   customers: Customer[];
   selectedOwner: Customer | null;
