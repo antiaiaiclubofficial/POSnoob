@@ -9,9 +9,10 @@ import CustomerModal from '@/components/CustomerModal';
 import GroomingServiceModal from '@/components/GroomingServiceModal';
 import AddOnModal from '@/components/AddOnModal';
 import ManageServicesModal from '@/components/ManageServicesModal';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
-  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath, Wallet, Plus, AlertCircle, ArrowRight, History
+  CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath, Wallet, Plus, AlertCircle, ArrowRight, History, LayoutGrid, List
 } from 'lucide-react';
 import { useStore, QueueItem, ServiceIcon, Customer } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -109,6 +110,7 @@ const Index = () => {
   const [speciesFilter, setSpeciesFilter] = useState<'Dog' | 'Cat'>('Dog');
   const [coatFilter, setCoatFilter] = useState<'All' | 'Short' | 'Long'>('Short');
   const [productSearch, setProductQuery] = useState('');
+  const [productViewMode, setProductViewMode] = useState<'grid' | 'list'>('grid');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isManageServicesOpen, setIsManageServicesOpen] = useState(false);
   const [isSavedBillsSheetOpen, setIsSavedBillsSheetOpen] = useState(false);
@@ -493,7 +495,7 @@ const Index = () => {
                       {productCategory === 'All' ? 'Products' : productCategory}
                     </TabsTrigger>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-48 bg-white border-gray-100 rounded-xl shadow-lg z-50">
+                  <DropdownMenuContent align="start" className="w-48 bg-white border-gray-100 rounded-xl shadow-lg z-50">
                     {productCategories.map(cat => (
                       <DropdownMenuItem 
                         key={cat} 
@@ -535,14 +537,30 @@ const Index = () => {
             )}
 
             {posTab === 'products' && (
-              <div className="relative w-full sm:w-64 animate-in zoom-in-95">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
-                <input 
-                  className="w-full bg-[#F5F6FA] border-none rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold"
-                  placeholder="Search products..."
-                  value={productSearch}
-                  onChange={e => setProductQuery(e.target.value)}
-                />
+              <div className="flex items-center gap-2 animate-in zoom-in-95 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                  <input 
+                    className="w-full bg-[#F5F6FA] border-none rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold"
+                    placeholder="Search products..."
+                    value={productSearch}
+                    onChange={e => setProductQuery(e.target.value)}
+                  />
+                </div>
+                <div className="bg-[#F5F6FA] p-1 rounded-xl flex items-center shrink-0">
+                  <button 
+                    onClick={() => setProductViewMode('grid')}
+                    className={cn("p-1.5 rounded-lg transition-all", productViewMode === 'grid' ? "bg-white shadow-sm text-[#1A1F3D]" : "text-gray-400 hover:text-[#1A1F3D]")}
+                  >
+                    <LayoutGrid size={16} />
+                  </button>
+                  <button 
+                    onClick={() => setProductViewMode('list')}
+                    className={cn("p-1.5 rounded-lg transition-all", productViewMode === 'list' ? "bg-white shadow-sm text-[#1A1F3D]" : "text-gray-400 hover:text-[#1A1F3D]")}
+                  >
+                    <List size={16} />
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -606,11 +624,25 @@ const Index = () => {
                   <h2 className="text-xl font-black">{language === 'th' ? 'ไม่พบสินค้า' : 'No products found'}</h2>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-500">
-                  {filteredProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
+                <AnimatePresence mode="wait">
+                  <motion.div 
+                    key={productViewMode}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className={cn(
+                      "w-full",
+                      productViewMode === 'grid' 
+                        ? "grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6" 
+                        : "flex flex-col gap-3"
+                    )}
+                  >
+                    {filteredProducts.map((product) => (
+                      <ProductCard key={product.id} product={product} viewMode={productViewMode} />
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
               )}
             </TabsContent>
 

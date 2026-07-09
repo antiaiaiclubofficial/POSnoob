@@ -41,6 +41,37 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
   const [activeDiscountIndex, setActiveDiscountIndex] = useState<number | null>(null);
   const [tempDiscountVal, setTempDiscountVal] = useState('');
   const [tempDiscountType, setTempDiscountType] = useState<'percent' | 'amount'>('percent');
+  const [width, setWidth] = useState(384);
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth >= 300 && newWidth <= 800) {
+        setWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      // Prevent text selection during drag
+      document.body.style.userSelect = 'none';
+    } else {
+      document.body.style.userSelect = '';
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
 
   // เก็บข้อมูลธุรกรรมที่เพิ่งทำเสร็จเพื่อแสดงใบเสร็จ
   const [completedTransaction, setCompletedTransaction] = useState<any | null>(null);
@@ -247,10 +278,22 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
   };
 
   return (
-    <div className={cn(
-      "bg-white h-full flex flex-col shrink-0",
-      isMobile ? "w-full p-6" : "w-96 p-8 border-l border-gray-100"
-    )}>
+    <div 
+      className={cn(
+        "bg-white h-full flex flex-col shrink-0 relative transition-all duration-75",
+        isMobile ? "w-full p-6" : "p-8 border-l border-gray-100"
+      )}
+      style={!isMobile ? { width: `${width}px` } : undefined}
+    >
+      {!isMobile && (
+        <div 
+          className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-[#1A1F3D] active:bg-[#1A1F3D] z-50 transition-colors"
+          style={{ transform: 'translateX(-50%)' }}
+          onMouseDown={() => setIsResizing(true)}
+        >
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-8 bg-gray-300 rounded-full group-hover:bg-[#D9ED5F]" />
+        </div>
+      )}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-2xl font-bold text-[#1A1F3D]">{t.orderSummary}</h2>
@@ -323,8 +366,8 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
                       <Dog className="text-[#1A1F3D] w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-[#1A1F3D] text-[12px] leading-tight truncate">{item.title}</h4>
-                      <p className="text-[8px] text-gray-400 font-black uppercase mt-0.5">{item.petName || 'Retail Item'}</p>
+                      <h4 className="font-bold text-[#1A1F3D] text-[18px] leading-tight truncate">{item.title}</h4>
+                      <p className="text-[10px] text-gray-400 font-black uppercase mt-0.5">{item.petName || 'Retail Item'}</p>
                     </div>
                     <button onClick={() => removeFromCart(idx)} className="p-1.5 text-red-200 hover:text-red-500"><X size={14} /></button>
                   </div>
@@ -375,7 +418,7 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
                       <div className="flex items-center justify-between">
                         {hasDiscount ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-[9px] bg-red-50 text-red-600 px-2 py-0.5 rounded-md font-black">
+                            <span className="text-[12px] bg-red-50 text-red-600 px-2 py-0.5 rounded-md font-black">
                               Discount: -{item.discountType === 'percent' ? `${item.discountValue}%` : `${currency}${item.discountValue}`}
                             </span>
                             <button 
@@ -394,9 +437,9 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
                               setTempDiscountType('percent');
                               setTempDiscountVal('');
                             }}
-                            className="text-[9px] text-blue-500 hover:text-blue-700 font-black flex items-center gap-1"
+                            className="text-[12px] text-blue-500 hover:text-blue-700 font-black flex items-center gap-1.5"
                           >
-                            <Tag size={10} /> Add Item Discount
+                            <Tag size={12} /> Add Item Discount
                           </button>
                         )}
                       </div>
@@ -405,17 +448,17 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
                   
                   <div className="flex items-center justify-between pt-2 border-t border-gray-50">
                      <div className="flex items-center bg-[#F5F6FA] rounded-xl p-1 gap-3">
-                        <button onClick={() => updateCartQuantity(idx, -1)} className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Minus size={12} /></button>
-                        <span className="text-[10px] font-black w-4 text-center">{item.quantity}</span>
-                        <button onClick={() => updateCartQuantity(idx, 1)} className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Plus size={12} /></button>
+                        <button onClick={() => updateCartQuantity(idx, -1)} className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Minus size={16} /></button>
+                        <span className="text-[16px] font-black w-6 text-center">{item.quantity}</span>
+                        <button onClick={() => updateCartQuantity(idx, 1)} className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Plus size={16} /></button>
                      </div>
                      <div className="text-right">
                        {hasDiscount && (
-                         <p className="text-[9px] text-gray-300 line-through font-bold">
+                         <p className="text-[14px] text-gray-300 line-through font-bold">
                            {currency}{(item.price * item.quantity).toFixed(2)}
                          </p>
                        )}
-                       <span className="font-black text-[12px] text-[#1A1F3D]">
+                       <span className="font-black text-[24px] text-[#1A1F3D]">
                          {currency}{(finalPrice * item.quantity).toFixed(2)}
                        </span>
                      </div>
