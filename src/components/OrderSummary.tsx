@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText, Landmark, Percent, Tag, Save, ClipboardList
+  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText, Landmark, Percent, Tag, Save, ClipboardList, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useStore, PaymentMethod } from '@/store/useStore';
@@ -34,6 +34,7 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
   
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isPaymentExpanded, setIsPaymentExpanded] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [isTaxInvoice, setIsTaxInvoice] = useState(false);
   const [barcodeQuery, setBarcodeQuery] = useState('');
@@ -426,66 +427,90 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
         )}
       </div>
 
-      <div className="pt-6 mb-6 space-y-4">
-         <div className="bg-[#F8F9FD] p-4 rounded-2xl flex items-center justify-between border border-gray-100">
-            <div className="flex items-center gap-2">
-               <FileText size={16} className="text-gray-400" />
-               <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{language === 'th' ? 'ขอใบกำกับภาษี' : 'Tax Invoice'}</span>
+      <div className="mt-auto pt-4 flex flex-col">
+        <div className="flex items-center justify-center border-t border-gray-100 pt-4 pb-2">
+          <button 
+            onClick={() => setIsPaymentExpanded(!isPaymentExpanded)}
+            className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-[#1A1F3D] transition-colors bg-gray-50 px-4 py-1.5 rounded-full"
+          >
+            {isPaymentExpanded ? (
+               <><ChevronDown size={14} /> {language === 'th' ? 'ย่อรายละเอียดชำระเงิน' : 'Hide Payment Details'}</>
+            ) : (
+               <><ChevronUp size={14} /> {language === 'th' ? 'แสดงรายละเอียดชำระเงิน' : 'Show Payment Details'}</>
+            )}
+          </button>
+        </div>
+
+        {isPaymentExpanded && (
+          <div className="animate-in slide-in-from-bottom-2 fade-in duration-200">
+            <div className="pt-2 mb-6 space-y-4">
+               <div className="bg-[#F8F9FD] p-4 rounded-2xl flex items-center justify-between border border-gray-100">
+                  <div className="flex items-center gap-2">
+                     <FileText size={16} className="text-gray-400" />
+                     <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{language === 'th' ? 'ขอใบกำกับภาษี' : 'Tax Invoice'}</span>
+                  </div>
+                  <Switch checked={isTaxInvoice && vatEnabled} onCheckedChange={setIsTaxInvoice} disabled={!vatEnabled} className="data-[state=checked]:bg-[#1A1F3D]" />
+               </div>
+
+              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.paymentMethod}</p>
+              <div className="grid grid-cols-5 gap-1.5">
+                {(['Cash', 'Transfer', 'Credit Card', 'Package', 'Store Credit'] as const).map((method) => {
+                  const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Landmark : method === 'Credit Card' ? CreditCard : method === 'Package' ? Package : Wallet;
+                  const isDisabled = (method === 'Package' && availablePackages.length === 0) || (method === 'Store Credit' && (!selectedOwner || (selectedOwner.creditBalance || 0) < total));
+                  return (
+                    <button key={method} disabled={isDisabled} onClick={() => setPaymentMethod(method)} className={cn("flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all", paymentMethod === method ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-lg" : "bg-white border-gray-100 text-gray-400", isDisabled && "opacity-20 cursor-not-allowed grayscale")}>
+                      <Icon size={14} />
+                      <span className="text-[7px] font-black uppercase whitespace-nowrap">{method === 'Package' ? "PKG" : method === 'Store Credit' ? "CREDIT" : method.split(' ')[0]}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <Switch checked={isTaxInvoice && vatEnabled} onCheckedChange={setIsTaxInvoice} disabled={!vatEnabled} className="data-[state=checked]:bg-[#1A1F3D]" />
-         </div>
 
-        <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.paymentMethod}</p>
-        <div className="grid grid-cols-5 gap-1.5">
-          {(['Cash', 'Transfer', 'Credit Card', 'Package', 'Store Credit'] as const).map((method) => {
-            const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Landmark : method === 'Credit Card' ? CreditCard : method === 'Package' ? Package : Wallet;
-            const isDisabled = (method === 'Package' && availablePackages.length === 0) || (method === 'Store Credit' && (!selectedOwner || (selectedOwner.creditBalance || 0) < total));
-            return (
-              <button key={method} disabled={isDisabled} onClick={() => setPaymentMethod(method)} className={cn("flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all", paymentMethod === method ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-lg" : "bg-white border-gray-100 text-gray-400", isDisabled && "opacity-20 cursor-not-allowed grayscale")}>
-                <Icon size={14} />
-                <span className="text-[7px] font-black uppercase whitespace-nowrap">{method === 'Package' ? "PKG" : method === 'Store Credit' ? "CREDIT" : method.split(' ')[0]}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+            <div className="pt-4 space-y-2 border-t border-dashed border-gray-200">
+              <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
+                <span>{language === 'th' ? 'ยอดรวม' : 'Subtotal'}</span>
+                <span>{currency}{round2(cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)).toFixed(2)}</span>
+              </div>
 
-      <div className="pt-6 space-y-2 border-t border-dashed border-gray-200 mt-auto">
-        <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
-          <span>{language === 'th' ? 'ยอดรวม' : 'Subtotal'}</span>
-          <span>{currency}{round2(cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)).toFixed(2)}</span>
-        </div>
+              {totalItemDiscounts > 0 && (
+                <div className="flex justify-between items-center text-xs text-red-500 font-medium px-2 py-0.5">
+                  <span className="flex items-center gap-1.5"><Tag size={12}/> {language === 'th' ? 'ส่วนลดสินค้า' : 'Item Discounts'}</span>
+                  <span>-{currency}{totalItemDiscounts.toFixed(2)}</span>
+                </div>
+              )}
 
-        {totalItemDiscounts > 0 && (
-          <div className="flex justify-between items-center text-xs text-red-500 font-medium px-2 py-0.5">
-            <span className="flex items-center gap-1.5"><Tag size={12}/> {language === 'th' ? 'ส่วนลดสินค้า' : 'Item Discounts'}</span>
-            <span>-{currency}{totalItemDiscounts.toFixed(2)}</span>
+              {tierDiscountPercent > 0 && paymentMethod !== 'Package' && (
+                <div className="flex justify-between items-center text-xs text-green-600 font-medium px-2 py-0.5">
+                  <span className="flex items-center gap-1.5"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
+                  <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
+                </div>
+              )}
+
+              {vatEnabled && (
+                <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
+                  <span>{language === 'th' ? 'ยอดก่อนภาษี' : 'Subtotal Before VAT'}</span>
+                  <span>{currency}{subtotalBeforeTax.toFixed(2)}</span>
+                </div>
+              )}
+
+              {vatEnabled && (
+                <div className="flex justify-between items-center text-xs text-gray-400 px-2 py-0.5">
+                  <span>{vatInclusive ? (language === 'th' ? `VAT (${vatRateVal}% รวมในราคา)` : `VAT (${vatRateVal}% Incl.)`) : (language === 'th' ? `ภาษีมูลค่าเพิ่ม VAT (${vatRateVal}%)` : `VAT (${vatRateVal}%)`)}</span>
+                  <span>{currency}{tax.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {tierDiscountPercent > 0 && paymentMethod !== 'Package' && (
-          <div className="flex justify-between items-center text-xs text-green-600 font-medium px-2 py-0.5">
-            <span className="flex items-center gap-1.5"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
-            <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
+        <div className="flex justify-between items-end pt-4 px-2 border-t border-gray-50 mt-4">
+          <div className="flex flex-col">
+            <span className="text-xl font-bold text-[#1A1F3D]">{t.total}</span>
+            {!isPaymentExpanded && (
+              <span className="text-[10px] font-bold text-gray-400 uppercase">{paymentMethod}</span>
+            )}
           </div>
-        )}
-
-        {vatEnabled && (
-          <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
-            <span>{language === 'th' ? 'ยอดก่อนภาษี' : 'Subtotal Before VAT'}</span>
-            <span>{currency}{subtotalBeforeTax.toFixed(2)}</span>
-          </div>
-        )}
-
-        {vatEnabled && (
-          <div className="flex justify-between items-center text-xs text-gray-400 px-2 py-0.5">
-            <span>{vatInclusive ? (language === 'th' ? `VAT (${vatRateVal}% รวมในราคา)` : `VAT (${vatRateVal}% Incl.)`) : (language === 'th' ? `ภาษีมูลค่าเพิ่ม VAT (${vatRateVal}%)` : `VAT (${vatRateVal}%)`)}</span>
-            <span>{currency}{tax.toFixed(2)}</span>
-          </div>
-        )}
-
-        <div className="flex justify-between items-end pt-2 px-2 border-t border-gray-50 mt-2">
-          <span className="text-xl font-bold text-[#1A1F3D]">{t.total}</span>
           <span className="text-3xl font-extrabold text-[#1A1F3D]">{paymentMethod === 'Package' ? "0.00" : `${currency}${total.toFixed(2)}`}</span>
         </div>
       </div>

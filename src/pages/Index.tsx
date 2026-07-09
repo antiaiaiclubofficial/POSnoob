@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
@@ -115,6 +116,7 @@ const Index = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
   const [selectedAddOn, setSelectedAddOn] = useState<any>(null);
+  const [productCategory, setProductCategory] = useState<string>('All');
 
   useEffect(() => {
     if (activePet) {
@@ -170,9 +172,12 @@ const Index = () => {
   );
   
   const filteredProducts = inventory.filter(p => 
-    p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
-    p.category.toLowerCase().includes(productSearch.toLowerCase())
+    (productCategory === 'All' || p.category === productCategory) &&
+    (p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
+     p.category.toLowerCase().includes(productSearch.toLowerCase()))
   );
+  
+  const productCategories = ['All', ...Array.from(new Set(inventory.map(p => p.category)))];
   
   const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
@@ -273,7 +278,10 @@ const Index = () => {
                       </button>
                       <div>
                         <h2 className="text-2xl font-black text-[#1A1F3D] mb-1">{language === 'th' ? 'รายละเอียดรายการขาย' : 'Transaction Details'}</h2>
-                        <p className="text-gray-400 text-sm font-bold">{format(new Date(selectedTransaction.createdAt || new Date()), 'HH:mm')} • {selectedTransaction.customerName}</p>
+                        <p className="text-gray-400 text-sm font-bold">
+                          {format(new Date(selectedTransaction.createdAt || new Date()), 'HH:mm')} • {selectedTransaction.customerName}
+                          {selectedTransaction.items?.some((i: any) => i.petName) && ` | ${Array.from(new Set(selectedTransaction.items.filter((i: any) => i.petName).map((i: any) => i.petName))).join(', ')}`}
+                        </p>
                       </div>
                     </div>
 
@@ -324,7 +332,14 @@ const Index = () => {
                           >
                             <div className="flex items-center justify-between">
                               <div>
-                                <p className="font-black text-[#1A1F3D] group-hover:text-[#1A1F3D]">{tx.customerName}</p>
+                                <p className="font-black text-[#1A1F3D] group-hover:text-[#1A1F3D]">
+                                  {tx.customerName}
+                                  {tx.items?.some((i: any) => i.petName) && (
+                                    <span className="ml-2">
+                                      | {Array.from(new Set(tx.items.filter((i: any) => i.petName).map((i: any) => i.petName))).join(', ')}
+                                    </span>
+                                  )}
+                                </p>
                                 <p className="text-xs text-gray-400 font-bold">
                                   {format(new Date(tx.createdAt), 'HH:mm')} • {tx.paymentMethod}
                                 </p>
@@ -471,9 +486,29 @@ const Index = () => {
                 <TabsTrigger value="addons" className="flex-1 sm:px-6 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all whitespace-nowrap">
                   <Zap size={14} className="mr-2" /> Add-ons
                 </TabsTrigger>
-                <TabsTrigger value="products" className="flex-1 sm:px-6 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all whitespace-nowrap">
-                  <Package size={14} className="mr-2" /> Products
-                </TabsTrigger>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <TabsTrigger value="products" className="flex-1 sm:px-6 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all whitespace-nowrap outline-none cursor-pointer">
+                      <Package size={14} className="mr-2" /> 
+                      {productCategory === 'All' ? 'Products' : productCategory}
+                    </TabsTrigger>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48 bg-white border-gray-100 rounded-xl shadow-lg z-50">
+                    {productCategories.map(cat => (
+                      <DropdownMenuItem 
+                        key={cat} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProductCategory(cat);
+                          setPosTab('products');
+                        }}
+                        className="text-xs font-bold focus:bg-gray-50 focus:text-[#1A1F3D] cursor-pointer"
+                      >
+                        {cat === 'All' ? (language === 'th' ? 'สินค้าทั้งหมด' : 'All Products') : cat}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <TabsTrigger value="packages" className="flex-1 sm:px-6 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all whitespace-nowrap">
                   <Package size={14} className="mr-2" /> Packages
                 </TabsTrigger>

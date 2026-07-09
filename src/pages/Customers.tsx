@@ -46,7 +46,7 @@ const Customers = () => {
   });
 
   const { isLoading, refetch } = useQuery({
-    queryKey: ['customers-list', storeId],
+    queryKey: ['customers-list-v2', storeId],
     queryFn: async () => {
       let query = supabase
         .from('customers')
@@ -82,7 +82,13 @@ const Customers = () => {
             birth_date,
             weight,
             medical_condition,
-            image_url
+            image_url,
+            created_at,
+            pet_weight_history (
+              date,
+              weight,
+              created_at
+            )
           )
         `);
       
@@ -150,17 +156,29 @@ const Customers = () => {
           createdAt: item.created_at || '',
           creditHistory: [],
           packages: [],
-          pets: (item.pets || []).map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            species: (p.type || 'Dog') as 'Dog' | 'Cat' | 'Other',
-            breed: p.breed || '-',
-            birthday: p.birth_date || '',
-            weightHistory: p.weight ? [{ date: format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }] : [],
-            serviceHistory: serviceHistoryMap[p.id] || [], // แมปประวัติการใช้บริการจริงจาก Supabase
-            notes: p.medical_condition || '',
-            image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
-          }))
+          pets: (item.pets || []).map((p: any) => {
+            const wh = p.pet_weight_history || [];
+            let weightHistory = wh.map((w: any) => ({
+              date: w.date || (w.created_at ? format(new Date(w.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')),
+              value: Number(w.weight)
+            })).sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+            if (weightHistory.length === 0 && p.weight) {
+               weightHistory = [{ date: p.created_at ? format(new Date(p.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }];
+            }
+
+            return {
+              id: p.id,
+              name: p.name,
+              species: (p.type || 'Dog') as 'Dog' | 'Cat' | 'Other',
+              breed: p.breed || '-',
+              birthday: p.birth_date || '',
+              weightHistory,
+              serviceHistory: serviceHistoryMap[p.id] || [], // แมปประวัติการใช้บริการจริงจาก Supabase
+              notes: p.medical_condition || '',
+              image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+            };
+          })
         };
       });
 
@@ -401,7 +419,9 @@ const Customers = () => {
             </div>
           </div>
         ) : (
-          <CustomerDashboard />
+          <div className="p-6 lg:p-10">
+            <CustomerDashboard />
+          </div>
         )}
       </div>
 

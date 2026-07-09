@@ -297,7 +297,13 @@ const AuthInitializer = () => {
               birth_date,
               weight,
               medical_condition,
-              image_url
+              image_url,
+              created_at,
+              pet_weight_history (
+                date,
+                weight,
+                created_at
+              )
             )
           `);
 
@@ -337,18 +343,30 @@ const AuthInitializer = () => {
               postalCode: c.postal_code || '',
               creditHistory: [],
               packages: [],
-              pets: (c.pets || []).map((p: any) => ({
-                id: p.id,
-                name: p.name,
-                species: (p.type || 'Dog') as BookingType,
-                breed: p.breed || '-',
-                birthday: p.birth_date || '',
-                weightHistory: p.weight ? [{ date: format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }] : [],
-                serviceHistory: [],
-                intakeHistory: [],
-                notes: p.medical_condition || '',
-                image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
-              }))
+              pets: (c.pets || []).map((p: any) => {
+                const wh = p.pet_weight_history || [];
+                let weightHistory = wh.map((w: any) => ({
+                  date: w.date || (w.created_at ? format(new Date(w.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')),
+                  value: Number(w.weight)
+                })).sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+                if (weightHistory.length === 0 && p.weight) {
+                   weightHistory = [{ date: p.created_at ? format(new Date(p.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }];
+                }
+
+                return {
+                  id: p.id,
+                  name: p.name,
+                  species: (p.type || 'Dog') as BookingType,
+                  breed: p.breed || '-',
+                  birthday: p.birth_date || '',
+                  weightHistory,
+                  serviceHistory: [],
+                  intakeHistory: [],
+                  notes: p.medical_condition || '',
+                  image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+                };
+              })
             };
           });
           useStore.setState({ customers: formattedCustomers });

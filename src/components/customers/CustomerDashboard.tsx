@@ -314,9 +314,9 @@ const CustomerDashboard = () => {
         />
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-11 gap-8 mb-8">
         {/* Ratio Chart (Glassmorphic & Gradient UI) */}
-        <div className="w-full lg:w-[55%] bg-white/80 backdrop-blur-2xl p-8 rounded-[3rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] border border-white/40 flex flex-col relative overflow-hidden font-sans">
+        <div className="w-full lg:col-span-6 bg-white/80 backdrop-blur-2xl p-8 rounded-[3rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] border border-white/40 flex flex-col relative overflow-hidden font-sans">
 
           {/* Decorative Background Glows for the card */}
           <div className="absolute -top-20 -left-20 w-[200px] h-[200px] bg-[#4299E1]/10 rounded-full blur-3xl pointer-events-none" />
@@ -426,7 +426,7 @@ const CustomerDashboard = () => {
         </div>
 
         {/* Customer Journey Funnel */}
-        <div className="w-full lg:w-[45%] bg-white/80 backdrop-blur-2xl p-6 md:p-8 rounded-[3rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] border border-white/40 relative overflow-hidden font-sans">
+        <div className="w-full lg:col-span-5 bg-white/80 backdrop-blur-2xl p-6 md:p-8 rounded-[3rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] border border-white/40 relative overflow-hidden font-sans">
           {/* Exact Image Grid Background */}
           <div className="absolute inset-0 opacity-[0.4]" style={{ backgroundImage: 'linear-gradient(#F1F5F9 1px, transparent 1px), linear-gradient(90deg, #F1F5F9 1px, transparent 1px)', backgroundSize: '40px 40px', backgroundPosition: 'center' }} />
 
