@@ -19,7 +19,8 @@ import {
   Package,
   Calculator,
   BookOpen,
-  ChevronDown
+  ChevronDown,
+  Building2
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -45,6 +46,7 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     { icon: ShoppingBag, label: t.pos, path: '/pos' },
     { icon: CalendarDays, label: t.queue, path: '/queue' },
     { icon: Users, label: t.customers, path: '/customers' },
+    { icon: Building2, label: t.hotel || 'โรงแรม', path: '/hotel' },
     {
       icon: Package, 
       label: 'สต๊อก & บัญชี',
@@ -77,13 +79,16 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
   const userRole = currentUser?.role || 'Assistant';
   let allowedPaths = rolePermissions[userRole] || ['/', '/queue', '/customers'];
   
-  // Ensure accounting is available for Admin and superadmin even if DB roles aren't updated yet
+  // Ensure accounting and hotel are available for Admin and superadmin even if DB roles aren't updated yet
   if (userRole === 'Admin' || userRole === 'superadmin') {
     if (!allowedPaths.includes('/sales-procurement')) {
       allowedPaths = [...allowedPaths, '/sales-procurement'];
     }
     if (!allowedPaths.includes('/accounting')) {
       allowedPaths = [...allowedPaths, '/accounting'];
+    }
+    if (!allowedPaths.includes('/hotel')) {
+      allowedPaths = [...allowedPaths, '/hotel'];
     }
   }
 

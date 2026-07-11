@@ -21,6 +21,7 @@ import SalesAndProcurement from "@/pages/SalesAndProcurement";
 import Accounting from "@/pages/Accounting";
 import Login from "@/pages/Login";
 import SuperAdmin from "@/pages/SuperAdmin";
+import Hotel from "@/pages/Hotel";
 import LiffRegister from "@/pages/LiffRegister";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -954,6 +955,7 @@ const AuthInitializer = () => {
         <Route path="/queue" element={<Queue />} />
         <Route path="/services" element={<Services />} />
         <Route path="/customers" element={<Customers />} />
+        <Route path="/hotel" element={<Hotel />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/marketing" element={<Marketing />} />
         <Route path="/staff" element={<Staff />} />

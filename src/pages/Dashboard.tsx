@@ -59,55 +59,12 @@ import CustomerDashboard from '@/components/customers/CustomerDashboard';
 import InventoryDashboard from '@/components/InventoryDashboard';
 import BookingModal from '@/components/BookingModal';
 import CustomerModal from '@/components/CustomerModal';
-import HotelBookingModal from '@/components/HotelBookingModal';
+
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-interface RoomConfig {
-  id: number;
-  name: string;
-  color: 'gray' | 'blue' | 'pink' | 'green' | 'purple' | 'amber';
-}
 
-const COLOR_MAP = {
-  gray: {
-    bg: "bg-[#F5F6FA] border-transparent text-gray-500 hover:bg-gray-100",
-    border: "border-gray-300",
-    dot: "bg-gray-400",
-    badge: "bg-gray-100 text-gray-600"
-  },
-  blue: {
-    bg: "bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100/70",
-    border: "border-blue-400",
-    dot: "bg-blue-500",
-    badge: "bg-blue-100 text-blue-700"
-  },
-  pink: {
-    bg: "bg-pink-50 border-pink-100 text-pink-600 hover:bg-pink-100/70",
-    border: "border-pink-400",
-    dot: "bg-pink-500",
-    badge: "bg-pink-100 text-pink-700"
-  },
-  green: {
-    bg: "bg-green-50 border-green-100 text-green-600 hover:bg-green-100/70",
-    border: "border-green-400",
-    dot: "bg-green-500",
-    badge: "bg-green-100 text-green-700"
-  },
-  purple: {
-    bg: "bg-purple-50 border-purple-100 text-purple-600 hover:bg-purple-100/70",
-    border: "border-purple-400",
-    dot: "bg-purple-500",
-    badge: "bg-purple-100 text-purple-700"
-  },
-  amber: {
-    bg: "bg-amber-50 border-amber-100 text-amber-600 hover:bg-amber-100/70",
-    border: "border-amber-400",
-    dot: "bg-amber-500",
-    badge: "bg-amber-100 text-amber-700"
-  }
-};
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -120,18 +77,7 @@ const Dashboard = () => {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
 
-  // Hotel Booking States
-  const [isHotelBookingOpen, setIsHotelBookingOpen] = useState(false);
-  const [selectedRoomForBooking, setSelectedRoomForBooking] = useState<{ name: string; index: number } | null>(null);
-  const [selectedOccupiedRoom, setSelectedOccupiedRoom] = useState<any | null>(null);
-  const [hotelBookings, setHotelBookings] = useState<any[]>([]);
 
-  // Kennel Customization States
-  const [isEditRoomsMode, setIsEditRoomsMode] = useState(false);
-  const [editingRoomIndex, setEditingRoomIndex] = useState<number | null>(null);
-  const [tempRoomName, setTempRoomName] = useState('');
-  const [tempRoomColor, setTempRoomColor] = useState<RoomConfig['color']>('gray');
-  const [roomsConfig, setRoomsConfig] = useState<RoomConfig[]>([]);
 
   // Fetch today's attendance status for the current user
   const { data: todayAttendance = [] } = useQuery({
@@ -176,114 +122,20 @@ const Dashboard = () => {
     }
   });
 
-  // Load & Save Room Configurations from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('kennel_rooms_config');
-    if (saved) {
-      try {
-        setRoomsConfig(JSON.parse(saved));
-      } catch (e) {
-        initializeDefaultRooms();
-      }
-    } else {
-      initializeDefaultRooms();
-    }
-
-    // Load Hotel Bookings
-    const savedBookings = localStorage.getItem('hotel_bookings');
-    if (savedBookings) {
-      try {
-        setHotelBookings(JSON.parse(savedBookings));
-      } catch (e) {
-        setHotelBookings([]);
-      }
-    }
-  }, [kennelCapacity]);
-
-  const initializeDefaultRooms = () => {
-    const defaults = Array.from({ length: kennelCapacity }).map((_, idx) => ({
-      id: idx,
-      name: (idx + 1).toString().padStart(2, '0'),
-      color: 'gray' as RoomConfig['color']
-    }));
-    setRoomsConfig(defaults);
-    localStorage.setItem('kennel_rooms_config', JSON.stringify(defaults));
-  };
-
-  const handleSaveRoomEdit = () => {
-    if (editingRoomIndex === null) return;
-    if (!tempRoomName.trim()) {
-      toast.error("กรุณาระบุชื่อห้องพัก");
-      return;
-    }
-
-    const updated = [...roomsConfig];
-    updated[editingRoomIndex] = {
-      ...updated[editingRoomIndex],
-      name: tempRoomName.trim(),
-      color: tempRoomColor
-    };
-
-    setRoomsConfig(updated);
-    localStorage.setItem('kennel_rooms_config', JSON.stringify(updated));
-    setEditingRoomIndex(null);
-    toast.success("บันทึกการตั้งค่าห้องพักเรียบร้อยแล้ว");
-  };
-
-  // เพิ่มจำนวนห้องพัก
-  const handleIncreaseCapacity = () => {
-    const newCapacity = kennelCapacity + 1;
-    // อัปเดตค่าใน Zustand Store
-    useStore.setState({ kennelCapacity: newCapacity });
-
-    // อัปเดตค่าใน Local Config
-    const updated = [...roomsConfig, {
-      id: newCapacity - 1,
-      name: newCapacity.toString().padStart(2, '0'),
-      color: 'gray' as const
-    }];
-    setRoomsConfig(updated);
-    localStorage.setItem('kennel_rooms_config', JSON.stringify(updated));
-    toast.success(`เพิ่มห้องพักเป็น ${newCapacity} ห้องเรียบร้อยแล้ว`);
-  };
-
-  // ลดจำนวนห้องพัก
-  const handleDecreaseCapacity = () => {
-    if (kennelCapacity <= 1) {
-      toast.error("ต้องมีห้องพักอย่างน้อย 1 ห้อง");
-      return;
-    }
-    const newCapacity = kennelCapacity - 1;
-    // อัปเดตค่าใน Zustand Store
-    useStore.setState({ kennelCapacity: newCapacity });
-
-    // อัปเดตค่าใน Local Config
-    const updated = roomsConfig.slice(0, newCapacity);
-    setRoomsConfig(updated);
-    localStorage.setItem('kennel_rooms_config', JSON.stringify(updated));
-    toast.success(`ลดห้องพักเหลือ ${newCapacity} ห้องเรียบร้อยแล้ว`);
-  };
-
-  // บันทึกการจองโรงแรมสัตว์เลี้ยง
-  const handleSaveHotelBooking = (bookingData: any) => {
-    const updatedBookings = [...hotelBookings, bookingData];
-    setHotelBookings(updatedBookings);
-    localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
-    setIsHotelBookingOpen(false);
-    setSelectedRoomForBooking(null);
-    toast.success(`จองห้องพัก ${bookingData.roomName} ให้กับ ${bookingData.petName} เรียบร้อยแล้ว!`);
-  };
-
-  // เช็คเอาท์ / คืนห้องพักโรงแรมสัตว์เลี้ยง
-  const handleCheckOutRoom = (roomIndex: number) => {
-    if (!window.confirm("คุณต้องการทำรายการ Check-out และคืนห้องพักนี้ใช่หรือไม่?")) return;
-
-    const updatedBookings = hotelBookings.filter(b => b.roomIndex !== roomIndex);
-    setHotelBookings(updatedBookings);
-    localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings));
-    setSelectedOccupiedRoom(null);
-    toast.success("ทำรายการ Check-out และคืนห้องพักเรียบร้อยแล้ว");
-  };
+  // Fetch Active Hotel Bookings for dashboard stats
+  const { data: hotelBookings = [] } = useQuery({
+    queryKey: ['hotel_bookings_active_dashboard', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('hotel_bookings')
+        .select('*')
+        .eq('store_id', storeId)
+        .in('status', ['reserved', 'checked_in']);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!storeId && storeId !== 'default-store',
+  });
 
   const todayQueue = queue.filter(q => q.date === today);
   const todayTransactions = transactions.filter(t => t.date === today);
@@ -332,36 +184,7 @@ const Dashboard = () => {
       .slice(0, 10);
   }, [customers, transactions]);
 
-  // 3. ตารางห้องพักโรงแรมสัตว์เลี้ยงแบบโต้ตอบได้ (Interactive Hotel Rooms Grid)
-  const hotelRooms = useMemo(() => {
-    if (roomsConfig.length === 0) return [];
-    return roomsConfig.map((room, idx) => {
-      // ค้นหาข้อมูลการจองโรงแรมสัตว์เลี้ยงที่ตรงกับห้องนี้
-      const occupiedBy = hotelBookings.find(b => b.roomIndex === idx) || null;
-      return {
-        ...room,
-        occupiedBy
-      };
-    });
-  }, [roomsConfig, hotelBookings]);
-
   const occupiedKennels = hotelBookings.length;
-
-  const handleRoomClick = (room: any, idx: number) => {
-    if (isEditRoomsMode) {
-      setEditingRoomIndex(idx);
-      setTempRoomName(room.name);
-      setTempRoomColor(room.color);
-      return;
-    }
-
-    if (room.occupiedBy) {
-      setSelectedOccupiedRoom(room.occupiedBy);
-    } else {
-      setSelectedRoomForBooking({ name: room.name, index: idx });
-      setIsHotelBookingOpen(true);
-    }
-  };
 
   const busyHoursData = useMemo(() => {
     const hoursMap: Record<string, number> = {};
@@ -753,89 +576,7 @@ const Dashboard = () => {
 
             {/* Kennel Status & Special Care */}
             <div className="space-y-8">
-              {/* Kennel Occupancy */}
-              <div className="bg-white/80 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] p-8 rounded-[3rem]">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><Home size={20} /></div>
-                    <h3 className="text-lg font-black text-[#1A1F3D]">{t.kennelStatus}</h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-gray-400">{occupiedKennels}/{kennelCapacity}</span>
-                    <button
-                      onClick={() => setIsEditRoomsMode(!isEditRoomsMode)}
-                      className={cn(
-                        "p-2 rounded-xl transition-all border",
-                        isEditRoomsMode
-                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
-                          : "bg-white border-gray-100 text-gray-400 hover:bg-gray-50"
-                      )}
-                      title="ตั้งค่าห้องพัก"
-                    >
-                      <SettingsIcon size={14} className={cn(isEditRoomsMode && "animate-spin")} />
-                    </button>
-                  </div>
-                </div>
 
-                {isEditRoomsMode && (
-                  <div className="mb-4 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl space-y-3 animate-in slide-in-from-top-2">
-                    <p className="text-[10px] font-bold text-indigo-700 leading-relaxed">
-                      💡 โหมดตั้งค่าเปิดอยู่: คลิกที่ห้องพักเพื่อแก้ไขชื่อห้องและเปลี่ยนสีประจำห้อง
-                    </p>
-                    <div className="flex items-center justify-between pt-2 border-t border-indigo-100/50">
-                      <span className="text-[10px] font-black uppercase text-indigo-900">ปรับจำนวนห้องพัก:</span>
-                      <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-xl shadow-sm">
-                        <button
-                          type="button"
-                          onClick={handleDecreaseCapacity}
-                          className="w-6 h-6 rounded-lg bg-gray-50 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-gray-400 transition-colors"
-                        >
-                          <Minus size={12} strokeWidth={3} />
-                        </button>
-                        <span className="text-xs font-black text-[#1A1F3D] w-6 text-center">{kennelCapacity}</span>
-                        <button
-                          type="button"
-                          onClick={handleIncreaseCapacity}
-                          className="w-6 h-6 rounded-lg bg-gray-50 hover:bg-green-50 hover:text-green-500 flex items-center justify-center text-gray-400 transition-colors"
-                        >
-                          <Plus size={12} strokeWidth={3} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-4 gap-2.5">
-                  {hotelRooms.map((room, idx) => {
-                    const colorConfig = COLOR_MAP[room.color || 'gray'];
-                    return (
-                      <button
-                        key={room.id ?? idx}
-                        onClick={() => handleRoomClick(room, idx)}
-                        className={cn(
-                          "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-[10px] font-black relative overflow-hidden",
-                          isEditRoomsMode && "animate-pulse border-dashed border-indigo-400",
-                          room.occupiedBy
-                            ? "bg-[#1A1F3D] text-[#D9ED5F] shadow-sm shadow-[#1A1F3D]/10"
-                            : colorConfig.bg
-                        )}
-                        style={{
-                          borderColor: room.occupiedBy ? COLOR_MAP[room.color || 'gray'].dot.replace('bg-', '') : undefined
-                        }}
-                        title={room.occupiedBy ? `${room.occupiedBy.petName} (${room.occupiedBy.ownerName})` : `Room ${room.name} (Available)`}
-                      >
-                        <span>{room.name}</span>
-                        {room.occupiedBy && (
-                          <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-[8px] text-gray-400 font-bold uppercase tracking-wider mt-4 text-center">
-                  {isEditRoomsMode ? "* คลิกห้องเพื่อแก้ไขชื่อและสี" : "* คลิกที่ห้องเพื่อจองคิว หรือดูสถานะ"}
-                </p>
-              </div>
 
               {/* Special Care Alerts */}
               <div className="bg-white/80 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] p-8 rounded-[3rem] space-y-6">
@@ -869,161 +610,6 @@ const Dashboard = () => {
       {/* Modals */}
       {isBookingOpen && <BookingModal onClose={() => setIsBookingOpen(false)} />}
       {isCustomerOpen && <CustomerModal onClose={() => setIsCustomerOpen(false)} />}
-
-      {/* Dedicated Hotel Booking Modal */}
-      {isHotelBookingOpen && selectedRoomForBooking && (
-        <HotelBookingModal
-          roomName={selectedRoomForBooking.name}
-          roomIndex={selectedRoomForBooking.index}
-          onClose={() => {
-            setIsHotelBookingOpen(false);
-            setSelectedRoomForBooking(null);
-          }}
-          onSave={handleSaveHotelBooking}
-        />
-      )}
-
-      {/* Occupied Room Details Modal */}
-      {selectedOccupiedRoom && (
-        <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-[#1A1F3D] rounded-2xl flex items-center justify-center text-[#D9ED5F]">
-                  <Home size={24} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-[#1A1F3D]">รายละเอียดการเข้าพัก</h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ห้องพักหมายเลข: {selectedOccupiedRoom.roomName}</p>
-                </div>
-              </div>
-              <button onClick={() => setSelectedOccupiedRoom(null)} className="p-2 hover:bg-white rounded-xl transition-all">
-                <X size={20} className="text-gray-400" />
-              </button>
-            </div>
-
-            <div className="p-8 space-y-6">
-              {/* Pet Info */}
-              <div className="flex items-center gap-4 bg-[#F5F6FA] p-4 rounded-2xl">
-                <img src={selectedOccupiedRoom.petImage} className="w-16 h-16 rounded-xl object-cover shadow-sm" alt={selectedOccupiedRoom.petName} />
-                <div>
-                  <h4 className="text-base font-black text-[#1A1F3D]">{selectedOccupiedRoom.petName}</h4>
-                  <p className="text-xs text-gray-400 font-bold uppercase">{selectedOccupiedRoom.petSpecies} • {selectedOccupiedRoom.petBreed}</p>
-                </div>
-              </div>
-
-              {/* Owner Info */}
-              <div className="space-y-1">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">เจ้าของสัตว์เลี้ยง (Owner)</span>
-                <p className="text-sm font-bold text-[#1A1F3D]">{selectedOccupiedRoom.customerName}</p>
-                <p className="text-xs text-gray-400 font-medium">เบอร์โทร: {selectedOccupiedRoom.customerPhone}</p>
-              </div>
-
-              {/* Stay Dates */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-50">
-                <div>
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Check-in</span>
-                  <p className="text-xs font-bold text-[#1A1F3D] mt-1">{selectedOccupiedRoom.checkInDate}</p>
-                  <p className="text-[10px] text-gray-400 font-medium">เวลา {selectedOccupiedRoom.checkInTime} น.</p>
-                </div>
-                <div>
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Check-out</span>
-                  <p className="text-xs font-bold text-[#1A1F3D] mt-1">{selectedOccupiedRoom.checkOutDate}</p>
-                  <p className="text-[10px] text-gray-400 font-medium">เวลา {selectedOccupiedRoom.checkOutTime} น.</p>
-                </div>
-              </div>
-
-              {/* Stay Duration */}
-              <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex justify-between items-center">
-                <span className="text-xs font-black text-indigo-600 uppercase">ระยะเวลาเข้าพัก</span>
-                <span className="text-sm font-black text-[#1A1F3D]">{selectedOccupiedRoom.stayDays} คืน</span>
-              </div>
-
-              {/* Check-out Button */}
-              <button
-                onClick={() => handleCheckOutRoom(selectedOccupiedRoom.roomIndex)}
-                className="w-full bg-red-500 hover:bg-red-600 text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/10 active:scale-95 transition-all"
-              >
-                <LogOut size={16} /> Check-out / คืนห้องพัก
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Room Customization Modal */}
-      {editingRoomIndex !== null && (
-        <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-[#1A1F3D] rounded-2xl flex items-center justify-center text-white">
-                  <SettingsIcon size={24} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-[#1A1F3D]">ตั้งค่าห้องพัก</h3>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Room Customization</p>
-                </div>
-              </div>
-              <button onClick={() => setEditingRoomIndex(null)} className="p-2 hover:bg-white rounded-xl transition-all">
-                <X size={20} className="text-gray-400" />
-              </button>
-            </div>
-
-            <div className="p-8 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อห้องพัก (Room Name)</label>
-                <input
-                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                  value={tempRoomName}
-                  onChange={e => setTempRoomName(e.target.value)}
-                  placeholder="เช่น 01, VIP 1, Suite"
-                  maxLength={10}
-                />
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">สีประจำห้อง (Room Color)</label>
-                <div className="grid grid-cols-6 gap-2 bg-[#F5F6FA] p-2 rounded-2xl">
-                  {(Object.keys(COLOR_MAP) as RoomConfig['color'][]).map((colorKey) => {
-                    const config = COLOR_MAP[colorKey];
-                    return (
-                      <button
-                        key={colorKey}
-                        type="button"
-                        onClick={() => setTempRoomColor(colorKey)}
-                        className={cn(
-                          "aspect-square rounded-xl flex items-center justify-center transition-all border-2",
-                          config.bg,
-                          tempRoomColor === colorKey ? "border-indigo-600 scale-110 shadow-sm" : "border-transparent"
-                        )}
-                        title={colorKey}
-                      >
-                        <div className={cn("w-3 h-3 rounded-full", config.dot)} />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setEditingRoomIndex(null)}
-                  className="flex-1 py-4 rounded-2xl text-xs font-black text-gray-400 hover:bg-gray-50 transition-all"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  onClick={handleSaveRoomEdit}
-                  className="flex-[2] bg-[#1A1F3D] text-white font-black py-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#1A1F3D]/10 active:scale-95 transition-all"
-                >
-                  <Check size={16} /> บันทึก
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <TabsContent value="crm" className="flex-1 overflow-y-auto px-6 lg:px-12 py-10 m-0 border-none outline-none data-[state=active]:flex flex-col bg-[#F9F9F9]">
         <CustomerDashboard />

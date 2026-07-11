@@ -1,21 +1,21 @@
-"use client";
-
 import React, { useState, useMemo } from 'react';
-import { X, Calendar, Clock, User, Dog, Plus, ArrowRight, Home } from 'lucide-react';
+import { X, Calendar, User, ArrowRight, Home } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format, differenceInDays, parseISO } from 'date-fns';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface HotelBookingModalProps {
+  roomId: string;
   roomName: string;
-  roomIndex: number;
   onClose: () => void;
-  onSave: (booking: any) => void;
 }
 
-const HotelBookingModal = ({ roomName, roomIndex, onClose, onSave }: HotelBookingModalProps) => {
-  const { customers } = useStore();
+const HotelBookingModal = ({ roomId, roomName, onClose }: HotelBookingModalProps) => {
+  const { customers, storeId, currentUser } = useStore();
+  const queryClient = useQueryClient();
   
   // Search & Selection States
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,6 +28,9 @@ const HotelBookingModal = ({ roomName, roomIndex, onClose, onSave }: HotelBookin
   const [checkInTime, setCheckInTime] = useState('12:00');
   const [checkOutDate, setCheckOutDate] = useState(format(new Date(Date.now() + 86400000), 'yyyy-MM-dd'));
   const [checkOutTime, setCheckOutTime] = useState('12:00');
+  
+  const [depositAmount, setDepositAmount] = useState(0);
+  const [specialRequests, setSpecialRequests] = useState('');
 
   // Derived Data
   const filteredCustomers = useMemo(() => {
@@ -47,7 +50,7 @@ const HotelBookingModal = ({ roomName, roomIndex, onClose, onSave }: HotelBookin
       const start = parseISO(checkInDate);
       const end = parseISO(checkOutDate);
       const diff = differenceInDays(end, start);
-      return diff > 0 ? diff : 1; // อย่างน้อย 1 คืน
+      return diff > 0 ? diff : 1;
     } catch (e) {
       return 1;
     }
@@ -59,6 +62,33 @@ const HotelBookingModal = ({ roomName, roomIndex, onClose, onSave }: HotelBookin
     setIsSearching(false);
     setSelectedPetId('');
   };
+
+  const createBooking = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('hotel_bookings').insert([{
+        store_id: storeId,
+        room_id: roomId,
+        customer_id: selectedOwner?.id,
+        pet_id: selectedPet?.id,
+        check_in_date: `${checkInDate}T${checkInTime}:00`,
+        check_out_expected: `${checkOutDate}T${checkOutTime}:00`,
+        status: 'reserved',
+        deposit_amount: depositAmount,
+        special_requests: specialRequests,
+        created_by: currentUser?.id
+      }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hotel_bookings_active'] });
+      queryClient.invalidateQueries({ queryKey: ['hotel_rooms'] });
+      toast.success('สร้างการจองสำเร็จ');
+      onClose();
+    },
+    onError: (err) => {
+      toast.error('เกิดข้อผิดพลาด: ' + err.message);
+    }
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,25 +102,7 @@ const HotelBookingModal = ({ roomName, roomIndex, onClose, onSave }: HotelBookin
       return;
     }
 
-    const bookingData = {
-      roomIndex,
-      roomName,
-      customerId: selectedOwner.id,
-      customerName: selectedOwner.name,
-      customerPhone: selectedOwner.phone,
-      petId: selectedPet.id,
-      petName: selectedPet.name,
-      petImage: selectedPet.image,
-      petSpecies: selectedPet.species,
-      petBreed: selectedPet.breed,
-      checkInDate,
-      checkInTime,
-      checkOutDate,
-      checkOutTime,
-      stayDays
-    };
-
-    onSave(bookingData);
+    createBooking.mutate();
   };
 
   return (
@@ -104,7 +116,7 @@ const HotelBookingModal = ({ roomName, roomIndex, onClose, onSave }: HotelBookin
             </div>
             <div>
               <h3 className="text-xl font-black text-[#1A1F3D]">จองห้องพักโรงแรมสัตว์เลี้ยง</h3>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ห้องพักหมายเลข: {roomName}</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ห้องพัก: {roomName}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all">
@@ -242,6 +254,27 @@ const HotelBookingModal = ({ roomName, roomIndex, onClose, onSave }: HotelBookin
               </div>
             </div>
           </div>
+          
+          <div className="space-y-4 pt-4 border-t border-gray-50">
+             <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1 block">หมายเหตุ / ความต้องการพิเศษ</label>
+                <textarea 
+                  className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-xs font-bold min-h-[80px]"
+                  placeholder="เช่น ต้องป้อนยา..."
+                  value={specialRequests}
+                  onChange={e => setSpecialRequests(e.target.value)}
+                />
+             </div>
+             <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1 block">มัดจำล่วงหน้า (บาท)</label>
+                <input 
+                  type="number"
+                  className="w-full bg-[#F5F6FA] border-none rounded-xl px-4 py-3 text-xs font-bold"
+                  value={depositAmount}
+                  onChange={e => setDepositAmount(Number(e.target.value))}
+                />
+             </div>
+          </div>
 
           {/* 3. Stay Summary */}
           <div className="bg-indigo-50/50 border border-indigo-100 p-6 rounded-[32px] flex items-center justify-between">
@@ -257,10 +290,10 @@ const HotelBookingModal = ({ roomName, roomIndex, onClose, onSave }: HotelBookin
           {/* Submit Button */}
           <button 
             type="submit"
-            disabled={!selectedOwnerId || !selectedPetId}
+            disabled={!selectedOwnerId || !selectedPetId || createBooking.isPending}
             className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
           >
-            ยืนยันการจองห้องพัก <ArrowRight size={18} />
+            {createBooking.isPending ? 'กำลังบันทึก...' : <>ยืนยันการจองห้องพัก <ArrowRight size={18} /></>}
           </button>
         </form>
       </div>

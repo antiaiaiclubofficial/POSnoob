@@ -19,6 +19,7 @@ export const translations = {
     promotions: "Promotions",
     coupons: "Coupons",
     accounting: "Sales & Procurement",
+    hotel: "Pet Hotel",
     
     // Inventory Sub-modules
     allInventory: "All Inventory",
@@ -279,6 +280,7 @@ export const translations = {
     promotions: "โปรโมชั่น",
     coupons: "คูปอง",
     accounting: "ฝ่ายขายและจัดซื้อ",
+    hotel: "โรงแรมสัตว์เลี้ยง",
 
     // Inventory Sub-modules
     allInventory: "คลังสินค้าทั้งหมด",

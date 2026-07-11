@@ -105,8 +105,8 @@ export const useStore = create<AppState>()((set, get) => ({
   specificHolidays: [],
 
   rolePermissions: {
-    'superadmin': ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings'],
-    'Admin': ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings'],
+    'superadmin': ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings', '/hotel'],
+    'Admin': ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings', '/hotel'],
     'Groomer': ['/', '/pos', '/queue', '/customers', '/inventory'],
     'Assistant': ['/', '/queue', '/customers']
   },

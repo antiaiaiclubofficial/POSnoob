@@ -702,3 +702,65 @@ export interface TaxRecord {
   journalEntryId?: string;
   status: 'Pending' | 'Filed' | 'Cancelled';
 }
+
+// --- Hotel System Types ---
+export interface HotelRoomType {
+  id: string;
+  typeName: string;
+  color: 'gray' | 'blue' | 'pink' | 'green' | 'purple' | 'amber';
+  sortOrder: number;
+}
+
+export interface HotelRoom {
+  id: string;
+  roomName: string;
+  roomTypeId: string | null;
+  pricePerNight: number;
+  capacity: number;
+  amenities: string[];
+  description?: string;
+  photoUrl?: string;
+  status: 'available' | 'occupied' | 'cleaning' | 'maintenance';
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface HotelBooking {
+  id: string;
+  bookingCode?: string;
+  roomId: string;
+  customerId: string;
+  petId: string;
+  checkInDate: string;
+  checkOutExpected: string;
+  checkOutActual?: string | null;
+  status: 'reserved' | 'checked_in' | 'checked_out' | 'cancelled';
+  specialRequests?: string;
+  healthNotes?: string;
+  depositAmount: number;
+  notes?: string;
+  customer?: Customer;
+  pet?: Pet;
+  room?: HotelRoom;
+}
+
+export interface HotelActivity {
+  id: string;
+  bookingId: string;
+  petId: string;
+  activityType: 'feeding' | 'walk' | 'medication' | 'grooming' | 'playtime' | 'cleaning' | 'custom';
+  title?: string;
+  scheduledTime: string;
+  status: 'pending' | 'done' | 'missed';
+  assignedStaffId?: string;
+  note?: string;
+}
+
+export interface HotelBookingCharge {
+  id: string;
+  bookingId: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  chargeType: 'service' | 'product';
+}
