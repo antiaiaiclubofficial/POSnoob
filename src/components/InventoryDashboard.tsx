@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 "use client";
 
 import React, { useMemo, useState } from 'react';
+import { DateRangeDropdown, DateRange } from '@/components/ui/date-range-dropdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ResponsiveContainer,
@@ -76,7 +77,8 @@ const PIE_COLORS = [COLORS.primary, COLORS.purple, COLORS.accentPeach, COLORS.ac
 export default function InventoryDashboard() {
   const { inventory, currency, adjustStock, stockLogs, language, transactions, partners, addPurchaseRequest } = useStore();
   const [reorderingId, setReorderingId] = useState<string | null>(null);
-  const [kpiDateRange, setKpiDateRange] = useState<'today' | 'yesterday' | '7days' | '30days' | 'q1' | 'q2' | 'q3' | 'q4' | 'yearly' | 'all'>('all');
+  const [kpiDateRange, setKpiDateRange] = useState<string>('all');
+  const [kpiCustomDateRange, setKpiCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
   const [selectedSalesDate, setSelectedSalesDate] = useState<string | null>(null);
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
@@ -275,27 +277,12 @@ export default function InventoryDashboard() {
 
       if (isNaN(txDate.getTime())) return true;
 
-      switch (kpiDateRange) {
-        case 'today':
-          return txDate >= startOfToday && txDate < startOfTomorrow;
-        case 'yesterday':
-          return txDate >= startOfYesterday && txDate < startOfToday;
-        case '7days':
-          return txDate >= sevenDaysAgo;
-        case '30days':
-          return txDate >= thirtyDaysAgo;
-        case 'q1': return txDate >= q1Start && txDate < q2Start;
-        case 'q2': return txDate >= q2Start && txDate < q3Start;
-        case 'q3': return txDate >= q3Start && txDate < q4Start;
-        case 'q4': return txDate >= q4Start && txDate < nextYearStart;
-        case 'yearly':
-          return txDate >= yearlyAgo;
-        case 'all':
-        default:
-          return true;
-      }
+      if (!kpiCustomDateRange?.from) return true;
+      const fromTime = kpiCustomDateRange.from.getTime();
+      const toTime = kpiCustomDateRange.to ? kpiCustomDateRange.to.getTime() : new Date().getTime();
+      return txDate.getTime() >= fromTime && txDate.getTime() <= toTime;
     });
-  }, [processedTransactions, kpiDateRange]);
+  }, [processedTransactions, kpiCustomDateRange]);
 
   const bestSellers = useMemo(() => {
     const counts: Record<string, { id: string; title: string; quantity: number; totalRevenue: number }> = {};
@@ -717,27 +704,12 @@ export default function InventoryDashboard() {
 
       if (isNaN(txDate.getTime())) return true;
 
-      switch (kpiDateRange) {
-        case 'today':
-          return txDate >= startOfToday && txDate < startOfTomorrow;
-        case 'yesterday':
-          return txDate >= startOfYesterday && txDate < startOfToday;
-        case '7days':
-          return txDate >= sevenDaysAgo;
-        case '30days':
-          return txDate >= thirtyDaysAgo;
-        case 'q1': return txDate >= q1Start && txDate < q2Start;
-        case 'q2': return txDate >= q2Start && txDate < q3Start;
-        case 'q3': return txDate >= q3Start && txDate < q4Start;
-        case 'q4': return txDate >= q4Start && txDate < nextYearStart;
-        case 'yearly':
-          return txDate >= yearlyAgo;
-        case 'all':
-        default:
-          return true;
-      }
+      if (!kpiCustomDateRange?.from) return true;
+      const fromTime = kpiCustomDateRange.from.getTime();
+      const toTime = kpiCustomDateRange.to ? kpiCustomDateRange.to.getTime() : new Date().getTime();
+      return txDate.getTime() >= fromTime && txDate.getTime() <= toTime;
     });
-  }, [transactions, kpiDateRange]);
+  }, [transactions, kpiCustomDateRange]);
 
   // Dynamic comparison label based on selected period
   const trendPeriodLabel = useMemo(() => {
@@ -1316,49 +1288,17 @@ export default function InventoryDashboard() {
             </span>
 
             {/* KPI Period Filter Pills */}
-            <div className="flex bg-[#F3F3F3] p-1 rounded-[16px] border border-gray-50 shadow-inner w-fit">
-              {(['today', 'yesterday', '7days', '30days'] as const).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setKpiDateRange(r)}
-                  className={cn(
-                    "px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap",
-                    kpiDateRange === r
-                      ? "bg-white text-[#18234A] shadow-sm"
-                      : "text-gray-400 hover:text-gray-600"
-                  )}
-                >
-                  {r === 'today'
-                    ? (language === 'th' ? 'วันนี้' : 'Today')
-                    : r === 'yesterday'
-                      ? (language === 'th' ? 'เมื่อวาน' : 'Yesterday')
-                      : r === '7days'
-                        ? (language === 'th' ? '7 วัน' : '7 Days')
-                        : (language === 'th' ? '30 วัน' : '30 Days')
+            <div className="flex w-fit z-50 relative">
+              <DateRangeDropdown
+                language={language}
+                value={kpiCustomDateRange}
+                onChange={(range, preset) => {
+                  setKpiCustomDateRange(range);
+                  if (preset) {
+                    setKpiDateRange(preset);
                   }
-                </button>
-              ))}
-              <div className="relative flex items-center">
-                <select
-                  value={['q1', 'q2', 'q3', 'q4', 'yearly', 'all'].includes(kpiDateRange) ? kpiDateRange : 'all'}
-                  onChange={(e) => setKpiDateRange(e.target.value as any)}
-                  className={cn(
-                    "appearance-none bg-transparent outline-none cursor-pointer pl-3 pr-6 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all",
-                    ['q1', 'q2', 'q3', 'q4', 'yearly', 'all'].includes(kpiDateRange)
-                      ? "bg-white text-[#18234A] shadow-sm"
-                      : "text-gray-400 hover:text-gray-600"
-                  )}
-                >
-                  <option value="all">{language === 'th' ? 'ทั้งหมด' : 'All'}</option>
-                  <option value="q1">{language === 'th' ? 'ไตรมาส 1 (Q1)' : 'Quarter 1 (Q1)'}</option>
-                  <option value="q2">{language === 'th' ? 'ไตรมาส 2 (Q2)' : 'Quarter 2 (Q2)'}</option>
-                  <option value="q3">{language === 'th' ? 'ไตรมาส 3 (Q3)' : 'Quarter 3 (Q3)'}</option>
-                  <option value="q4">{language === 'th' ? 'ไตรมาส 4 (Q4)' : 'Quarter 4 (Q4)'}</option>
-                  <option value="yearly">{language === 'th' ? 'รายปี' : 'Yearly'}</option>
-                </select>
-                <ChevronDown className="absolute right-2 w-3 h-3 text-gray-400 pointer-events-none" />
-              </div>
+                }}
+              />
             </div>
           </div>
 

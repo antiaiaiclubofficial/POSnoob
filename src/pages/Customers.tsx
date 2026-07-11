@@ -23,6 +23,7 @@ const Customers = () => {
   const t = translations[language];
   
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [savedSegment, setSavedSegment] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetailOnMobile, setShowDetailOnMobile] = useState(false);
   
@@ -195,8 +196,13 @@ const Customers = () => {
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
-  const handleSelectCustomer = (id: string) => {
+  const handleSelectCustomer = (id: string, segment?: any) => {
     setSelectedCustomerId(id);
+    if (segment) {
+      setSavedSegment(segment);
+    } else {
+      setSavedSegment(null);
+    }
     if (isMobile) setShowDetailOnMobile(true);
   };
 
@@ -313,11 +319,18 @@ const Customers = () => {
       )}>
         {selectedCustomer ? (
           <div className="p-6 lg:p-10 max-w-5xl mx-auto">
-            {isMobile && (
-              <button onClick={() => setShowDetailOnMobile(false)} className="flex items-center gap-2 text-gray-400 font-bold text-xs mb-6 pt-14">
-                <ChevronLeft size={16} /> {language === 'th' ? 'กลับไปยังรายชื่อ' : 'Back to List'}
-              </button>
-            )}
+            <button 
+              onClick={() => {
+                setSelectedCustomerId(null);
+                if (isMobile) setShowDetailOnMobile(false);
+              }} 
+              className={cn(
+                "flex items-center gap-2 text-gray-400 font-bold text-xs mb-6 hover:text-[#1A1F3D] transition-colors",
+                isMobile ? "pt-14" : ""
+              )}
+            >
+              <ChevronLeft size={16} /> {language === 'th' ? 'ย้อนกลับ' : 'Back'}
+            </button>
 
             <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 mb-8 flex flex-col sm:flex-row justify-between items-start gap-6 group">
               <div className="flex gap-6">
@@ -420,7 +433,7 @@ const Customers = () => {
           </div>
         ) : (
           <div className="p-6 lg:p-10">
-            <CustomerDashboard />
+            <CustomerDashboard onSelectCustomer={handleSelectCustomer} initialSegment={savedSegment} />
           </div>
         )}
       </div>

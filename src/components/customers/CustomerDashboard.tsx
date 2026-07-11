@@ -1,14 +1,31 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { translations } from '@/utils/translations';
 import { motion } from 'framer-motion';
-import { Users, Cat, Star, TrendingUp, Trophy, Award, Filter, ChevronDown } from 'lucide-react';
+import { Users, Cat, Star, TrendingUp, Trophy, Award, Filter, ChevronDown, Search, ShoppingBag, Calendar, Phone } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { DateRangeDropdown, DateRange } from '@/components/ui/date-range-dropdown';
 
-const CustomerDashboard = () => {
+interface CustomerDashboardProps {
+  onSelectCustomer?: (id: string, segment?: any) => void;
+  initialSegment?: {
+    mode: 'loyalty' | 'tier';
+    id: string;
+    label: string;
+    color: string;
+  } | null;
+}
+
+const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer, initialSegment = null }) => {
   const { customers, transactions, language, currency, tierRules, storeId } = useStore();
   const t = translations[language];
 
@@ -31,6 +48,27 @@ const CustomerDashboard = () => {
 
   // State for toggling ratio mode
   const [ratioMode, setRatioMode] = useState<'loyalty' | 'tier'>('loyalty');
+  const [selectedSegment, setSelectedSegment] = useState<{
+    mode: 'loyalty' | 'tier';
+    id: string;
+    label: string;
+    color: string;
+  } | null>(initialSegment);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const isDragging = useRef(false);
+
+  const filteredTransactions = useMemo(() => {
+    if (!transactions) return [];
+    if (!dateRange?.from) return transactions;
+    
+    return transactions.filter(tx => {
+      const txTime = new Date(tx.createdAt || tx.date).getTime();
+      const fromTime = dateRange.from!.getTime();
+      const toTime = dateRange.to ? dateRange.to.getTime() : new Date().getTime();
+      return txTime >= fromTime && txTime <= toTime;
+    });
+  }, [transactions, dateRange]);
 
   // Calculations
   const stats = useMemo(() => {
@@ -45,8 +83,8 @@ const CustomerDashboard = () => {
 
     let walkInCustomers = 0;
 
-    if (transactions) {
-      transactions.forEach(tx => {
+    if (filteredTransactions) {
+      filteredTransactions.forEach(tx => {
         if (!tx.customerId || tx.customerId === 'walk-in' || tx.customerId === 'walk-id') {
           walkInCustomers++;
         } else if (tx.customerId) {
@@ -250,8 +288,80 @@ const CustomerDashboard = () => {
       funnelStages,
       loyaltyDataArray,
       tierDataArray,
+      customerStats,
     };
-  }, [customers, language, transactions, tierRules, dbTiers]);
+  }, [customers, language, filteredTransactions, tierRules, dbTiers]);
+
+  const getFilteredItems = () => {
+    if (!selectedSegment) return [];
+    
+    const todayTime = new Date().setHours(0, 0, 0, 0);
+    const twoMonthsAgoTime = todayTime - 60 * 24 * 60 * 60 * 1000;
+
+    if (selectedSegment.mode === 'loyalty') {
+      if (selectedSegment.id === 'walkin') {
+        const walkInTx = filteredTransactions ? filteredTransactions.filter(tx => !tx.customerId || tx.customerId === 'walk-in' || tx.customerId === 'walk-id') : [];
+        return [...walkInTx].sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
+      }
+
+      return stats.customerStats.filter(c => {
+        const isChurned = c.visits > 0 && c.lastVisitTime > 0 && c.lastVisitTime < twoMonthsAgoTime;
+        if (selectedSegment.id === 'churned') return isChurned;
+        if (isChurned) return false;
+        
+        if (selectedSegment.id === 'onetime') return c.visits === 1;
+        if (selectedSegment.id === 'regular') return c.visits >= 2 && c.visits <= 4;
+        if (selectedSegment.id === 'loyal') return c.visits >= 5;
+        return false;
+      });
+    } else {
+      if (selectedSegment.id === 'walkin') {
+        const walkInTx = filteredTransactions ? filteredTransactions.filter(tx => !tx.customerId || tx.customerId === 'walk-in' || tx.customerId === 'walk-id') : [];
+        return [...walkInTx].sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
+      }
+
+      return stats.customerStats.filter(c => {
+        if (!c.membership) return false;
+        const memLower = String(c.membership).toLowerCase().trim();
+        const levelLower = String(selectedSegment.id).toLowerCase().trim();
+        return memLower === levelLower ||
+          levelLower.includes(memLower) ||
+          memLower.includes(levelLower);
+      });
+    }
+  };
+
+  const filteredItems = useMemo(() => {
+    const items = getFilteredItems();
+    if (!searchQuery) return items;
+    const query = searchQuery.toLowerCase().trim();
+
+    if (selectedSegment?.id === 'walkin') {
+      return (items as any[]).filter(tx => 
+        (tx.id && tx.id.toLowerCase().includes(query)) ||
+        (tx.paymentMethod && tx.paymentMethod.toLowerCase().includes(query)) ||
+        (tx.amount && String(tx.amount).includes(query)) ||
+        (tx.staffName && tx.staffName.toLowerCase().includes(query))
+      );
+    }
+
+    return (items as any[]).filter(c => 
+      (c.name && c.name.toLowerCase().includes(query)) ||
+      (c.phone && c.phone.includes(query)) ||
+      (c.email && c.email.toLowerCase().includes(query)) ||
+      (c.membership && c.membership.toLowerCase().includes(query))
+    );
+  }, [selectedSegment, searchQuery, stats.customerStats, filteredTransactions]);
+
+  const formatDate = (time: number | string | undefined) => {
+    if (!time || time === Infinity || time === 0) return language === 'th' ? 'ไม่มีข้อมูล' : 'N/A';
+    const date = new Date(time);
+    return date.toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
   const StatCard = ({ title, value, subtitle, icon: Icon, isPrimary = false }: any) => (
     <div className={cn(
@@ -278,13 +388,20 @@ const CustomerDashboard = () => {
 
   return (
     <div className="w-full animate-in fade-in duration-500">
-      <div className="mb-8">
-        <h2 className="text-3xl font-black text-[#1A1F3D]">
-          {language === 'th' ? 'ภาพรวมลูกค้าสัมพันธ์' : 'Customer Overview'}
-        </h2>
-        <p className="text-gray-400 text-sm font-medium mt-2">
-          {language === 'th' ? 'ข้อมูลสถิติและการวิเคราะห์ลูกค้า' : 'Analytics and insights for your customers'}
-        </p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-[#1A1F3D]">
+            {language === 'th' ? 'ภาพรวมลูกค้าสัมพันธ์' : 'Customer Overview'}
+          </h2>
+          <p className="text-gray-400 text-sm font-medium mt-2">
+            {language === 'th' ? 'ข้อมูลสถิติและการวิเคราะห์ลูกค้า' : 'Analytics and insights for your customers'}
+          </p>
+        </div>
+        <DateRangeDropdown 
+          language={language}
+          value={dateRange}
+          onChange={setDateRange}
+        />
       </div>
 
       {/* Top Stats */}
@@ -370,7 +487,26 @@ const CustomerDashboard = () => {
                     drag
                     dragConstraints={{ left: -200, right: 200, top: -100, bottom: 150 }}
                     dragElastic={0.1}
+                    whileHover={{ scale: 1.05 }}
                     whileDrag={{ scale: 1.1, cursor: "grabbing" }}
+                    onDragStart={() => {
+                      isDragging.current = true;
+                    }}
+                    onDragEnd={() => {
+                      setTimeout(() => {
+                        isDragging.current = false;
+                      }, 150);
+                    }}
+                    onClick={() => {
+                      if (isDragging.current) return;
+                      setSelectedSegment({
+                        mode: ratioMode,
+                        id: item.id,
+                        label: item.labelFull || item.label,
+                        color: item.color
+                      });
+                      setSearchQuery('');
+                    }}
                     initial={{ width: minSize, height: minSize, opacity: 0, scale: 0.5 }}
                     animate={{
                       width: minSize + (isZero ? 0 : item.percent * scaleMultiplier),
@@ -388,7 +524,7 @@ const CustomerDashboard = () => {
                       y: { duration: 12 + index * 2, repeat: Infinity, ease: "easeInOut" },
                       x: { duration: 14 + index * 2, repeat: Infinity, ease: "easeInOut" }
                     }}
-                    className={cn("group absolute rounded-full backdrop-blur-xl flex items-center justify-center shadow-[inset_0_0_30px_rgba(255,255,255,0.6),0_15px_30px_rgba(0,0,0,0.1)] cursor-grab active:cursor-grabbing", pos)}
+                    className={cn("group absolute rounded-full backdrop-blur-xl flex items-center justify-center shadow-[inset_0_0_30px_rgba(255,255,255,0.6),0_15px_30px_rgba(0,0,0,0.1)] cursor-pointer active:cursor-grabbing", pos)}
                     style={{
                       background: `linear-gradient(135deg, ${item.color}E6, ${item.color}80)`,
                       borderColor: `${item.color}CC`,
@@ -414,7 +550,19 @@ const CustomerDashboard = () => {
           <div className="flex flex-row flex-nowrap overflow-x-auto gap-6 md:gap-10 lg:justify-between mt-8 relative z-30 pb-2 scrollbar-hide">
             {(ratioMode === 'loyalty' ? stats.loyaltyDataArray : stats.tierDataArray)
               .map(item => (
-                <div key={item.id} className="text-left shrink-0">
+                <div 
+                  key={item.id} 
+                  className="text-left shrink-0 cursor-pointer hover:bg-slate-50 p-2 rounded-2xl transition-all duration-200 active:scale-95 border border-transparent hover:border-slate-100/50"
+                  onClick={() => {
+                    setSelectedSegment({
+                      mode: ratioMode,
+                      id: item.id,
+                      label: item.labelFull || item.label,
+                      color: item.color
+                    });
+                    setSearchQuery('');
+                  }}
+                >
                   <p className="text-2xl font-black text-slate-800">{item.count}</p>
                   <p className="text-[10px] md:text-[11px] text-slate-500 flex items-center gap-1.5 mt-1 font-bold uppercase tracking-wider truncate">
                     <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: item.color, boxShadow: `0 0 8px ${item.color}` }}></span>
@@ -572,6 +720,134 @@ const CustomerDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Dialog for displaying segment customer list / transactions */}
+      <Dialog open={!!selectedSegment} onOpenChange={(open) => !open && setSelectedSegment(null)}>
+        <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-2xl rounded-[2rem] border border-white/50 shadow-2xl p-6 sm:p-8 font-sans overflow-hidden">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="flex items-center gap-3 text-2xl font-black text-[#1A1F3D]">
+              <span className="w-4 h-4 rounded-full inline-block shadow-lg shrink-0" style={{ backgroundColor: selectedSegment?.color || '#3B82F6', boxShadow: `0 0 12px ${selectedSegment?.color || '#3B82F6'}` }}></span>
+              <span>{selectedSegment?.label}</span>
+              <span className="text-sm font-bold bg-[#F5F6FA] text-slate-500 px-3 py-1 rounded-full border border-slate-100/50">
+                {filteredItems.length} {language === 'th' ? 'รายการ' : 'records'}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Search bar */}
+          <div className="relative mb-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder={
+                selectedSegment?.id === 'walkin'
+                  ? (language === 'th' ? 'ค้นหารหัสชำระเงิน หรือช่องทาง...' : 'Search Transaction ID or payment method...')
+                  : (language === 'th' ? 'ค้นหาชื่อ, เบอร์โทรศัพท์ หรือระดับสมาชิก...' : 'Search name, phone, or tier...')
+              }
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-2xl bg-slate-50/80 border border-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all font-medium text-sm text-slate-800"
+            />
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+            {selectedSegment?.id === 'walkin' ? (
+              // Display walkin transactions
+              (filteredItems as any[]).map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-4 bg-[#F8FAFC]/55 hover:bg-[#F1F5F9]/60 border border-slate-100 rounded-2xl transition-all duration-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold shrink-0">
+                      <ShoppingBag size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-slate-800 truncate max-w-[200px] sm:max-w-[300px]">
+                        TXID: {tx.id.substring(0, 8)}...
+                      </p>
+                      <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
+                        <Calendar size={12} />
+                        {new Date(tx.createdAt || tx.date).toLocaleString(language === 'th' ? 'th-TH' : 'en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-[#1A1F3D] text-base">
+                      {currency}{tx.amount.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                      {tx.paymentMethod}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              // Display registered customers
+              (filteredItems as any[]).map((customer) => (
+                <div 
+                  key={customer.id} 
+                  className={cn(
+                    "flex items-center justify-between p-4 bg-[#F8FAFC]/55 hover:bg-[#F1F5F9]/60 border border-slate-100 rounded-2xl transition-all duration-200",
+                    onSelectCustomer && "cursor-pointer active:scale-[0.98]"
+                  )}
+                  onClick={() => {
+                    if (onSelectCustomer) {
+                      onSelectCustomer(customer.id, selectedSegment);
+                      setSelectedSegment(null);
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-sm text-slate-600 overflow-hidden shrink-0 border border-white shadow-sm">
+                      {customer.avatarUrl ? (
+                        <img src={customer.avatarUrl} alt={customer.name} className="w-full h-full object-cover" />
+                      ) : (
+                        customer.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-sm text-[#1A1F3D] truncate">{customer.name}</p>
+                        {customer.membership && (
+                          <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100/50">
+                            {customer.membership}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
+                        <Phone size={12} />
+                        {customer.phone || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-black text-[#1A1F3D] text-base">
+                      {currency}{customer.spent.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                      {customer.visits} {language === 'th' ? 'ครั้ง' : 'Visits'} • ล่าสุด: {formatDate(customer.lastVisitTime)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+
+            {filteredItems.length === 0 && (
+              <div className="text-center py-12 bg-[#F8FAFC]/30 rounded-2xl border border-dashed border-slate-200">
+                <Users size={32} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-slate-400 font-bold text-sm">
+                  {language === 'th' ? 'ไม่พบข้อมูลที่ตรงกับเงื่อนไข' : 'No matching records found'}
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
