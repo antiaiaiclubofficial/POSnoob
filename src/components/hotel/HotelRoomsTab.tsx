@@ -15,6 +15,7 @@ const HotelRoomsTab = () => {
 
   const [bookingRoomId, setBookingRoomId] = useState<string | null>(null);
   const [bookingRoomName, setBookingRoomName] = useState<string>('');
+  const [editingBooking, setEditingBooking] = useState<any>(null);
   
   const [checkoutBookingId, setCheckoutBookingId] = useState<string | null>(null);
 
@@ -68,7 +69,7 @@ const HotelRoomsTab = () => {
       // 1. Update Booking Status
       const { error: bookingError } = await supabase
         .from('hotel_bookings')
-        .update({ status: 'checked_in', check_in_actual: new Date().toISOString() })
+        .update({ status: 'checked_in' })
         .eq('id', bookingId);
       if (bookingError) throw bookingError;
 
@@ -99,14 +100,9 @@ const HotelRoomsTab = () => {
 
     if (activeBooking) {
       if (activeBooking.status === 'reserved') {
-        const checkInDate = parseISO(activeBooking.check_in_date);
-        if (isToday(checkInDate) || checkInDate < new Date()) {
-           if (confirm(`เช็คอินให้น้อง ${activeBooking.pets?.name} (เจ้าของ: ${activeBooking.customers?.display_name || activeBooking.customers?.first_name}) เข้าห้อง ${room.room_name} ใช่หรือไม่?`)) {
-             checkInMutation.mutate({ bookingId: activeBooking.id, roomId: room.id });
-           }
-        } else {
-           toast.info(`จองคิวไว้สำหรับวันที่ ${activeBooking.check_in_date.split('T')[0]}`);
-        }
+        setEditingBooking(activeBooking);
+        setBookingRoomId(room.id);
+        setBookingRoomName(room.room_name);
       } else if (activeBooking.status === 'checked_in') {
         setCheckoutBookingId(activeBooking.id);
       }
@@ -120,11 +116,11 @@ const HotelRoomsTab = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex gap-4 mb-4 text-xs font-bold text-gray-500">
-        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-gray-200 block"></span> ว่าง</div>
-        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500 block"></span> จองแล้ว</div>
-        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500 block"></span> เข้าพัก</div>
-        <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-500 block"></span> ปิดปรับปรุง/ทำความสะอาด</div>
+      <div className="flex gap-[1.5rem] mb-[1rem] text-[12px] font-bold text-[#76767f]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+        <div className="flex items-center gap-[0.5rem]"><span className="w-[1rem] h-[1rem] rounded-full bg-[#ffffff] border border-gray-200 shadow-sm block"></span> ว่าง</div>
+        <div className="flex items-center gap-[0.5rem]"><span className="w-[1rem] h-[1rem] rounded-full bg-[#dce1ff] border border-[#bac4f5] block"></span> จองแล้ว</div>
+        <div className="flex items-center gap-[0.5rem]"><span className="w-[1rem] h-[1rem] rounded-full bg-gradient-to-br from-[#18234a] to-[#020d35] shadow-sm block"></span> เข้าพัก</div>
+        <div className="flex items-center gap-[0.5rem]"><span className="w-[1rem] h-[1rem] rounded-full bg-[#FBE8E8] border border-[#F3C2C2] block"></span> ปิดปรับปรุง/ทำความสะอาด</div>
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
@@ -137,15 +133,12 @@ const HotelRoomsTab = () => {
           let bgColor = colorConfig?.bg || COLOR_MAP['gray'].bg;
           
           if (room.status === 'maintenance' || room.status === 'cleaning') {
-             dotColor = 'bg-amber-500';
-             bgColor = 'bg-amber-50 border-amber-100 text-amber-600';
+             bgColor = 'bg-[#FBE8E8] text-[#8E171D] shadow-[0_4px_16px_rgba(142,23,29,0.1)]';
           } else if (activeBooking) {
              if (activeBooking.status === 'reserved') {
-               dotColor = 'bg-blue-500';
-               bgColor = 'bg-blue-50 border-blue-100 text-blue-600';
+               bgColor = 'bg-[#dce1ff] text-[#0d193f] shadow-[0_4px_16px_rgba(24,35,74,0.1)]';
              } else if (activeBooking.status === 'checked_in') {
-               dotColor = 'bg-red-500';
-               bgColor = 'bg-[#1A1F3D] border-[#1A1F3D] text-white';
+               bgColor = 'bg-gradient-to-br from-[#18234a] to-[#020d35] text-white shadow-[0_10px_25px_-5px_rgba(24,35,74,0.3)] translate-y-[-2px]';
              }
           }
 
@@ -154,20 +147,20 @@ const HotelRoomsTab = () => {
               key={room.id}
               onClick={() => handleRoomClick(room)}
               className={cn(
-                "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-xs font-black relative overflow-hidden",
-                bgColor
+                "aspect-square rounded-[2rem] border-0 transition-all flex flex-col items-center justify-center font-bold relative overflow-hidden hover:-translate-y-1",
+                bgColor,
+                !activeBooking && room.status !== 'maintenance' && room.status !== 'cleaning' ? '' : ''
               )}
+              style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}
             >
-              <span className="text-sm">{room.room_name}</span>
-              <span className="text-[10px] opacity-70 mt-1">{type?.type_name || 'ไม่ระบุประเภท'}</span>
+              <span className="text-[16px] font-black">{room.room_name}</span>
+              <span className="text-[12px] opacity-70 mt-1">{type?.type_name || 'ไม่ระบุประเภท'}</span>
               
               {activeBooking && (
                 <span className="text-[9px] mt-1 opacity-90 truncate w-full px-2 text-center">
                   {activeBooking.pets?.name}
                 </span>
               )}
-
-              <span className={`absolute top-2 right-2 w-2 h-2 ${dotColor} rounded-full`} />
             </button>
           );
         })}
@@ -177,7 +170,11 @@ const HotelRoomsTab = () => {
         <HotelBookingModal 
           roomId={bookingRoomId}
           roomName={bookingRoomName}
-          onClose={() => setBookingRoomId(null)}
+          existingBooking={editingBooking}
+          onClose={() => {
+            setBookingRoomId(null);
+            setEditingBooking(null);
+          }}
         />
       )}
 

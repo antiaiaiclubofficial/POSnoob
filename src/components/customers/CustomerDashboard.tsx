@@ -23,9 +23,10 @@ interface CustomerDashboardProps {
     label: string;
     color: string;
   } | null;
+  hideTitle?: boolean;
 }
 
-const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer, initialSegment = null }) => {
+const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer, initialSegment = null, hideTitle = false }) => {
   const { customers, transactions, language, currency, tierRules, storeId } = useStore();
   const t = translations[language];
 
@@ -388,15 +389,17 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer,
 
   return (
     <div className="w-full animate-in fade-in duration-500">
-      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-[#1A1F3D]">
-            {language === 'th' ? 'ภาพรวมลูกค้าสัมพันธ์' : 'Customer Overview'}
-          </h2>
-          <p className="text-gray-400 text-sm font-medium mt-2">
-            {language === 'th' ? 'ข้อมูลสถิติและการวิเคราะห์ลูกค้า' : 'Analytics and insights for your customers'}
-          </p>
-        </div>
+      <div className={cn("mb-8 flex flex-col md:flex-row md:items-center gap-4", hideTitle ? "justify-end" : "justify-between")}>
+        {!hideTitle && (
+          <div>
+            <h2 className="text-3xl font-black text-[#1A1F3D]">
+              {language === 'th' ? 'ภาพรวมลูกค้าสัมพันธ์' : 'Customer Overview'}
+            </h2>
+            <p className="text-gray-400 text-sm font-medium mt-2">
+              {language === 'th' ? 'ข้อมูลสถิติและการวิเคราะห์ลูกค้า' : 'Analytics and insights for your customers'}
+            </p>
+          </div>
+        )}
         <DateRangeDropdown 
           language={language}
           value={dateRange}

@@ -6,39 +6,39 @@ export interface RoomConfig {
 
 export const COLOR_MAP = {
   gray: {
-    bg: "bg-[#F5F6FA] border-transparent text-gray-500 hover:bg-gray-100",
-    border: "border-gray-300",
-    dot: "bg-gray-400",
-    badge: "bg-gray-100 text-gray-600"
+    bg: "bg-[#ffffff] text-[#1a1c1c] shadow-[0_4px_16px_rgba(24,35,74,0.03)] hover:shadow-[0_8px_24px_rgba(24,35,74,0.08)]",
+    border: "border-transparent",
+    dot: "bg-[#18234a]",
+    badge: "bg-[#f3f3f3] text-[#1a1c1c]"
   },
   blue: {
-    bg: "bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100/70",
-    border: "border-blue-400",
-    dot: "bg-blue-500",
-    badge: "bg-blue-100 text-blue-700"
+    bg: "bg-[#dce1ff] text-[#0d193f] hover:bg-[#bac4f5]",
+    border: "border-transparent",
+    dot: "bg-[#020d35]",
+    badge: "bg-[#18234a] text-white"
   },
   pink: {
-    bg: "bg-pink-50 border-pink-100 text-pink-600 hover:bg-pink-100/70",
-    border: "border-pink-400",
-    dot: "bg-pink-500",
-    badge: "bg-pink-100 text-pink-700"
+    bg: "bg-[#ffdad6] text-[#93000a] hover:bg-[#ffb4ab]",
+    border: "border-transparent",
+    dot: "bg-[#ba1a1a]",
+    badge: "bg-[#93000a] text-white"
   },
   green: {
-    bg: "bg-green-50 border-green-100 text-green-600 hover:bg-green-100/70",
-    border: "border-green-400",
-    dot: "bg-green-500",
-    badge: "bg-green-100 text-green-700"
+    bg: "bg-[#daed5b] text-[#1a1e00] hover:bg-[#bed041]",
+    border: "border-transparent",
+    dot: "bg-[#1a1e00]",
+    badge: "bg-[#232800] text-white"
   },
   purple: {
-    bg: "bg-purple-50 border-purple-100 text-purple-600 hover:bg-purple-100/70",
-    border: "border-purple-400",
-    dot: "bg-purple-500",
-    badge: "bg-purple-100 text-purple-700"
+    bg: "bg-[#d9d6fe] text-[#191836] hover:bg-[#c5c3ea]",
+    border: "border-transparent",
+    dot: "bg-[#191836]",
+    badge: "bg-[#5c5b7d] text-white"
   },
   amber: {
-    bg: "bg-amber-50 border-amber-100 text-amber-600 hover:bg-amber-100/70",
-    border: "border-amber-400",
-    dot: "bg-amber-500",
-    badge: "bg-amber-100 text-amber-700"
+    bg: "bg-[#FBE8E8] text-[#8E171D] hover:bg-[#F3C2C2]",
+    border: "border-transparent",
+    dot: "bg-[#8E171D]",
+    badge: "bg-[#8E171D] text-white"
   }
 };

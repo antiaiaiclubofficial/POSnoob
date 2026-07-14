@@ -612,7 +612,7 @@ const Dashboard = () => {
       {isCustomerOpen && <CustomerModal onClose={() => setIsCustomerOpen(false)} />}
 
       <TabsContent value="crm" className="flex-1 overflow-y-auto px-6 lg:px-12 py-10 m-0 border-none outline-none data-[state=active]:flex flex-col bg-[#F9F9F9]">
-        <CustomerDashboard />
+        <CustomerDashboard hideTitle={true} />
       </TabsContent>
 
       <TabsContent value="inventory" className="flex-1 overflow-y-auto px-6 lg:px-12 py-10 m-0 border-none outline-none data-[state=active]:flex flex-col bg-[#F9F9F9]">

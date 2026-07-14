@@ -24,6 +24,7 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
     selectedOwner, activePet, markAsPaid, processPayment, tierRules, inventory, 
     addToCart, currency, language, shopName, shopLogo, shopAddress, shopPhone,
     receiptHeader, receiptFooter, receiptPaperSize, vatEnabled, vatRate, vatInclusive,
+    serviceChargeEnabled, serviceChargeRate,
     holdBill, heldBills, queue
   } = useStore();
   
@@ -139,25 +140,28 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
   
   // ยอดรวมหลังหักส่วนลดสมาชิก
   const discountableSubtotal = round2(subtotal - tierDiscountAmount);
+  
+  const serviceChargeAmount = serviceChargeEnabled ? round2(discountableSubtotal * (serviceChargeRate || 10) / 100) : 0;
+  const subtotalAfterServiceCharge = discountableSubtotal + serviceChargeAmount;
 
   // คำนวณภาษีและยอดสุทธิ
   const vatRateVal = vatRate || 7;
   let tax = 0;
   let total = 0;
-  let subtotalBeforeTax = discountableSubtotal;
+  let subtotalBeforeTax = subtotalAfterServiceCharge;
 
   if (vatEnabled) {
     if (vatInclusive) {
-      total = discountableSubtotal;
+      total = subtotalAfterServiceCharge;
       tax = round2(total * vatRateVal / (100 + vatRateVal));
       subtotalBeforeTax = round2(total - tax);
     } else {
-      tax = round2(discountableSubtotal * vatRateVal / 100);
-      total = round2(discountableSubtotal + tax);
-      subtotalBeforeTax = discountableSubtotal;
+      tax = round2(subtotalAfterServiceCharge * vatRateVal / 100);
+      total = round2(subtotalAfterServiceCharge + tax);
+      subtotalBeforeTax = subtotalAfterServiceCharge;
     }
   } else {
-    total = discountableSubtotal;
+    total = subtotalAfterServiceCharge;
     tax = 0;
     subtotalBeforeTax = total;
   }
@@ -527,6 +531,13 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
                 <div className="flex justify-between items-center text-xs text-green-600 font-medium px-2 py-0.5">
                   <span className="flex items-center gap-1.5"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
                   <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
+                </div>
+              )}
+
+              {serviceChargeEnabled && paymentMethod !== 'Package' && (
+                <div className="flex justify-between items-center text-xs text-indigo-500 font-medium px-2 py-0.5">
+                  <span className="flex items-center gap-1.5">Service Charge ({serviceChargeRate || 10}%)</span>
+                  <span>+{currency}{serviceChargeAmount.toFixed(2)}</span>
                 </div>
               )}
 

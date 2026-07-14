@@ -204,6 +204,8 @@ const AuthInitializer = () => {
               receiptPaperSize: storeData.receipt_paper_size || '80mm',
               vatEnabled: storeData.vat_enabled || false,
               vatInclusive: storeData.vat_inclusive !== undefined ? storeData.vat_inclusive : true,
+              serviceChargeEnabled: storeData.service_charge_enabled || false,
+              serviceChargeRate: storeData.service_charge_rate || 10,
               companyName: storeData.company_name || '',
               companyAddress: storeData.company_address || '',
               companyTaxId: storeData.company_tax_id || '',

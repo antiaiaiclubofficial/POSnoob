@@ -21,20 +21,26 @@ const Hotel = () => {
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f9f9f9] overflow-hidden fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-2 p-6 lg:p-8 pb-4 shrink-0">
-        <h1 className="text-3xl font-black text-[#1A1F3D] tracking-tight">
-          {t.hotel || 'โรงแรมสัตว์เลี้ยง'}
-        </h1>
-        <p className="text-gray-500 font-medium">
-          จัดการการจองห้องพัก สถานะการเข้าพัก และกิจกรรมของสัตว์เลี้ยง
-        </p>
-      </div>
+    <div className="flex-1 flex flex-col h-full bg-[#f7f8fd] overflow-hidden fade-in">
+      {/* Header & Tabs */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-[2rem] px-[3rem] py-[2rem] shrink-0">
+        <div className="flex flex-col gap-[0.5rem]">
+          <h1 
+            className="text-[32px] font-bold leading-normal tracking-[-0.02em] text-[#020d35]" 
+            style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}
+          >
+            {t.hotel || 'โรงแรมสัตว์เลี้ยง'}
+          </h1>
+          <p 
+            className="text-[16px] font-normal leading-[24px] text-[#45464E]" 
+            style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}
+          >
+            จัดการการจองห้องพัก สถานะการเข้าพัก และกิจกรรมของสัตว์เลี้ยง
+          </p>
+        </div>
 
-      {/* Tabs */}
-      <div className="px-6 lg:px-8 shrink-0">
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-hide">
+        {/* Tabs */}
+        <div className="flex items-center gap-[0.75rem] overflow-x-auto scrollbar-hide py-2 px-1">
           {menuItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
@@ -42,11 +48,12 @@ const Hotel = () => {
                 key={item.id}
                 onClick={() => setActiveTab(item.id as HotelTab)}
                 className={cn(
-                  "flex items-center gap-2 px-5 py-3 rounded-2xl font-bold transition-all duration-300 whitespace-nowrap",
+                  "flex items-center gap-[0.5rem] px-[1.25rem] py-[0.75rem] rounded-[2rem] transition-all duration-300 whitespace-nowrap",
                   isActive 
-                    ? "bg-[#18234a] text-white shadow-[0_10px_25px_-5px_rgba(24,35,74,0.3)] translate-y-[-2px] bg-gradient-to-br from-[#18234a] to-[#020d35]" 
+                    ? "bg-gradient-to-br from-[#18234a] to-[#020d35] text-[#ffffff] shadow-[0_20px_40px_rgba(24,35,74,0.04)] translate-y-[-2px]" 
                     : "bg-[#f3f3f3] text-[#45464e] hover:bg-[#e8e8e8] hover:text-[#1a1c1c]"
                 )}
+                style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif', fontSize: '14px', fontWeight: 500, lineHeight: '20px' }}
               >
                 <item.icon size={18} className={cn(isActive ? "text-[#EAFD69]" : "text-[#76767f]")} />
                 {item.label}
@@ -57,8 +64,8 @@ const Hotel = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-6 lg:px-8 pb-8 overflow-hidden flex flex-col">
-        <div className="bg-[#ffffff] rounded-[3rem] p-6 lg:p-8 shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex-1 overflow-y-auto">
+      <div className="flex-1 px-[3rem] pb-[3rem] overflow-hidden flex flex-col">
+        <div className="bg-white/50 backdrop-blur-xl border border-white/60 rounded-[3rem] p-[2rem] shadow-[0_20px_40px_rgba(24,35,74,0.04)] flex-1 overflow-y-auto">
           {activeTab === 'dashboard' && <HotelDashboardTab />}
           {activeTab === 'rooms' && <HotelRoomsTab />}
           {activeTab === 'settings' && <HotelSettingsTab />}
@@ -69,3 +76,4 @@ const Hotel = () => {
 };
 
 export default Hotel;
+

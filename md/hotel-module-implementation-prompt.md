@@ -1,4 +1,4 @@
-# Prompt: พัฒนาโมดูล Hotel (โรงแรมฝากเลี้ยงสัตว์เลี้ยง) — POSnoob
+![alt text](image.png)# Prompt: พัฒนาโมดูล Hotel (โรงแรมฝากเลี้ยงสัตว์เลี้ยง) — POSnoob
 
 > เอกสารนี้เขียนจากการอ่านโค้ดจริงในโปรเจกต์ `POSnoob` (React + TypeScript + Vite + Zustand + Supabase + Tailwind + shadcn/ui) ให้คัดลอกทั้งไฟล์นี้ไปเป็น prompt สั่งงาน Claude Code หรือ AI coding agent ในโปรเจกต์ได้เลย
 

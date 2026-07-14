@@ -35,6 +35,8 @@ export const useStore = create<AppState>()((set, get) => ({
   language: 'th',
   vatEnabled: false,
   vatInclusive: true,
+  serviceChargeEnabled: false,
+  serviceChargeRate: 10,
   liffId: '',
   liffChannelId: '',
   liffChannelSecret: '',
@@ -161,6 +163,8 @@ export const useStore = create<AppState>()((set, get) => ({
       if (profile.vatEnabled !== undefined) localStorage.setItem('vat_enabled', String(profile.vatEnabled));
       if (profile.vatRate !== undefined) localStorage.setItem('vat_rate', String(profile.vatRate));
       if (profile.vatInclusive !== undefined) localStorage.setItem('vat_inclusive', String(profile.vatInclusive));
+      if (profile.serviceChargeEnabled !== undefined) localStorage.setItem('service_charge_enabled', String(profile.serviceChargeEnabled));
+      if (profile.serviceChargeRate !== undefined) localStorage.setItem('service_charge_rate', String(profile.serviceChargeRate));
     }
     const storeId = get().storeId;
     if (storeId && storeId !== 'default-store') {
@@ -184,6 +188,8 @@ export const useStore = create<AppState>()((set, get) => ({
             vat_enabled: profile.vatEnabled !== undefined ? profile.vatEnabled : undefined,
             vat_rate: profile.vatRate !== undefined ? profile.vatRate : undefined,
             vat_inclusive: profile.vatInclusive !== undefined ? profile.vatInclusive : undefined,
+            service_charge_enabled: profile.serviceChargeEnabled !== undefined ? profile.serviceChargeEnabled : undefined,
+            service_charge_rate: profile.serviceChargeRate !== undefined ? profile.serviceChargeRate : undefined,
             points_earn_rate: profile.pointsEarnRate !== undefined ? profile.pointsEarnRate : undefined,
             points_redeem_rate: profile.pointsRedeemRate !== undefined ? profile.pointsRedeemRate : undefined,
             max_users: profile.maxUsers !== undefined ? profile.maxUsers : undefined,

@@ -889,6 +889,7 @@ const BillingSystem = () => {
           transaction={{
             id: previewDoc.documentNo,
             date: previewDoc.date,
+            customerId: previewDoc.customerId,
             customerName: previewDoc.customerName || 'Walk-in Customer',
             items: previewDoc.items.map(item => ({
               title: item.productName,

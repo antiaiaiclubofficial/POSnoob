@@ -136,11 +136,12 @@ const HotelSettingsTab = () => {
     <div className="space-y-8">
       {/* Room Types Section */}
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-[#1A1F3D]">ประเภทห้องพัก</h2>
+        <div className="flex justify-between items-center mb-[1.5rem]">
+          <h2 className="text-[24px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ประเภทห้องพัก</h2>
           <button 
             onClick={() => { setEditingType({ typeName: '', color: 'gray', sortOrder: 0 }); setIsEditingType(true); }}
-            className="px-4 py-2 bg-[#1A1F3D] text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#1A1F3D]/90"
+            className="px-[1.5rem] py-[0.75rem] bg-gradient-to-br from-[#18234a] to-[#020d35] text-white rounded-[3rem] text-[14px] font-bold flex items-center gap-2 hover:-translate-y-0.5 transition-transform shadow-[0_10px_25px_-5px_rgba(24,35,74,0.3)]"
+            style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}
           >
             <Plus size={16} />
             เพิ่มประเภท
@@ -188,17 +189,17 @@ const HotelSettingsTab = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[1rem]">
           {roomTypes.map(type => {
             const colorConfig = COLOR_MAP[type.color || 'gray'];
             return (
-              <div key={type.id} className={`p-4 rounded-xl border ${colorConfig?.border} ${colorConfig?.bg} flex justify-between items-center`}>
-                <span className="font-bold">{type.typeName || type.type_name}</span>
+              <div key={type.id} className={`p-[1.5rem] rounded-[2rem] border-0 shadow-[0_4px_16px_rgba(24,35,74,0.03)] ${colorConfig?.bg} flex justify-between items-center`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                <span className="font-bold text-[#1A1F3D]">{type.typeName || type.type_name}</span>
                 <div className="flex gap-2">
-                  <button onClick={() => { setEditingType({ id: type.id, typeName: type.typeName || type.type_name, color: type.color, sortOrder: type.sort_order }); setIsEditingType(true); }} className="text-gray-500 hover:text-blue-500">
+                  <button onClick={() => { setEditingType({ id: type.id, typeName: type.typeName || type.type_name, color: type.color, sortOrder: type.sort_order }); setIsEditingType(true); }} className="text-gray-400 hover:text-[#18234a] transition-colors">
                     <Edit size={16} />
                   </button>
-                  <button onClick={() => { if(confirm('ยืนยันการลบประเภทห้องนี้?')) deleteRoomType.mutate(type.id); }} className="text-gray-500 hover:text-red-500">
+                  <button onClick={() => { if(confirm('ยืนยันการลบประเภทห้องนี้?')) deleteRoomType.mutate(type.id); }} className="text-gray-400 hover:text-[#8E171D] transition-colors">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -212,11 +213,12 @@ const HotelSettingsTab = () => {
 
       {/* Rooms Section */}
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-[#1A1F3D]">ห้องพักทั้งหมด</h2>
+        <div className="flex justify-between items-center mb-[1.5rem]">
+          <h2 className="text-[24px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ห้องพักทั้งหมด</h2>
           <button 
             onClick={() => { setEditingRoom({ roomName: '', pricePerNight: 0, capacity: 1, status: 'available', isActive: true }); setIsEditingRoom(true); }}
-            className="px-4 py-2 bg-[#1A1F3D] text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#1A1F3D]/90"
+            className="px-[1.5rem] py-[0.75rem] bg-gradient-to-br from-[#18234a] to-[#020d35] text-white rounded-[3rem] text-[14px] font-bold flex items-center gap-2 hover:-translate-y-0.5 transition-transform shadow-[0_10px_25px_-5px_rgba(24,35,74,0.3)]"
+            style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}
           >
             <Plus size={16} />
             เพิ่มห้องพัก
@@ -291,14 +293,14 @@ const HotelSettingsTab = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[1rem]">
           {rooms.map(room => {
             const type = roomTypes.find(t => t.id === room.room_type_id);
             const colorConfig = COLOR_MAP[(type?.color as keyof typeof COLOR_MAP) || 'gray'];
             return (
-              <div key={room.id} className={`p-4 rounded-xl border ${colorConfig?.border} ${colorConfig?.bg} flex flex-col gap-2`}>
+              <div key={room.id} className={`p-[1.5rem] rounded-[2rem] border-0 shadow-[0_4px_16px_rgba(24,35,74,0.03)] ${colorConfig?.bg} flex flex-col gap-[0.5rem]`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
                 <div className="flex justify-between items-start">
-                  <span className="font-black text-lg">{room.room_name}</span>
+                  <span className="font-black text-[20px] text-[#020d35]">{room.room_name}</span>
                   <div className="flex gap-2">
                     <button onClick={() => { 
                       setEditingRoom({ 
@@ -311,21 +313,21 @@ const HotelSettingsTab = () => {
                         isActive: room.is_active
                       }); 
                       setIsEditingRoom(true); 
-                    }} className="text-gray-500 hover:text-blue-500">
+                    }} className="text-gray-400 hover:text-[#18234a] transition-colors">
                       <Edit size={16} />
                     </button>
-                    <button onClick={() => { if(confirm('ยืนยันการลบห้องพักนี้?')) deleteRoom.mutate(room.id); }} className="text-gray-500 hover:text-red-500">
+                    <button onClick={() => { if(confirm('ยืนยันการลบห้องพักนี้?')) deleteRoom.mutate(room.id); }} className="text-gray-400 hover:text-[#8E171D] transition-colors">
                       <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-[14px]">
                   <span className="font-medium opacity-80">{type?.type_name || 'ไม่ระบุประเภท'}</span>
                   <span className="font-bold">฿{room.price_per_night}/คืน</span>
                 </div>
-                <div className="flex justify-between text-xs mt-2">
+                <div className="flex justify-between text-[12px] mt-2">
                   <span>ความจุ: {room.capacity} ตัว</span>
-                  <span className={room.status === 'available' ? 'text-green-600 font-bold' : 'text-amber-600 font-bold'}>
+                  <span className={room.status === 'available' ? 'text-[#18234a] font-bold bg-[#18234a]/10 px-2 py-0.5 rounded-full' : 'text-[#C5805D] font-bold bg-[#C5805D]/10 px-2 py-0.5 rounded-full'}>
                     {room.status === 'available' ? 'ว่าง' : room.status === 'maintenance' ? 'ซ่อมบำรุง' : room.status}
                   </span>
                 </div>

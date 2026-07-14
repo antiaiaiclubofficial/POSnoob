@@ -431,6 +431,8 @@ export interface AppState {
   receiptPaperSize: '58mm' | '80mm';
   vatEnabled: boolean;
   vatInclusive: boolean;
+  serviceChargeEnabled?: boolean;
+  serviceChargeRate?: number;
   companyName?: string;
   companyAddress?: string;
   companyTaxId?: string;

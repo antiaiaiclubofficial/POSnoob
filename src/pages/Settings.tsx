@@ -20,7 +20,7 @@ type SettingTab = 'profile' | 'company' | 'operations' | 'integrations' | 'syste
 const Settings = () => {
   const { 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
-    receiptHeader, receiptFooter, receiptPaperSize,
+    receiptHeader, receiptFooter, receiptPaperSize, serviceChargeEnabled, serviceChargeRate,
     liffId, liffChannelId, liffChannelSecret, liffEnabled,
     companyName, companyAddress, companyTaxId, companyPhone, companyEmail, vatEnabled, vatRate,
     vatInclusive,
@@ -47,6 +47,8 @@ const Settings = () => {
   const [localReceiptHeader, setLocalReceiptHeader] = useState(receiptHeader);
   const [localReceiptFooter, setLocalReceiptFooter] = useState(receiptFooter);
   const [localReceiptPaperSize, setLocalReceiptPaperSize] = useState<'58mm' | '80mm'>(receiptPaperSize);
+  const [localServiceChargeEnabled, setLocalServiceChargeEnabled] = useState(serviceChargeEnabled);
+  const [localServiceChargeRate, setLocalServiceChargeRate] = useState(serviceChargeRate);
   const [localSlotDuration, setLocalSlotDuration] = useState(slotDuration);
   const [localMaxCapacity, setLocalMaxCapacity] = useState(maxCapacity);
   const [localOpenTime, setLocalOpenTime] = useState(openTime);
@@ -86,6 +88,8 @@ const Settings = () => {
     setLocalReceiptHeader(receiptHeader);
     setLocalReceiptFooter(receiptFooter);
     setLocalReceiptPaperSize(receiptPaperSize);
+    setLocalServiceChargeEnabled(serviceChargeEnabled);
+    setLocalServiceChargeRate(serviceChargeRate);
     setLocalSlotDuration(slotDuration);
     setLocalMaxCapacity(maxCapacity);
     setLocalOpenTime(openTime);
@@ -108,8 +112,9 @@ const Settings = () => {
     setLocalPrinterType(printerType);
   }, [
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
-    receiptHeader, receiptFooter, receiptPaperSize, slotDuration, maxCapacity, openTime, closeTime,
-    recurringHolidays, specificHolidays, companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
+    updateBusinessProfile,
+    receiptHeader, receiptFooter, receiptPaperSize, serviceChargeEnabled, serviceChargeRate,
+    slotDuration, maxCapacity, openTime, closeTime, recurringHolidays, specificHolidays, companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
     vatEnabled, vatRate, vatInclusive, liffId, liffChannelId, liffChannelSecret, liffEnabled,
     scannerType, printerType
   ]);
@@ -137,6 +142,8 @@ const Settings = () => {
       localReceiptHeader !== receiptHeader ||
       localReceiptFooter !== receiptFooter ||
       localReceiptPaperSize !== receiptPaperSize ||
+      localServiceChargeEnabled !== serviceChargeEnabled ||
+      localServiceChargeRate !== serviceChargeRate ||
       localCurrency !== currency ||
       localShopIsOpen !== shopIsOpen ||
       localLiffId !== liffId ||
@@ -175,6 +182,8 @@ const Settings = () => {
         receiptHeader: localReceiptHeader,
         receiptFooter: localReceiptFooter,
         receiptPaperSize: localReceiptPaperSize,
+        serviceChargeEnabled: localServiceChargeEnabled,
+        serviceChargeRate: localServiceChargeRate,
         currency: localCurrency,
         shopIsOpen: localShopIsOpen,
         liffId: localLiffId,
@@ -220,6 +229,7 @@ const Settings = () => {
     localLiffId, localLiffChannelId, localLiffChannelSecret, localLiffEnabled,
     localCompanyName, localCompanyAddress, localCompanyTaxId, localCompanyPhone, localCompanyEmail,
     localVatEnabled, localVatRate, localVatInclusive,
+    localServiceChargeEnabled, localServiceChargeRate,
     localSlotDuration, localMaxCapacity, localOpenTime, localCloseTime,
     localRecurringHolidays, localSpecificHolidays,
     localScannerType, localPrinterType,
@@ -496,6 +506,43 @@ const Settings = () => {
                       </div>
                     )}
                   </div>
+
+                  <div className="border-t border-gray-100" />
+
+                  {/* Service Charge Settings */}
+                  <div className="border border-gray-100 rounded-3xl p-6 bg-gray-50/50 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-50 rounded-xl text-indigo-500">
+                           <span className="font-black text-xs">%</span>
+                        </div>
+                        <div>
+                          <span className="text-sm font-black text-[#1A1F3D]">Service Charge</span>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">Apply Service Charge to sales</p>
+                        </div>
+                      </div>
+                      <Switch checked={localServiceChargeEnabled} onCheckedChange={setLocalServiceChargeEnabled} className="data-[state=checked]:bg-indigo-600" />
+                    </div>
+
+                    {localServiceChargeEnabled && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-200">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Service Charge Rate (%)</label>
+                          <div className="relative">
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 font-bold text-xs">%</span>
+                            <input 
+                              type="number"
+                              className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                              value={localServiceChargeRate} 
+                              onChange={e => setLocalServiceChargeRate(Number(e.target.value))} 
+                              placeholder="10"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </section>
             )}
