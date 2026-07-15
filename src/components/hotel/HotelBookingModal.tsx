@@ -199,7 +199,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
 
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-2xl rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+      <div className="bg-white w-full max-w-3xl rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
           <div className="flex items-center gap-4">
@@ -300,7 +300,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
           <div className="space-y-6 pt-4 border-t border-gray-50">
             <div>
               <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1 block mb-3">เลือกวันเข้าพัก (Select Stay Dates)</span>
-              <div className="bg-[#F3F3F3] rounded-[2rem] p-6 flex justify-center border-none shadow-[0_20px_40px_rgba(24,35,74,0.04)] overflow-x-auto scrollbar-hide w-fit mx-auto max-w-full">
+              <div className="bg-[#F3F3F3] rounded-[2rem] p-6 flex justify-center border-none shadow-[0_20px_40px_rgba(24,35,74,0.04)] w-full mx-auto">
                 <Calendar 
                   mode="range" 
                   selected={dateRange} 

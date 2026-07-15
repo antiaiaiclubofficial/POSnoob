@@ -24,6 +24,25 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 1.5rem;
+    
+    /* Liquid Glass tokens */
+    --lg-surface: 0 0% 97.6%;              /* #f9f9f9 */
+    --lg-surface-container-low: 0 0% 95.3%; /* #f3f3f3 */
+    --lg-surface-container-lowest: 0 0% 100%;
+    --lg-surface-variant: 0 0% 88.6%;
+    --lg-on-surface: 180 5% 10.6%;         /* #1a1c1c */
+    --lg-on-surface-variant: 228 6% 28.4%; /* #45464e */
+    --lg-primary: 227 45% 12%;             /* #020d35 */
+    --lg-primary-container: 227 42% 19.6%; /* #18234a */
+    --lg-on-primary-container: 227 30% 66%;
+    --lg-secondary-container: 245 100% 92.5%; /* #d9d6fe */
+    --lg-on-secondary-container: 248 15% 42%;
+    --lg-tertiary-fixed: 70 92% 66.5%;     /* #eafd69 lime */
+    --lg-on-tertiary-fixed: 66 100% 6%;
+    --lg-accent-red: 358 70% 32%;          /* #8e171d */
+    --lg-accent-brown: 22 45% 58%;         /* #c5805d */
+    --lg-radius-xl: 3rem;
+    --lg-radius-lg: 2rem;
   }
 }
 

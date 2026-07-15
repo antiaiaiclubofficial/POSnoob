@@ -3,7 +3,7 @@ import { LayoutDashboard, BedDouble, Settings as SettingsIcon } from 'lucide-rea
 import { translations } from '@/utils/translations';
 import { useStore } from '@/store/useStore';
 import HotelDashboardTab from '@/components/hotel/HotelDashboardTab';
-import HotelRoomsTab from '@/components/hotel/HotelRoomsTab';
+import { HotelFloorPlan } from '@/components/hotel/HotelFloorPlan';
 import HotelSettingsTab from '@/components/hotel/HotelSettingsTab';
 import { cn } from '@/lib/utils';
 
@@ -64,10 +64,16 @@ const Hotel = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-[3rem] pb-[3rem] overflow-hidden flex flex-col">
-        <div className="bg-white/50 backdrop-blur-xl border border-white/60 rounded-[3rem] p-[2rem] shadow-[0_20px_40px_rgba(24,35,74,0.04)] flex-1 overflow-y-auto">
+      <div className={cn(
+        "flex-1 overflow-hidden flex flex-col",
+        activeTab !== 'rooms' ? "px-[3rem] pb-[3rem]" : "px-[3rem]"
+      )}>
+        <div className={cn(
+          "flex-1 overflow-y-auto flex flex-col h-full",
+          activeTab !== 'rooms' && "bg-white/50 backdrop-blur-xl border border-white/60 rounded-[3rem] p-[2rem] shadow-[0_20px_40px_rgba(24,35,74,0.04)]"
+        )}>
           {activeTab === 'dashboard' && <HotelDashboardTab />}
-          {activeTab === 'rooms' && <HotelRoomsTab />}
+          {activeTab === 'rooms' && <HotelFloorPlan />}
           {activeTab === 'settings' && <HotelSettingsTab />}
         </div>
       </div>

@@ -17,12 +17,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import HotelBookingModal from './HotelBookingModal';
+import HotelCheckoutModal from './HotelCheckoutModal';
 
 const HotelDashboardTab = () => {
   const { storeId } = useStore();
   const queryClient = useQueryClient();
 
   const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [checkoutBookingId, setCheckoutBookingId] = useState<string | null>(null);
 
   // Fetch Rooms
   const { data: rooms = [] } = useQuery({
@@ -120,29 +122,6 @@ const HotelDashboardTab = () => {
     }
   });
 
-  const checkOutBooking = useMutation({
-    mutationFn: async ({ bookingId, roomId }: { bookingId: string, roomId: string }) => {
-      const { error: bookingError } = await supabase
-        .from('hotel_bookings')
-        .update({ status: 'checked_out', check_out_actual: new Date().toISOString() })
-        .eq('id', bookingId);
-      if (bookingError) throw bookingError;
-
-      const { error: roomError } = await supabase
-        .from('hotel_rooms')
-        .update({ status: 'available' })
-        .eq('id', roomId);
-      if (roomError) throw roomError;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hotel_bookings_active'] });
-      queryClient.invalidateQueries({ queryKey: ['hotel_rooms'] });
-      toast.success('เช็คเอาท์สำเร็จ');
-    },
-    onError: (err) => {
-      toast.error('เกิดข้อผิดพลาด: ' + err.message);
-    }
-  });
 
   // Derived Data
   const totalRooms = rooms.length;
@@ -223,12 +202,20 @@ const HotelDashboardTab = () => {
                     </div>
                     <div className="flex flex-col gap-2 items-end">
                       <span className="text-[12px] font-bold bg-[#020d35]/10 text-[#020d35] px-[1rem] py-[0.5rem] rounded-[9999px] uppercase tracking-wider backdrop-blur-md">เข้าพักอยู่</span>
-                      <button
-                        onClick={() => setEditingBooking(booking)}
-                        className="opacity-0 group-hover:opacity-100 p-2 bg-white/50 hover:bg-[#1A1F3D] hover:text-[#EAFD69] text-gray-600 rounded-full transition-all"
-                      >
-                        <Edit3 size={16} />
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditingBooking(booking)}
+                          className="opacity-0 group-hover:opacity-100 p-2 bg-white/50 hover:bg-[#1A1F3D] hover:text-[#EAFD69] text-gray-600 rounded-full transition-all"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          onClick={() => setCheckoutBookingId(booking.id)}
+                          className="opacity-0 group-hover:opacity-100 text-[12px] font-bold bg-[#d9d6fe] hover:brightness-95 text-[#191836] px-[1rem] py-[0.5rem] rounded-[9999px] uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+                        >
+                          เช็คเอาท์
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -329,28 +316,12 @@ const HotelDashboardTab = () => {
                       >
                         <Edit3 size={16} />
                       </button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <button
-                            disabled={checkOutBooking.isPending}
-                            className="text-[12px] font-bold bg-[#d9d6fe] hover:brightness-95 text-[#191836] px-[1rem] py-[0.5rem] rounded-[9999px] uppercase tracking-wider shadow-sm transition-all cursor-pointer"
-                          >
-                            {checkOutBooking.isPending ? 'รอสักครู่...' : 'เช็คเอาท์'}
-                          </button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-8 max-w-md">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="font-['IBM_Plex_Sans_Thai'] text-xl font-bold text-[#1A1F3D]">ยืนยันการเช็คเอาท์คืนห้องพัก?</AlertDialogTitle>
-                            <AlertDialogDescription className="font-['IBM_Plex_Sans_Thai'] text-sm text-gray-500 font-medium">
-                              สถานะห้องพักจะถูกเปลี่ยนเป็น "ห้องว่าง" ทันที
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="mt-6">
-                            <AlertDialogCancel className="rounded-2xl font-['IBM_Plex_Sans_Thai'] font-bold border-gray-200">ยกเลิก</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => checkOutBooking.mutate({ bookingId: booking.id, roomId: booking.room_id })} className="bg-[#191836] hover:bg-[#020d35] rounded-2xl font-['IBM_Plex_Sans_Thai'] font-bold text-white shadow-lg">ยืนยันเช็คเอาท์</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <button
+                        onClick={() => setCheckoutBookingId(booking.id)}
+                        className="text-[12px] font-bold bg-[#d9d6fe] hover:brightness-95 text-[#191836] px-[1rem] py-[0.5rem] rounded-[9999px] uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+                      >
+                        เช็คเอาท์
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -399,6 +370,13 @@ const HotelDashboardTab = () => {
           roomName={editingBooking.hotel_rooms?.room_name || ''}
           existingBooking={editingBooking}
           onClose={() => setEditingBooking(null)}
+        />
+      )}
+
+      {checkoutBookingId && (
+        <HotelCheckoutModal
+          bookingId={checkoutBookingId}
+          onClose={() => setCheckoutBookingId(null)}
         />
       )}
     </div>

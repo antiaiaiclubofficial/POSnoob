@@ -1,11 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
-import { Settings, Plus, Edit, Trash2 } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
+import { Reorder } from 'framer-motion';
 import { HotelRoomType, HotelRoom } from '@/store/types';
 import { COLOR_MAP } from './roomColorMap';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { SketchPicker } from 'react-color';
+
+const CustomColorPicker = ({ color, onChange }: { color: string, onChange: (hex: string) => void }) => {
+  return (
+    <SketchPicker
+      color={color || '#ffffff'}
+      onChange={(newColor) => {
+        onChange(newColor.hex);
+      }}
+      presetColors={[
+        '#dce1ff', '#ffdad6', '#daed5b', '#d9d6fe', '#FBE8E8', '#ffffff',
+        '#bac4f5', '#ffb4ab', '#bed041', '#c5c3ea', '#F3C2C2', '#18234a'
+      ]}
+      disableAlpha
+    />
+  );
+};
 
 const HotelSettingsTab = () => {
   const { storeId } = useStore();
@@ -15,6 +34,9 @@ const HotelSettingsTab = () => {
   const [isEditingRoom, setIsEditingRoom] = useState(false);
   const [editingType, setEditingType] = useState<Partial<HotelRoomType> | null>(null);
   const [editingRoom, setEditingRoom] = useState<Partial<HotelRoom> | null>(null);
+
+  const [localRoomTypes, setLocalRoomTypes] = useState<HotelRoomType[]>([]);
+  const [filterTypeId, setFilterTypeId] = useState<string>('all');
 
   // Fetch Room Types
   const { data: roomTypes = [], isLoading: loadingTypes } = useQuery({
@@ -45,6 +67,29 @@ const HotelSettingsTab = () => {
     },
     enabled: !!storeId && storeId !== 'default-store',
   });
+
+  useEffect(() => {
+    setLocalRoomTypes(roomTypes);
+  }, [roomTypes]);
+
+  const updateSortOrder = useMutation({
+    mutationFn: async (newOrder: HotelRoomType[]) => {
+      await Promise.all(
+        newOrder.map((type, index) =>
+          supabase.from('hotel_room_types').update({ sort_order: index }).eq('id', type.id)
+        )
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hotel_room_types'] });
+      // Silent success for smooth dragging
+    }
+  });
+
+  const handleReorder = (newOrder: HotelRoomType[]) => {
+    setLocalRoomTypes(newOrder);
+    updateSortOrder.mutate(newOrder);
+  };
 
   const saveRoomType = useMutation({
     mutationFn: async (type: Partial<HotelRoomType>) => {
@@ -161,16 +206,30 @@ const HotelSettingsTab = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">สีสัญลักษณ์</label>
-              <select 
-                value={editingType.color || 'gray'} 
-                onChange={(e) => setEditingType({...editingType, color: e.target.value as any})}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-              >
-                {Object.keys(COLOR_MAP).map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <label className="block text-xs font-bold text-gray-500 mb-1">สีสัญลักษณ์ (รหัสสี HEX)</label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button 
+                      className="w-10 h-10 border border-gray-200 rounded-lg cursor-pointer"
+                      style={{ backgroundColor: editingType.color?.startsWith('#') ? editingType.color : '#cccccc' }}
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 border-0 shadow-none bg-transparent" align="start">
+                    <CustomColorPicker 
+                      color={editingType.color || ''} 
+                      onChange={(hex) => setEditingType({...editingType, color: hex})} 
+                    />
+                  </PopoverContent>
+                </Popover>
+                <input 
+                  type="text" 
+                  value={editingType.color || ''}
+                  onChange={(e) => setEditingType({...editingType, color: e.target.value})}
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm uppercase"
+                  placeholder="#HEXCODE"
+                />
+              </div>
             </div>
             <div className="flex gap-2">
               <button 
@@ -189,24 +248,41 @@ const HotelSettingsTab = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[1rem]">
-          {roomTypes.map(type => {
-            const colorConfig = COLOR_MAP[type.color || 'gray'];
+        <Reorder.Group 
+          axis="x"
+          values={localRoomTypes}
+          onReorder={handleReorder}
+          className="flex flex-wrap gap-[1rem]"
+        >
+          {localRoomTypes.map(type => {
+            const isHex = type.color?.startsWith('#');
+            const colorConfig = !isHex ? COLOR_MAP[type.color || 'gray'] : null;
             return (
-              <div key={type.id} className={`p-[1.5rem] rounded-[2rem] border-0 shadow-[0_4px_16px_rgba(24,35,74,0.03)] ${colorConfig?.bg} flex justify-between items-center`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-                <span className="font-bold text-[#1A1F3D]">{type.typeName || type.type_name}</span>
-                <div className="flex gap-2">
-                  <button onClick={() => { setEditingType({ id: type.id, typeName: type.typeName || type.type_name, color: type.color, sortOrder: type.sort_order }); setIsEditingType(true); }} className="text-gray-400 hover:text-[#18234a] transition-colors">
-                    <Edit size={16} />
-                  </button>
-                  <button onClick={() => { if(confirm('ยืนยันการลบประเภทห้องนี้?')) deleteRoomType.mutate(type.id); }} className="text-gray-400 hover:text-[#8E171D] transition-colors">
-                    <Trash2 size={16} />
-                  </button>
+              <Reorder.Item key={type.id} value={type} className="min-w-[250px] flex-1 cursor-grab active:cursor-grabbing">
+                <div 
+                  className={`p-[1.5rem] h-full rounded-[2rem] border-2 shadow-[0_4px_16px_rgba(24,35,74,0.03)] bg-white ${colorConfig ? colorConfig.border : ''} flex justify-between items-center`} 
+                  style={{ 
+                    fontFamily: '"IBM Plex Sans Thai", sans-serif',
+                    ...(isHex ? { borderColor: type.color } : {})
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <GripVertical size={20} className="text-gray-400" />
+                    <span className="font-bold text-[#1A1F3D]">{type.typeName || type.type_name}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEditingType({ id: type.id, typeName: type.typeName || type.type_name, color: type.color, sortOrder: type.sort_order }); setIsEditingType(true); }} className="text-gray-400 hover:text-[#18234a] transition-colors">
+                      <Edit size={16} />
+                    </button>
+                    <button onClick={() => { if(confirm('ยืนยันการลบประเภทห้องนี้?')) deleteRoomType.mutate(type.id); }} className="text-gray-400 hover:text-[#8E171D] transition-colors">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </Reorder.Item>
             );
           })}
-        </div>
+        </Reorder.Group>
       </div>
 
       <hr className="border-gray-100" />
@@ -223,6 +299,25 @@ const HotelSettingsTab = () => {
             <Plus size={16} />
             เพิ่มห้องพัก
           </button>
+        </div>
+
+        {/* Filter Section */}
+        <div className="flex gap-2 overflow-x-auto pb-4 mb-4" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+          <button
+            onClick={() => setFilterTypeId('all')}
+            className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${filterTypeId === 'all' ? 'bg-[#020d35] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          >
+            ทั้งหมด
+          </button>
+          {roomTypes.map(type => (
+            <button
+              key={type.id}
+              onClick={() => setFilterTypeId(type.id)}
+              className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${filterTypeId === type.id ? 'bg-[#020d35] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              {type.typeName || type.type_name}
+            </button>
+          ))}
         </div>
 
         {isEditingRoom && editingRoom && (
@@ -294,11 +389,30 @@ const HotelSettingsTab = () => {
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[1rem]">
-          {rooms.map(room => {
+          {[...rooms]
+            .sort((a, b) => {
+              const typeAIndex = roomTypes.findIndex(t => t.id === a.room_type_id);
+              const typeBIndex = roomTypes.findIndex(t => t.id === b.room_type_id);
+              const safeA = typeAIndex === -1 ? 999 : typeAIndex;
+              const safeB = typeBIndex === -1 ? 999 : typeBIndex;
+              if (safeA !== safeB) {
+                return safeA - safeB;
+              }
+              return (a.sort_order || 0) - (b.sort_order || 0);
+            })
+            .filter(r => filterTypeId === 'all' || r.room_type_id === filterTypeId)
+            .map(room => {
             const type = roomTypes.find(t => t.id === room.room_type_id);
-            const colorConfig = COLOR_MAP[(type?.color as keyof typeof COLOR_MAP) || 'gray'];
+            const isHex = type?.color?.startsWith('#');
+            const colorConfig = !isHex ? COLOR_MAP[(type?.color as keyof typeof COLOR_MAP) || 'gray'] : null;
             return (
-              <div key={room.id} className={`p-[1.5rem] rounded-[2rem] border-0 shadow-[0_4px_16px_rgba(24,35,74,0.03)] ${colorConfig?.bg} flex flex-col gap-[0.5rem]`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+              <div key={room.id} 
+                className={`p-[1.5rem] rounded-[2rem] border-2 shadow-[0_4px_16px_rgba(24,35,74,0.03)] bg-white ${colorConfig ? colorConfig.border : ''} flex flex-col gap-[0.5rem]`} 
+                style={{ 
+                  fontFamily: '"IBM Plex Sans Thai", sans-serif',
+                  ...(isHex ? { borderColor: type?.color } : {})
+                }}
+              >
                 <div className="flex justify-between items-start">
                   <span className="font-black text-[20px] text-[#020d35]">{room.room_name}</span>
                   <div className="flex gap-2">
