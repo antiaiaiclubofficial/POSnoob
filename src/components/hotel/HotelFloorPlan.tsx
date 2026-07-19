@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import HotelBookingModal from './HotelBookingModal';
 import HotelCheckoutModal from './HotelCheckoutModal';
 import { RoomGlassCard } from './RoomGlassCard';
-import { RoomDetailPopover } from './RoomDetailPopover';
 import { Search } from 'lucide-react';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { RoomDetailCard } from './RoomDetailPopover';
