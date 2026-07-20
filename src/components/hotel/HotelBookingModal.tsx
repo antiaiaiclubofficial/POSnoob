@@ -309,7 +309,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
 
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-3xl rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+      <div className="bg-white w-full max-w-3xl h-[85vh] max-h-[850px] rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col">
         {/* Header */}
         <div className="p-8 pb-4 flex justify-between items-center bg-white shrink-0">
           <div className="flex items-center gap-4">
