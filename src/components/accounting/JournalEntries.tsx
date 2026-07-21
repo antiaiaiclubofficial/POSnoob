@@ -77,7 +77,6 @@ const JournalEntries = () => {
     }));
 
     await addJournalEntry({
-      id: generatedId,
       date: entryForm.date,
       journalType: entryForm.journalType,
       referenceNo: entryForm.referenceNo,

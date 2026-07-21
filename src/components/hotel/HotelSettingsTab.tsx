@@ -48,7 +48,11 @@ const HotelSettingsTab = () => {
         .eq('store_id', storeId)
         .order('sort_order', { ascending: true });
       if (error) throw error;
-      return data as HotelRoomType[];
+      return (data as any[]).map(d => ({
+        ...d,
+        typeName: d.type_name,
+        sortOrder: d.sort_order
+      })) as HotelRoomType[];
     },
     enabled: !!storeId && storeId !== 'default-store',
   });
@@ -218,14 +222,14 @@ const HotelSettingsTab = () => {
                   <PopoverContent className="w-auto p-0 border-0 shadow-none bg-transparent" align="start">
                     <CustomColorPicker 
                       color={editingType.color || ''} 
-                      onChange={(hex) => setEditingType({...editingType, color: hex})} 
+                      onChange={(hex) => setEditingType({...editingType, color: hex as any})} 
                     />
                   </PopoverContent>
                 </Popover>
                 <input 
                   type="text" 
                   value={editingType.color || ''}
-                  onChange={(e) => setEditingType({...editingType, color: e.target.value})}
+                  onChange={(e) => setEditingType({...editingType, color: e.target.value as any})}
                   className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm uppercase"
                   placeholder="#HEXCODE"
                 />
@@ -268,10 +272,10 @@ const HotelSettingsTab = () => {
                 >
                   <div className="flex items-center gap-3">
                     <GripVertical size={20} className="text-gray-400" />
-                    <span className="font-bold text-[#1A1F3D]">{type.typeName || type.type_name}</span>
+                    <span className="font-bold text-[#1A1F3D]">{type.typeName}</span>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => { setEditingType({ id: type.id, typeName: type.typeName || type.type_name, color: type.color, sortOrder: type.sort_order }); setIsEditingType(true); }} className="text-gray-400 hover:text-[#18234a] transition-colors">
+                    <button onClick={() => { setEditingType({ id: type.id, typeName: type.typeName, color: type.color, sortOrder: type.sortOrder }); setIsEditingType(true); }} className="text-gray-400 hover:text-[#18234a] transition-colors">
                       <Edit size={16} />
                     </button>
                     <button onClick={() => { if(confirm('ยืนยันการลบประเภทห้องนี้?')) deleteRoomType.mutate(type.id); }} className="text-gray-400 hover:text-[#8E171D] transition-colors">
@@ -315,7 +319,7 @@ const HotelSettingsTab = () => {
               onClick={() => setFilterTypeId(type.id)}
               className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${filterTypeId === type.id ? 'bg-[#020d35] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
             >
-              {type.typeName || type.type_name}
+              {type.typeName}
             </button>
           ))}
         </div>
@@ -339,7 +343,7 @@ const HotelSettingsTab = () => {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
               >
                 <option value="">เลือกประเภท</option>
-                {roomTypes.map(t => <option key={t.id} value={t.id}>{t.typeName || t.type_name}</option>)}
+                {roomTypes.map(t => <option key={t.id} value={t.id}>{t.typeName}</option>)}
               </select>
             </div>
             <div>
@@ -436,7 +440,7 @@ const HotelSettingsTab = () => {
                   </div>
                 </div>
                 <div className="flex justify-between text-[14px]">
-                  <span className="font-medium opacity-80">{type?.type_name || 'ไม่ระบุประเภท'}</span>
+                  <span className="font-medium opacity-80">{type?.typeName || 'ไม่ระบุประเภท'}</span>
                   <span className="font-bold">฿{room.price_per_night}/คืน</span>
                 </div>
                 <div className="flex justify-between text-[12px] mt-2">
