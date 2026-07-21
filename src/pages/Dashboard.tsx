@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { translations } from '@/utils/translations';
 import {
   ResponsiveContainer,
@@ -59,6 +59,7 @@ import CustomerDashboard from '@/components/customers/CustomerDashboard';
 import InventoryDashboard from '@/components/InventoryDashboard';
 import BookingModal from '@/components/BookingModal';
 import CustomerModal from '@/components/CustomerModal';
+import { RoomTypeBadge } from '@/components/hotel/RoomTypeBadge';
 
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -98,6 +99,65 @@ const Dashboard = () => {
 
   const lastLog = todayAttendance[0];
   const isClockedIn = lastLog?.type === 'check_in';
+
+  // Fetch Activities for today
+  const { data: activities = [] } = useQuery({
+    queryKey: ['hotel_activities_today', storeId],
+    queryFn: async () => {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
+      
+      const { data, error } = await supabase
+        .from('hotel_activities')
+        .select(`
+          *,
+          hotel_bookings (
+            pets (name),
+            hotel_rooms (room_name, hotel_room_types (type_name, color))
+          )
+        `)
+        .eq('store_id', storeId)
+        .gte('scheduled_time', start)
+        .lte('scheduled_time', end)
+        .order('scheduled_time', { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!storeId && storeId !== 'default-store',
+  });
+
+  const toggleActivity = useMutation({
+    mutationFn: async ({ activityId, currentStatus }: { activityId: string, currentStatus: string }) => {
+      const newStatus = currentStatus === 'done' ? 'pending' : 'done';
+      const completedAt = newStatus === 'done' ? new Date().toISOString() : null;
+      
+      const { error } = await supabase
+        .from('hotel_activities')
+        .update({ status: newStatus, completed_at: completedAt })
+        .eq('id', activityId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hotel_activities_today'] });
+    }
+  });
+
+  const groupedActivities = React.useMemo(() => {
+    const groups: Record<string, { bookingId: string, booking: any, activities: any[] }> = {};
+    activities.forEach(activity => {
+      const key = activity.booking_id || 'unassigned';
+      if (!groups[key]) {
+        groups[key] = {
+          bookingId: key,
+          booking: activity.hotel_bookings,
+          activities: []
+        };
+      }
+      groups[key].activities.push(activity);
+    });
+    return Object.values(groups);
+  }, [activities]);
 
   const clockMutation = useMutation({
     mutationFn: async () => {
@@ -578,23 +638,63 @@ const Dashboard = () => {
             <div className="space-y-8">
 
 
-              {/* Special Care Alerts */}
-              <div className="bg-white/80 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] p-8 rounded-[3rem] space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-orange-50 text-orange-500 rounded-2xl"><AlertTriangle size={20} /></div>
-                  <h3 className="text-lg font-black text-[#1A1F3D]">Special Care Today</h3>
+              {/* Pet Activities */}
+              <div className="bg-white/80 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] p-8 rounded-[3rem] space-y-6 flex flex-col h-[500px]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-black text-[#1A1F3D]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>กิจกรรมสัตว์เลี้ยงวันนี้</h3>
+                    <span className="bg-[#1A1F3D] text-[#EAFD69] px-3 py-1 rounded-full text-xs font-bold">{activities.length}</span>
+                  </div>
+                  <button 
+                    onClick={() => navigate('/hotel')}
+                    className="text-xs font-black text-indigo-600 hover:underline flex items-center gap-1"
+                  >
+                    ดูทั้งหมด
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
 
-                <div className="space-y-3 max-h-[180px] overflow-y-auto scrollbar-hide">
-                  {specialCarePets.length === 0 ? (
-                    <p className="text-xs text-gray-400 font-bold text-center py-4">ไม่มีสัตว์เลี้ยงที่ต้องดูแลเป็นพิเศษวันนี้</p>
+                <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+                  {groupedActivities.length === 0 ? (
+                    <p className="text-xs text-gray-400 font-bold text-center py-4" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ไม่มีกิจกรรมสำหรับวันนี้</p>
                   ) : (
-                    specialCarePets.map((pet, idx) => (
-                      <div key={idx} className="p-4 bg-orange-50/50 border border-orange-100 rounded-2xl flex gap-3">
-                        <div className="shrink-0 text-orange-500"><AlertTriangle size={16} /></div>
-                        <div>
-                          <p className="text-xs font-black text-[#1A1F3D]">{pet.name} ({pet.owner})</p>
-                          <p className="text-[10px] text-orange-800 font-medium mt-1 leading-relaxed">{pet.note}</p>
+                    groupedActivities.map(group => (
+                      <div key={group.bookingId} className="flex flex-col p-[1.5rem] rounded-[1.5rem] bg-[#f9f9f9] shadow-sm">
+                        <div className="mb-4 pb-3 border-b border-gray-200">
+                          <p className="text-[16px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                            {group.booking?.pets?.name || 'ไม่ระบุชื่อสัตว์เลี้ยง'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-[13px] text-[#76767f] font-medium" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                              ห้อง: {group.booking?.hotel_rooms?.room_name || '-'}
+                            </p>
+                            <RoomTypeBadge type={group.booking?.hotel_rooms?.hotel_room_types} className="text-[10px]" />
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          {group.activities.map(activity => (
+                            <div key={activity.id} className="flex items-center justify-between group">
+                              <div className="flex items-center gap-[1rem]">
+                                <button
+                                  onClick={() => toggleActivity.mutate({ activityId: activity.id, currentStatus: activity.status })}
+                                  className={`w-[2rem] h-[2rem] rounded-full flex items-center justify-center shrink-0 transition-colors ${activity.status === 'done' ? 'bg-[#EAFD69] text-[#1A1F3D]' : 'bg-[#e2e2e2] text-transparent hover:bg-[#EAFD69] hover:text-[#1A1F3D]'}`}
+                                >
+                                  <CheckCircle2 size={16} />
+                                </button>
+                                <div>
+                                  <p className={`text-[14px] font-bold ${activity.status === 'done' ? 'text-gray-400 line-through' : 'text-[#020d35]'}`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                                    {activity.title || activity.activity_type}
+                                  </p>
+                                  <p className="text-[12px] text-[#76767f]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                                    {format(parseISO(activity.scheduled_time), 'HH:mm')} {activity.note && `- ${activity.note}`}
+                                  </p>
+                                </div>
+                              </div>
+                              {activity.status === 'done' && (
+                                <span className="text-[10px] font-bold bg-[#EAFD69] text-[#1a1e00] px-[0.75rem] py-[0.25rem] rounded-[9999px] uppercase tracking-wider">เสร็จแล้ว</span>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))

@@ -484,14 +484,14 @@ const Inventory = () => {
 
         {activeTab === 'master' && (
           <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
-            <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 w-full">
-                  <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">ค้นหาสินค้า</label><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold shadow-inner" placeholder="ค้นหา..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>
-                  <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">หมวดหมู่</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold shadow-inner appearance-none" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}><option value="">ทั้งหมด</option>{categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}</select></div>
-                  <div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">คู่ค้า</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold shadow-inner appearance-none" value={partnerFilter} onChange={e => setPartnerFilter(e.target.value)}><option value="">ทั้งหมด</option>{partners.map(p => <option key={p.id} value={p.id}>{p.companyName}</option>)}</select></div>
+            <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-4 sticky top-0 z-30">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 w-full">
+                  <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-gray-400 px-2">ค้นหาสินค้า</label><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-2.5 text-sm font-bold shadow-inner" placeholder="ค้นหา..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>
+                  <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-gray-400 px-2">หมวดหมู่</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-2.5 text-sm font-bold shadow-inner appearance-none" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}><option value="">ทั้งหมด</option>{categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}</select></div>
+                  <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-gray-400 px-2">คู่ค้า</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-2.5 text-sm font-bold shadow-inner appearance-none" value={partnerFilter} onChange={e => setPartnerFilter(e.target.value)}><option value="">ทั้งหมด</option>{partners.map(p => <option key={p.id} value={p.id}>{p.companyName}</option>)}</select></div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -500,9 +500,9 @@ const Inventory = () => {
                       setDefaultIsConsignment(false);
                       setIsItemModalOpen(true);
                     }}
-                    className="bg-[#1A1F3D] hover:bg-[#2A3152] text-white px-6 py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 whitespace-nowrap"
+                    className="bg-[#1A1F3D] hover:bg-[#2A3152] text-white px-5 py-3 rounded-2xl font-black text-[13px] shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
                   >
-                    <Plus size={18} /> เพิ่มสินค้าขายเอง
+                    <Plus size={16} /> เพิ่มสินค้าขายเอง
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -512,9 +512,9 @@ const Inventory = () => {
                       setDefaultIsConsignment(true);
                       setIsItemModalOpen(true);
                     }}
-                    className="bg-[#EAFD69] hover:brightness-95 text-[#18234A] px-6 py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 whitespace-nowrap"
+                    className="bg-[#EAFD69] hover:brightness-95 text-[#18234A] px-5 py-3 rounded-2xl font-black text-[13px] shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
                   >
-                    <Plus size={18} /> เพิ่มสินค้าฝากขาย
+                    <Plus size={16} /> เพิ่มสินค้าฝากขาย
                   </motion.button>
                 </div>
               </div>
@@ -606,9 +606,9 @@ const Inventory = () => {
 
         {activeTab === 'check' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="flex-1 w-full relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold shadow-inner" placeholder="ค้นหาสินค้าเพื่อเช็คสต็อก..." value={checkSearch} onChange={e => setCheckSearch(e.target.value)} /></div>
-              <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1 shrink-0">{(['All', 'Low', 'Out'] as const).map(status => (<button key={status} onClick={() => setCheckStatusFilter(status)} className={cn("px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", checkStatusFilter === status ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{status === 'All' ? 'ทั้งหมด' : status === 'Low' ? 'สต็อกต่ำ' : 'สินค้าหมด'}</button>))}</div>
+            <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-30">
+              <div className="flex-1 w-full relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-2.5 text-sm font-bold shadow-inner" placeholder="ค้นหาสินค้าเพื่อเช็คสต็อก..." value={checkSearch} onChange={e => setCheckSearch(e.target.value)} /></div>
+              <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1 shrink-0">{(['All', 'Low', 'Out'] as const).map(status => (<button key={status} onClick={() => setCheckStatusFilter(status)} className={cn("px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", checkStatusFilter === status ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{status === 'All' ? 'ทั้งหมด' : status === 'Low' ? 'สต็อกต่ำ' : 'สินค้าหมด'}</button>))}</div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredCheckItems.map(item => {

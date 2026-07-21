@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, AccountCode, AccountCategory } from '@/store/useStore';
-import { Plus, Edit2, Search, X, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Search, X, Trash2, Building2, Store as StoreIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const CATEGORIES: { id: AccountCategory, label: string, color: string }[] = [
@@ -12,24 +12,58 @@ const CATEGORIES: { id: AccountCategory, label: string, color: string }[] = [
 ];
 
 const ChartOfAccounts = () => {
-  const { accountCodes, addAccountCode, deleteAccountCode } = useStore();
+  const { accountCodes, addAccountCode, updateAccountCode, deleteAccountCode } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Add Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newCode, setNewCode] = useState({ code: '', name: '', category: 'Assets' as AccountCategory, description: '', isActive: true });
+
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCode, setEditingCode] = useState<AccountCode | null>(null);
+  const [editForm, setEditForm] = useState({ code: '', name: '', category: 'Assets' as AccountCategory, description: '', isActive: true });
+
+  // Delete Modal State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
-  const [newCode, setNewCode] = useState({ code: '', name: '', category: 'Assets' as AccountCategory, description: '', isActive: true });
 
   const filteredCodes = accountCodes.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     c.code.includes(searchTerm)
   );
 
+  const handleEditClick = (code: AccountCode) => {
+    setEditingCode(code);
+    setEditForm({
+      code: code.code,
+      name: code.name,
+      category: code.category,
+      description: code.description || '',
+      isActive: code.isActive !== false
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingCode || !editForm.code || !editForm.name) return;
+    updateAccountCode(editingCode.id, {
+      code: editForm.code,
+      name: editForm.name,
+      category: editForm.category,
+      description: editForm.description,
+      isActive: editForm.isActive
+    });
+    setIsEditModalOpen(false);
+    setEditingCode(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl font-black text-[#1A1F3D]">ผังบัญชี (Chart of Accounts)</h2>
-          <p className="text-sm text-gray-500">จัดการรหัสบัญชีมาตรฐาน 5 หมวด</p>
+          <p className="text-sm text-gray-500">จัดการและแก้ไขรหัสบัญชีมาตรฐาน 5 หมวด (ระดับองค์กรและสาขา)</p>
         </div>
         
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -73,24 +107,35 @@ const ChartOfAccounts = () => {
               {categoryCodes.length > 0 ? (
                 <div className="space-y-2">
                   {categoryCodes.map(code => (
-                    <div key={code.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-[#F9F9F9] transition-colors group cursor-pointer">
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-bold text-[#1A1F3D] bg-gray-100 px-2 py-1 rounded-lg">{code.code}</span>
-                        <span className="text-sm font-medium text-gray-700">{code.name}</span>
+                    <div key={code.id} className="flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#F9F9F9] transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-[#1A1F3D] bg-gray-100 px-2.5 py-1 rounded-lg">{code.code}</span>
+                        <div>
+                          <span className="text-sm font-bold text-gray-800 block">{code.name}</span>
+                          {code.description && <span className="text-xs text-gray-400 block">{code.description}</span>}
+                        </div>
                       </div>
                       <div className="flex items-center gap-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${code.storeId ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700'}`}>
+                          {code.storeId ? 'ระดับสาขา' : 'ระดับองค์กร'}
+                        </span>
                         <span className={`w-2 h-2 rounded-full ${code.isActive ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                        <button className="text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Edit2 size={14} />
+                        <button 
+                          onClick={() => handleEditClick(code)}
+                          title="แก้ไขรหัสบัญชี"
+                          className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        >
+                          <Edit2 size={16} />
                         </button>
                         <button 
                           onClick={() => {
                             setCodeToDelete(code.id);
                             setIsDeleteModalOpen(true);
                           }}
-                          className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="ลบรหัสบัญชี"
+                          className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
@@ -122,7 +167,7 @@ const ChartOfAccounts = () => {
               className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col"
             >
               <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h3 className="text-xl font-black text-[#1A1F3D]">เพิ่มรหัสบัญชี</h3>
+                <h3 className="text-xl font-black text-[#1A1F3D]">เพิ่มรหัสบัญชีใหม่</h3>
                 <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors">
                   <X size={20} />
                 </button>
@@ -144,7 +189,7 @@ const ChartOfAccounts = () => {
                     type="text" 
                     value={newCode.code}
                     onChange={(e) => setNewCode({ ...newCode, code: e.target.value })}
-                    placeholder="เช่น 1101"
+                    placeholder="เช่น 1005"
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   />
                 </div>
@@ -154,7 +199,7 @@ const ChartOfAccounts = () => {
                     type="text" 
                     value={newCode.name}
                     onChange={(e) => setNewCode({ ...newCode, name: e.target.value })}
-                    placeholder="เช่น เงินสด (Cash)"
+                    placeholder="เช่น เงินสำรองจ่าย (Petty Cash)"
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   />
                 </div>
@@ -175,7 +220,7 @@ const ChartOfAccounts = () => {
                     onChange={(e) => setNewCode({ ...newCode, isActive: e.target.checked })}
                     className="rounded text-blue-600 focus:ring-blue-500"
                   />
-                  <label htmlFor="isActive" className="text-sm text-gray-700">เปิดใช้งาน (Active)</label>
+                  <label htmlFor="isActive" className="text-sm font-medium text-gray-700">เปิดใช้งาน (Active)</label>
                 </div>
               </div>
               <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
@@ -202,6 +247,96 @@ const ChartOfAccounts = () => {
                   className="px-6 py-2.5 rounded-xl bg-[#1A1F3D] text-white font-bold text-sm hover:bg-[#2A3158] transition-colors disabled:opacity-50"
                 >
                   บันทึกรหัสบัญชี
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Account Modal */}
+      <AnimatePresence>
+        {isEditModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col"
+            >
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h3 className="text-xl font-black text-[#1A1F3D]">แก้ไขรหัสบัญชี</h3>
+                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">หมวดบัญชี (Category)</label>
+                  <select 
+                    value={editForm.category}
+                    onChange={(e) => setEditForm({ ...editForm, category: e.target.value as AccountCategory })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  >
+                    {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">รหัสบัญชี (Account Code)</label>
+                  <input 
+                    type="text" 
+                    value={editForm.code}
+                    onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">ชื่อบัญชี (Account Name)</label>
+                  <input 
+                    type="text" 
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">คำอธิบายเพิ่มเติม</label>
+                  <input 
+                    type="text" 
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  />
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <input 
+                    type="checkbox" 
+                    id="editIsActive"
+                    checked={editForm.isActive}
+                    onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="editIsActive" className="text-sm font-medium text-gray-700">เปิดใช้งาน (Active)</label>
+                </div>
+              </div>
+              <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
+                <button 
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-6 py-2.5 rounded-xl text-gray-500 hover:bg-gray-200 font-bold text-sm transition-colors"
+                >
+                  ยกเลิก
+                </button>
+                <button 
+                  onClick={handleSaveEdit}
+                  disabled={!editForm.code || !editForm.name}
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  บันทึกการแก้ไข
                 </button>
               </div>
             </motion.div>

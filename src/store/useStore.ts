@@ -1815,8 +1815,6 @@ export const useStore = create<AppState>()((set, get) => ({
   },
   
   updateAccountCode: async (id, code) => {
-    const storeId = get().storeId;
-    if (!storeId || storeId === 'default-store') return;
     set(s => ({ accountCodes: s.accountCodes.map(c => c.id === id ? { ...c, ...code } : c) }));
     try {
       const { error } = await supabase.from('account_codes').update({
@@ -1825,10 +1823,12 @@ export const useStore = create<AppState>()((set, get) => ({
         category: code.category,
         description: code.description,
         is_active: code.isActive
-      }).eq('id', id).eq('store_id', storeId);
+      }).eq('id', id);
       if (error) throw error;
+      toast.success("อัปเดตรหัสบัญชีสำเร็จ");
     } catch (err) {
       console.error("Failed to update account code:", err);
+      toast.error("เกิดข้อผิดพลาดในการอัปเดตรหัสบัญชี");
     }
   },
 
@@ -1851,42 +1851,73 @@ export const useStore = create<AppState>()((set, get) => ({
   
   addJournalEntry: async (entry) => {
     const storeId = get().storeId;
-    if (!storeId || storeId === 'default-store') return;
-    const newId = `JV${Date.now().toString().slice(-6)}`;
+    const effectiveStoreId = (storeId && storeId !== 'default-store') ? storeId : null;
+    const newId = entry.id || `JE-${Date.now()}`;
+    
+    const totalDebit = (entry.lines || []).reduce((s, l) => s + Number(l.debit || 0), 0);
+    const totalCredit = (entry.lines || []).reduce((s, l) => s + Number(l.credit || 0), 0);
+    const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+    const status = entry.status || (isBalanced ? 'Posted' : 'Draft');
+
+    const formattedEntry: JournalEntry = {
+      ...entry,
+      id: newId,
+      status,
+      totalDebit,
+      totalCredit,
+      createdBy: entry.createdBy || 'Admin'
+    };
+
+    set(s => ({ journalEntries: [formattedEntry, ...s.journalEntries] }));
+
     try {
       const { data, error } = await supabase.from('journal_entries').insert({
         id: newId,
-        store_id: storeId,
+        store_id: effectiveStoreId,
         date: entry.date,
         journal_type: entry.journalType,
-        reference_no: entry.referenceNo,
+        reference_no: entry.referenceNo || null,
         description: entry.description,
         lines: entry.lines,
-        status: entry.status,
-        total_debit: entry.totalDebit,
-        total_credit: entry.totalCredit,
-        created_by: entry.createdBy,
-        is_opening_balance: entry.isOpeningBalance,
-        is_closing_entry: entry.isClosingEntry
+        status: status,
+        total_debit: totalDebit,
+        total_credit: totalCredit,
+        created_by: entry.createdBy || 'Admin'
       }).select().single();
+
       if (error) throw error;
-      if (data) {
-        set(s => ({ journalEntries: [{ ...entry, id: data.id }, ...s.journalEntries] }));
+
+      if (entry.lines && entry.lines.length > 0) {
+        const lineRows = entry.lines.map((line, idx) => ({
+          journal_entry_id: newId,
+          account_code_id: line.accountId || line.accountCodeId,
+          debit: Number(line.debit || 0),
+          credit: Number(line.credit || 0),
+          description: line.description || entry.description,
+          line_order: idx + 1
+        })).filter(l => l.account_code_id);
+
+        if (lineRows.length > 0) {
+          await supabase.from('journal_entry_lines').insert(lineRows);
+        }
       }
-    } catch (err) {
+
+      toast.success("บันทึกรายการสมุดรายวันสำเร็จ");
+    } catch (err: any) {
       console.error("Failed to add journal entry:", err);
+      toast.error("เกิดข้อผิดพลาดในการลงรายการ: " + (err?.message || ''));
     }
   },
   
   updateJournalEntryStatus: async (id, status) => {
-    const storeId = get().storeId;
-    if (!storeId || storeId === 'default-store') return;
     set(s => ({ journalEntries: s.journalEntries.map(e => e.id === id ? { ...e, status } : e) }));
     try {
-      const { error } = await supabase.from('journal_entries').update({ status }).eq('id', id).eq('store_id', storeId);
+      const { error } = await supabase.from('journal_entries').update({ status }).eq('id', id);
       if (error) throw error;
+      toast.success(`อัปเดตสถานะรายการเป็น ${status} สำเร็จ`);
     } catch (err) {
       console.error("Failed to update journal entry status:", err);
+      toast.error("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
     }
   },
 

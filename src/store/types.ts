@@ -663,15 +663,21 @@ export interface AccountCode {
   category: AccountCategory;
   description?: string;
   isActive: boolean;
+  storeId?: string | null;
+  organizationId?: string | null;
 }
 
 export type JournalType = 'JV' | 'PJ' | 'SJ' | 'CR' | 'CP';
 
 export interface JournalEntryLine {
+  id?: string;
+  journalEntryId?: string;
+  accountCodeId?: string;
   accountId: string;
   description: string;
   debit: number;
   credit: number;
+  lineOrder?: number;
 }
 
 export interface JournalEntry {
@@ -687,6 +693,30 @@ export interface JournalEntry {
   createdBy: string;
   isOpeningBalance?: boolean;
   isClosingEntry?: boolean;
+  sourceType?: string;
+  sourceId?: string;
+}
+
+export interface AccountMappingRule {
+  id: string;
+  storeId?: string;
+  organizationId?: string;
+  transactionType: string;
+  accountCodeId: string;
+  description?: string;
+  isActive: boolean;
+}
+
+export interface AccountingPeriod {
+  id: string;
+  organizationId?: string;
+  storeId?: string;
+  periodName: string;
+  periodStart: string;
+  periodEnd: string;
+  status: 'open' | 'closed' | 'locked';
+  closedBy?: string;
+  closedAt?: string;
 }
 
 export type TaxType = 'Input' | 'Output' | 'Withholding';

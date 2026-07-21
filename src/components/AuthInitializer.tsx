@@ -49,12 +49,26 @@ const AuthInitializer = () => {
 
   useEffect(() => {
     // Auth Session Handling
+    const handleDevBypass = (session: any) => {
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!session && isLocalhost) {
+        const { login } = useStore.getState();
+        login('admin', '1234');
+        return true;
+      }
+      return false;
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session?.user ?? null, navigate);
+      if (!handleDevBypass(session)) {
+        setSession(session?.user ?? null, navigate);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session?.user ?? null, navigate);
+      if (!handleDevBypass(session)) {
+        setSession(session?.user ?? null, navigate);
+      }
     });
 
     return () => subscription.unsubscribe();

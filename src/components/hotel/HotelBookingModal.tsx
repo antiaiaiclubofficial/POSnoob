@@ -212,26 +212,24 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
         });
         
         const activitiesToInsert: any[] = [];
-        const todayStart = startOfDay(new Date());
         
         days.forEach(day => {
-          const dayStart = startOfDay(day);
-          // Don't insert activities for past days
-          if (dayStart >= todayStart) {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            dailyRoutines.forEach(routine => {
-              activitiesToInsert.push({
-                store_id: storeId,
-                booking_id: bookingId,
-                pet_id: selectedPet?.id,
-                activity_type: routine.type,
-                title: getActivityTypeName(routine.type),
-                scheduled_time: `${dateStr}T${routine.time}:00`,
-                status: 'pending',
-                note: routine.note
-              });
+          dailyRoutines.forEach(routine => {
+            const [hours, minutes] = routine.time.split(':');
+            const scheduledTime = new Date(day);
+            scheduledTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+            activitiesToInsert.push({
+              store_id: storeId,
+              booking_id: bookingId,
+              pet_id: selectedPet?.id,
+              activity_type: routine.type,
+              title: getActivityTypeName(routine.type),
+              scheduled_time: scheduledTime.toISOString(),
+              status: 'pending',
+              note: routine.note
             });
-          }
+          });
         });
         
         if (activitiesToInsert.length > 0) {
@@ -244,6 +242,9 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
       queryClient.invalidateQueries({ queryKey: ['hotel_bookings_active'] });
       queryClient.invalidateQueries({ queryKey: ['hotel_rooms'] });
       queryClient.invalidateQueries({ queryKey: ['hotel_activities_today'] });
+      if (existingBooking?.id) {
+        queryClient.invalidateQueries({ queryKey: ['hotel_activities_booking', existingBooking.id] });
+      }
       toast.success(isEdit ? 'แก้ไขการจองสำเร็จ' : 'สร้างการจองสำเร็จ');
       onClose();
     },
