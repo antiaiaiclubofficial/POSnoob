@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, BedDouble, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, BedDouble, Settings as SettingsIcon, History } from 'lucide-react';
 import { translations } from '@/utils/translations';
 import { useStore } from '@/store/useStore';
 import HotelDashboardTab from '@/components/hotel/HotelDashboardTab';
 import { HotelFloorPlan } from '@/components/hotel/HotelFloorPlan';
 import HotelSettingsTab from '@/components/hotel/HotelSettingsTab';
+import HotelHistoryTab from '@/components/hotel/HotelHistoryTab';
 import { cn } from '@/lib/utils';
 
-type HotelTab = 'dashboard' | 'rooms' | 'settings';
+type HotelTab = 'dashboard' | 'rooms' | 'settings' | 'history';
 
 const Hotel = () => {
   const { language } = useStore();
@@ -18,6 +19,7 @@ const Hotel = () => {
     { id: 'dashboard', label: 'ภาพรวม', icon: LayoutDashboard },
     { id: 'rooms', label: 'ห้องพัก & การจอง', icon: BedDouble },
     { id: 'settings', label: 'ตั้งค่าห้องพัก', icon: SettingsIcon },
+    { id: 'history', label: 'ประวัติการเข้าพัก', icon: History },
   ];
 
   return (
@@ -75,6 +77,7 @@ const Hotel = () => {
           {activeTab === 'dashboard' && <HotelDashboardTab />}
           {activeTab === 'rooms' && <HotelFloorPlan />}
           {activeTab === 'settings' && <HotelSettingsTab />}
+          {activeTab === 'history' && <HotelHistoryTab />}
         </div>
       </div>
     </div>

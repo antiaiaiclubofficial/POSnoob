@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Receipt, ShoppingCart, LogOut, ArrowRight, User, BedDouble } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -132,7 +133,7 @@ const HotelCheckoutModal = ({ bookingId, onClose }: HotelCheckoutModalProps) => 
   });
 
   if (isLoading || !booking) {
-    return (
+    const loadingContent = (
       <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
         <div className="bg-white rounded-3xl p-8 flex items-center gap-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1A1F3D]"></div>
@@ -140,6 +141,7 @@ const HotelCheckoutModal = ({ bookingId, onClose }: HotelCheckoutModalProps) => 
         </div>
       </div>
     );
+    return typeof document !== 'undefined' ? createPortal(loadingContent, document.body) : loadingContent;
   }
 
   const checkInDate = parseISO(booking.check_in_date);
@@ -153,9 +155,9 @@ const HotelCheckoutModal = ({ bookingId, onClose }: HotelCheckoutModalProps) => 
   const chargesTotal = charges.reduce((sum: number, c: any) => sum + (c.quantity * Number(c.unit_price)), 0);
   const deposit = Number(booking.deposit_amount || 0);
   
-  const grandTotal = roomTotal + chargesTotal - deposit;
+  const grandTotal = roomTotal + chargesTotal - booking.deposit_amount;
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-2xl rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
         
@@ -251,6 +253,8 @@ const HotelCheckoutModal = ({ bookingId, onClose }: HotelCheckoutModalProps) => 
       </div>
     </div>
   );
+  
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };
 
 export default HotelCheckoutModal;

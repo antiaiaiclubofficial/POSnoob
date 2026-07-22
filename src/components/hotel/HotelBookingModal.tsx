@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calendar as CalendarIcon, User, ArrowRight, Home, Trash2, Clock, Plus } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -308,7 +309,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
     createOrUpdateBooking.mutate();
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-3xl h-[85vh] max-h-[850px] rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col">
         {/* Header */}
@@ -547,9 +548,8 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
                             )}>
                               {act.status}
                             </span>
-                            <p className="text-sm font-bold text-[#1A1F3D]">{format(parseISO(act.scheduled_time), 'dd MMM yyyy HH:mm')} - {act.title || getActivityTypeName(act.activity_type)}</p>
+                            <p className="text-sm font-bold text-[#1A1F3D]">{format(parseISO(act.scheduled_time), 'dd MMM yyyy HH:mm')} - {act.title || getActivityTypeName(act.activity_type)}{act.note && ` - ${act.note}`}</p>
                           </div>
-                          {act.note && <p className="text-xs text-gray-500 mt-1">{act.note}</p>}
                         </div>
                         <button type="button" onClick={() => deleteActivity.mutate(act.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors">
                           <Trash2 size={16} />
@@ -611,8 +611,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
                               <Clock size={16} />
                           </div>
                           <div>
-                              <p className="text-sm font-bold text-[#1A1F3D]">{routine.time} - {getActivityTypeName(routine.type)}</p>
-                              {routine.note && <p className="text-xs text-gray-500 mt-1">{routine.note}</p>}
+                              <p className="text-sm font-bold text-[#1A1F3D]">{routine.time} - {getActivityTypeName(routine.type)}{routine.note && ` - ${routine.note}`}</p>
                           </div>
                         </div>
                         <button type="button" onClick={() => handleRemoveRoutine(routine.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors">
@@ -693,6 +692,8 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };
 
 export default HotelBookingModal;
