@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay } from 'date-fns';
 import { translations } from '@/utils/translations';
 import {
   ResponsiveContainer,
@@ -118,8 +118,8 @@ const Dashboard = () => {
           )
         `)
         .eq('store_id', storeId)
-        .gte('scheduled_time', start)
         .lte('scheduled_time', end)
+        .or(`scheduled_time.gte.${start},status.neq.done`)
         .order('scheduled_time', { ascending: true });
       if (error) throw error;
       return data as any[];
@@ -672,21 +672,33 @@ const Dashboard = () => {
                           </div>
                         </div>
                         <div className="space-y-4">
-                          {group.activities.map(activity => (
+                          {group.activities.map(activity => {
+                            const activityTime = parseISO(activity.scheduled_time);
+                            const isOverdue = activity.status !== 'done' && activityTime < new Date();
+                            const isPastDay = isOverdue && activityTime < startOfDay(new Date());
+
+                            return (
                             <div key={activity.id} className="flex items-center justify-between group">
                               <div className="flex items-center gap-[1rem]">
                                 <button
                                   onClick={() => toggleActivity.mutate({ activityId: activity.id, currentStatus: activity.status })}
-                                  className={`w-[2rem] h-[2rem] rounded-full flex items-center justify-center shrink-0 transition-colors ${activity.status === 'done' ? 'bg-[#EAFD69] text-[#1A1F3D]' : 'bg-[#e2e2e2] text-transparent hover:bg-[#EAFD69] hover:text-[#1A1F3D]'}`}
+                                  className={`w-[2rem] h-[2rem] rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                                    activity.status === 'done' 
+                                      ? 'bg-[#EAFD69] text-[#1A1F3D]' 
+                                      : isOverdue 
+                                        ? 'bg-red-100 text-red-500 hover:bg-red-200' 
+                                        : 'bg-[#e2e2e2] text-transparent hover:bg-[#EAFD69] hover:text-[#1A1F3D]'
+                                  }`}
                                 >
                                   <CheckCircle2 size={16} />
                                 </button>
                                 <div>
-                                  <p className={`text-[14px] font-bold ${activity.status === 'done' ? 'text-gray-400 line-through' : 'text-[#020d35]'}`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                                  <p className={`text-[14px] font-bold ${activity.status === 'done' ? 'text-gray-400 line-through' : isOverdue ? 'text-red-600' : 'text-[#020d35]'}`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
                                     {activity.title || activity.activity_type}
                                   </p>
-                                  <p className="text-[12px] text-[#76767f]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-                                    {format(parseISO(activity.scheduled_time), 'HH:mm')} {activity.note && `- ${activity.note}`}
+                                  <p className={`text-[12px] ${isOverdue ? 'text-red-500 font-medium' : 'text-[#76767f]'}`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                                    {format(activityTime, 'HH:mm')} {activity.note && `- ${activity.note}`}
+                                    {isPastDay && ' (ค้างจากวันก่อน)'}
                                   </p>
                                 </div>
                               </div>
@@ -694,7 +706,7 @@ const Dashboard = () => {
                                 <span className="text-[10px] font-bold bg-[#EAFD69] text-[#1a1e00] px-[0.75rem] py-[0.25rem] rounded-[9999px] uppercase tracking-wider">เสร็จแล้ว</span>
                               )}
                             </div>
-                          ))}
+                          )})}
                         </div>
                       </div>
                     ))

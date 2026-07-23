@@ -163,276 +163,322 @@ const HotelDashboardTab = () => {
   const stayingBookings = bookings.filter(b => b.status === 'checked_in');
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-[1rem]">
-        <div className="p-[1.5rem] bg-gradient-to-br from-[#18234a]/90 to-[#020d35]/70 backdrop-blur-xl border border-white/20 rounded-[1.5rem] flex items-center gap-[1rem] transition-transform hover:-translate-y-1 shadow-[0_8px_24px_rgba(24,35,74,0.15)] relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#EAFD69]/10 rounded-full blur-2xl -translate-y-10 translate-x-10 pointer-events-none"></div>
-          <div className="w-[3rem] h-[3rem] bg-[#ffffff]/10 text-[#EAFD69] rounded-[1rem] flex items-center justify-center backdrop-blur-md relative z-10">
-            <BedDouble size={22} />
-          </div>
-          <div className="relative z-10">
-            <p className="text-[13px] font-bold text-[#bac4f5]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>อัตราการเข้าพัก (Occupancy)</p>
-            <p className="text-[28px] font-black text-[#ffffff] mt-0.5 leading-none" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>{occupancyRate}% <span className="text-[13px] font-medium text-[#bac4f5]">({occupiedRooms}/{totalRooms})</span></p>
-          </div>
-        </div>
-
-        <div className="p-[1.5rem] bg-gradient-to-br from-[#EAFD69]/90 to-[#EAFD69]/50 backdrop-blur-xl border border-white/50 rounded-[1.5rem] flex items-center gap-[1rem] transition-transform hover:-translate-y-1 shadow-[0_8px_24px_rgba(234,253,105,0.2)] relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/60 rounded-full blur-2xl -translate-y-10 translate-x-10 pointer-events-none"></div>
-          <div className="w-[3rem] h-[3rem] bg-[#1a1e00]/5 text-[#1a1e00] rounded-[1rem] flex items-center justify-center relative z-10">
-            <CheckSquare size={22} />
-          </div>
-          <div className="relative z-10">
-            <p className="text-[13px] font-bold text-[#434b00]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>รอเช็คอินวันนี้</p>
-            <p className="text-[28px] font-black text-[#1a1e00] mt-0.5 leading-none" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>{todayCheckIns.length} <span className="text-[13px] font-medium text-[#434b00]">ห้อง</span></p>
-          </div>
-        </div>
-
-        <div className="p-[1.5rem] bg-gradient-to-br from-[#d9d6fe]/90 to-[#d9d6fe]/50 backdrop-blur-xl border border-white/50 rounded-[1.5rem] flex items-center gap-[1rem] transition-transform hover:-translate-y-1 shadow-[0_8px_24px_rgba(217,214,254,0.3)] relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/60 rounded-full blur-2xl -translate-y-10 translate-x-10 pointer-events-none"></div>
-          <div className="w-[3rem] h-[3rem] bg-[#5d5c7e]/10 text-[#191836] rounded-[1rem] flex items-center justify-center relative z-10">
-            <LogOut size={22} />
-          </div>
-          <div className="relative z-10">
-            <p className="text-[13px] font-bold text-[#5d5c7e]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>รอเช็คเอาท์วันนี้</p>
-            <p className="text-[28px] font-black text-[#191836] mt-0.5 leading-none" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>{todayCheckOuts.length} <span className="text-[13px] font-medium text-[#5d5c7e]">ห้อง</span></p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Currently Staying */}
-        <div className="relative overflow-hidden bg-white/40 backdrop-blur-2xl rounded-[2rem] p-[2rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col">
-          {/* Fluid Mesh Gradient */}
-          <div className="absolute -bottom-[30%] -right-[10%] w-[120%] h-[100%] bg-gradient-to-tl from-[#848FBC]/60 to-[#848FBC]/20 rounded-full blur-[80px] pointer-events-none"></div>
-          <div className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] bg-[#848FBC]/30 rounded-full blur-[70px] pointer-events-none"></div>
-
-          <h3 className="relative z-10 text-[20px] font-bold text-[#020d35] mb-[1rem]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>กำลังเข้าพัก ({stayingBookings.length})</h3>
-          {stayingBookings.length === 0 ? (
-            <p className="relative z-10 text-[14px] text-[#76767f] text-center py-[2rem]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ไม่มีสัตว์เลี้ยงเข้าพักในขณะนี้</p>
-          ) : (
-            <div className="relative z-10 space-y-[1rem]">
-              {stayingBookings.map(booking => {
-                const isOverdue = booking.check_out_expected ? isBefore(startOfDay(parseISO(booking.check_out_expected)), startOfDay(new Date())) : false;
-                return (
-                <div key={booking.id} className="flex flex-col gap-[0.5rem] p-[1.5rem] rounded-[1.5rem] bg-gradient-to-br from-white/60 to-white/30 backdrop-blur-xl border border-white/60 text-[#020d35] shadow-[0_8px_16px_rgba(0,0,0,0.03)] relative group">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-[16px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>{booking.pets?.name}</p>
-                      <p className="text-[14px] text-[#45464e] mt-1" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>เจ้าของ: {booking.customers?.display_name || booking.customers?.first_name}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-[14px] text-[#45464e]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-                          ห้อง: {booking.hotel_rooms?.room_name}
-                        </p>
-                        <RoomTypeBadge type={booking.hotel_rooms?.hotel_room_types} className="text-[11px]" />
-                      </div>
-                      {booking.special_requests && (
-                        <p className="text-[12px] text-[#45464e] mt-2" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-                          <span className="font-bold text-[#1A1F3D]">หมายเหตุ:</span> {booking.special_requests}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2 items-end">
-                      <span className={`text-[12px] font-bold px-[1rem] py-[0.5rem] rounded-[9999px] uppercase tracking-wider backdrop-blur-md ${isOverdue ? 'bg-red-500/10 text-red-600' : 'bg-[#020d35]/10 text-[#020d35]'}`}>
-                        {isOverdue ? 'เกินกำหนด' : 'เข้าพักอยู่'}
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setEditingBooking(booking)}
-                          className="opacity-0 group-hover:opacity-100 p-2 bg-white/50 hover:bg-[#1A1F3D] hover:text-[#EAFD69] text-gray-600 rounded-full transition-all"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          onClick={() => setCheckoutBookingId(booking.id)}
-                          className="opacity-0 group-hover:opacity-100 text-[12px] font-bold bg-[#d9d6fe] hover:brightness-95 text-[#191836] px-[1rem] py-[0.5rem] rounded-[9999px] uppercase tracking-wider shadow-sm transition-all cursor-pointer"
-                        >
-                          เช็คเอาท์
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )})}
+    <div className="space-y-[2rem]">
+      <div className="flex flex-col xl:flex-row gap-[2rem] items-start">
+        {/* Main Column (Left) */}
+        <div className="flex-1 w-full space-y-[1.5rem]">
+          {/* Section: ภาพรวมวันนี้ (Statistics Header Fallback) */}
+          <div className="flex justify-between items-center bg-[#f3f3f3] p-[0.75rem] rounded-[1.5rem] px-[1.25rem] shadow-[inset_0_4px_20px_rgba(0,0,0,0.02)]">
+            <h2 className="text-[24px] font-semibold text-[#1a1c1c] leading-none" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+              ภาพรวมวันนี้
+            </h2>
+            <div className="bg-[#ffffff] rounded-full px-[1rem] py-[0.35rem] shadow-[0_4px_20px_rgba(24,35,74,0.04)]">
+              <span className="text-[14px] font-medium text-[#45464E]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                {format(new Date(), 'dd MMM yyyy')}
+              </span>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Check-ins Today */}
-        <div className="relative overflow-hidden bg-white/40 backdrop-blur-2xl rounded-[2rem] p-[2rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col">
-          {/* Fluid Mesh Gradient */}
-          <div className="absolute -bottom-[30%] -right-[10%] w-[120%] h-[100%] bg-gradient-to-tl from-[#EAFD69]/70 to-[#EAFD69]/20 rounded-full blur-[80px] pointer-events-none"></div>
-          <div className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] bg-[#EAFD69]/30 rounded-full blur-[70px] pointer-events-none"></div>
+          {/* Section: กิจกรรม & ห้องพักวันนี้ */}
+          <div className="space-y-[1rem]">
+            <div className="flex items-center gap-[1rem]">
+              <h3 className="text-[24px] font-semibold text-[#1a1c1c] leading-none" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                กิจกรรม & ห้องพักวันนี้
+              </h3>
+              <div className="w-[1.75rem] h-[1.75rem] bg-[#020d35] text-[#ffffff] rounded-full flex items-center justify-center text-[12px] font-bold shadow-[0_4px_12px_rgba(2,13,53,0.3)]">
+                {activities.length}
+              </div>
+            </div>
 
-          <h3 className="relative z-10 text-[20px] font-bold text-[#020d35] mb-[1rem]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>รอเช็คอินวันนี้</h3>
-          {todayCheckIns.length === 0 ? (
-            <p className="relative z-10 text-[14px] text-[#76767f] text-center py-[2rem]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ไม่มีการเช็คอินวันนี้</p>
-          ) : (
-            <div className="relative z-10 space-y-[1rem]">
-              {todayCheckIns.map(booking => (
-                <div key={booking.id} className="flex flex-col gap-[0.5rem] p-[1.5rem] rounded-[1.5rem] bg-gradient-to-br from-white/60 to-white/30 backdrop-blur-xl border border-white/60 shadow-[0_8px_16px_rgba(0,0,0,0.03)] relative group">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-[16px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>{booking.pets?.name}</p>
-                      <p className="text-[14px] text-[#45464e] mt-1" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>เจ้าของ: {booking.customers?.display_name || booking.customers?.first_name}</p>
-                      <p className="text-[14px] text-[#45464e]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ห้อง: {booking.hotel_rooms?.room_name}</p>
-                      {booking.special_requests && (
-                        <p className="text-[12px] text-[#45464e] mt-2" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-                          <span className="font-bold text-[#1A1F3D]">หมายเหตุ:</span> {booking.special_requests}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <button
-                        onClick={() => setEditingBooking(booking)}
-                        className="opacity-0 group-hover:opacity-100 p-2 bg-white/50 hover:bg-[#1A1F3D] hover:text-[#EAFD69] text-gray-600 rounded-full transition-all"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[1rem]">
+              {stayingBookings.length === 0 ? (
+                <div className="col-span-full py-[3rem] text-center text-[#45464E] bg-[#ffffff] rounded-[2rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] text-[14px]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                  ไม่มีกิจกรรมหรือห้องพักวันนี้
+                </div>
+              ) : (
+                stayingBookings.map(booking => {
+                  const bookingActivities = activities.filter(a => a.booking_id === booking.id);
+                  const isVip = booking.customers?.membership === 'VIP';
+                  
+                  return (
+                    <div key={booking.id} className="bg-[#ffffff] rounded-[2rem] p-[1.5rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col gap-[1rem] relative overflow-hidden group">
+                      {/* Inner Frosted Glow Effect */}
+                      <div className="absolute top-0 right-0 w-[120px] h-[120px] bg-gradient-to-br from-white/80 to-transparent -translate-y-1/2 translate-x-1/2 rounded-full pointer-events-none"></div>
+
+                      {/* 1. หัวการ์ด: Avatar + Pet Name + Status Badge */}
+                      <div className="flex justify-between items-center relative z-10">
+                        <div className="flex items-center gap-[0.75rem]">
+                          <div className="w-[2.5rem] h-[2.5rem] rounded-full bg-[#f3f3f3] flex items-center justify-center text-[#020d35] shrink-0">
+                            <Activity size={18} />
+                          </div>
+                          <span className="text-[18px] font-semibold text-[#1a1c1c] truncate max-w-[100px]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                            {booking.pets?.name || 'ไม่ระบุชื่อ'}
+                          </span>
+                        </div>
+                        <div className="bg-[#d9d6fe] text-[#5d5c7e] px-[1rem] py-[0.25rem] rounded-full text-[12px] font-medium whitespace-nowrap">
+                          เข้าพักอยู่
+                        </div>
+                      </div>
+
+                      {/* 2. แถว stat: ไอคอน + ตัวเลขห้อง + Badge VIP */}
+                      <div className="flex items-center gap-[0.5rem] mt-[0.5rem] relative z-10 flex-wrap">
+                        <BedDouble size={16} className="text-[#45464E]" />
+                        <span className="text-[14px] text-[#45464E]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                          ห้อง: {booking.hotel_rooms?.room_name || '-'}
+                        </span>
+                        {booking.hotel_rooms?.hotel_room_types && (
+                          <RoomTypeBadge type={booking.hotel_rooms.hotel_room_types} className="text-[10px]" />
+                        )}
+                        {isVip && (
+                          <span className="ml-[0.5rem] bg-[#daed5b] text-[#1a1e00] px-[0.75rem] py-[0.125rem] rounded-full text-[10px] font-bold tracking-wider uppercase">
+                            VIP
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 3. เจ้าของสัตว์เลี้ยง + ไอคอนจำนวนกิจกรรมค้าง */}
+                      <div className="flex justify-between items-center text-[16px] text-[#45464E] relative z-10" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                        <span className="truncate pr-[1rem]">เจ้าของ: {booking.customers?.display_name || booking.customers?.first_name || '-'}</span>
+                        <div className="flex items-center gap-[0.25rem] shrink-0">
+                          <CheckSquare size={16} className="text-[#1a1c1c]" />
+                          <span className="font-bold text-[#1a1c1c]">{bookingActivities.filter(a => a.status !== 'done').length}</span>
+                        </div>
+                      </div>
+
+                      {/* 4. รายการกิจกรรมย่อย */}
+                      <div className="flex flex-col gap-[0.5rem] mt-[0.5rem] relative z-10 max-h-[150px] overflow-y-auto pr-1 scrollbar-thin">
+                        {bookingActivities.length === 0 ? (
+                          <span className="text-[12px] text-[#45464E]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ไม่มีกิจกรรม</span>
+                        ) : (
+                          bookingActivities.map((act) => {
+                            const activityTime = parseISO(act.scheduled_time);
+                            const isOverdue = act.status !== 'done' && activityTime < new Date();
+                            return (
+                              <div key={act.id} className="flex items-center justify-between group/act bg-[#f9f9f9] p-[0.5rem] rounded-[1rem] hover:bg-[#f3f3f3] transition-colors border border-transparent hover:border-gray-200">
+                                <div className="flex items-center gap-[0.5rem]">
+                                  <button
+                                    onClick={() => toggleActivity.mutate({ activityId: act.id, currentStatus: act.status })}
+                                    className={`w-[1.5rem] h-[1.5rem] rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                                      act.status === 'done' 
+                                        ? 'bg-[#daed5b] text-[#1a1e00]' 
+                                        : isOverdue 
+                                          ? 'bg-red-100 text-red-500 hover:bg-red-200' 
+                                          : 'bg-[#e2e2e2] text-transparent hover:bg-[#daed5b] hover:text-[#1a1e00]'
+                                    }`}
+                                  >
+                                    <CheckCircle2 size={14} />
+                                  </button>
+                                  <span className={`text-[12px] font-medium leading-tight ${act.status === 'done' ? 'text-gray-400 line-through' : isOverdue ? 'text-red-600' : 'text-[#1a1c1c]'}`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                                    {act.title || act.activity_type}{act.note && ` - ${act.note}`}
+                                  </span>
+                                </div>
+                                <span className={`text-[10px] font-bold px-[0.5rem] py-[0.125rem] rounded-full ${act.status === 'done' ? 'text-gray-400' : isOverdue ? 'text-red-500 bg-red-50' : 'text-[#45464E] bg-[#e2e2e2]'}`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                                  {format(activityTime, 'HH:mm')}
+                                </span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Actions / Footer */}
+                      <div className="mt-auto pt-[1.5rem] flex justify-between items-center border-t-0 relative z-10">
+                        <span className="text-[12px] text-[#45464E] truncate w-[50%]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                          Ref: {booking.id.substring(0,8)}
+                        </span>
+                        <div className="flex gap-[0.5rem]">
                           <button
-                            disabled={checkInBooking.isPending}
-                            className="text-[12px] font-bold bg-[#EAFD69] hover:brightness-95 text-[#1a1e00] px-[1rem] py-[0.5rem] rounded-[9999px] uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+                            onClick={() => setEditingBooking(booking)}
+                            className="w-[2.5rem] h-[2.5rem] bg-[#f3f3f3] hover:bg-[#e8e8e8] text-[#45464E] rounded-full flex items-center justify-center transition-colors"
                           >
-                            {checkInBooking.isPending ? 'รอสักครู่...' : 'เช็คอิน'}
+                            <Edit3 size={14} />
                           </button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-8 max-w-md">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="font-['IBM_Plex_Sans_Thai'] text-xl font-bold text-[#1A1F3D]">ยืนยันการเช็คอินให้น้องเข้าห้องพัก?</AlertDialogTitle>
-                            <AlertDialogDescription className="font-['IBM_Plex_Sans_Thai'] text-sm text-gray-500 font-medium">
-                              สถานะห้องพักจะถูกเปลี่ยนเป็น "กำลังเข้าพัก" ทันที
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="mt-6">
-                            <AlertDialogCancel className="rounded-2xl font-['IBM_Plex_Sans_Thai'] font-bold border-gray-200">ยกเลิก</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => checkInBooking.mutate({ bookingId: booking.id, roomId: booking.room_id })} className="bg-[#1A1F3D] hover:bg-[#020d35] rounded-2xl font-['IBM_Plex_Sans_Thai'] font-bold text-white shadow-lg">ยืนยันเช็คอิน</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Check-outs Today */}
-        <div className="relative overflow-hidden bg-white/40 backdrop-blur-2xl rounded-[2rem] p-[2rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col">
-          {/* Fluid Mesh Gradient */}
-          <div className="absolute -bottom-[30%] -right-[10%] w-[120%] h-[100%] bg-gradient-to-tl from-[#d9d6fe]/90 to-[#d9d6fe]/40 rounded-full blur-[80px] pointer-events-none"></div>
-          <div className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] bg-[#d9d6fe]/50 rounded-full blur-[70px] pointer-events-none"></div>
-
-          <h3 className="relative z-10 text-[20px] font-bold text-[#020d35] mb-[1rem]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>รอเช็คเอาท์วันนี้</h3>
-          {todayCheckOuts.length === 0 ? (
-            <p className="relative z-10 text-[14px] text-[#76767f] text-center py-[2rem]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ไม่มีการเช็คเอาท์วันนี้</p>
-          ) : (
-            <div className="relative z-10 space-y-[1rem]">
-              {todayCheckOuts.map(booking => (
-                <div key={booking.id} className="flex flex-col gap-[0.5rem] p-[1.5rem] rounded-[1.5rem] bg-gradient-to-br from-white/60 to-white/30 backdrop-blur-xl border border-white/60 shadow-[0_8px_16px_rgba(0,0,0,0.03)] relative group">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-[16px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>{booking.pets?.name}</p>
-                      <p className="text-[14px] text-[#45464e] mt-1" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>เจ้าของ: {booking.customers?.display_name || booking.customers?.first_name}</p>
-                      <p className="text-[14px] text-[#45464e]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ห้อง: {booking.hotel_rooms?.room_name}</p>
-                      {booking.special_requests && (
-                        <p className="text-[12px] text-[#45464e] mt-2" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-                          <span className="font-bold text-[#1A1F3D]">หมายเหตุ:</span> {booking.special_requests}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <button
-                        onClick={() => setEditingBooking(booking)}
-                        className="opacity-0 group-hover:opacity-100 p-2 bg-white/50 hover:bg-[#1A1F3D] hover:text-[#EAFD69] text-gray-600 rounded-full transition-all"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <button
-                        onClick={() => setCheckoutBookingId(booking.id)}
-                        className="text-[12px] font-bold bg-[#d9d6fe] hover:brightness-95 text-[#191836] px-[1rem] py-[0.5rem] rounded-[9999px] uppercase tracking-wider shadow-sm transition-all cursor-pointer"
-                      >
-                        เช็คเอาท์
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Pet Activities */}
-      <div className="relative overflow-hidden bg-[#F2F7FF] backdrop-blur-2xl rounded-[2rem] p-[2rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col mt-6 border border-blue-100/50">
-          <div className="absolute -bottom-[30%] -right-[10%] w-[120%] h-[100%] bg-gradient-to-tl from-blue-200/30 to-transparent rounded-full blur-[80px] pointer-events-none"></div>
-          <div className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] bg-blue-200/20 rounded-full blur-[70px] pointer-events-none"></div>
-
-          <div className="relative z-10 flex items-center gap-3 mb-[1rem]">
-            <h3 className="text-[20px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>กิจกรรมวันนี้</h3>
-            <span className="bg-[#1A1F3D] text-[#EAFD69] px-3 py-1 rounded-full text-xs font-bold">{activities.length}</span>
-          </div>
-          
-          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
-            {groupedActivities.length === 0 ? (
-              <p className="text-[14px] text-[#76767f] text-center py-[2rem]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ไม่มีกิจกรรมสำหรับวันนี้</p>
-            ) : (
-              groupedActivities.map(group => (
-                <div key={group.bookingId} className="flex flex-col gap-[0.5rem] p-[1.5rem] rounded-[1.5rem] bg-white/70 backdrop-blur-xl border border-white shadow-sm relative group h-fit">
-                  <div className="mb-2 pb-2 border-b border-gray-200">
-                    <p className="text-[16px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-                      {group.booking?.pets?.name || 'ไม่ระบุชื่อสัตว์เลี้ยง'}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className="text-[13px] text-[#76767f] font-medium" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-                        ห้อง: {group.booking?.hotel_rooms?.room_name || '-'}
-                      </p>
-                      <RoomTypeBadge type={group.booking?.hotel_rooms?.hotel_room_types} className="text-[10px]" />
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    {group.activities.map(activity => {
-                      const activityTime = parseISO(activity.scheduled_time);
-                      const isOverdue = activity.status !== 'done' && activityTime < new Date();
-                      const isPastDay = isOverdue && activityTime < startOfDay(new Date());
-                      
-                      return (
-                      <div key={activity.id} className="flex items-center justify-between group/act">
-                        <div className="flex items-center gap-[1rem]">
                           <button
-                            onClick={() => toggleActivity.mutate({ activityId: activity.id, currentStatus: activity.status })}
-                            className={`w-[2rem] h-[2rem] rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                              activity.status === 'done' 
-                                ? 'bg-[#EAFD69] text-[#1A1F3D]' 
-                                : isOverdue 
-                                  ? 'bg-red-100 text-red-500 hover:bg-red-200' 
-                                  : 'bg-[#e2e2e2] text-transparent hover:bg-[#EAFD69] hover:text-[#1A1F3D]'
+                            onClick={() => setCheckoutBookingId(booking.id)}
+                            className="text-[12px] font-bold bg-[#d9d6fe] hover:brightness-95 text-[#191836] px-[1rem] py-[0.5rem] rounded-full tracking-wider transition-all cursor-pointer"
+                          >
+                            เช็คเอาท์
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel Column (Right) */}
+        <div className="w-full xl:w-[320px] shrink-0 bg-[#f3f3f3] rounded-[3rem] p-[1.5rem] flex flex-col gap-[2rem] h-full shadow-[inset_0_4px_20px_rgba(0,0,0,0.02)]">
+          {/* รอเช็คอินวันนี้ */}
+          <div className="flex flex-col gap-[1rem]">
+            <h3 className="text-[14px] font-bold text-[#1a1c1c]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+              รอเช็คอินวันนี้
+            </h3>
+            <div className="flex flex-col gap-[0.75rem]">
+              {todayCheckIns.length === 0 ? (
+                <div className="bg-[#eeeeee] p-[1.5rem] rounded-[2rem] text-center text-[#45464E] text-[14px]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                  ไม่มีการเช็คอินวันนี้
+                </div>
+              ) : (
+                todayCheckIns.map(booking => (
+                  <div key={booking.id} className="bg-[#ffffff] p-[1rem] rounded-[2rem] flex items-center gap-[1rem] shadow-[0_4px_16px_rgba(24,35,74,0.03)] group relative hover:-translate-y-0.5 transition-transform">
+                     <div className="w-[2.5rem] h-[2.5rem] bg-[#f3f3f3] rounded-full flex items-center justify-center text-[#020d35] shrink-0">
+                       <Activity size={16} />
+                     </div>
+                     <div className="flex flex-col overflow-hidden items-start gap-[0.125rem]">
+                       <span className="text-[16px] font-medium text-[#1a1c1c] truncate w-full" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>{booking.pets?.name || 'ไม่ระบุชื่อ'}</span>
+                       <div className="flex items-center gap-[0.5rem]">
+                         <span className="text-[12px] text-[#45464E] truncate" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>{booking.hotel_rooms?.room_name || '-'}</span>
+                         {booking.hotel_rooms?.hotel_room_types && (
+                           <RoomTypeBadge type={booking.hotel_rooms.hotel_room_types} className="text-[9px] px-[0.35rem] py-[0.1rem]" />
+                         )}
+                       </div>
+                     </div>
+                     <div className="ml-auto flex shrink-0 gap-[0.25rem]">
+                       <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button
+                              disabled={checkInBooking.isPending}
+                              className="text-[10px] font-bold bg-[#daed5b] text-[#1a1e00] px-[0.75rem] py-[0.5rem] rounded-full uppercase cursor-pointer shadow-sm hover:brightness-95 transition-all"
+                            >
+                              เช็คอิน
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-8 max-w-md">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="font-['IBM_Plex_Sans_Thai'] text-xl font-bold text-[#1A1F3D]">ยืนยันการเช็คอิน?</AlertDialogTitle>
+                              <AlertDialogDescription className="font-['IBM_Plex_Sans_Thai'] text-sm text-gray-500 font-medium">
+                                สถานะห้องพักจะถูกเปลี่ยนเป็น "กำลังเข้าพัก" ทันที
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="mt-6">
+                              <AlertDialogCancel className="rounded-2xl font-['IBM_Plex_Sans_Thai'] font-bold border-gray-200">ยกเลิก</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => checkInBooking.mutate({ bookingId: booking.id, roomId: booking.room_id })} className="bg-[#1A1F3D] hover:bg-[#020d35] rounded-2xl font-['IBM_Plex_Sans_Thai'] font-bold text-white shadow-lg">ยืนยันเช็คอิน</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                     </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* รอเช็คเอาท์วันนี้ */}
+          <div className="flex flex-col gap-[1rem]">
+            <h3 className="text-[14px] font-bold text-[#1a1c1c]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+              รอเช็คเอาท์วันนี้
+            </h3>
+            <div className="flex flex-col gap-[0.75rem]">
+              {todayCheckOuts.length === 0 ? (
+                <div className="bg-[#eeeeee] p-[1.5rem] rounded-[2rem] text-center text-[#45464E] text-[14px]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                  ไม่มีการเช็คเอาท์วันนี้
+                </div>
+              ) : (
+                todayCheckOuts.map(booking => (
+                  <div key={booking.id} className="bg-[#ffffff] p-[1rem] rounded-[2rem] flex items-center gap-[1rem] shadow-[0_4px_16px_rgba(24,35,74,0.03)] group relative hover:-translate-y-0.5 transition-transform">
+                     <div className="w-[2.5rem] h-[2.5rem] bg-[#f3f3f3] rounded-full flex items-center justify-center text-[#020d35] shrink-0">
+                       <Activity size={16} />
+                     </div>
+                     <div className="flex flex-col overflow-hidden items-start gap-[0.125rem]">
+                       <span className="text-[16px] font-medium text-[#1a1c1c] truncate w-full" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>{booking.pets?.name || 'ไม่ระบุชื่อ'}</span>
+                       <div className="flex items-center gap-[0.5rem]">
+                         <span className="text-[12px] text-[#45464E] truncate" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ห้อง: {booking.hotel_rooms?.room_name || '-'}</span>
+                         {booking.hotel_rooms?.hotel_room_types && (
+                           <RoomTypeBadge type={booking.hotel_rooms.hotel_room_types} className="text-[9px] px-[0.35rem] py-[0.1rem]" />
+                         )}
+                       </div>
+                     </div>
+                     <div className="ml-auto text-[12px] text-[#45464E]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                       {booking.check_out_expected ? format(parseISO(booking.check_out_expected), 'HH:mm') : '-'}
+                     </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* กิจกรรมที่ต้องทำ */}
+          <div className="flex flex-col gap-[1rem]">
+            <h3 className="text-[14px] font-bold text-[#1a1c1c] flex justify-between items-center" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+              <span>กิจกรรมที่ต้องทำ</span>
+              <span className="bg-[#020d35] text-[#ffffff] px-[0.5rem] py-[0.125rem] rounded-full text-[10px]">{activities.filter(a => a.status !== 'done').length}</span>
+            </h3>
+            <div className="flex flex-col gap-[0.75rem] max-h-[300px] overflow-y-auto pr-[0.25rem] scrollbar-thin">
+              {activities.filter(a => a.status !== 'done').length === 0 ? (
+                <div className="bg-[#eeeeee] p-[1.5rem] rounded-[2rem] text-center text-[#45464E] text-[14px]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                  ไม่มีกิจกรรมค้าง
+                </div>
+              ) : (
+                activities.filter(a => a.status !== 'done').map(act => {
+                  const activityTime = parseISO(act.scheduled_time);
+                  const isOverdue = activityTime < new Date();
+                  const booking = act.hotel_bookings;
+                  
+                  return (
+                    <div key={act.id} className="bg-[#ffffff] p-[1rem] rounded-[2rem] flex flex-col gap-[0.75rem] shadow-[0_4px_16px_rgba(24,35,74,0.03)] border border-transparent hover:border-[#e2e2e2] transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-[0.5rem]">
+                          <button
+                            onClick={() => toggleActivity.mutate({ activityId: act.id, currentStatus: act.status })}
+                            className={`w-[1.75rem] h-[1.75rem] rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                              isOverdue ? 'bg-red-100 text-red-500 hover:bg-red-200' : 'bg-[#e2e2e2] text-transparent hover:bg-[#daed5b] hover:text-[#1a1e00]'
                             }`}
                           >
                             <CheckCircle2 size={16} />
                           </button>
-                          <div>
-                            <p className={`text-[14px] font-bold ${activity.status === 'done' ? 'text-gray-400 line-through' : isOverdue ? 'text-red-600' : 'text-[#020d35]'}`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-                              {activity.title || activity.activity_type}{activity.note && ` - ${activity.note}`}
-                            </p>
-                            <p className={`text-[12px] ${isOverdue ? 'text-red-500 font-medium' : 'text-[#76767f]'}`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-                              {format(activityTime, 'HH:mm')}
-                              {isPastDay && ' (ค้างจากวันก่อน)'}
-                            </p>
-                          </div>
+                          <span className={`text-[14px] font-medium leading-tight ${isOverdue ? 'text-red-600' : 'text-[#1a1c1c]'}`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                            {act.title || act.activity_type}{act.note && ` - ${act.note}`}
+                          </span>
                         </div>
-                        {activity.status === 'done' && (
-                          <span className="text-[10px] font-bold bg-[#EAFD69] text-[#1a1e00] px-[0.75rem] py-[0.25rem] rounded-[9999px] uppercase tracking-wider">เสร็จแล้ว</span>
-                        )}
+                        <span className={`text-[10px] font-bold px-[0.5rem] py-[0.125rem] rounded-full ${isOverdue ? 'text-red-500 bg-red-50' : 'text-[#45464E] bg-[#f3f3f3]'}`} style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                          {format(activityTime, 'HH:mm')}
+                        </span>
                       </div>
-                    )})}
-                  </div>
+                      {booking && (
+                        <div className="flex items-center gap-[0.5rem] pl-[2.25rem] flex-wrap">
+                          <span className="text-[12px] text-[#45464E]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                            น้อน: <span className="font-medium text-[#1a1c1c]">{booking.pets?.name || '-'}</span>
+                          </span>
+                          <span className="text-[10px] text-[#76767f]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>•</span>
+                          <span className="text-[12px] text-[#45464E]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                            ห้อง: {booking.hotel_rooms?.room_name || '-'}
+                          </span>
+                          {booking.hotel_rooms?.hotel_room_types && (
+                            <RoomTypeBadge type={booking.hotel_rooms.hotel_room_types} className="text-[9px] px-[0.35rem] py-[0.1rem]" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Highlight Stat Card (Occupancy) */}
+          <div className="mt-auto pt-[2rem]">
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#18234a] to-[#020d35] rounded-[3rem] p-[2.5rem] shadow-[0_8px_32px_rgba(24,35,74,0.15)] group">
+              {/* Liquid Glow Halo */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[#daed5b] opacity-[0.15] blur-[50px] pointer-events-none transition-transform group-hover:scale-110 duration-700"></div>
+              
+              <div className="relative z-10 flex flex-col gap-[0.5rem] items-center text-center">
+                <div className="w-[4rem] h-[4rem] bg-[#ffffff]/10 backdrop-blur-md rounded-full flex items-center justify-center text-[#ffffff] mb-[1rem] shadow-[0_4px_24px_rgba(0,0,0,0.2)]">
+                  <BedDouble size={28} />
                 </div>
-              ))
-            )}
+                <div className="text-[48px] font-semibold text-[#ffffff] leading-none tracking-tight" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                  {occupancyRate}%
+                </div>
+                <div className="text-[14px] font-medium text-[#bac4f5] mt-[0.5rem]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+                  อัตราการเข้าพัก ({occupiedRooms}/{totalRooms} ห้อง)
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
       {editingBooking && (
         <HotelBookingModal
