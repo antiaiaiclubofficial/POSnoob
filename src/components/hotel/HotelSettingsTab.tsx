@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
-import { Settings, Plus, Edit, Trash2, GripVertical } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, GripVertical, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Reorder } from 'framer-motion';
-import { HotelRoomType, HotelRoom } from '@/store/types';
+import { HotelRoomType, HotelRoom, HotelDaycarePricingRule } from '@/store/types';
 import { COLOR_MAP } from './roomColorMap';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { SketchPicker } from 'react-color';
@@ -26,7 +26,7 @@ const CustomColorPicker = ({ color, onChange }: { color: string, onChange: (hex:
   );
 };
 
-const HotelSettingsTab = () => {
+const HotelSettingsTab = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel' | 'daycare' }) => {
   const { storeId } = useStore();
   const queryClient = useQueryClient();
 
@@ -37,15 +37,20 @@ const HotelSettingsTab = () => {
 
   const [localRoomTypes, setLocalRoomTypes] = useState<HotelRoomType[]>([]);
   const [filterTypeId, setFilterTypeId] = useState<string>('all');
+  const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(null);
+
+  const [isEditingRule, setIsEditingRule] = useState(false);
+  const [editingRule, setEditingRule] = useState<Partial<HotelDaycarePricingRule> | null>(null);
 
   // Fetch Room Types
   const { data: roomTypes = [], isLoading: loadingTypes } = useQuery({
-    queryKey: ['hotel_room_types', storeId],
+    queryKey: ['hotel_room_types', storeId, serviceMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hotel_room_types')
         .select('*')
         .eq('store_id', storeId)
+        .eq('service_type', serviceMode)
         .order('sort_order', { ascending: true });
       if (error) throw error;
       return (data as any[]).map(d => ({
@@ -54,22 +59,38 @@ const HotelSettingsTab = () => {
         sortOrder: d.sort_order
       })) as HotelRoomType[];
     },
-    enabled: !!storeId && storeId !== 'default-store',
+    enabled: !!storeId && storeId !== 'default-store' && serviceMode === 'hotel',
+  });
+
+  // Fetch Pricing Rules
+  const { data: pricingRules = [] } = useQuery({
+    queryKey: ['daycare_pricing_rules', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('daycare_pricing_rules')
+        .select('*')
+        .eq('store_id', storeId)
+        .order('hours', { ascending: true });
+      if (error) throw error;
+      return data as HotelDaycarePricingRule[];
+    },
+    enabled: !!storeId && storeId !== 'default-store' && serviceMode === 'daycare',
   });
 
   // Fetch Rooms
   const { data: rooms = [], isLoading: loadingRooms } = useQuery({
-    queryKey: ['hotel_rooms', storeId],
+    queryKey: ['hotel_rooms', storeId, serviceMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hotel_rooms')
-        .select('*')
+        .select('*, hotel_room_types(*)')
         .eq('store_id', storeId)
-        .order('sort_order', { ascending: true });
+        .eq('service_type', serviceMode)
+        .order('room_name', { ascending: true });
       if (error) throw error;
       return data as any[];
     },
-    enabled: !!storeId && storeId !== 'default-store',
+    enabled: !!storeId && storeId !== 'default-store' && serviceMode === 'hotel',
   });
 
   useEffect(() => {
@@ -92,25 +113,31 @@ const HotelSettingsTab = () => {
 
   const handleReorder = (newOrder: HotelRoomType[]) => {
     setLocalRoomTypes(newOrder);
-    updateSortOrder.mutate(newOrder);
+    
+    if (saveTimeoutId) clearTimeout(saveTimeoutId);
+    
+    const timeout = setTimeout(() => {
+      updateSortOrder.mutate(newOrder);
+    }, 1000);
+    
+    setSaveTimeoutId(timeout);
   };
 
   const saveRoomType = useMutation({
     mutationFn: async (type: Partial<HotelRoomType>) => {
+      const payload = {
+        type_name: type.typeName,
+        color: type.color,
+        sort_order: type.sortOrder || 0,
+        store_id: storeId,
+        service_type: serviceMode
+      };
+
       if (type.id) {
-        const { error } = await supabase.from('hotel_room_types').update({
-          type_name: type.typeName,
-          color: type.color,
-          sort_order: type.sortOrder
-        }).eq('id', type.id);
+        const { error } = await supabase.from('hotel_room_types').update(payload).eq('id', type.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('hotel_room_types').insert([{
-          store_id: storeId,
-          type_name: type.typeName,
-          color: type.color || 'gray',
-          sort_order: type.sortOrder || 0
-        }]);
+        const { error } = await supabase.from('hotel_room_types').insert([payload]);
         if (error) throw error;
       }
     },
@@ -146,16 +173,15 @@ const HotelSettingsTab = () => {
         description: room.description || '',
         status: room.status || 'available',
         is_active: room.isActive !== false,
+        store_id: storeId,
+        service_type: serviceMode
       };
 
       if (room.id) {
         const { error } = await supabase.from('hotel_rooms').update(payload).eq('id', room.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('hotel_rooms').insert([{
-          store_id: storeId,
-          ...payload
-        }]);
+        const { error } = await supabase.from('hotel_rooms').insert([payload]);
         if (error) throw error;
       }
     },
@@ -181,9 +207,48 @@ const HotelSettingsTab = () => {
     }
   });
 
+  const saveRule = useMutation({
+    mutationFn: async (rule: Partial<HotelDaycarePricingRule>) => {
+      const payload = {
+        hours: rule.hours || 1,
+        price: rule.price || 0,
+        store_id: storeId,
+      };
+
+      if (rule.id) {
+        const { error } = await supabase.from('daycare_pricing_rules').update(payload).eq('id', rule.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('daycare_pricing_rules').insert([payload]);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daycare_pricing_rules'] });
+      setIsEditingRule(false);
+      setEditingRule(null);
+      toast.success('บันทึกกฎราคาสำเร็จ');
+    },
+    onError: (err) => {
+      toast.error('เกิดข้อผิดพลาด: ' + err.message);
+    }
+  });
+
+  const deleteRule = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('daycare_pricing_rules').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daycare_pricing_rules'] });
+      toast.success('ลบกฎราคาสำเร็จ');
+    }
+  });
+
   return (
     <div className="space-y-8">
       {/* Room Types Section */}
+      {serviceMode !== 'daycare' && (
       <div>
         <div className="flex justify-between items-center mb-[1.5rem]">
           <h2 className="text-[24px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ประเภทห้องพัก</h2>
@@ -256,13 +321,13 @@ const HotelSettingsTab = () => {
           axis="x"
           values={localRoomTypes}
           onReorder={handleReorder}
-          className="flex flex-wrap gap-[1rem]"
+          className="flex gap-[1rem] overflow-x-auto pb-4 scrollbar-thin"
         >
           {localRoomTypes.map(type => {
             const isHex = type.color?.startsWith('#');
             const colorConfig = !isHex ? COLOR_MAP[type.color || 'gray'] : null;
             return (
-              <Reorder.Item key={type.id} value={type} className="min-w-[250px] flex-1 cursor-grab active:cursor-grabbing">
+              <Reorder.Item key={type.id} value={type} className="min-w-[250px] shrink-0 cursor-grab active:cursor-grabbing">
                 <div 
                   className={`p-[1.5rem] h-full rounded-[2rem] border-2 shadow-[0_4px_16px_rgba(24,35,74,0.03)] bg-white ${colorConfig ? colorConfig.border : ''} flex justify-between items-center`} 
                   style={{ 
@@ -288,24 +353,29 @@ const HotelSettingsTab = () => {
           })}
         </Reorder.Group>
       </div>
+      )}
 
-      <hr className="border-gray-100" />
+      {serviceMode !== 'daycare' && <hr className="border-gray-100" />}
 
       {/* Rooms Section */}
+      {serviceMode !== 'daycare' && (
       <div>
         <div className="flex justify-between items-center mb-[1.5rem]">
-          <h2 className="text-[24px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>ห้องพักทั้งหมด</h2>
+          <h2 className="text-[24px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+            {serviceMode === 'daycare' ? 'แพ็กเกจฝากเลี้ยง (Day Care Packages)' : 'ห้องพักทั้งหมด'}
+          </h2>
           <button 
             onClick={() => { setEditingRoom({ roomName: '', pricePerNight: 0, capacity: 1, status: 'available', isActive: true }); setIsEditingRoom(true); }}
             className="px-[1.5rem] py-[0.75rem] bg-gradient-to-br from-[#18234a] to-[#020d35] text-white rounded-[3rem] text-[14px] font-bold flex items-center gap-2 hover:-translate-y-0.5 transition-transform shadow-[0_10px_25px_-5px_rgba(24,35,74,0.3)]"
             style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}
           >
             <Plus size={16} />
-            เพิ่มห้องพัก
+            {serviceMode === 'daycare' ? 'เพิ่มแพ็กเกจ' : 'เพิ่มห้องพัก'}
           </button>
         </div>
 
         {/* Filter Section */}
+        {serviceMode !== 'daycare' && (
         <div className="flex gap-2 overflow-x-auto pb-4 mb-4" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
           <button
             onClick={() => setFilterTypeId('all')}
@@ -323,6 +393,7 @@ const HotelSettingsTab = () => {
             </button>
           ))}
         </div>
+        )}
 
         {isEditingRoom && editingRoom && (
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
@@ -434,7 +505,7 @@ const HotelSettingsTab = () => {
                     }} className="text-gray-400 hover:text-[#18234a] transition-colors">
                       <Edit size={16} />
                     </button>
-                    <button onClick={() => { if(confirm('ยืนยันการลบห้องพักนี้?')) deleteRoom.mutate(room.id); }} className="text-gray-400 hover:text-[#8E171D] transition-colors">
+                    <button onClick={() => { if(confirm('ยืนยันการลบรายการนี้?')) deleteRoom.mutate(room.id); }} className="text-gray-400 hover:text-[#8E171D] transition-colors">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -454,6 +525,101 @@ const HotelSettingsTab = () => {
           })}
         </div>
       </div>
+      )}
+
+      {/* Day Care Pricing Rules Section */}
+      {serviceMode === 'daycare' && (
+      <div>
+        <div className="flex justify-between items-center mb-[1.5rem]">
+          <h2 className="text-[24px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
+            กฎการคิดราคาตามเวลา (Pricing Rules)
+          </h2>
+          <button 
+            onClick={() => { setEditingRule({ hours: 1, price: 0 }); setIsEditingRule(true); }}
+            className="px-[1.5rem] py-[0.75rem] bg-gradient-to-br from-[#18234a] to-[#020d35] text-white rounded-[3rem] text-[14px] font-bold flex items-center gap-2 hover:-translate-y-0.5 transition-transform shadow-[0_10px_25px_-5px_rgba(24,35,74,0.3)]"
+            style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}
+          >
+            <Plus size={16} />
+            เพิ่มกฎราคา
+          </button>
+        </div>
+
+        {isEditingRule && editingRule && (
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">ระยะเวลา (ชั่วโมง)</label>
+              <input 
+                type="number" 
+                step="0.5"
+                value={editingRule.hours || 1} 
+                onChange={(e) => setEditingRule({...editingRule, hours: Number(e.target.value)})}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">ใช้ตัวเลขทศนิยมได้ (เช่น 0.5 สำหรับครึ่งชั่วโมง)</p>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">ราคา (บาท)</label>
+              <input 
+                type="number" 
+                value={editingRule.price || 0} 
+                onChange={(e) => setEditingRule({...editingRule, price: Number(e.target.value)})}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+            </div>
+            <div className="flex gap-2 w-full lg:col-span-2">
+              <button 
+                onClick={() => saveRule.mutate(editingRule)}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600 flex-1"
+              >
+                บันทึก
+              </button>
+              <button 
+                onClick={() => { setIsEditingRule(false); setEditingRule(null); }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-300 flex-1"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[1rem]">
+          {[...pricingRules].map(rule => (
+            <div key={rule.id} 
+              className="p-[1.5rem] rounded-[2rem] border-2 border-indigo-100 shadow-[0_4px_16px_rgba(24,35,74,0.03)] bg-white flex flex-col gap-[0.5rem]" 
+              style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <Clock size={20} className="text-indigo-600" />
+                  <span className="font-black text-[20px] text-[#020d35]">{rule.hours} ชม.</span>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => { 
+                    setEditingRule({ id: rule.id, hours: rule.hours, price: rule.price }); 
+                    setIsEditingRule(true); 
+                  }} className="text-gray-400 hover:text-[#18234a] transition-colors">
+                    <Edit size={16} />
+                  </button>
+                  <button onClick={() => { if(confirm('ยืนยันการลบกฎราคานี้?')) deleteRule.mutate(rule.id); }} className="text-gray-400 hover:text-[#8E171D] transition-colors">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex justify-between text-[14px] mt-2">
+                <span className="font-medium opacity-80">ราคาเหมา</span>
+                <span className="font-bold text-lg text-indigo-700">฿{rule.price}</span>
+              </div>
+            </div>
+          ))}
+          {pricingRules.length === 0 && (
+            <div className="col-span-full py-10 text-center text-gray-400">
+              ยังไม่มีกฎราคา กรุณาเพิ่มกฎอย่างน้อย 1 กฎ (เช่น 1 ชั่วโมง)
+            </div>
+          )}
+        </div>
+      </div>
+      )}
     </div>
   );
 };

@@ -1,57 +1,45 @@
 import React from 'react';
-import { Plus, PawPrint } from 'lucide-react';
+import { parseISO, isAfter, subHours } from 'date-fns';
+import { Plus, PawPrint, Power } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COLOR_MAP } from './roomColorMap';
+import { RoomTypeBadge } from './RoomTypeBadge';
 
 interface RoomGlassCardProps {
   room: any; // Room from hotel_rooms
   type: any; // Room type from hotel_room_types
   activeBooking?: any; // Active booking if occupied
   size?: number; // Size in pixels
+  serviceMode?: 'hotel' | 'daycare';
   onBook: () => void;
   onOpenDetail: () => void;
+  onCleanFinish?: () => void;
 }
 
 const statusHalo = {
-  ok: 'bg-lg-tertiary-fixed/15',      // เขียวมะนาว soft glow = ปกติ
-  warn: 'bg-lg-accent-brown/20',        // amber-brown glow = ถึงเวลากิจกรรม
-  danger: 'bg-lg-accent-red/15',          // แดง glow = ด่วน
+  ok: 'bg-green-400/30',
+  warn: 'bg-orange-400/30',
+  danger: 'bg-red-500/30',
 };
-
-const statusBubbleClass = {
-  ok: 'bg-lg-secondary-container text-lg-on-secondary-container',
-  warn: 'bg-lg-accent-brown/15 text-lg-accent-brown',
-  danger: 'bg-lg-accent-red/10 text-lg-accent-red',
-};
-
-const statusText = { ok: 'ปกติ', warn: 'ถึงเวลา', danger: 'ด่วน' };
 
 export const RoomGlassCard: React.FC<RoomGlassCardProps> = ({
   room,
   type,
   activeBooking,
-  size = 160,
+  size = 140, // Set default size to be slightly smaller to fit the 3D grid
+  serviceMode = 'hotel',
   onBook,
   onOpenDetail,
+  onCleanFinish,
 }) => {
   const isOccupied = activeBooking && activeBooking.status === 'checked_in';
   const sizeLabel = type?.type_name || 'ไม่ระบุ';
-  const typeColor = type?.color || 'gray';
+  const typeColor = type?.color || '#a0a0a0';
   const isHex = typeColor.startsWith('#');
-  const badgeClass = !isHex ? (COLOR_MAP[typeColor as keyof typeof COLOR_MAP]?.badge || COLOR_MAP.gray.badge) : '';
-  
-  const getContrastColor = (hex: string) => {
-    const cleanHex = hex.replace('#', '');
-    const r = parseInt(cleanHex.slice(0, 2), 16) || 0;
-    const g = parseInt(cleanHex.slice(2, 4), 16) || 0;
-    const b = parseInt(cleanHex.slice(4, 6), 16) || 0;
-    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-    return yiq >= 128 ? '#1a1c1c' : '#ffffff';
-  };
-  
-  const style = { width: `${size}px`, height: `${size}px` };
 
-  // Determine the state of the room to render the correct content
+  // We make it slightly taller than wide
+  const style = { width: `${size}px`, height: `${size * 1.15}px` };
+
   let status: 'maintenance' | 'cleaning' | 'empty' | 'reserved' | 'occupied';
   if (room.status === 'maintenance') status = 'maintenance';
   else if (room.status === 'cleaning') status = 'cleaning';
@@ -59,47 +47,51 @@ export const RoomGlassCard: React.FC<RoomGlassCardProps> = ({
   else if (activeBooking && activeBooking.status === 'reserved') status = 'reserved';
   else status = 'empty';
 
-  // Content rendering based on status
+  // Toggle state
+  const isToggleOn = status === 'occupied' || status === 'reserved';
+
+
+
   const renderContent = () => {
     switch (status) {
       case 'maintenance':
         return (
           <button
             data-tilt
-            onClick={() => {}}
-            className="group relative flex w-full h-full flex-col items-center justify-center gap-2
-                       rounded-lg-lg bg-lg-surface-variant/30 backdrop-blur-md
-                       shadow-[0_8px_20px_-8px_rgba(2,13,53,0.06),0_4px_0_0_rgba(2,13,53,0.04)]
-                       opacity-60 cursor-not-allowed transition-transform duration-150 ease-out z-10"
+            onClick={() => { }}
+            style={{ WebkitFontSmoothing: 'antialiased', backfaceVisibility: 'hidden', transform: 'translateZ(1px)' }}
+            className="group relative flex w-full h-full flex-col items-center justify-center p-4
+                       rounded-[1.5rem] bg-white/90 border border-white/40
+                       shadow-[0_8px_32px_rgba(31,38,135,0.15)] overflow-hidden
+                       opacity-60 cursor-not-allowed transition-transform duration-300 ease-out z-10"
           >
-            <span 
-              className={cn("absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px]", badgeClass)}
-              style={isHex ? { backgroundColor: typeColor, color: getContrastColor(typeColor) } : {}}
-            >
-              {sizeLabel}
-            </span>
-            <span className="text-label-md text-lg-on-surface-variant">ปรับปรุง</span>
-            <span className="text-[13px] text-lg-on-surface-variant/70">{room.room_name}</span>
+            <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
+            <div className="mb-2">
+              <RoomTypeBadge type={type} className="text-[12px] px-3 py-1" />
+            </div>
+            <Power className="h-8 w-8 text-gray-400 mb-2 opacity-50" />
+            <span className="text-[20px] font-bold text-gray-700 text-center leading-tight">ปรับปรุง</span>
+            <span className="text-[16px] font-medium text-gray-500 mt-1">{room.room_name}</span>
           </button>
         );
       case 'cleaning':
         return (
           <button
             data-tilt
-            onClick={() => {}}
-            className="group relative flex w-full h-full flex-col items-center justify-center gap-2
-                       rounded-lg-lg bg-lg-surface-variant/50 backdrop-blur-md
-                       shadow-[0_8px_20px_-8px_rgba(2,13,53,0.06),0_4px_0_0_rgba(2,13,53,0.04)]
-                       opacity-80 transition-transform duration-150 ease-out z-10"
+            onClick={(e) => { e.stopPropagation(); onCleanFinish?.(); }}
+            style={{ WebkitFontSmoothing: 'antialiased', backfaceVisibility: 'hidden', transform: 'translateZ(1px)' }}
+            className="group relative flex w-full h-full flex-col items-center justify-center p-4
+                       rounded-[1.5rem] bg-white/90 border border-white/50
+                       shadow-[0_8px_32px_rgba(31,38,135,0.15)] overflow-hidden
+                       opacity-80 transition-transform duration-300 ease-out z-10"
           >
-            <span 
-              className={cn("absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px]", badgeClass)}
-              style={isHex ? { backgroundColor: typeColor, color: getContrastColor(typeColor) } : {}}
-            >
-              {sizeLabel}
-            </span>
-            <span className="text-label-md text-lg-on-surface-variant">ทำความสะอาด</span>
-            <span className="text-[13px] text-lg-on-surface-variant/70">{room.room_name}</span>
+            <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
+            <div className="mb-2">
+              <RoomTypeBadge type={type} className="text-[12px] px-3 py-1" />
+            </div>
+            <Power className="h-8 w-8 text-blue-400 mb-2 opacity-80" />
+            <span className="text-[20px] font-bold text-blue-700 text-center leading-tight">ทำความสะอาด</span>
+            <span className="text-[16px] font-medium text-gray-500 mt-1">{room.room_name}</span>
           </button>
         );
       case 'empty':
@@ -107,96 +99,88 @@ export const RoomGlassCard: React.FC<RoomGlassCardProps> = ({
           <button
             data-tilt
             onClick={onBook}
-            className="group relative flex w-full h-full flex-col items-center justify-center gap-2
-                       rounded-lg-lg bg-lg-surface-container-lowest/60 backdrop-blur-md
-                       shadow-[0_8px_20px_-8px_rgba(2,13,53,0.06),0_4px_0_0_rgba(2,13,53,0.04)]
+            style={{ WebkitFontSmoothing: 'antialiased', backfaceVisibility: 'hidden', transform: 'translateZ(1px)' }}
+            className="group relative flex w-full h-full flex-col items-center justify-center p-4
+                       rounded-[1.5rem] bg-white/80 border border-white/40
+                       shadow-[0_8px_32px_rgba(31,38,135,0.1)] overflow-hidden
                        transition-all duration-300 ease-out z-10
-                       hover:shadow-[0_16px_32px_-8px_rgba(2,13,53,0.14),0_4px_0_0_rgba(2,13,53,0.06)]
-                       hover:-translate-y-1"
+                       hover:bg-white/90 hover:shadow-[0_16px_32px_rgba(31,38,135,0.2)] hover:-translate-y-2"
           >
-            <div className="absolute inset-0 rounded-lg-lg border-2 border-green-400/60 animate-pulse pointer-events-none" />
-            <span 
-              className={cn("absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px]", badgeClass)}
-              style={isHex ? { backgroundColor: typeColor, color: getContrastColor(typeColor) } : {}}
-            >
-              {sizeLabel}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent pointer-events-none" />
+            <div className="mb-2">
+              <RoomTypeBadge type={type} className="text-[12px] px-3 py-1" />
+            </div>
+            <div className="w-10 h-10 rounded-full bg-white/40 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-inner">
+              <Plus className="h-5 w-5 text-gray-500" />
+            </div>
+            <span className="text-[20px] font-bold text-gray-800 text-center leading-tight">
+              {serviceMode === 'daycare' ? 'ว่าง' : 'ว่าง'}
             </span>
-            <Plus className="h-5 w-5 text-lg-on-surface-variant transition-transform group-hover:scale-110" />
-            <span className="text-label-md text-lg-on-surface-variant">ว่าง</span>
-            <span className="text-[13px] text-lg-on-surface-variant/70">{room.room_name}</span>
+            <span className="text-[16px] font-medium text-gray-600 mt-1">{room.room_name}</span>
           </button>
         );
       case 'reserved':
-        return (
-          <button
-            data-tilt
-            onClick={onBook}
-            className="group relative flex w-full h-full flex-col items-center justify-center gap-2
-                       rounded-lg-lg bg-lg-surface-container-lowest/80 backdrop-blur-md
-                       shadow-[0_8px_20px_-8px_rgba(2,13,53,0.08),0_4px_0_0_rgba(2,13,53,0.06)]
-                       transition-all duration-300 ease-out z-10
-                       hover:shadow-[0_16px_32px_-8px_rgba(2,13,53,0.14),0_4px_0_0_rgba(2,13,53,0.06)]
-                       hover:-translate-y-1"
-          >
-            <div className="absolute inset-0 rounded-lg-lg border-2 border-orange-400/70 animate-pulse pointer-events-none" />
-            <span 
-              className={cn("absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px]", badgeClass)}
-              style={isHex ? { backgroundColor: typeColor, color: getContrastColor(typeColor) } : {}}
-            >
-              {sizeLabel}
-            </span>
-            <span className="text-label-md text-lg-on-surface-variant font-medium">รอเช็คอิน</span>
-            <span className="text-[14px] text-lg-on-surface-variant/80">{activeBooking.pets?.name}</span>
-            <span className="text-[12px] text-lg-on-surface-variant/50">{room.room_name}</span>
-          </button>
-        );
-      case 'occupied':
-        const petStatus = 'ok';
-        return (
-          <button
-            data-tilt
-            onClick={onOpenDetail}
-            className="group relative flex w-full h-full flex-col items-center justify-center gap-2
-                       rounded-lg-lg bg-gradient-to-br from-white/90 to-white/50
-                       backdrop-blur-xl shadow-[0_8px_20px_-8px_rgba(2,13,53,0.08),0_4px_0_0_rgba(2,13,53,0.06)]
-                       transition-all duration-300 ease-out z-10
-                       hover:shadow-[0_16px_32px_-8px_rgba(2,13,53,0.14),0_4px_0_0_rgba(2,13,53,0.06)]
-                       hover:-translate-y-1"
-          >
-            <div className="absolute inset-0 rounded-lg-lg border-2 border-lg-primary/60 animate-pulse pointer-events-none" />
-            <span 
-              className={cn("absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px]", badgeClass)}
-              style={isHex ? { backgroundColor: typeColor, color: getContrastColor(typeColor) } : {}}
-            >
-              {sizeLabel}
-            </span>
+      case 'occupied': {
+        const expectedDate = activeBooking?.check_out_expected ? parseISO(activeBooking.check_out_expected) : null;
+        const isOverdue = status === 'occupied' && expectedDate && isAfter(new Date(), expectedDate);
+        const isWaitingForPickup = status === 'occupied' && expectedDate && !isOverdue && isAfter(new Date(), subHours(expectedDate, 1));
+        
+        let statusText = 'เข้าพักอยู่';
+        let statusColor = 'text-gray-400';
+        let haloClass = statusHalo.ok;
+        
+        if (status === 'reserved') {
+          statusText = 'รอเช็คอิน';
+        } else if (isOverdue) {
+          statusText = 'เลยเวลา';
+          statusColor = 'text-red-500';
+          haloClass = statusHalo.danger;
+        } else if (isWaitingForPickup) {
+          statusText = 'รอรับกลับ';
+          statusColor = 'text-orange-500';
+          haloClass = statusHalo.warn;
+        }
 
-            {/* Pet Highlight halo + Contact shadow */}
-            <div className="relative flex flex-col items-center">
-              <div className="relative flex h-12 w-12 items-center justify-center">
-                <div className={cn("absolute inset-0 rounded-full blur-md scale-150", statusHalo[petStatus])} />
-                <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-lg-surface-container-lowest shadow-[0_3px_6px_rgba(2,13,53,0.1)]">
-                  <PawPrint className="h-5 w-5 text-lg-primary" />
-                </div>
-              </div>
-              <div className="mt-0.5 h-1.5 w-6 rounded-full bg-lg-on-surface/10 blur-[3px]" />
+        return (
+          <button
+            data-tilt
+            onClick={status === 'occupied' ? onOpenDetail : onBook}
+            style={{ WebkitFontSmoothing: 'antialiased', backfaceVisibility: 'hidden', transform: 'translateZ(1px)' }}
+            className="group relative flex w-full h-full flex-col items-center justify-center p-4
+                       rounded-[1.5rem] bg-white/95 border border-white/80
+                       shadow-[0_8px_32px_rgba(31,38,135,0.2)] overflow-hidden
+                       transition-all duration-300 ease-out z-10
+                       hover:bg-white hover:shadow-[0_16px_40px_rgba(31,38,135,0.3)] hover:-translate-y-2"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-transparent pointer-events-none" />
+            
+            {/* Status indicator (like temperature in the image) */}
+            <div className="absolute top-3 w-full text-center">
+              <span className={cn("text-[11px] font-black uppercase tracking-wider", statusColor)}>
+                {statusText}
+              </span>
             </div>
 
-            <span className="text-[16px] font-bold text-lg-on-surface truncate w-full px-2 text-center">
-              {activeBooking.pets?.name}
-            </span>
+            <div className="relative flex h-12 w-12 items-center justify-center mt-3 mb-1">
+              <div className={cn("absolute inset-0 rounded-full blur-xl scale-150 transition-opacity", haloClass)} />
+              <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md">
+                <PawPrint className="h-5 w-5 text-cyan-500" />
+              </div>
+            </div>
 
-            <span className="text-[12px] text-lg-on-surface-variant/50 absolute bottom-3">
-              {room.room_name}
+            <span className="text-[20px] font-extrabold text-gray-900 text-center leading-tight truncate w-full px-1">
+              {activeBooking?.pets?.name || 'Unknown'}
             </span>
+            <span className="text-[16px] font-medium text-gray-600 mt-1">{room.room_name}</span>
           </button>
         );
+      }
     }
   };
 
   return (
     <div
-      className="relative [perspective:600px] group"
+      className="relative group perspective-[1000px] pointer-events-auto"
       style={style}
       onMouseMove={(e) => {
         if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return;
@@ -205,7 +189,7 @@ export const RoomGlassCard: React.FC<RoomGlassCardProps> = ({
         const rect = e.currentTarget.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width - 0.5;
         const y = (e.clientY - rect.top) / rect.height - 0.5;
-        card.style.transform = `rotateX(${y * -12}deg) rotateY(${x * 12}deg)`;
+        card.style.transform = `rotateX(${y * -20}deg) rotateY(${x * 20}deg)`;
       }}
       onMouseLeave={(e) => {
         const card = e.currentTarget.querySelector('[data-tilt]') as HTMLElement;
@@ -214,19 +198,8 @@ export const RoomGlassCard: React.FC<RoomGlassCardProps> = ({
         }
       }}
     >
-      {/* Diamond floor tile */}
-      <div
-        aria-hidden
-        className={cn(
-          "absolute left-1/2 top-1/2 h-3/5 w-3/5 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-lg",
-          "bg-gradient-to-br opacity-40 blur-[2px] transition-colors duration-500 z-0",
-          status === 'empty' || status === 'maintenance' || status === 'cleaning'
-            ? "from-lg-surface-variant/30 to-transparent"
-            : "from-lg-tertiary-fixed/25 to-lg-secondary-container/20"
-        )}
-      />
-
       {renderContent()}
     </div>
   );
 };
+

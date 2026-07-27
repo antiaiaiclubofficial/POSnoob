@@ -23,9 +23,16 @@ import {
 
 interface HotelBookingModalProps {
   roomId: string;
-  roomName: string;
+  roomName?: string;
   existingBooking?: any;
   onClose: () => void;
+  serviceMode?: 'hotel' | 'daycare';
+}
+
+interface HotelDaycarePricingRule {
+  id: string;
+  hours: number;
+  price: number;
 }
 
 type ActivityType = 'feeding' | 'walk' | 'medication' | 'grooming' | 'playtime' | 'cleaning' | 'custom';
@@ -48,7 +55,7 @@ const getActivityTypeName = (type: string) => {
   }
 };
 
-const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: HotelBookingModalProps) => {
+const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, serviceMode = 'hotel' }: HotelBookingModalProps) => {
   const { customers, storeId, currentUser } = useStore();
   const queryClient = useQueryClient();
   
@@ -56,11 +63,11 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
 
   const [activeTab, setActiveTab] = useState<'details' | 'routine'>('details');
 
-  // Search & Selection States
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedOwnerId, setSelectedOwnerId] = useState('');
   const [selectedPetId, setSelectedPetId] = useState('');
+  const [selectedRoomId, setSelectedRoomId] = useState(roomId || '');
 
   // Stay Details States
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -88,16 +95,16 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
       setSpecialRequests(existingBooking.special_requests || '');
 
       if (existingBooking.check_in_date && existingBooking.check_out_expected) {
-        const ci = existingBooking.check_in_date.split('T');
-        const co = existingBooking.check_out_expected.split('T');
+        const ciDate = parseISO(existingBooking.check_in_date);
+        const coDate = parseISO(existingBooking.check_out_expected);
         
         setDateRange({
-          from: parseISO(ci[0]),
-          to: parseISO(co[0])
+          from: ciDate,
+          to: coDate
         });
         
-        if (ci[1]) setCheckInTime(ci[1].substring(0, 5));
-        if (co[1]) setCheckOutTime(co[1].substring(0, 5));
+        setCheckInTime(format(ciDate, 'HH:mm'));
+        setCheckOutTime(format(coDate, 'HH:mm'));
       }
     }
   }, [existingBooking]);
@@ -115,6 +122,38 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
       return data;
     },
     enabled: !!existingBooking?.id,
+  });
+
+  // Fetch available rooms/packages
+  const { data: rooms = [] } = useQuery({
+    queryKey: ['hotel_rooms_booking', storeId, serviceMode],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('hotel_rooms')
+        .select('*')
+        .eq('store_id', storeId)
+        .eq('service_type', serviceMode)
+        .eq('is_active', true)
+        .order('room_name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!storeId && storeId !== 'default-store' && serviceMode === 'hotel',
+  });
+
+  // Fetch Pricing Rules for Day Care
+  const { data: pricingRules = [] } = useQuery({
+    queryKey: ['daycare_pricing_rules_booking', storeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('daycare_pricing_rules')
+        .select('*')
+        .eq('store_id', storeId)
+        .order('hours', { ascending: false }); // Sort DESC for greedy algo
+      if (error) throw error;
+      return data as HotelDaycarePricingRule[];
+    },
+    enabled: !!storeId && storeId !== 'default-store' && serviceMode === 'daycare',
   });
 
   const deleteActivity = useMutation({
@@ -141,16 +180,72 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
   const selectedOwner = customers.find(c => c.id === selectedOwnerId);
   const selectedPet = selectedOwner?.pets.find(p => p.id === selectedPetId);
 
-  // Auto-calculate stay days
-  const stayDays = useMemo(() => {
-    try {
-      if (!dateRange?.from || !dateRange?.to) return 1;
-      const diff = differenceInDays(dateRange.to, dateRange.from);
-      return diff > 0 ? diff : 1;
-    } catch (e) {
-      return 1;
+  // Auto-calculate stay duration
+  const stayDurationLabel = useMemo(() => {
+    if (serviceMode === 'daycare') {
+      try {
+        const [inH, inM] = checkInTime.split(':').map(Number);
+        const [outH, outM] = checkOutTime.split(':').map(Number);
+        const diffMinutes = (outH * 60 + outM) - (inH * 60 + inM);
+        if (diffMinutes <= 0) return '0 ชั่วโมง';
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+        if (hours > 0 && mins > 0) return `${hours} ชั่วโมง ${mins} นาที`;
+        if (hours > 0) return `${hours} ชั่วโมง`;
+        return `${mins} นาที`;
+      } catch {
+        return 'ไม่ระบุ';
+      }
+    } else {
+      try {
+        if (!dateRange?.from || !dateRange?.to) return '1 คืน';
+        const diff = differenceInDays(dateRange.to, dateRange.from);
+        return `${diff > 0 ? diff : 1} คืน`;
+      } catch (e) {
+        return '1 คืน';
+      }
     }
-  }, [dateRange]);
+  }, [dateRange, checkInTime, checkOutTime, serviceMode]);
+
+  const estimatedDayCarePrice = useMemo(() => {
+    if (serviceMode !== 'daycare') return 0;
+    try {
+      const [inH, inM] = checkInTime.split(':').map(Number);
+      const [outH, outM] = checkOutTime.split(':').map(Number);
+      const diffMinutes = (outH * 60 + outM) - (inH * 60 + inM);
+      if (diffMinutes <= 0) return 0;
+      
+      const H = diffMinutes / 60;
+      let remainingHours = H;
+      let total = 0;
+      
+      // Greedy logic
+      for (const rule of pricingRules) {
+         if (remainingHours <= 0) break;
+         if (rule.hours <= remainingHours) {
+            const count = Math.floor(remainingHours / rule.hours);
+            total += count * rule.price;
+            remainingHours -= count * rule.hours;
+         }
+      }
+      
+      if (remainingHours > 0 && pricingRules.length > 0) {
+         const smallestRule = pricingRules[pricingRules.length - 1]; // Because it's sorted DESC
+         total += smallestRule.price;
+      }
+      
+      // Cap at next tier
+      for (const rule of pricingRules) {
+         if (rule.hours >= H && rule.price < total) {
+             total = rule.price;
+         }
+      }
+      
+      return total;
+    } catch {
+      return 0;
+    }
+  }, [checkInTime, checkOutTime, serviceMode, pricingRules]);
 
   const handleSelectOwner = (id: string, name: string) => {
     setSelectedOwnerId(id);
@@ -176,16 +271,22 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
 
   const createOrUpdateBooking = useMutation({
     mutationFn: async () => {
-      const checkInStr = format(dateRange!.from!, 'yyyy-MM-dd');
-      const checkOutStr = format(dateRange!.to!, 'yyyy-MM-dd');
+      const ciDate = new Date(dateRange!.from!);
+      const [ciH, ciM] = checkInTime.split(':');
+      ciDate.setHours(parseInt(ciH, 10), parseInt(ciM, 10), 0, 0);
+
+      const coDate = new Date(dateRange!.to!);
+      const [coH, coM] = checkOutTime.split(':');
+      coDate.setHours(parseInt(coH, 10), parseInt(coM, 10), 0, 0);
       
       const bookingData = {
         store_id: storeId,
-        room_id: roomId,
+        service_type: serviceMode,
+        room_id: selectedRoomId || null,
         customer_id: selectedOwner?.id,
         pet_id: selectedPet?.id,
-        check_in_date: `${checkInStr}T${checkInTime}:00`,
-        check_out_expected: `${checkOutStr}T${checkOutTime}:00`,
+        check_in_date: ciDate.toISOString(),
+        check_out_expected: coDate.toISOString(),
         deposit_amount: depositAmount,
         special_requests: specialRequests,
       };
@@ -222,6 +323,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
 
             activitiesToInsert.push({
               store_id: storeId,
+              service_type: serviceMode,
               booking_id: bookingId,
               pet_id: selectedPet?.id,
               activity_type: routine.type,
@@ -319,8 +421,13 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
               <Home size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-black text-[#1A1F3D]">{isEdit ? 'แก้ไขการจองห้องพัก' : 'จองห้องพักโรงแรมสัตว์เลี้ยง'}</h3>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ห้องพัก: {roomName}</p>
+              <h3 className="text-xl font-black text-[#1A1F3D]">
+                {isEdit 
+                  ? (serviceMode === 'daycare' ? 'แก้ไขการรับฝากเลี้ยง' : 'แก้ไขการจองห้องพัก') 
+                  : (serviceMode === 'daycare' ? 'เพิ่มรับฝากเลี้ยง (Day Care)' : 'จองห้องพักโรงแรมสัตว์เลี้ยง')
+                }
+              </h3>
+              {serviceMode !== 'daycare' && <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ห้องพัก: {roomName}</p>}
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
@@ -401,7 +508,9 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
 
                 {selectedOwner && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-                    <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">เลือกสัตว์เลี้ยงที่เข้าพัก (Select Pet)</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 mb-3 block tracking-widest px-1">
+                      {serviceMode === 'daycare' ? 'เลือกสัตว์เลี้ยงที่ฝาก (Select Pet)' : 'เลือกสัตว์เลี้ยงที่เข้าพัก (Select Pet)'}
+                    </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {selectedOwner.pets.map(pet => (
                         <button
@@ -430,30 +539,51 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
 
               {/* 2. Stay Dates & Times */}
               <div className="space-y-6 pt-6 border-t border-gray-100">
+                {serviceMode !== 'daycare' && (
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1 block mb-3">เลือกห้องพัก (Select Room)</span>
+                    <select
+                      value={selectedRoomId}
+                      onChange={e => setSelectedRoomId(e.target.value)}
+                      className="w-full bg-white border border-gray-100 shadow-sm rounded-xl px-4 py-3 text-sm font-bold text-[#1A1F3D]"
+                    >
+                      <option value="">-- เลือกห้องพัก --</option>
+                      {rooms?.map(room => (
+                        <option key={room.id} value={room.id}>
+                          {room.room_name} (฿{room.price_per_night}/คืน)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
                 <div>
-                  <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1 block mb-3">เลือกวันเข้าพัก (Select Stay Dates)</span>
+                  <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1 block mb-3">
+                    {serviceMode === 'daycare' ? 'เลือกวันที่ฝากเลี้ยง (Select Date)' : 'เลือกวันเข้าพัก (Select Stay Dates)'}
+                  </span>
                   <div className="bg-white rounded-[2rem] p-6 flex justify-center border border-gray-100 shadow-sm w-full mx-auto">
                     <Calendar 
                       mode="range" 
                       selected={dateRange} 
                       onSelect={setDateRange} 
                       numberOfMonths={2} 
-                      className="bg-transparent"
+                      showOutsideDays={false}
+                      className="bg-transparent w-full"
                       classNames={{
-                        months: "flex flex-col md:flex-row space-y-4 md:space-x-6 md:space-y-0 relative justify-center",
-                        month: "space-y-2",
-                        caption: "flex justify-center pt-1 items-center mb-3",
-                        caption_label: "text-base font-semibold text-[#020d35] font-['IBM_Plex_Sans_Thai']",
+                        months: "flex flex-col md:flex-row space-y-4 md:space-x-8 md:space-y-0 relative justify-between w-full",
+                        month: "space-y-2 flex-1 w-full",
+                        caption: "flex justify-center pt-1 items-center mb-4",
+                        caption_label: "text-lg font-bold text-[#020d35] font-['IBM_Plex_Sans_Thai']",
                         nav: "pointer-events-none",
-                        nav_button: "h-7 w-7 bg-white rounded-full flex items-center justify-center text-[#18234a] shadow-sm hover:bg-[#dce1ff] transition-all border border-gray-100 pointer-events-auto",
-                        nav_button_previous: "absolute left-0 top-0.5",
-                        nav_button_next: "absolute right-0 top-0.5",
+                        nav_button: "h-8 w-8 bg-white rounded-full flex items-center justify-center text-[#18234a] shadow-sm hover:bg-[#dce1ff] transition-all border border-gray-100 pointer-events-auto",
+                        nav_button_previous: "absolute left-0 top-0",
+                        nav_button_next: "absolute right-0 top-0",
                         table: "w-full border-collapse space-y-1",
-                        head_row: "grid grid-cols-7 w-full mb-1",
-                        head_cell: "text-[#76767f] font-medium text-[10px] uppercase flex items-center justify-center h-8 w-full",
+                        head_row: "grid grid-cols-7 w-full mb-2",
+                        head_cell: "text-[#76767f] font-medium text-[11px] uppercase flex items-center justify-center h-8 w-full",
                         row: "grid grid-cols-7 w-full mt-1",
-                        cell: "relative p-0 text-center text-xs h-8 w-full flex items-center justify-center focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-[#dce1ff] [&:has([aria-selected].day-range-end)]:rounded-r-full [&:has([aria-selected].day-range-start)]:rounded-l-full",
-                        day: "h-8 w-8 p-0 flex items-center justify-center font-medium text-[12px] rounded-full hover:bg-[#bac4f5] text-[#1a1c1c] transition-all aria-selected:opacity-100 aria-selected:bg-[#020d35] aria-selected:text-white aria-selected:shadow-md",
+                        cell: "relative p-0 text-center text-sm h-11 w-full flex items-center justify-center focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-[#dce1ff] [&:has([aria-selected].day-range-end)]:rounded-r-full [&:has([aria-selected].day-range-start)]:rounded-l-full",
+                        day: "h-11 w-full max-w-[44px] aspect-square p-0 flex items-center justify-center font-medium text-[14px] rounded-full hover:bg-[#bac4f5] text-[#1a1c1c] transition-all aria-selected:opacity-100 aria-selected:bg-[#020d35] aria-selected:text-white aria-selected:shadow-md mx-auto",
                         day_range_start: "day-range-start",
                         day_range_end: "day-range-end",
                         day_selected: "bg-[#020d35] text-white",
@@ -517,7 +647,12 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
               <div className="bg-indigo-50/50 border border-indigo-100 p-6 rounded-[32px] flex items-center justify-between">
                 <div>
                   <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Stay Duration</span>
-                  <h4 className="text-xl font-black text-[#1A1F3D] mt-1">จำนวนเข้าพักทั้งหมด: {stayDays} คืน</h4>
+                  <h4 className="text-xl font-black text-[#1A1F3D] mt-1">จำนวนเวลาทั้งหมด: {stayDurationLabel}</h4>
+                  {serviceMode === 'daycare' && (
+                    <p className="text-sm font-bold text-indigo-700 mt-2">
+                      ราคาประเมิน: ฿{estimatedDayCarePrice.toLocaleString()}
+                    </p>
+                  )}
                 </div>
                 <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm">
                   <CalendarIcon size={20} />
@@ -685,7 +820,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose }: Hotel
               disabled={!selectedOwnerId || !selectedPetId || createOrUpdateBooking.isPending || checkInBooking.isPending}
               className="flex-1 bg-[#1A1F3D] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
             >
-              {createOrUpdateBooking.isPending ? 'กำลังบันทึก...' : <>{isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันการจองห้องพัก'} <ArrowRight size={18} /></>}
+              {createOrUpdateBooking.isPending ? 'กำลังบันทึก...' : <>{isEdit ? 'บันทึกการแก้ไข' : (serviceMode === 'daycare' ? 'ยืนยันรับฝากเลี้ยง' : 'ยืนยันการจองห้องพัก')} <ArrowRight size={18} /></>}
             </button>
           </div>
         </div>

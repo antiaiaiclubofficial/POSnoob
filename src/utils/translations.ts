@@ -280,7 +280,7 @@ export const translations = {
     promotions: "โปรโมชั่น",
     coupons: "คูปอง",
     accounting: "ฝ่ายขายและจัดซื้อ",
-    hotel: "โรงแรมสัตว์เลี้ยง",
+    hotel: "Hotel & Day Care",
 
     // Inventory Sub-modules
     allInventory: "คลังสินค้าทั้งหมด",

@@ -368,7 +368,7 @@ const AuthInitializer = () => {
                 })).sort((a: any, b: any) => a.date.localeCompare(b.date));
 
                 if (weightHistory.length === 0 && p.weight) {
-                   weightHistory = [{ date: p.created_at ? format(new Date(p.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }];
+                  weightHistory = [{ date: p.created_at ? format(new Date(p.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }];
                 }
 
                 return {
@@ -936,7 +936,7 @@ const AuthInitializer = () => {
           heldBillsQuery = heldBillsQuery.eq('store_id', storeId);
         }
         const { data: heldBillsData, error: heldBillsError } = await heldBillsQuery;
-        
+
         if (heldBillsError) throw heldBillsError;
 
         if (heldBillsData) {

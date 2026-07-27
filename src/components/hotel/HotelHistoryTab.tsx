@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
-import { format, parseISO, differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO, differenceInCalendarDays, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { History, Search, Calendar, User, Home, ArrowRight, Filter, ChevronDown, Activity, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,16 +10,20 @@ import { RoomTypeBadge } from './RoomTypeBadge';
 import { DateRangeDropdown, DateRange } from '@/components/ui/date-range-dropdown';
 import BookingDetailsModal from './BookingDetailsModal';
 
-const HotelHistoryTab = () => {
+const HotelHistoryTab = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel' | 'daycare' }) => {
   const { storeId } = useStore();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
+  });
   const [detailsModalBooking, setDetailsModalBooking] = useState<any | null>(null);
 
   // Fetch History Bookings
   const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ['hotel_bookings_history', storeId],
+    queryKey: ['hotel_history', storeId, dateRange, serviceMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hotel_bookings')
@@ -30,6 +34,7 @@ const HotelHistoryTab = () => {
           pets (*)
         `)
         .eq('store_id', storeId)
+        .eq('service_type', serviceMode)
         .in('status', ['checked_out', 'cancelled', 'checked_in'])
         .order('check_out_actual', { ascending: false, nullsFirst: false });
       if (error) throw error;
@@ -159,7 +164,7 @@ const HotelHistoryTab = () => {
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-4">
                           <img 
-                            src={booking.pets?.image || `https://ui-avatars.com/api/?name=${booking.pets?.name || 'Pet'}&background=random`} 
+                            src={booking.pets?.image_url || `https://ui-avatars.com/api/?name=${booking.pets?.name || 'Pet'}&background=random`} 
                             alt={booking.pets?.name}
                             className="w-12 h-12 rounded-2xl object-cover shadow-sm border border-slate-100 shrink-0"
                           />
@@ -170,7 +175,7 @@ const HotelHistoryTab = () => {
                             </div>
                             <div className="flex items-center gap-1.5 mt-1 text-sm text-slate-600">
                               <User size={14} className="text-slate-400" />
-                              <span>{booking.customers?.name}</span>
+                              <span>{booking.customers?.display_name || booking.customers?.first_name || '-'}</span>
                             </div>
                           </div>
                         </div>

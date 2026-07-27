@@ -743,6 +743,12 @@ export interface HotelRoomType {
   sortOrder: number;
 }
 
+export interface HotelDaycarePricingRule {
+  id: string;
+  hours: number;
+  price: number;
+}
+
 export interface HotelRoom {
   id: string;
   roomName: string;
