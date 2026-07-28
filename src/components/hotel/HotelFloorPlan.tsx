@@ -7,6 +7,7 @@ import HotelBookingModal from './HotelBookingModal';
 import HotelCheckoutModal from './HotelCheckoutModal';
 import { RoomGlassCard } from './RoomGlassCard';
 import { RoomIsometricBlock } from './RoomIsometricBlock';
+import { DayCareLawn } from './DayCareLawn';
 import { Search, Plus, Minus } from 'lucide-react';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { RoomDetailCard } from './RoomDetailPopover';
@@ -21,6 +22,7 @@ export const HotelFloorPlan = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel
   const [editingBooking, setEditingBooking] = useState<any>(null);
 
   const [checkoutBookingId, setCheckoutBookingId] = useState<string | null>(null);
+  const [openHoverRoomId, setOpenHoverRoomId] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -139,7 +141,7 @@ export const HotelFloorPlan = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hotel_bookings')
-        .select('*, customers(display_name, first_name), pets(name, image_url, notes), hotel_rooms(room_name, hotel_room_types(type_name, color))')
+        .select('*, customers(display_name, first_name), pets(name, image_url, notes, type), hotel_rooms(room_name, hotel_room_types(type_name, color)), hotel_activities(id, status)')
         .eq('store_id', storeId)
         .eq('service_type', serviceMode)
         .in('status', ['reserved', 'checked_in']);
@@ -304,29 +306,16 @@ export const HotelFloorPlan = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel
           }}
         >
           {serviceMode === 'daycare' ? (
-            <div className="flex flex-wrap gap-0 max-w-[800px]" style={{ transformStyle: 'preserve-3d' }}>
-              {bookings.map(booking => {
-                let status: 'maintenance' | 'cleaning' | 'empty' | 'reserved' | 'occupied' = 'occupied';
-                return (
-                  <RoomIsometricBlock
-                    key={booking.id}
-                    type={booking.hotel_rooms?.hotel_room_types || { type_name: 'รับฝากเลี้ยง', color: '#18234a' }}
-                    status={status}
-                    onClick={() => { }}
-                  >
-                    <RoomGlassCard
-                      room={booking.hotel_rooms || { room_name: `${format(new Date(booking.check_in_date), 'HH:mm')} - ${format(new Date(booking.check_out_expected), 'HH:mm')}` }}
-                      type={booking.hotel_rooms?.hotel_room_types || { type_name: 'รับฝากเลี้ยง', color: '#18234a' }}
-                      activeBooking={booking}
-                      size={140}
-                      serviceMode="daycare"
-                      onBook={() => { }}
-                      onOpenDetail={() => { }}
-                    />
-                  </RoomIsometricBlock>
-                );
-              })}
-            </div>
+            <DayCareLawn 
+              bookings={bookings}
+              searchQuery={searchQuery}
+              onBookingClick={(booking) => {
+                setEditingBooking(booking);
+                setBookingRoomId(booking.room_id || 'daycare');
+                setBookingRoomName(booking.hotel_rooms?.room_name || 'รับฝากเลี้ยง');
+              }}
+              onCheckout={(id) => setCheckoutBookingId(id)}
+            />
           ) : (
             <div className="flex flex-col gap-24" style={{ transformStyle: 'preserve-3d' }}>
               {roomTypes.map(type => {
@@ -383,7 +372,13 @@ export const HotelFloorPlan = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel
                         else if (activeBooking && activeBooking.status === 'reserved') status = 'reserved';
 
                         return (
-                          <HoverCard key={room.id} openDelay={200} closeDelay={300}>
+                          <HoverCard 
+                            key={room.id} 
+                            openDelay={200} 
+                            closeDelay={300}
+                            open={openHoverRoomId === room.id}
+                            onOpenChange={(open) => setOpenHoverRoomId(open ? room.id : null)}
+                          >
                             <HoverCardTrigger asChild>
                               <div style={{ transformStyle: 'preserve-3d' }}>
                                 <RoomIsometricBlock
@@ -403,19 +398,27 @@ export const HotelFloorPlan = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel
                                 </RoomIsometricBlock>
                               </div>
                             </HoverCardTrigger>
-                            <HoverCardContent
-                              side="right"
-                              align="start"
-                              sideOffset={24}
-                              className="w-96 rounded-2xl bg-white/70 backdrop-blur-3xl p-6 shadow-[0_24px_60px_-12px_rgba(2,13,53,0.18)] border border-white"
-                            >
-                              <RoomDetailCard
-                                booking={activeBooking}
-                                room={room}
-                                onCheckout={() => setCheckoutBookingId(activeBooking?.id || null)}
-                                onEdit={() => handleRoomClick(room)}
-                              />
-                            </HoverCardContent>
+                            {activeBooking && (
+                              <HoverCardContent
+                                side="right"
+                                align="start"
+                                sideOffset={24}
+                                className="w-[340px] p-0 border-none bg-transparent shadow-none outline-none"
+                              >
+                                <RoomDetailCard
+                                  booking={activeBooking}
+                                  room={room}
+                                  onCheckout={() => {
+                                    setOpenHoverRoomId(null);
+                                    setCheckoutBookingId(activeBooking?.id || null);
+                                  }}
+                                  onEdit={() => {
+                                    setOpenHoverRoomId(null);
+                                    handleRoomClick(room);
+                                  }}
+                                />
+                              </HoverCardContent>
+                            )}
                           </HoverCard>
                         );
                       })}

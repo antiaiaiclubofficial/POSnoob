@@ -21,9 +21,11 @@ export const RoomDetailCard: React.FC<RoomDetailCardProps> = ({
   onEdit,
 }) => {
   if (!booking) return null;
-
   return (
-    <div className="bg-[#ffffff] rounded-[2rem] p-[1.5rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col gap-[1rem] relative overflow-hidden group w-full border border-gray-100">
+    <div 
+      onClick={(e) => e.stopPropagation()}
+      className="bg-[#ffffff] rounded-[2rem] p-[1.5rem] shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col gap-[1rem] relative overflow-hidden group w-full border border-gray-100"
+    >
       {/* Inner Frosted Glow Effect */}
       <div className="absolute top-0 right-0 w-[120px] h-[120px] bg-gradient-to-br from-white/80 to-transparent -translate-y-1/2 translate-x-1/2 rounded-full pointer-events-none"></div>
 

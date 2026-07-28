@@ -20,7 +20,8 @@ export const RoomIsometricBlock: React.FC<RoomIsometricBlockProps> = ({
 
   // The floor color should be very subtle to look like a house floor.
   // We can use a light beige or the type color heavily washed out.
-  const floorBg = isHex ? typeColor : '#f3f4f6';
+  // If the room is occupied, the floor color should be grey.
+  const floorBg = status === 'occupied' ? '#9ca3af' : (isHex ? typeColor : '#f3f4f6');
 
   let opacityClass = 'opacity-100';
   if (status === 'maintenance') opacityClass = 'opacity-40 grayscale';

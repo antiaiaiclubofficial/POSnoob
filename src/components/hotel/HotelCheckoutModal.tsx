@@ -18,6 +18,7 @@ const HotelCheckoutModal = ({ bookingId, onClose }: HotelCheckoutModalProps) => 
   const queryClient = useQueryClient();
   const { addToCart, selectOwner, setActivePet, clearCart } = useStore();
   const [manualHours, setManualHours] = useState<number | null>(null);
+  const [broughtItems, setBroughtItems] = useState<{name: string, is_returned: boolean}[]>([]);
 
   // Fetch Booking details with relations
   const { data: booking, isLoading } = useQuery({
@@ -38,6 +39,12 @@ const HotelCheckoutModal = ({ bookingId, onClose }: HotelCheckoutModalProps) => 
     },
     enabled: !!bookingId,
   });
+
+  React.useEffect(() => {
+    if (booking?.brought_items) {
+      setBroughtItems(booking.brought_items);
+    }
+  }, [booking]);
 
   // Fetch Charges
   const { data: charges = [] } = useQuery({
@@ -115,7 +122,8 @@ const HotelCheckoutModal = ({ bookingId, onClose }: HotelCheckoutModalProps) => 
       // 4. Update Booking and Room Status
       await supabase.from('hotel_bookings').update({
         status: 'checked_out',
-        check_out_actual: new Date().toISOString()
+        check_out_actual: new Date().toISOString(),
+        brought_items: broughtItems
       }).eq('id', booking.id);
 
       if (!isDaycare && booking.hotel_rooms) {
@@ -257,6 +265,37 @@ const HotelCheckoutModal = ({ bookingId, onClose }: HotelCheckoutModalProps) => 
             </div>
           </div>
 
+          {/* Brought Items Checklist */}
+          {broughtItems.length > 0 && (
+            <div className="border border-indigo-100 rounded-3xl overflow-hidden">
+              <div className="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex items-center justify-between">
+                <h4 className="font-black text-[#1A1F3D] flex items-center gap-2">
+                  <ShoppingCart size={18} className="text-indigo-400" />
+                  สิ่งของที่นำมาด้วย (กรุณาตรวจสอบก่อนคืน)
+                </h4>
+              </div>
+              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {broughtItems.map((item, idx) => (
+                  <label key={idx} className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
+                    <input 
+                      type="checkbox" 
+                      className="rounded w-5 h-5 text-indigo-600 focus:ring-indigo-600"
+                      checked={item.is_returned}
+                      onChange={(e) => {
+                        const newItems = [...broughtItems];
+                        newItems[idx].is_returned = e.target.checked;
+                        setBroughtItems(newItems);
+                      }}
+                    />
+                    <span className={`text-sm font-bold ${item.is_returned ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                      {item.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="border border-gray-100 rounded-3xl overflow-hidden">
             <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h4 className="font-black text-[#1A1F3D] flex items-center gap-2">
@@ -323,9 +362,20 @@ const HotelCheckoutModal = ({ bookingId, onClose }: HotelCheckoutModalProps) => 
           </div>
 
           <button 
-            onClick={() => checkoutMutation.mutate({ roomTotal, chargesTotal, stayDuration, isDaycare })}
+            onClick={() => {
+              const unreturnedItems = broughtItems.filter(item => !item.is_returned);
+              if (unreturnedItems.length > 0) {
+                toast.error("กรุณาติ๊กคืนสิ่งของที่นำมาให้ครบทุกชิ้นก่อน Check-out");
+                return;
+              }
+              checkoutMutation.mutate({ roomTotal, chargesTotal, stayDuration, isDaycare });
+            }}
             disabled={checkoutMutation.isPending}
-            className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all disabled:opacity-50"
+            className={`w-full font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all bg-[#1A1F3D] text-white ${
+              broughtItems.some(item => !item.is_returned)
+                ? 'opacity-60 shadow-none'
+                : 'shadow-[#1A1F3D]/10 disabled:opacity-50'
+            }`}
           >
             {checkoutMutation.isPending ? 'กำลังประมวลผล...' : <>ส่งบิลไปหน้า POS <ShoppingCart size={18} /></>}
           </button>

@@ -12,12 +12,15 @@ interface HotelTimelineViewProps {
   serviceMode: 'hotel' | 'daycare';
   onToggleActivity: (activityId: string, currentStatus: string) => void;
   onCheckout: (bookingId: string) => void;
+  onCheckout: (bookingId: string) => void;
   onEdit?: (booking: any) => void;
+  onCreateBooking?: (date: Date) => void;
 }
 
-export const HotelTimelineView: React.FC<HotelTimelineViewProps> = ({ rooms, bookings, activities, serviceMode, onToggleActivity, onCheckout, onEdit }) => {
+export const HotelTimelineView: React.FC<HotelTimelineViewProps> = ({ rooms, bookings, activities, serviceMode, onToggleActivity, onCheckout, onEdit, onCreateBooking }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'Day' | 'Week' | 'Month'>('Month');
+  const [openHoverCardId, setOpenHoverCardId] = useState<string | null>(null);
   
   const { openTime, closeTime } = useStore();
   
@@ -122,10 +125,19 @@ export const HotelTimelineView: React.FC<HotelTimelineViewProps> = ({ rooms, boo
     const isWaitingForPickup = booking.status === 'checked_in' && expectedDate && !isOverdue && isAfter(new Date(), subHours(expectedDate, 1));
     const bgClass = isOverdue ? 'bg-red-50' : isWaitingForPickup ? 'bg-yellow-50' : booking.status === 'checked_in' ? 'bg-[#f3f3f3]' : 'bg-orange-100';
 
+    const cardId = currentDay ? `${booking.id}-${currentDay.toISOString()}` : booking.id;
+
     return (
-      <HoverCard key={booking.id} openDelay={200} closeDelay={200}>
+      <HoverCard 
+        key={booking.id} 
+        openDelay={200} 
+        closeDelay={200}
+        open={openHoverCardId === cardId}
+        onOpenChange={(open) => setOpenHoverCardId(open ? cardId : null)}
+      >
         <HoverCardTrigger asChild>
           <div
+            onClick={(e) => e.stopPropagation()}
             className={`px-3 py-2 flex items-center gap-2.5 shadow-sm hover:shadow-md transition-all cursor-pointer rounded-full relative z-10 w-full mb-1.5 hover:scale-[1.02] origin-left border border-white/50 ${bgClass}`}
           >
             {/* The Room Bubble */}
@@ -164,8 +176,14 @@ export const HotelTimelineView: React.FC<HotelTimelineViewProps> = ({ rooms, boo
             room={roomInfo?.room}
             activities={activities.filter(a => a.booking_id === booking.id)}
             onToggleActivity={onToggleActivity}
-            onCheckout={() => onCheckout(booking.id)}
-            onEdit={() => onEdit && onEdit(booking)}
+            onCheckout={() => {
+              setOpenHoverCardId(null);
+              onCheckout(booking.id);
+            }}
+            onEdit={() => {
+              setOpenHoverCardId(null);
+              if (onEdit) onEdit(booking);
+            }}
           />
         </HoverCardContent>
       </HoverCard>
@@ -233,8 +251,11 @@ export const HotelTimelineView: React.FC<HotelTimelineViewProps> = ({ rooms, boo
               {columns.map((day, idx) => {
                 const dayBookings = bookings.filter(b => isOverlap(b, day));
                 const isCurrentMonth = isSameMonth(day, currentDate);
+                const isPastDay = isBefore(day, startOfDay(new Date()));
                 return (
-                  <div key={idx} className={`border-b border-r border-gray-100 p-2 flex flex-col gap-2 ${!isCurrentMonth ? 'bg-gray-50/30' : ''}`}>
+                  <div key={idx} 
+                       onClick={() => !isPastDay && onCreateBooking?.(day)}
+                       className={`border-b border-r border-gray-100 p-2 flex flex-col gap-2 ${isPastDay ? 'bg-gray-200/70 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50/50'} ${!isCurrentMonth ? 'opacity-50' : ''}`}>
                     <div className="flex justify-between items-center">
                       <span className={`text-[13px] font-bold w-7 h-7 flex items-center justify-center rounded-full ${isSameDay(day, new Date()) ? 'bg-red-500 text-white shadow-sm' : isCurrentMonth ? 'text-[#1a1c1c]' : 'text-gray-300'}`}>
                         {format(day, 'd')}
@@ -253,8 +274,11 @@ export const HotelTimelineView: React.FC<HotelTimelineViewProps> = ({ rooms, boo
             <div className="flex-1 grid grid-cols-7">
               {columns.map((day, idx) => {
                 const dayBookings = bookings.filter(b => isOverlap(b, day));
+                const isPastDay = isBefore(day, startOfDay(new Date()));
                 return (
-                  <div key={idx} className="border-r border-gray-100 p-3 flex flex-col gap-3">
+                  <div key={idx} 
+                       onClick={() => !isPastDay && onCreateBooking?.(day)}
+                       className={`border-r border-gray-100 p-3 flex flex-col gap-3 ${isPastDay ? 'bg-gray-200/70 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50/50'}`}>
                     <div className="flex justify-between items-center border-b border-gray-100 pb-2">
                       <span className={`text-[14px] font-black ${isSameDay(day, new Date()) ? 'text-red-500' : 'text-[#1a1c1c]'}`}>
                         {format(day, 'd MMM')}
@@ -341,7 +365,12 @@ export const HotelTimelineView: React.FC<HotelTimelineViewProps> = ({ rooms, boo
 
                         return (
                           <div key={b.id} className="flex border-b border-gray-100 group relative">
-                            <HoverCard openDelay={200} closeDelay={200}>
+                            <HoverCard 
+                              openDelay={200} 
+                              closeDelay={200}
+                              open={openHoverCardId === `${b.id}-sidebar`}
+                              onOpenChange={(open) => setOpenHoverCardId(open ? `${b.id}-sidebar` : null)}
+                            >
                               <HoverCardTrigger asChild>
                                 <div className="w-[150px] shrink-0 border-r border-gray-100 p-3 flex flex-col justify-center bg-white z-20 cursor-pointer hover:bg-gray-50 transition-colors">
                                   <span className="text-[13px] font-semibold text-[#1a1c1c] truncate">{b.pets?.name || 'ไม่ระบุชื่อ'}</span>
@@ -356,8 +385,14 @@ export const HotelTimelineView: React.FC<HotelTimelineViewProps> = ({ rooms, boo
                                   room={roomInfo?.room}
                                   activities={activities.filter(a => a.booking_id === b.id)}
                                   onToggleActivity={onToggleActivity}
-                                  onCheckout={() => onCheckout(b.id)}
-                                  onEdit={() => onEdit && onEdit(b)}
+                                  onCheckout={() => {
+                                    setOpenHoverCardId(null);
+                                    onCheckout(b.id);
+                                  }}
+                                  onEdit={() => {
+                                    setOpenHoverCardId(null);
+                                    if (onEdit) onEdit(b);
+                                  }}
                                 />
                               </HoverCardContent>
                             </HoverCard>
@@ -373,7 +408,12 @@ export const HotelTimelineView: React.FC<HotelTimelineViewProps> = ({ rooms, boo
                                 className="absolute top-1/2 -translate-y-1/2 h-[40px] z-30 shadow-sm rounded-md transition-all hover:z-40"
                                 style={{ left: `${left}%`, width: `${width}%` }}
                               >
-                                <HoverCard openDelay={200} closeDelay={200}>
+                                <HoverCard 
+                                  openDelay={200} 
+                                  closeDelay={200}
+                                  open={openHoverCardId === `${b.id}-timeline`}
+                                  onOpenChange={(open) => setOpenHoverCardId(open ? `${b.id}-timeline` : null)}
+                                >
                                   <HoverCardTrigger asChild>
                                     <div
                                       className={`w-full h-full rounded-md border ${isOverdue ? 'border-red-200' : isWaitingForPickup ? 'border-yellow-200' : 'border-white/50'} cursor-pointer flex items-center px-2 shadow-[0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-[0_4px_15px_rgba(0,0,0,0.1)] hover:scale-[1.02] origin-left relative`}
@@ -395,8 +435,14 @@ export const HotelTimelineView: React.FC<HotelTimelineViewProps> = ({ rooms, boo
                                       room={roomInfo?.room}
                                       activities={activities.filter(a => a.booking_id === b.id)}
                                       onToggleActivity={onToggleActivity}
-                                      onCheckout={() => onCheckout(b.id)}
-                                      onEdit={() => onEdit && onEdit(b)}
+                                      onCheckout={() => {
+                                        setOpenHoverCardId(null);
+                                        onCheckout(b.id);
+                                      }}
+                                      onEdit={() => {
+                                        setOpenHoverCardId(null);
+                                        if (onEdit) onEdit(b);
+                                      }}
                                     />
                                   </HoverCardContent>
                                 </HoverCard>

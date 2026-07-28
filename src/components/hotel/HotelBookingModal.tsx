@@ -27,6 +27,7 @@ interface HotelBookingModalProps {
   existingBooking?: any;
   onClose: () => void;
   serviceMode?: 'hotel' | 'daycare';
+  initialDate?: Date;
 }
 
 interface HotelDaycarePricingRule {
@@ -55,7 +56,7 @@ const getActivityTypeName = (type: string) => {
   }
 };
 
-const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, serviceMode = 'hotel' }: HotelBookingModalProps) => {
+const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, serviceMode = 'hotel', initialDate }: HotelBookingModalProps) => {
   const { customers, storeId, currentUser } = useStore();
   const queryClient = useQueryClient();
   
@@ -70,15 +71,28 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, service
   const [selectedRoomId, setSelectedRoomId] = useState(roomId || '');
 
   // Stay Details States
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(Date.now() + 86400000)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (initialDate) {
+      if (serviceMode === 'daycare') {
+        return { from: initialDate, to: initialDate };
+      } else {
+        return { from: initialDate, to: new Date(initialDate.getTime() + 86400000) };
+      }
+    }
+    return {
+      from: new Date(),
+      to: new Date(Date.now() + 86400000)
+    };
   });
   const [checkInTime, setCheckInTime] = useState('12:00');
   const [checkOutTime, setCheckOutTime] = useState('12:00');
   
   const [depositAmount, setDepositAmount] = useState(0);
   const [specialRequests, setSpecialRequests] = useState('');
+
+  // Brought Items States
+  const [broughtItems, setBroughtItems] = useState<{name: string, is_returned: boolean}[]>([]);
+  const [otherBroughtItem, setOtherBroughtItem] = useState('');
 
   // Routine States
   const [dailyRoutines, setDailyRoutines] = useState<RoutineItem[]>([]);
@@ -93,6 +107,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, service
       setSelectedPetId(existingBooking.pet_id);
       setDepositAmount(existingBooking.deposit_amount || 0);
       setSpecialRequests(existingBooking.special_requests || '');
+      setBroughtItems(existingBooking.brought_items || []);
 
       if (existingBooking.check_in_date && existingBooking.check_out_expected) {
         const ciDate = parseISO(existingBooking.check_in_date);
@@ -130,7 +145,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, service
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hotel_rooms')
-        .select('*')
+        .select('*, hotel_room_types(*)')
         .eq('store_id', storeId)
         .eq('service_type', serviceMode)
         .eq('is_active', true)
@@ -173,12 +188,24 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, service
     if (!searchQuery) return [];
     return customers.filter(c => 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      c.phone.includes(searchQuery)
+      c.phone.includes(searchQuery) ||
+      c.pets?.some((p: any) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [customers, searchQuery]);
 
   const selectedOwner = customers.find(c => c.id === selectedOwnerId);
   const selectedPet = selectedOwner?.pets.find(p => p.id === selectedPetId);
+
+  const groupedRooms = useMemo(() => {
+    const groups: Record<string, { typeName: string, rooms: any[] }> = {};
+    rooms.forEach(r => {
+      const typeId = r.room_type_id || 'unassigned';
+      const typeName = r.hotel_room_types?.type_name || 'ไม่ได้จัดหมวดหมู่';
+      if (!groups[typeId]) groups[typeId] = { typeName, rooms: [] };
+      groups[typeId].rooms.push(r);
+    });
+    return Object.values(groups);
+  }, [rooms]);
 
   // Auto-calculate stay duration
   const stayDurationLabel = useMemo(() => {
@@ -269,6 +296,25 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, service
     setDailyRoutines(prev => prev.filter(r => r.id !== id));
   };
 
+  const commonBroughtItems = ['ชามอาหาร', 'ขวดน้ำ', 'สายจูง/ปลอกคอ', 'กระเป๋า/ตะกร้า', 'ของเล่น', 'ที่นอน/ผ้าห่ม'];
+
+  const handleToggleBroughtItem = (itemName: string) => {
+    setBroughtItems(prev => {
+      const exists = prev.find(item => item.name === itemName);
+      if (exists) {
+        return prev.filter(item => item.name !== itemName);
+      } else {
+        return [...prev, { name: itemName, is_returned: false }];
+      }
+    });
+  };
+
+  const handleAddOtherBroughtItem = () => {
+    if (!otherBroughtItem.trim()) return;
+    handleToggleBroughtItem(otherBroughtItem.trim());
+    setOtherBroughtItem('');
+  };
+
   const createOrUpdateBooking = useMutation({
     mutationFn: async () => {
       const ciDate = new Date(dateRange!.from!);
@@ -289,6 +335,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, service
         check_out_expected: coDate.toISOString(),
         deposit_amount: depositAmount,
         special_requests: specialRequests,
+        brought_items: broughtItems,
       };
 
       let bookingId = existingBooking?.id;
@@ -466,7 +513,7 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, service
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
                       <input 
                         type="text"
-                        placeholder="พิมพ์ชื่อลูกค้า หรือเบอร์โทรศัพท์..."
+                        placeholder="พิมพ์ชื่อลูกค้า เบอร์โทรศัพท์ หรือชื่อสัตว์เลี้ยง..."
                         className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
                         value={searchQuery}
                         onChange={(e) => {
@@ -548,10 +595,14 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, service
                       className="w-full bg-white border border-gray-100 shadow-sm rounded-xl px-4 py-3 text-sm font-bold text-[#1A1F3D]"
                     >
                       <option value="">-- เลือกห้องพัก --</option>
-                      {rooms?.map(room => (
-                        <option key={room.id} value={room.id}>
-                          {room.room_name} (฿{room.price_per_night}/คืน)
-                        </option>
+                      {groupedRooms.map(group => (
+                        <optgroup key={group.typeName} label={group.typeName}>
+                          {group.rooms.map(room => (
+                            <option key={room.id} value={room.id}>
+                              {room.room_name} (฿{room.price_per_night}/คืน)
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>
@@ -562,38 +613,73 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, service
                     {serviceMode === 'daycare' ? 'เลือกวันที่ฝากเลี้ยง (Select Date)' : 'เลือกวันเข้าพัก (Select Stay Dates)'}
                   </span>
                   <div className="bg-white rounded-[2rem] p-6 flex justify-center border border-gray-100 shadow-sm w-full mx-auto">
-                    <Calendar 
-                      mode="range" 
-                      selected={dateRange} 
-                      onSelect={setDateRange} 
-                      numberOfMonths={2} 
-                      showOutsideDays={false}
-                      className="bg-transparent w-full"
-                      classNames={{
-                        months: "flex flex-col md:flex-row space-y-4 md:space-x-8 md:space-y-0 relative justify-between w-full",
-                        month: "space-y-2 flex-1 w-full",
-                        caption: "flex justify-center pt-1 items-center mb-4",
-                        caption_label: "text-lg font-bold text-[#020d35] font-['IBM_Plex_Sans_Thai']",
-                        nav: "pointer-events-none",
-                        nav_button: "h-8 w-8 bg-white rounded-full flex items-center justify-center text-[#18234a] shadow-sm hover:bg-[#dce1ff] transition-all border border-gray-100 pointer-events-auto",
-                        nav_button_previous: "absolute left-0 top-0",
-                        nav_button_next: "absolute right-0 top-0",
-                        table: "w-full border-collapse space-y-1",
-                        head_row: "grid grid-cols-7 w-full mb-2",
-                        head_cell: "text-[#76767f] font-medium text-[11px] uppercase flex items-center justify-center h-8 w-full",
-                        row: "grid grid-cols-7 w-full mt-1",
-                        cell: "relative p-0 text-center text-sm h-11 w-full flex items-center justify-center focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-[#dce1ff] [&:has([aria-selected].day-range-end)]:rounded-r-full [&:has([aria-selected].day-range-start)]:rounded-l-full",
-                        day: "h-11 w-full max-w-[44px] aspect-square p-0 flex items-center justify-center font-medium text-[14px] rounded-full hover:bg-[#bac4f5] text-[#1a1c1c] transition-all aria-selected:opacity-100 aria-selected:bg-[#020d35] aria-selected:text-white aria-selected:shadow-md mx-auto",
-                        day_range_start: "day-range-start",
-                        day_range_end: "day-range-end",
-                        day_selected: "bg-[#020d35] text-white",
-                        day_today: "bg-[#e2e2e2] text-[#1a1c1c]",
-                        day_outside: "text-[#c6c5cf] opacity-50",
-                        day_disabled: "text-gray-300 opacity-50",
-                        day_range_middle: "aria-selected:!bg-transparent aria-selected:!text-[#0d193f] aria-selected:!shadow-none",
-                        day_hidden: "invisible",
-                      }}
-                    />
+                    {serviceMode === 'daycare' ? (
+                      <Calendar 
+                        mode="single" 
+                        selected={dateRange?.from} 
+                        onSelect={(date: any) => setDateRange(date ? { from: date, to: date } : undefined)} 
+                        numberOfMonths={2} 
+                        showOutsideDays={false}
+                        className="bg-transparent w-full"
+                        classNames={{
+                          months: "flex flex-col md:flex-row space-y-4 md:space-x-8 md:space-y-0 relative justify-between w-full",
+                          month: "space-y-2 flex-1 w-full",
+                          caption: "flex justify-center pt-1 items-center mb-4",
+                          caption_label: "text-lg font-bold text-[#020d35] font-['IBM_Plex_Sans_Thai']",
+                          nav: "pointer-events-none",
+                          nav_button: "h-8 w-8 bg-white rounded-full flex items-center justify-center text-[#18234a] shadow-sm hover:bg-[#dce1ff] transition-all border border-gray-100 pointer-events-auto",
+                          nav_button_previous: "absolute left-0 top-0",
+                          nav_button_next: "absolute right-0 top-0",
+                          table: "w-full border-collapse space-y-1",
+                          head_row: "grid grid-cols-7 w-full mb-2",
+                          head_cell: "text-[#76767f] font-medium text-[11px] uppercase flex items-center justify-center h-8 w-full",
+                          row: "grid grid-cols-7 w-full mt-1",
+                          cell: "relative p-0 text-center text-sm h-11 w-full flex items-center justify-center focus-within:relative focus-within:z-20",
+                          day: "h-11 w-full max-w-[44px] aspect-square p-0 flex items-center justify-center font-medium text-[14px] rounded-full hover:bg-[#bac4f5] text-[#1a1c1c] transition-all aria-selected:opacity-100 aria-selected:bg-[#020d35] aria-selected:text-white aria-selected:shadow-md mx-auto",
+                          day_range_start: "day-range-start",
+                          day_range_end: "day-range-end",
+                          day_selected: "bg-[#020d35] text-white",
+                          day_today: "bg-[#e2e2e2] text-[#1a1c1c]",
+                          day_outside: "text-[#c6c5cf] opacity-50",
+                          day_disabled: "text-gray-300 opacity-50",
+                          day_range_middle: "aria-selected:!bg-transparent aria-selected:!text-[#0d193f] aria-selected:!shadow-none",
+                          day_hidden: "invisible",
+                        }}
+                      />
+                    ) : (
+                      <Calendar 
+                        mode="range" 
+                        selected={dateRange} 
+                        onSelect={setDateRange} 
+                        numberOfMonths={2} 
+                        showOutsideDays={false}
+                        className="bg-transparent w-full"
+                        classNames={{
+                          months: "flex flex-col md:flex-row space-y-4 md:space-x-8 md:space-y-0 relative justify-between w-full",
+                          month: "space-y-2 flex-1 w-full",
+                          caption: "flex justify-center pt-1 items-center mb-4",
+                          caption_label: "text-lg font-bold text-[#020d35] font-['IBM_Plex_Sans_Thai']",
+                          nav: "pointer-events-none",
+                          nav_button: "h-8 w-8 bg-white rounded-full flex items-center justify-center text-[#18234a] shadow-sm hover:bg-[#dce1ff] transition-all border border-gray-100 pointer-events-auto",
+                          nav_button_previous: "absolute left-0 top-0",
+                          nav_button_next: "absolute right-0 top-0",
+                          table: "w-full border-collapse space-y-1",
+                          head_row: "grid grid-cols-7 w-full mb-2",
+                          head_cell: "text-[#76767f] font-medium text-[11px] uppercase flex items-center justify-center h-8 w-full",
+                          row: "grid grid-cols-7 w-full mt-1",
+                          cell: "relative p-0 text-center text-sm h-11 w-full flex items-center justify-center focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-[#dce1ff] [&:has([aria-selected].day-range-end)]:rounded-r-full [&:has([aria-selected].day-range-start)]:rounded-l-full",
+                          day: "h-11 w-full max-w-[44px] aspect-square p-0 flex items-center justify-center font-medium text-[14px] rounded-full hover:bg-[#bac4f5] text-[#1a1c1c] transition-all aria-selected:opacity-100 aria-selected:bg-[#020d35] aria-selected:text-white aria-selected:shadow-md mx-auto",
+                          day_range_start: "day-range-start",
+                          day_range_end: "day-range-end",
+                          day_selected: "bg-[#020d35] text-white",
+                          day_today: "bg-[#e2e2e2] text-[#1a1c1c]",
+                          day_outside: "text-[#c6c5cf] opacity-50",
+                          day_disabled: "text-gray-300 opacity-50",
+                          day_range_middle: "aria-selected:!bg-transparent aria-selected:!text-[#0d193f] aria-selected:!shadow-none",
+                          day_hidden: "invisible",
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -641,6 +727,61 @@ const HotelBookingModal = ({ roomId, roomName, existingBooking, onClose, service
                       onChange={e => setDepositAmount(Number(e.target.value))}
                     />
                  </div>
+              </div>
+
+              {/* Brought Items */}
+              <div className="space-y-4 pt-6 border-t border-gray-100">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1 block">สิ่งของที่นำมาด้วย (Brought Items)</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {commonBroughtItems.map(item => (
+                    <label key={item} className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
+                      <input 
+                        type="checkbox" 
+                        className="rounded text-[#1A1F3D] focus:ring-[#1A1F3D]"
+                        checked={broughtItems.some(i => i.name === item)}
+                        onChange={() => handleToggleBroughtItem(item)}
+                      />
+                      <span className="text-sm font-bold text-gray-700">{item}</span>
+                    </label>
+                  ))}
+                </div>
+                
+                {/* Custom items */}
+                {broughtItems.filter(item => !commonBroughtItems.includes(item.name)).length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {broughtItems.filter(item => !commonBroughtItems.includes(item.name)).map(item => (
+                      <span key={item.name} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-bold border border-indigo-100">
+                        {item.name}
+                        <button type="button" onClick={() => handleToggleBroughtItem(item.name)} className="hover:text-indigo-900 bg-indigo-100 rounded-full p-0.5">
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="ระบุสิ่งของอื่นๆ..."
+                    className="flex-1 bg-white border border-gray-100 shadow-sm rounded-xl px-4 py-3 text-sm font-bold"
+                    value={otherBroughtItem}
+                    onChange={e => setOtherBroughtItem(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddOtherBroughtItem();
+                      }
+                    }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleAddOtherBroughtItem}
+                    className="bg-gray-100 text-gray-600 px-4 rounded-xl hover:bg-gray-200 transition-colors font-bold text-sm shadow-sm"
+                  >
+                    เพิ่ม
+                  </button>
+                </div>
               </div>
 
               {/* 3. Stay Summary */}

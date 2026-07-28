@@ -18,7 +18,7 @@ const Hotel = () => {
 
   const menuItems = [
     { id: 'dashboard', label: 'ภาพรวม', icon: LayoutDashboard },
-    { id: 'rooms', label: 'ห้องพัก & การจอง', icon: BedDouble },
+    { id: 'rooms', label: 'แผนผัง & สถานะ', icon: BedDouble },
     { id: 'settings', label: 'ตั้งค่าห้องพัก', icon: SettingsIcon },
     { id: 'history', label: 'ประวัติการเข้าพัก', icon: History },
   ];

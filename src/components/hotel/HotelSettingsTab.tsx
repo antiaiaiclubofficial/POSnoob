@@ -545,7 +545,7 @@ const HotelSettingsTab = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel' | '
         </div>
 
         {isEditingRule && editingRule && (
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">ระยะเวลา (ชั่วโมง)</label>
               <input 

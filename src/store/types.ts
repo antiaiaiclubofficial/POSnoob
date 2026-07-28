@@ -780,6 +780,7 @@ export interface HotelBooking {
   customer?: Customer;
   pet?: Pet;
   room?: HotelRoom;
+  brought_items?: { name: string; is_returned: boolean }[];
 }
 
 export interface HotelActivity {

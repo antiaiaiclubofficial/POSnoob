@@ -29,6 +29,7 @@ const HotelDashboardTab = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel' | 
 
   const [editingBooking, setEditingBooking] = useState<any>(null);
   const [checkoutBookingId, setCheckoutBookingId] = useState<string | null>(null);
+  const [creatingBookingDate, setCreatingBookingDate] = useState<Date | null>(null);
 
   // Fetch Rooms
   const { data: rooms = [] } = useQuery({
@@ -185,6 +186,7 @@ const HotelDashboardTab = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel' | 
             onToggleActivity={(id, status) => toggleActivity.mutate({ activityId: id, currentStatus: status })}
             onCheckout={(id) => setCheckoutBookingId(id)}
             onEdit={(booking) => setEditingBooking(booking)}
+            onCreateBooking={(date) => setCreatingBookingDate(date)}
           />
         </div>
 
@@ -384,12 +386,17 @@ const HotelDashboardTab = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel' | 
         </div>
       </div>
 
-      {editingBooking && (
+      {(editingBooking || creatingBookingDate) && (
         <HotelBookingModal
-          roomId={editingBooking.room_id}
-          roomName={editingBooking.hotel_rooms?.room_name || ''}
+          roomId={editingBooking?.room_id || ''}
+          roomName={editingBooking?.hotel_rooms?.room_name || ''}
           existingBooking={editingBooking}
-          onClose={() => setEditingBooking(null)}
+          initialDate={creatingBookingDate || undefined}
+          onClose={() => {
+            setEditingBooking(null);
+            setCreatingBookingDate(null);
+          }}
+          serviceMode={serviceMode}
         />
       )}
 
