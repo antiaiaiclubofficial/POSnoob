@@ -267,7 +267,19 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                     <select
                       className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
                       value={selectedProductId}
-                      onChange={(e) => setSelectedProductId(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedProductId(val);
+                        if (val) {
+                          const product = inventory.find(i => i.id === val);
+                          if (product) {
+                            setPriceInput(product.costPrice?.toString() || '0');
+                            if (!qtyInput) setQtyInput('1');
+                          }
+                        } else {
+                          setPriceInput('');
+                        }
+                      }}
                     >
                       <option value="">-- เลือกสินค้า --</option>
                       {inventory

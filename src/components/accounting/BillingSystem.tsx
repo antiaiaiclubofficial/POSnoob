@@ -750,7 +750,35 @@ const BillingSystem = () => {
                     </select>
                     <select
                       value={selectedProductId}
-                      onChange={(e) => setSelectedProductId(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedProductId(val);
+                        if (val) {
+                          let itemPrice = 0;
+                          if (selectedItemType === 'product') {
+                            const p = inventory.find(i => i.id === val);
+                            if (p) itemPrice = p.price || 0;
+                          } else if (selectedItemType === 'service') {
+                            const s = services.find(i => i.id === val);
+                            if (s && s.prices && Object.keys(s.prices).length > 0) {
+                               itemPrice = s.prices[Object.keys(s.prices)[0]].price || 0;
+                            }
+                          } else if (selectedItemType === 'addon') {
+                            const a = addons.find(i => i.id === val);
+                            if (a) itemPrice = a.price || 0;
+                          } else if (selectedItemType === 'package') {
+                            const pkg = packageTemplates.find(i => i.id === val);
+                            if (pkg) itemPrice = pkg.price || 0;
+                          } else if (selectedItemType === 'credit') {
+                            const c = creditPackages.find(i => i.id === val);
+                            if (c) itemPrice = c.price || 0;
+                          }
+                          setPriceInput(itemPrice.toString());
+                          if (!qtyInput) setQtyInput('1');
+                        } else {
+                          setPriceInput('');
+                        }
+                      }}
                       className="flex-1 px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm focus:outline-none"
                     >
                       <option value="">เลือกระบุรายการ</option>

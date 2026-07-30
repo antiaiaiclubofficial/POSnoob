@@ -166,11 +166,23 @@ const SOSystem: React.FC<SOSystemProps> = ({ initialView = 'list', onViewChange 
                 <h3 className="font-black text-[#1A1F3D]">เพิ่มรายการสินค้า</h3>
 
                 <div className="space-y-3">
-                  <select
-                    className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
-                    value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                  >
+                    <select
+                      className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold"
+                      value={selectedProductId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedProductId(val);
+                        if (val) {
+                          const product = inventory.find(i => i.id === val);
+                          if (product) {
+                            setPriceInput(product.price?.toString() || '0');
+                            if (!soyInput) setQtyInput('1');
+                          }
+                        } else {
+                          setPriceInput('');
+                        }
+                      }}
+                    >
                     <option value="">-- เลือกสินค้า --</option>
                     {inventory.map(i => (
                       <option key={i.id} value={i.id}>{i.name} (ในสต็อก: {i.stock})</option>
