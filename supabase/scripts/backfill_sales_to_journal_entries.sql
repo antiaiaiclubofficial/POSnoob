@@ -23,7 +23,7 @@ BEGIN
     FOR v_rec IN SELECT id, amount, created_at FROM public.sales_transactions ORDER BY created_at ASC LOOP
         v_found := v_found + 1;
         
-        SELECT * INTO v_res FROM public.fn_post_sales_transaction_to_accounting(v_rec.id, p_dry_run);
+        SELECT * INTO v_res FROM public.fn_post_sales_transaction_to_accounting(v_rec.id::TEXT, p_dry_run);
         
         IF v_res.status = 'AlreadyPosted' THEN
             v_skipped := v_skipped + 1;

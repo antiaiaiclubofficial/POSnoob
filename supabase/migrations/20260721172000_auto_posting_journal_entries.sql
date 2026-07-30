@@ -157,7 +157,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION public.fn_trg_auto_post_sales()
 RETURNS TRIGGER AS $$
 BEGIN
-    PERFORM public.fn_post_sales_transaction_to_accounting(NEW.id, false);
+    PERFORM public.fn_post_sales_transaction_to_accounting(NEW.id::TEXT, false);
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
