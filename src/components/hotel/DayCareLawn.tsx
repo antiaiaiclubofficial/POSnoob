@@ -183,13 +183,7 @@ const AnimatedAnimal = ({ booking, onClick, onCheckout }: { booking: any, onClic
                 "group-hover:scale-110"
               )}
             >
-              {pet?.image_url ? (
-                <div className="w-20 h-20 bg-white rounded-[20px] shadow-lg overflow-hidden border-4 border-white transform rotate-3">
-                  <img src={pet.image_url} alt={pet.name} className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <span className="text-[72px] filter drop-shadow-[0_8px_8px_rgba(0,0,0,0.3)] select-none">{emoji}</span>
-              )}
+              <span className="text-[72px] filter drop-shadow-[0_8px_8px_rgba(0,0,0,0.3)] select-none">{emoji}</span>
               
               {/* Status indicator */}
               {statusDotColor && (
