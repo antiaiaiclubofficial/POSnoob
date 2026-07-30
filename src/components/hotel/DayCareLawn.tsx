@@ -12,12 +12,12 @@ interface DayCareLawnProps {
 
 const getAnimalEmoji = (species: string) => {
   const s = (species || '').toLowerCase();
-  if (s.includes('dog') || s.includes('หมา') || s.includes('สุนัข')) return '🐕'; // Full body dog
+  if (s.includes('dog') || s.includes('หมา') || s.includes('สุนัข')) return '🦮'; // Full body dog
   if (s.includes('cat') || s.includes('แมว')) return '🐈'; // Full body cat
   if (s.includes('rabbit') || s.includes('กระต่าย')) return '🐇'; // Full body rabbit
   if (s.includes('bird') || s.includes('นก')) return '🕊️';
   if (s.includes('turtle') || s.includes('เต่า')) return '🐢';
-  return '🐕'; // fallback to dog standing
+  return '🦮'; // fallback to dog standing
 };
 
 const FenceWall3D = ({ length, axis, x, y }: { length: number, axis: 'x' | 'y', x: number, y: number }) => {
@@ -86,7 +86,7 @@ const AnimatedAnimal = ({ booking, onClick, onCheckout }: { booking: any, onClic
   });
 
   const [pos, setPos] = useState(getRandPos());
-  const [isJumping, setIsJumping] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
   const [facingLeft, setFacingLeft] = useState(Math.random() > 0.5);
   const [moveDuration, setMoveDuration] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -104,18 +104,9 @@ const AnimatedAnimal = ({ booking, onClick, onCheckout }: { booking: any, onClic
       setFacingLeft(nextPos.x < pos.x);
       setPos(nextPos);
       
-      // Gentle bobbing effect while walking
-      let bobCount = 0;
-      const totalBobs = Math.floor(duration / 600); // One bob every 600ms
-      
-      const bobInterval = setInterval(() => {
-        setIsJumping(j => !j);
-        bobCount++;
-        if (bobCount >= totalBobs * 2) {
-          clearInterval(bobInterval);
-          setIsJumping(false);
-        }
-      }, 300); // 300ms up, 300ms down
+      // Use pure CSS for bobbing while walking
+      setIsMoving(true);
+      setTimeout(() => setIsMoving(false), duration);
       
       // Schedule next move after this one finishes, plus a random resting period
       setTimeout(move, duration + 5000 + Math.random() * 7000);
@@ -174,12 +165,11 @@ const AnimatedAnimal = ({ booking, onClick, onCheckout }: { booking: any, onClic
               )}
             </div>
 
-            {/* Animal Character */}
             <div 
               className={cn(
                 "relative flex items-center justify-center w-24 h-24 transition-transform duration-300 origin-bottom",
                 facingLeft ? "scale-x-[-1]" : "",
-                isJumping ? "-translate-y-2 rotate-2" : "translate-y-0",
+                isMoving ? "animate-[animal-bob_0.6s_infinite_ease-in-out]" : "translate-y-0",
                 "group-hover:scale-110"
               )}
             >
@@ -195,7 +185,7 @@ const AnimatedAnimal = ({ booking, onClick, onCheckout }: { booking: any, onClic
             <div 
               className={cn(
                 "absolute top-[calc(100%-10px)] left-1/2 -translate-x-1/2 w-16 h-5 bg-black/25 rounded-[100%] blur-[3px] -z-10 transition-all duration-300",
-                isJumping ? "scale-75 opacity-20" : "scale-100 opacity-100"
+                isMoving ? "animate-[shadow-bob_0.6s_infinite_ease-in-out]" : "scale-100 opacity-100"
               )} 
             />
           </div>
@@ -344,6 +334,17 @@ export const DayCareLawn: React.FC<DayCareLawnProps> = ({ bookings, searchQuery,
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes animal-bob {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-8px) rotate(2deg); }
+        }
+        @keyframes shadow-bob {
+          0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
+          50% { transform: translateX(-50%) scale(0.75); opacity: 0.2; }
+        }
+      `}</style>
     </div>
   );
 };

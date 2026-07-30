@@ -73,7 +73,7 @@ export const RoomIsometricBlock: React.FC<RoomIsometricBlockProps> = ({
           transformStyle: 'preserve-3d',
         }}
       >
-        <div className="pointer-events-auto transition-transform duration-300 ease-in-out" style={{ animation: 'floating 4s ease-in-out infinite' }}>
+        <div className="pointer-events-auto transition-transform duration-300 ease-in-out" style={{ animation: 'drop-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' }}>
           <div className="scale-75 origin-bottom transition-transform duration-300 group-hover:scale-90">
             {children}
           </div>
@@ -86,10 +86,9 @@ export const RoomIsometricBlock: React.FC<RoomIsometricBlockProps> = ({
       </div>
 
       <style>{`
-        @keyframes floating {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-          100% { transform: translateY(0px); }
+        @keyframes drop-in {
+          0% { transform: translateY(-30px); opacity: 0; }
+          100% { transform: translateY(0px); opacity: 1; }
         }
       `}</style>
     </div>
