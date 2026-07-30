@@ -51,7 +51,8 @@ const AuthInitializer = () => {
     // Auth Session Handling
     const handleDevBypass = (session: any) => {
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      if (!session && isLocalhost) {
+      const isBypassDisabled = localStorage.getItem('dev_bypass_disabled') === 'true';
+      if (!session && isLocalhost && !isBypassDisabled) {
         const { login } = useStore.getState();
         login('admin', '1234');
         return true;

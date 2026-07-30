@@ -18,6 +18,7 @@ export const createAuthSlice: StateCreator<
   storeId: null,
 
   login: (id, pass) => {
+    localStorage.removeItem('dev_bypass_disabled');
     if (id === 'superadmin' && pass === 'superadmin') {
       const user = { id: 'superadmin', name: 'System Owner', role: 'superadmin', username: 'superadmin' };
       set({ 
@@ -65,6 +66,7 @@ export const createAuthSlice: StateCreator<
   },
 
   loginWithGoogle: async (redirectTo) => {
+    localStorage.removeItem('dev_bypass_disabled');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -370,6 +372,9 @@ export const createAuthSlice: StateCreator<
 
   logout: async () => {
     await supabase.auth.signOut();
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      localStorage.setItem('dev_bypass_disabled', 'true');
+    }
     set({
       isAuthenticated: false,
       currentUser: null,
