@@ -45,7 +45,8 @@ const FinancialReports = () => {
 
   // Fallback to POS transactions if journal entries haven't been auto-posted yet
   if (totalRevenue === 0 && transactions.length > 0) {
-    totalRevenue = transactions.reduce((sum, t) => sum + (t.subtotal || t.amount || 0), 0);
+    const activeTx = transactions.filter(t => t.status !== 'voided');
+    totalRevenue = activeTx.reduce((sum, t) => sum + (t.subtotal || t.amount || 0), 0);
   }
 
   const netProfit = totalRevenue - totalExpenses;

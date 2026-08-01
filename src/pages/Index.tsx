@@ -100,7 +100,8 @@ const Index = () => {
     removeHeldBill,
     currency,
     language,
-    transactions
+    transactions,
+    voidTransaction
   } = useStore();
 
   const t = translations[language];
@@ -119,6 +120,11 @@ const Index = () => {
   const [intakeItem, setIntakeItem] = useState<QueueItem | null>(null);
   const [selectedAddOn, setSelectedAddOn] = useState<any>(null);
   const [productCategory, setProductCategory] = useState<string>('All');
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyDateFilter, setHistoryDateFilter] = useState('today');
+  const [historyStatusFilter, setHistoryStatusFilter] = useState('all');
+  const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
+  const [voidReasonInput, setVoidReasonInput] = useState('');
 
   useEffect(() => {
     if (activePet) {
@@ -127,7 +133,19 @@ const Index = () => {
   }, [activePet]);
 
   const todayQueue = queue.filter(q => q.date === today && !q.isPaid);
-  const todayTransactions = transactions.filter(t => t.date === today);
+  const historyTransactions = transactions.filter(tx => {
+    const matchSearch = historySearch === '' || 
+      tx.customerName.toLowerCase().includes(historySearch.toLowerCase()) ||
+      tx.id.toLowerCase().includes(historySearch.toLowerCase()) ||
+      (tx.items && tx.items.some((i: any) => i.title?.toLowerCase().includes(historySearch.toLowerCase()) || i.name?.toLowerCase().includes(historySearch.toLowerCase())));
+      
+    const txDateLocal = tx.createdAt ? format(new Date(tx.createdAt), 'yyyy-MM-dd') : tx.date;
+    const matchDate = historyDateFilter === 'all' || txDateLocal === today;
+    const matchStatus = historyStatusFilter === 'all' || 
+                        (historyStatusFilter === 'voided' ? tx.status === 'voided' : tx.status !== 'voided');
+
+    return matchSearch && matchDate && matchStatus;
+  });
 
   const handleQuickSelectFromQueue = (item: QueueItem) => {
     const owner = customers.find(c => c.name === item.ownerName);
@@ -268,7 +286,14 @@ const Index = () => {
               setIsTransactionHistoryOpen(open);
               if (!open) setSelectedTransaction(null);
             }}>
-              <SheetContent className="w-[95vw] sm:max-w-[700px] border-l-0 rounded-l-[40px] p-8 shadow-2xl flex flex-col">
+              <SheetContent 
+                className="w-[95vw] sm:max-w-[700px] border-l-0 rounded-l-[40px] p-8 shadow-2xl flex flex-col"
+                onInteractOutside={(e) => {
+                  if (isVoidModalOpen) {
+                    e.preventDefault();
+                  }
+                }}
+              >
                 {selectedTransaction ? (
                   <div className="flex flex-col h-full animate-in slide-in-from-right-4 duration-300">
                     <div className="flex items-center gap-3 mb-6">
@@ -311,22 +336,149 @@ const Index = () => {
                           </div>
                         ))}
                       </div>
+                      
+                      <div className="mt-6 pt-6 border-t border-gray-100 flex flex-col gap-3">
+                        {selectedTransaction.status === 'voided' ? (
+                          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-bold flex flex-col gap-1">
+                            <span>{language === 'th' ? 'รายการนี้ถูกยกเลิกแล้ว' : 'This transaction was voided'}</span>
+                            <span className="text-xs opacity-80">
+                              {language === 'th' ? 'เหตุผล' : 'Reason'}: {selectedTransaction.voidReason}
+                            </span>
+                            <span className="text-xs opacity-80">
+                              {language === 'th' ? 'โดย' : 'By'}: {selectedTransaction.voidedBy} ({format(new Date(selectedTransaction.voidedAt), 'dd/MM/yyyy HH:mm')})
+                            </span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setVoidReasonInput('');
+                              setIsVoidModalOpen(true);
+                            }}
+                            className="bg-red-50 text-red-600 font-bold py-3 rounded-xl hover:bg-red-100 transition-colors"
+                          >
+                            {language === 'th' ? 'ยกเลิกบิล (Void Bill)' : 'Void Bill'}
+                          </button>
+                        )}
+                      </div>
                     </div>
+
+                    <AnimatePresence>
+                      {isVoidModalOpen && selectedTransaction && (
+                        <div 
+                          className="absolute inset-0 z-[100] flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-l-[40px]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                          }}
+                        >
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white border border-gray-100 rounded-3xl p-6 w-full max-w-md shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <h3 className="text-xl font-black text-[#1A1F3D] mb-4">
+                              {language === 'th' ? 'เหตุผลในการยกเลิกบิล' : 'Void Reason'}
+                            </h3>
+                            <input
+                              type="text"
+                              autoFocus
+                              placeholder={language === 'th' ? 'กรุณาระบุเหตุผล...' : 'Enter reason...'}
+                              value={voidReasonInput}
+                              onChange={(e) => setVoidReasonInput(e.target.value)}
+                              className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl mb-6 font-medium focus:outline-none focus:ring-2 focus:ring-[#1A1F3D]"
+                            />
+                            <div className="flex gap-3 justify-end">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsVoidModalOpen(false);
+                                }}
+                                className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition-colors"
+                              >
+                                {language === 'th' ? 'ยกเลิก' : 'Cancel'}
+                              </button>
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!selectedTransaction) return;
+                                  if (!voidReasonInput.trim()) {
+                                    toast.error(language === 'th' ? 'กรุณาระบุเหตุผล' : 'Reason is required');
+                                    return;
+                                  }
+                                  try {
+                                    await voidTransaction(selectedTransaction.id, voidReasonInput);
+                                    toast.success(language === 'th' ? 'ยกเลิกบิลสำเร็จและปรับปรุงสต๊อกแล้ว' : 'Bill voided and inventory restored');
+                                    const currentUser = useStore.getState().currentUser?.name || 'Admin';
+                                    setSelectedTransaction({ 
+                                      ...selectedTransaction, 
+                                      status: 'voided', 
+                                      voidReason: voidReasonInput,
+                                      voidedBy: currentUser,
+                                      voidedAt: new Date().toISOString()
+                                    });
+                                    setIsVoidModalOpen(false);
+                                  } catch (err: any) {
+                                    toast.error(err.message);
+                                  }
+                                }}
+                                className="px-6 py-2.5 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors"
+                              >
+                                {language === 'th' ? 'ยืนยัน' : 'Confirm'}
+                              </button>
+                            </div>
+                          </motion.div>
+                        </div>
+                      )}
+                    </AnimatePresence>
+
                   </div>
                 ) : (
                   <>
-                    <div>
-                      <h2 className="text-2xl font-black text-[#1A1F3D] mb-1">{language === 'th' ? 'ประวัติการขายวันนี้' : "Today's Transactions"}</h2>
-                      <p className="text-gray-400 text-sm font-bold mb-6">{language === 'th' ? 'รายการชำระเงินที่เสร็จสิ้น' : 'Completed transactions'}</p>
+                    <div className="mb-6 space-y-4">
+                      <div>
+                        <h2 className="text-2xl font-black text-[#1A1F3D] mb-1">{language === 'th' ? 'ประวัติการขาย' : "Sales History"}</h2>
+                        <p className="text-gray-400 text-sm font-bold">{language === 'th' ? 'รายการชำระเงินทั้งหมด' : 'All transactions'}</p>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                          <input 
+                            type="text"
+                            placeholder={language === 'th' ? 'ค้นหาชื่อ, เลขที่...' : 'Search name, ref...'}
+                            value={historySearch}
+                            onChange={(e) => setHistorySearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D] outline-none"
+                          />
+                        </div>
+                        <select 
+                          value={historyDateFilter}
+                          onChange={(e) => setHistoryDateFilter(e.target.value)}
+                          className="px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D] outline-none"
+                        >
+                          <option value="today">{language === 'th' ? 'วันนี้' : 'Today'}</option>
+                          <option value="all">{language === 'th' ? 'ทั้งหมด' : 'All Dates'}</option>
+                        </select>
+                        <select 
+                          value={historyStatusFilter}
+                          onChange={(e) => setHistoryStatusFilter(e.target.value)}
+                          className="px-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D] outline-none"
+                        >
+                          <option value="all">{language === 'th' ? 'ทุกสถานะ' : 'All Status'}</option>
+                          <option value="completed">{language === 'th' ? 'สำเร็จ' : 'Completed'}</option>
+                          <option value="voided">{language === 'th' ? 'ยกเลิก' : 'Voided'}</option>
+                        </select>
+                      </div>
                     </div>
-                    
                     <div className="flex-1 overflow-y-auto pr-2 space-y-3">
-                      {todayTransactions.length === 0 ? (
+                      {historyTransactions.length === 0 ? (
                         <div className="text-center py-10 text-gray-400 font-bold">
-                          {language === 'th' ? 'ไม่มีรายการขายวันนี้' : 'No transactions today'}
+                          {language === 'th' ? 'ไม่มีรายการขาย' : 'No transactions'}
                         </div>
                       ) : (
-                        todayTransactions.map(tx => (
+                        historyTransactions.map(tx => (
                           <div 
                             key={tx.id} 
                             onClick={() => setSelectedTransaction(tx)}
@@ -343,11 +495,18 @@ const Index = () => {
                                   )}
                                 </p>
                                 <p className="text-xs text-gray-400 font-bold">
-                                  {format(new Date(tx.createdAt), 'HH:mm')} • {tx.paymentMethod}
+                                  {format(new Date(tx.createdAt), 'dd/MM/yyyy HH:mm')} • {tx.paymentMethod}
                                 </p>
                               </div>
-                              <div className="text-right">
-                                <p className="font-black text-[#1A1F3D]">{currency} {tx.amount.toLocaleString()}</p>
+                              <div className="text-right flex flex-col items-end gap-1">
+                                {tx.status === 'voided' && (
+                                  <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                    Voided
+                                  </span>
+                                )}
+                                <p className={cn("font-black text-[#1A1F3D]", tx.status === 'voided' && "line-through opacity-50")}>
+                                  {currency} {tx.amount.toLocaleString()}
+                                </p>
                                 <p className="text-[10px] text-gray-400 font-bold">{tx.items?.length || 0} items</p>
                               </div>
                             </div>
@@ -370,7 +529,7 @@ const Index = () => {
               className="hidden sm:flex items-center gap-2 bg-white border border-gray-100 text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
             >
               <History size={16} />
-              {language === 'th' ? 'รายการขายวันนี้' : 'Today\'s Sales'}
+              {language === 'th' ? 'ประวัติการขาย' : 'Sales History'}
             </button>
             <button 
               onClick={() => setIsManageServicesOpen(true)}
@@ -807,6 +966,7 @@ const Index = () => {
       {selectedAddOn && (
         <AddOnModal addOn={selectedAddOn} onClose={() => setSelectedAddOn(null)} />
       )}
+
     </div>
   );
 };

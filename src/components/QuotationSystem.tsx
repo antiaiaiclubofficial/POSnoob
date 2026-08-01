@@ -51,6 +51,7 @@ const QuotationSystem: React.FC<QuotationSystemProps> = ({ initialView = 'list',
   const [selectedItemId, setSelectedItemId] = useState('');
   const [qtyInput, setQtyInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
+  const [duplicateItemConfirm, setDuplicateItemConfirm] = useState<{ productId: string, productName: string, qty: number, price: number, itemType: string } | null>(null);
 
   React.useEffect(() => {
     if (!selectedItemId) {
@@ -143,11 +144,14 @@ const QuotationSystem: React.FC<QuotationSystemProps> = ({ initialView = 'list',
 
     const existingItem = qtItems.find(i => i.productId === selectedItemId && i.itemType === selectedItemType);
     if (existingItem) {
-      setQtItems(qtItems.map(i => (i.productId === selectedItemId && i.itemType === selectedItemType) ? {
-        ...i,
-        quantity: i.quantity + qty,
-        total: (i.quantity + qty) * i.unitPrice
-      } : i));
+      setDuplicateItemConfirm({
+        productId: selectedItemId,
+        productName: itemName,
+        qty,
+        price,
+        itemType: selectedItemType
+      });
+      return;
     } else {
       setQtItems([...qtItems, {
         productId: selectedItemId,
@@ -159,6 +163,32 @@ const QuotationSystem: React.FC<QuotationSystemProps> = ({ initialView = 'list',
       }]);
     }
 
+    setSelectedItemId('');
+    setQtyInput('');
+    setPriceInput('');
+  };
+
+  const handleConfirmDuplicate = (action: 'add' | 'replace') => {
+    if (!duplicateItemConfirm) return;
+    const { productId, qty, price, itemType } = duplicateItemConfirm;
+    
+    if (action === 'add') {
+      setQtItems(qtItems.map(i => (i.productId === productId && i.itemType === itemType) ? {
+        ...i,
+        quantity: i.quantity + qty,
+        unitPrice: price,
+        total: (i.quantity + qty) * price
+      } : i));
+    } else {
+      setQtItems(qtItems.map(i => (i.productId === productId && i.itemType === itemType) ? {
+        ...i,
+        quantity: qty,
+        unitPrice: price,
+        total: qty * price
+      } : i));
+    }
+    
+    setDuplicateItemConfirm(null);
     setSelectedItemId('');
     setQtyInput('');
     setPriceInput('');
@@ -207,6 +237,48 @@ const QuotationSystem: React.FC<QuotationSystemProps> = ({ initialView = 'list',
   if (view === 'create') {
     return (
       <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500">
+        <AnimatePresence>
+          {duplicateItemConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full"
+              >
+                <h3 className="text-xl font-black text-[#1A1F3D] mb-2">พบสินค้านี้ในรายการแล้ว</h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  <span className="font-bold text-[#1A1F3D]">{duplicateItemConfirm.productName}</span> มีอยู่ในรายการแล้ว คุณต้องการบวกจำนวนเพิ่ม หรือแทนที่รายการเดิมด้วยจำนวนและราคาใหม่?
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => handleConfirmDuplicate('add')}
+                    className="w-full py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors"
+                  >
+                    บวกจำนวนเพิ่ม
+                  </button>
+                  <button
+                    onClick={() => handleConfirmDuplicate('replace')}
+                    className="w-full py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+                  >
+                    แทนที่รายการเดิม
+                  </button>
+                  <button
+                    onClick={() => setDuplicateItemConfirm(null)}
+                    className="w-full py-3 text-gray-400 font-bold hover:text-gray-600 transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-8">
             <div>

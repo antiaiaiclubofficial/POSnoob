@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { format } from 'date-fns';
 import { useStore, JournalEntry, JournalType, JournalEntryLine } from '@/store/useStore';
 import { Plus, Search, FileText, CheckCircle2, XCircle, X, Trash2, Calendar, Hash, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -40,6 +41,10 @@ const JournalEntries = () => {
                           e.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'ALL' || e.journalType === selectedType;
     return matchesSearch && matchesType;
+  }).sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.date).getTime();
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.date).getTime();
+    return timeB - timeA;
   });
 
   // Calculate totals
@@ -146,7 +151,7 @@ const JournalEntries = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-100 bg-[#F9F9F9]/50">
-                <th className="p-4 text-xs font-black text-gray-400 uppercase tracking-wider">วันที่</th>
+                <th className="p-4 text-xs font-black text-gray-400 uppercase tracking-wider">วันที่/เวลา</th>
                 <th className="p-4 text-xs font-black text-gray-400 uppercase tracking-wider">เลขที่รายการ</th>
                 <th className="p-4 text-xs font-black text-gray-400 uppercase tracking-wider">ประเภท</th>
                 <th className="p-4 text-xs font-black text-gray-400 uppercase tracking-wider">คำอธิบาย</th>
@@ -165,7 +170,9 @@ const JournalEntries = () => {
                     onClick={() => setSelectedEntry(entry)}
                     className="border-b border-gray-50 hover:bg-[#F9F9F9] transition-colors cursor-pointer group"
                   >
-                    <td className="p-4 text-sm font-medium text-gray-600 whitespace-nowrap">{entry.date}</td>
+                    <td className="p-4 text-sm font-medium text-gray-600 whitespace-nowrap">
+                      {entry.createdAt ? format(new Date(entry.createdAt), 'dd/MM/yyyy HH:mm') : entry.date}
+                    </td>
                     <td className="p-4 text-sm font-bold text-blue-600 whitespace-nowrap group-hover:underline">{entry.id}</td>
                     <td className="p-4 text-sm">
                       <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg font-bold text-xs">

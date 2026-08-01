@@ -42,6 +42,7 @@ interface ReceiptPreviewProps {
     appCode?: string;
     cashier?: string;
     terminalId?: string;
+    status?: string;
   } | null;
 }
 
@@ -149,11 +150,10 @@ const ReceiptPreview = ({
           </div>
         </div>
 
-        {/* Paper Container */}
         <div className="flex-1 overflow-y-auto p-10 flex justify-center bg-[#D1D5DB] scrollbar-hide print:bg-white print:p-0">
           <div 
             className={cn(
-              "bg-white shadow-xl h-fit min-h-full p-4 flex flex-col font-sans text-black transition-all duration-500 print:shadow-none",
+              "bg-white shadow-xl h-fit min-h-full p-4 flex flex-col font-sans text-black transition-all duration-500 print:shadow-none relative overflow-hidden",
               is80mm ? "w-[380px]" : "w-[300px]"
             )}
             style={{ fontSize: is80mm ? '13px' : '11px', fontFamily: "'IBM Plex Sans Thai', sans-serif" }}
@@ -303,6 +303,15 @@ const ReceiptPreview = ({
               <p>รับเปลี่ยนหรือคืนสินค้าภายใน7วัน</p>
               <p>****หากไม่มีใบเสร็จไม่รับเปลี่ยนหรือคืนทุกกรณี****</p>
             </div>
+
+            {/* Watermark */}
+            {(transaction?.status?.toLowerCase() === 'voided' || transaction?.status?.toLowerCase() === 'cancelled') && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[100]">
+                <div className="text-red-500 font-black text-6xl opacity-40 -rotate-45 border-8 border-red-500/40 rounded-2xl p-4 tracking-widest whitespace-nowrap select-none">
+                  VOID
+                </div>
+              </div>
+            )}
 
           </div>
         </div>

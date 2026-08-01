@@ -642,7 +642,11 @@ const AuthInitializer = () => {
             staffName: tx.staff_name || 'Admin',
             staffId: tx.staff_id,
             species: [],
-            bookingType: 'Walk-in' as BookingType
+            bookingType: 'Walk-in' as BookingType,
+            status: tx.status || 'completed',
+            voidReason: tx.void_reason,
+            voidedBy: tx.voided_by,
+            voidedAt: tx.voided_at
           }));
           useStore.setState({ transactions: formattedTransactions });
         } else {
@@ -869,7 +873,8 @@ const AuthInitializer = () => {
               totalCredit: Number(j.total_credit),
               createdBy: j.created_by,
               isOpeningBalance: j.is_opening_balance,
-              isClosingEntry: j.is_closing_entry
+              isClosingEntry: j.is_closing_entry,
+              createdAt: j.created_at
             }))
           });
         }
@@ -958,6 +963,50 @@ const AuthInitializer = () => {
 
     if (isAuthenticated) {
       fetchInitialData();
+      
+      // Setup realtime subscription for journal_entries
+      const journalChannel = supabase
+        .channel('realtime-journal-entries')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'journal_entries'
+          },
+          async () => {
+            console.log('Realtime journal_entries update detected, re-fetching...');
+            let journalsQuery = supabase.from('journal_entries').select('*').order('date', { ascending: false });
+            if (storeId && storeId !== 'default-store') {
+              journalsQuery = journalsQuery.eq('store_id', storeId);
+            }
+            const { data: journalsData } = await journalsQuery;
+            if (journalsData) {
+              useStore.setState({
+                journalEntries: journalsData.map(j => ({
+                  id: j.id,
+                  date: j.date,
+                  journalType: j.journal_type,
+                  referenceNo: j.reference_no,
+                  description: j.description,
+                  lines: j.lines,
+                  status: j.status,
+                  totalDebit: Number(j.total_debit),
+                  totalCredit: Number(j.total_credit),
+                  createdBy: j.created_by,
+                  isOpeningBalance: j.is_opening_balance,
+                  isClosingEntry: j.is_closing_entry,
+                  createdAt: j.created_at
+                }))
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(journalChannel);
+      };
     }
   }, [isAuthenticated, setCustomers, setServices, storeId]);
 

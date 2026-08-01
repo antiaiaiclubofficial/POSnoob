@@ -201,8 +201,9 @@ const Dashboard = () => {
   const todayTransactions = transactions.filter(t => t.date === today);
 
   const metrics = useMemo(() => {
-    const revenue = todayTransactions.reduce((acc, t) => acc + t.amount, 0);
-    const avgTicket = todayTransactions.length > 0 ? revenue / todayTransactions.length : 0;
+    const validTransactions = transactions.filter(t => t.status !== 'voided');
+    const revenue = validTransactions.reduce((acc, t) => acc + t.amount, 0);
+    const avgTicket = validTransactions.length > 0 ? revenue / validTransactions.length : 0;
     const activePets = todayQueue.filter(q => q.status === 'Checked-in' || q.status === 'In Progress').length;
     const completed = todayQueue.filter(q => q.status === 'Completed').length;
 
@@ -213,7 +214,7 @@ const Dashboard = () => {
       revenue,
       avgTicket
     };
-  }, [todayQueue, todayTransactions]);
+  }, [todayQueue, transactions]);
 
   // 1. คำนวณลูกค้าที่มาบ่อยที่สุด (Most Frequent Customers)
   const frequentCustomers = useMemo(() => {
@@ -454,8 +455,8 @@ const Dashboard = () => {
             <div className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500">
               <div className="absolute -top-12 -right-12 w-32 h-32 bg-green-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
               <div className="flex justify-between items-start mb-2 relative z-10">
-                <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.dailyRevenue}</h3>
-                <span className="text-[9px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-lg uppercase">Today</span>
+                <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.totalRevenue}</h3>
+                <span className="text-[9px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-lg uppercase">All Time</span>
               </div>
               <div className="relative z-10">
                 <h2 className="text-3xl font-black text-[#1A1F3D]">{currency}{metrics.revenue.toLocaleString()}</h2>

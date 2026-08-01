@@ -17,7 +17,7 @@ interface PRSystemProps {
 
 const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, initialView = 'list', onViewChange }) => {
   const {
-    purchaseRequests, partners, inventory, currentUser, addPurchaseRequest, updatePurchaseRequest, updatePurchaseRequestStatus,
+    purchaseRequests, partners, inventory, currentUser, addPurchaseRequest, updatePurchaseRequest, updatePurchaseRequestStatus, approvePurchaseRequestToPO,
     companyName, companyAddress, companyTaxId, companyPhone, companyEmail, shopName, shopAddress, shopPhone
   } = useStore();
   const [view, setView] = useState<'list' | 'create'>(initialView);
@@ -49,6 +49,7 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
   
   const [vendorInputMode, setVendorInputMode] = useState<'system' | 'manual'>('system');
   const [itemInputMode, setItemInputMode] = useState<'system' | 'manual'>('system');
+  const [duplicateItemConfirm, setDuplicateItemConfirm] = useState<{ productId: string, productName: string, qty: number, price: number } | null>(null);
 
   useEffect(() => {
     if (reorderItem) {
@@ -124,11 +125,13 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
 
     const existingItem = prItems.find(i => i.productId === productId);
     if (existingItem) {
-      setPrItems(prItems.map(i => i.productId === productId ? {
-        ...i,
-        quantity: i.quantity + qty,
-        total: (i.quantity + qty) * i.unitPrice
-      } : i));
+      setDuplicateItemConfirm({
+        productId,
+        productName,
+        qty,
+        price
+      });
+      return;
     } else {
       setPrItems([...prItems, {
         productId: productId,
@@ -139,6 +142,33 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
       }]);
     }
 
+    setSelectedProductId('');
+    setManualItemName('');
+    setQtyInput('');
+    setPriceInput('');
+  };
+
+  const handleConfirmDuplicate = (action: 'add' | 'replace') => {
+    if (!duplicateItemConfirm) return;
+    const { productId, qty, price } = duplicateItemConfirm;
+    
+    if (action === 'add') {
+      setPrItems(prItems.map(i => i.productId === productId ? {
+        ...i,
+        quantity: i.quantity + qty,
+        unitPrice: price,
+        total: (i.quantity + qty) * price
+      } : i));
+    } else {
+      setPrItems(prItems.map(i => i.productId === productId ? {
+        ...i,
+        quantity: qty,
+        unitPrice: price,
+        total: qty * price
+      } : i));
+    }
+    
+    setDuplicateItemConfirm(null);
     setSelectedProductId('');
     setManualItemName('');
     setQtyInput('');
@@ -199,6 +229,48 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
   if (view === 'create') {
     return (
       <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500">
+        <AnimatePresence>
+          {duplicateItemConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full"
+              >
+                <h3 className="text-xl font-black text-[#1A1F3D] mb-2">พบสินค้านี้ในรายการแล้ว</h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  <span className="font-bold text-[#1A1F3D]">{duplicateItemConfirm.productName}</span> มีอยู่ในรายการแล้ว คุณต้องการบวกจำนวนเพิ่ม หรือแทนที่รายการเดิมด้วยจำนวนและราคาใหม่?
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => handleConfirmDuplicate('add')}
+                    className="w-full py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors"
+                  >
+                    บวกจำนวนเพิ่ม
+                  </button>
+                  <button
+                    onClick={() => handleConfirmDuplicate('replace')}
+                    className="w-full py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+                  >
+                    แทนที่รายการเดิม
+                  </button>
+                  <button
+                    onClick={() => setDuplicateItemConfirm(null)}
+                    className="w-full py-3 text-gray-400 font-bold hover:text-gray-600 transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-8">
             <div>
@@ -937,7 +1009,7 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                   <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
                     <button
                       onClick={() => {
-                        updatePurchaseRequestStatus(previewPR.id, 'Approved');
+                        approvePurchaseRequestToPO(previewPR.id);
                         setPreviewPR({ ...previewPR, status: 'Approved' });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors text-xs font-bold"

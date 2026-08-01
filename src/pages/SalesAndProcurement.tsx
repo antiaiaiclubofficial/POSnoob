@@ -11,7 +11,7 @@ import SalesDashboard from '@/components/SalesDashboard';
 import ProcurementDashboard from '@/components/ProcurementDashboard';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 type Department = 'none' | 'sales' | 'procurement';
 type SalesTab = 'dashboard' | 'quotation' | 'so';
@@ -26,6 +26,7 @@ const SalesAndProcurement = () => {
   const [procAction, setProcAction] = useState<'list' | 'create'>('list');
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     if (location.state?.action === 'pr') {
@@ -214,7 +215,7 @@ const SalesAndProcurement = () => {
                     onCreateGR={() => { setProcAction('create'); setProcTab('gr'); }}
                   />
                 )}
-                {procTab === 'pr' && <PRSystem reorderItem={location.state?.reorderItem} clearReorderItem={() => window.history.replaceState({}, '')} initialView={procAction} onViewChange={setProcAction} />}
+                {procTab === 'pr' && <PRSystem reorderItem={location.state?.reorderItem} clearReorderItem={() => navigate(location.pathname, { replace: true, state: {} })} initialView={procAction} onViewChange={setProcAction} />}
                 {procTab === 'po' && <POSystem initialView={procAction} onViewChange={setProcAction} />}
                 {procTab === 'gr' && <GRSystem initialView={procAction} onViewChange={setProcAction} />}
               </motion.div>

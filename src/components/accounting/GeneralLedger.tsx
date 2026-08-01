@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { format } from 'date-fns';
 import { Search, Filter, BookOpen } from 'lucide-react';
+import { DateRangeDropdown, DateRange } from '@/components/ui/date-range-dropdown';
 
 const GeneralLedger = () => {
   const { accountCodes, journalEntries } = useStore();
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const activeAccount = accountCodes.find(c => c.id === selectedAccountId);
   
@@ -17,27 +20,49 @@ const GeneralLedger = () => {
       .filter(line => line.accountId === selectedAccountId)
       .map(line => ({
         date: entry.date,
+        createdAt: entry.createdAt,
         journalId: entry.id,
         journalType: entry.journalType,
         description: line.description || entry.description,
         debit: line.debit,
         credit: line.credit
       }))
-  ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  ).sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.date).getTime();
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.date).getTime();
+    return timeA - timeB; // Ascending order for ledger to calculate running balance correctly
+  });
 
-  // Calculate running balance
-  // Assume normal balance: Assets/Expenses -> Debit (Dr), Liabilities/Equity/Revenue -> Credit (Cr)
+  // Calculate running balance and Brought Forward
   let balance = 0;
+  let bfBalance = 0;
+  let hasBf = false;
   const isDebitNormal = activeAccount?.category === 'Assets' || activeAccount?.category === 'Expenses';
 
-  const ledgerWithBalance = ledgerLines.map(line => {
+  const visibleLines: any[] = [];
+
+  const startDate = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '';
+  const endDate = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : (dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '');
+
+  for (const line of ledgerLines) {
     if (isDebitNormal) {
       balance += line.debit - line.credit;
     } else {
       balance += line.credit - line.debit;
     }
-    return { ...line, balance };
-  });
+
+    const effectiveDate = line.createdAt ? format(new Date(line.createdAt), 'yyyy-MM-dd') : line.date;
+
+    const isAfterStart = !startDate || effectiveDate >= startDate;
+    const isBeforeEnd = !endDate || effectiveDate <= endDate;
+
+    if (isAfterStart && isBeforeEnd) {
+      visibleLines.push({ ...line, balance });
+    } else if (!isAfterStart) {
+      bfBalance = balance;
+      hasBf = !!startDate;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -61,9 +86,11 @@ const GeneralLedger = () => {
               ))}
             </select>
           </div>
-          <button className="px-5 py-2.5 bg-white text-gray-700 rounded-2xl text-sm font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2">
-            <Filter size={16} /> ตัวกรองวันที่
-          </button>
+          <DateRangeDropdown 
+            language="th"
+            value={dateRange}
+            onChange={(range) => setDateRange(range)}
+          />
         </div>
       </div>
 
@@ -73,7 +100,7 @@ const GeneralLedger = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-100 bg-[#F9F9F9]/50">
-                  <th className="p-4 text-xs font-black text-gray-400 uppercase tracking-wider">วันที่</th>
+                  <th className="p-4 text-xs font-black text-gray-400 uppercase tracking-wider">วันที่/เวลา</th>
                   <th className="p-4 text-xs font-black text-gray-400 uppercase tracking-wider">อ้างอิง</th>
                   <th className="p-4 text-xs font-black text-gray-400 uppercase tracking-wider">คำอธิบาย</th>
                   <th className="p-4 text-xs font-black text-gray-400 uppercase tracking-wider text-right">เดบิต (Dr.)</th>
@@ -84,10 +111,22 @@ const GeneralLedger = () => {
                 </tr>
               </thead>
               <tbody>
-                {ledgerWithBalance.length > 0 ? (
-                  ledgerWithBalance.map((line, idx) => (
+                {hasBf && (
+                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                    <td colSpan={5} className="p-4 text-sm font-bold text-gray-500 text-right uppercase tracking-wider">
+                      ยอดยกมา (Brought Forward)
+                    </td>
+                    <td className="p-4 text-sm font-bold text-[#1A1F3D] text-right bg-blue-50/30">
+                      {bfBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                )}
+                {visibleLines.length > 0 ? (
+                  visibleLines.map((line, idx) => (
                     <tr key={idx} className="border-b border-gray-50 hover:bg-[#F9F9F9] transition-colors">
-                      <td className="p-4 text-sm font-medium text-gray-600 whitespace-nowrap">{line.date}</td>
+                      <td className="p-4 text-sm font-medium text-gray-600 whitespace-nowrap">
+                        {line.createdAt ? format(new Date(line.createdAt), 'dd/MM/yyyy HH:mm') : line.date}
+                      </td>
                       <td className="p-4 text-sm font-bold text-blue-600 whitespace-nowrap cursor-pointer hover:underline">
                         {line.journalId}
                       </td>
@@ -106,7 +145,7 @@ const GeneralLedger = () => {
                 ) : (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-gray-400 text-sm">
-                      ไม่มีรายการเคลื่อนไหวสำหรับบัญชีนี้
+                      ไม่มีรายการเคลื่อนไหวสำหรับบัญชีนี้ในช่วงเวลาที่เลือก
                     </td>
                   </tr>
                 )}

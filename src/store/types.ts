@@ -193,6 +193,10 @@ export interface Transaction {
   species: string[];
   actualDuration?: number;
   bookingType: BookingType;
+  status?: 'completed' | 'voided';
+  voidReason?: string;
+  voidedBy?: string;
+  voidedAt?: string;
 }
 export interface GoodsReceiptItem {
   productId: string;
@@ -530,6 +534,7 @@ export interface AppState {
   clearCart: () => void;
   processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean, redeemedPoints?: number, subtotal?: number, vatAmount?: number, vatRate?: number) => Promise<any>;
   deleteTransaction: (id: string) => void;
+  voidTransaction: (id: string, reason: string) => Promise<void>;
   holdBill: (customerId: string, customerName: string, items: any[]) => void;
   removeHeldBill: (id: string) => void;
   setHeldBills: (bills: HeldBill[]) => void;
@@ -695,6 +700,7 @@ export interface JournalEntry {
   isClosingEntry?: boolean;
   sourceType?: string;
   sourceId?: string;
+  createdAt?: string;
 }
 
 export interface AccountMappingRule {

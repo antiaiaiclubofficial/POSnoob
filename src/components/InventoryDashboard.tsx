@@ -75,7 +75,33 @@ const COLORS = {
 const PIE_COLORS = [COLORS.primary, COLORS.purple, COLORS.accentPeach, COLORS.accentRed, '#4F46E5'];
 
 export default function InventoryDashboard() {
-  const { inventory, currency, adjustStock, stockLogs, language, transactions, partners, addPurchaseRequest } = useStore();
+  const { inventory, currency, adjustStock, stockLogs, language, transactions: storeTransactions, partners, addPurchaseRequest } = useStore();
+
+  const getLocalYMD = (date: Date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  const transactions = useMemo(() => {
+    return storeTransactions.map(t => {
+      let txDate: Date;
+      if (t.createdAt) {
+        txDate = new Date(t.createdAt);
+      } else if (t.date && t.date.includes('T')) {
+        txDate = new Date(t.date);
+      } else if (t.date) {
+        const parts = t.date.split('-');
+        if (parts.length === 3) {
+          txDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        } else {
+          txDate = new Date(t.date);
+        }
+      } else {
+        txDate = new Date();
+      }
+      return { ...t, date: getLocalYMD(txDate) };
+    });
+  }, [storeTransactions]);
+
   const [reorderingId, setReorderingId] = useState<string | null>(null);
   const [kpiDateRange, setKpiDateRange] = useState<string>('all');
   const [kpiCustomDateRange, setKpiCustomDateRange] = useState<DateRange | undefined>(undefined);
@@ -262,6 +288,7 @@ export default function InventoryDashboard() {
     const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
 
     return processedTransactions.filter(t => {
+      if (t.status === 'voided') return false;
       if (!t.date) return false;
       let txDate: Date;
       if (t.date.includes('T')) {
@@ -689,6 +716,7 @@ export default function InventoryDashboard() {
     const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
 
     return transactions.filter(t => {
+      if (t.status === 'voided') return false;
       if (!t.date) return false;
       let txDate: Date;
       if (t.date.includes('T')) {
@@ -735,6 +763,7 @@ export default function InventoryDashboard() {
 
   // Metrics for Order Received (Smartwatch card) and Total Sales chart
   const { totalOrders, orderGrowthPercent, totalOrdersThisWeek, weeklySalesTrend, trendLabels } = useMemo(() => {
+    const activeTransactions = transactions.filter(t => t.status !== 'voided');
     const now = new Date();
     const oneDay = 24 * 60 * 60 * 1000;
     const total = allKpiFilteredTransactions.length;
@@ -758,12 +787,12 @@ export default function InventoryDashboard() {
     let prevCount = 0;
 
     if (kpiDateRange === 'today') {
-      currentCount = transactions.filter(t => {
+      currentCount = activeTransactions.filter(t => {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= startOfToday;
       }).length;
-      prevCount = transactions.filter(t => {
+      prevCount = activeTransactions.filter(t => {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= startOfYesterday && txDate < startOfToday;
@@ -771,7 +800,7 @@ export default function InventoryDashboard() {
     } else if (kpiDateRange === 'yesterday') {
       currentCount = total;
       const dayBeforeYesterday = new Date(startOfYesterday.getTime() - 24 * 60 * 60 * 1000);
-      prevCount = transactions.filter(t => {
+      prevCount = activeTransactions.filter(t => {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= dayBeforeYesterday && txDate < startOfYesterday;
@@ -780,7 +809,7 @@ export default function InventoryDashboard() {
       currentCount = total;
       const sevenDaysAgoDate = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
       const fourteenDaysAgoDate = new Date(startOfToday.getTime() - 14 * 24 * 60 * 60 * 1000);
-      prevCount = transactions.filter(t => {
+      prevCount = activeTransactions.filter(t => {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= fourteenDaysAgoDate && txDate < sevenDaysAgoDate;
@@ -793,12 +822,12 @@ export default function InventoryDashboard() {
     const q4Start = new Date(currentYear, 9, 1);
     const nextYearStart = new Date(currentYear + 1, 0, 1);
       const oneEightyDaysAgo = new Date(startOfToday.getTime() - 180 * 24 * 60 * 60 * 1000);
-      currentCount = transactions.filter(t => {
+      currentCount = activeTransactions.filter(t => {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= ninetyDaysAgo;
       }).length;
-      prevCount = transactions.filter(t => {
+      prevCount = activeTransactions.filter(t => {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= oneEightyDaysAgo && txDate < ninetyDaysAgo;
@@ -806,23 +835,23 @@ export default function InventoryDashboard() {
     } else if (kpiDateRange === 'yearly') {
       const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
       const twoYearsAgo = new Date(startOfToday.getTime() - 730 * 24 * 60 * 60 * 1000);
-      currentCount = transactions.filter(t => {
+      currentCount = activeTransactions.filter(t => {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= yearlyAgo;
       }).length;
-      prevCount = transactions.filter(t => {
+      prevCount = activeTransactions.filter(t => {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= twoYearsAgo && txDate < yearlyAgo;
       }).length;
     } else if (kpiDateRange === '30days' || kpiDateRange === 'all') {
-      currentCount = transactions.filter(t => {
+      currentCount = activeTransactions.filter(t => {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= thirtyDaysAgo;
       }).length;
-      prevCount = transactions.filter(t => {
+      prevCount = activeTransactions.filter(t => {
         if (!t.date) return false;
         const txDate = new Date(t.date);
         return txDate >= sixtyDaysAgo && txDate < thirtyDaysAgo;
@@ -847,7 +876,7 @@ export default function InventoryDashboard() {
 
     if (kpiDateRange === 'today' || kpiDateRange === 'yesterday') {
       const targetDay = kpiDateRange === 'today' ? new Date() : new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const targetDayStr = targetDay.toISOString().split('T')[0];
+      const targetDayStr = getLocalYMD(targetDay);
 
       for (let h = 8; h <= 19; h++) {
         const hourStr = h.toString().padStart(2, '0');
@@ -856,7 +885,7 @@ export default function InventoryDashboard() {
           if (!t.date) return false;
           const d = new Date(t.date);
           const localHour = d.getHours();
-          const localDateStr = d.toISOString().split('T')[0];
+          const localDateStr = getLocalYMD(d);
           return localDateStr === targetDayStr && localHour === h;
         });
 
@@ -874,7 +903,7 @@ export default function InventoryDashboard() {
     } else if (kpiDateRange === '7days') {
       for (let i = 6; i >= 0; i--) {
         const targetDate = new Date(now.getTime() - i * oneDay);
-        const dateStr = targetDate.toISOString().split('T')[0];
+        const dateStr = getLocalYMD(targetDate);
         const dayTransactions = allKpiFilteredTransactions.filter(t => t.date === dateStr || t.date?.startsWith(dateStr));
         const count = dayTransactions.length;
         const amount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -940,7 +969,7 @@ export default function InventoryDashboard() {
     } else if (kpiDateRange === '30days') {
       for (let i = 29; i >= 0; i--) {
         const targetDate = new Date(now.getTime() - i * oneDay);
-        const dateStr = targetDate.toISOString().split('T')[0];
+        const dateStr = getLocalYMD(targetDate);
         const dayTransactions = allKpiFilteredTransactions.filter(t => t.date === dateStr || t.date?.startsWith(dateStr));
         const count = dayTransactions.length;
         const amount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -958,7 +987,7 @@ export default function InventoryDashboard() {
       const trendDays = 15;
       for (let i = 0; i < trendDays; i++) {
         const targetDate = new Date(now.getTime() - (trendDays - 1 - i) * oneDay);
-        const dateStr = targetDate.toISOString().split('T')[0];
+        const dateStr = getLocalYMD(targetDate);
         const dayTransactions = allKpiFilteredTransactions.filter(t => t.date === dateStr || t.date?.startsWith(dateStr));
         const count = dayTransactions.length;
         const amount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -2383,8 +2412,13 @@ export default function InventoryDashboard() {
 
                           <div className="flex items-center gap-4 self-stretch md:self-auto justify-between md:justify-end border-t md:border-t-0 border-gray-50 pt-3 md:pt-0">
                             <div className="text-left md:text-right">
-                              <span className="text-[10px] font-black text-gray-400 uppercase block tracking-wider leading-none mb-1">Total Amount</span>
-                              <span className={cn("text-lg font-black font-sans", tx.amount < 0 ? "text-red-500" : "text-[#18234A]")}>
+                              <span className="text-[10px] font-black text-gray-400 uppercase flex items-center justify-start md:justify-end gap-1.5 tracking-wider leading-none mb-1">
+                                {tx.status === 'voided' && (
+                                  <span className="bg-red-100 text-red-600 px-1.5 py-0.5 rounded-sm">Voided</span>
+                                )}
+                                Total Amount
+                              </span>
+                              <span className={cn("text-lg font-black font-sans", tx.amount < 0 ? "text-red-500" : "text-[#18234A]", tx.status === 'voided' && "line-through opacity-50")}>
                                 {tx.amount < 0 ? `-${currency}${Math.abs(tx.amount).toLocaleString()}` : `${currency}${tx.amount.toLocaleString()}`}
                               </span>
                             </div>
@@ -2448,13 +2482,27 @@ export default function InventoryDashboard() {
                                   )}
                                   <div className="flex justify-between w-60 text-base font-black border-t border-gray-50 pt-2 text-[#18234A]">
                                     <span>{language === 'th' ? 'ยอดสุทธิ:' : 'Grand Total:'}</span>
-                                    <span className={cn("font-sans font-black", tx.amount < 0 ? "text-red-500" : "text-[#18234A]")}>
+                                    <span className={cn("font-sans font-black", tx.amount < 0 ? "text-red-500" : "text-[#18234A]", tx.status === 'voided' && "line-through opacity-50")}>
                                       {tx.amount < 0 ? `-${currency}${Math.abs(tx.amount).toLocaleString()}` : `${currency}${tx.amount.toLocaleString()}`}
                                     </span>
                                   </div>
                                 </div>
 
-                                <div className="flex items-center justify-between text-[9px] text-gray-400 font-bold uppercase tracking-wider pt-2 border-t border-gray-50">
+                                {tx.status === 'voided' && (
+                                  <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-bold flex flex-col gap-1 mt-4">
+                                    <span>{language === 'th' ? 'รายการนี้ถูกยกเลิกแล้ว' : 'This transaction was voided'}</span>
+                                    <span className="text-xs opacity-80">
+                                      {language === 'th' ? 'เหตุผล' : 'Reason'}: {tx.voidReason}
+                                    </span>
+                                    {tx.voidedBy && (
+                                      <span className="text-xs opacity-80">
+                                        {language === 'th' ? 'โดย' : 'By'}: {tx.voidedBy} {tx.voidedAt ? `(${new Date(tx.voidedAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })})` : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                <div className="flex items-center justify-between text-[9px] text-gray-400 font-bold uppercase tracking-wider pt-2 mt-4 border-t border-gray-50">
                                   <span>ID: {tx.id}</span>
                                   <span>{language === 'th' ? `พนักงานขาย: ${tx.staffName}` : `Sold by: ${tx.staffName}`}</span>
                                 </div>

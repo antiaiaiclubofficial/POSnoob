@@ -1710,7 +1710,11 @@ export const useStore = create<AppState>()((set, get) => ({
         paymentMethod: data.payment_method,
         staffName: data.staff_name || 'Admin',
         species: [],
-        bookingType: 'Walk-in'
+        bookingType: 'Walk-in',
+        status: data.status || 'completed',
+        voidReason: data.void_reason,
+        voidedBy: data.voided_by,
+        voidedAt: data.voided_at
       };
 
       set(state => ({
@@ -1760,6 +1764,132 @@ export const useStore = create<AppState>()((set, get) => ({
 
     set(state => ({
       transactions: state.transactions.filter(t => t.id !== id)
+    }));
+  },
+
+  voidTransaction: async (id, reason) => {
+    const transaction = get().transactions.find(t => t.id === id);
+    if (!transaction) throw new Error("Transaction not found");
+    if (transaction.status === 'voided') throw new Error("Transaction is already voided");
+
+    const staffName = get().currentUser?.name || 'Admin';
+    const now = new Date().toISOString();
+    const currentStoreId = get().storeId;
+
+    // 1. Update DB
+    const { error } = await supabase
+      .from('sales_transactions')
+      .update({
+        status: 'voided',
+        void_reason: reason,
+        voided_by: staffName,
+        voided_at: now
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error voiding transaction:", error);
+      throw error;
+    }
+
+    // 2. Revert Customer Resources
+    const customerId = transaction.customerId;
+    if (customerId && customerId !== 'walk-in' && customerId !== 'walk-id') {
+      const customer = get().customers.find(c => c.id === customerId);
+      if (customer) {
+        let newPoints = customer.points || 0;
+        let newCreditBalance = customer.creditBalance || 0;
+        let updatedPackages = [...(customer.packages || [])];
+
+        if (transaction.paymentMethod === 'Store Credit') {
+          newCreditBalance += transaction.amount;
+        }
+
+        if (transaction.paymentMethod === 'Package' && transaction.details?.packageId) {
+          updatedPackages = updatedPackages.map(pkg => {
+            if (pkg.id === transaction.details.packageId) {
+              return { ...pkg, remainingSlots: pkg.remainingSlots + 1 };
+            }
+            return pkg;
+          });
+        }
+
+        const earnRate = get().pointsEarnRate || 10;
+        const earnedPoints = Math.floor(transaction.amount / earnRate);
+        newPoints = Math.max(0, newPoints - earnedPoints);
+
+        if (transaction.details?.redeemedPoints) {
+           newPoints += transaction.details.redeemedPoints;
+        }
+
+        const { error: updateError } = await supabase
+          .from('store_customers')
+          .update({ points: newPoints })
+          .eq('customer_id', customerId)
+          .eq('store_id', currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null);
+
+        if (!updateError) {
+          set(state => ({
+            customers: state.customers.map(c => {
+              if (c.id === customerId) {
+                return { ...c, points: newPoints, creditBalance: newCreditBalance, packages: updatedPackages };
+              }
+              return c;
+            }),
+            selectedOwner: state.selectedOwner?.id === customerId ? {
+              ...state.selectedOwner, points: newPoints, creditBalance: newCreditBalance, packages: updatedPackages
+            } : state.selectedOwner
+          }));
+        }
+      }
+    }
+
+    // 3. Revert Inventory Stock
+    for (const item of transaction.items) {
+      if (item.type === 'Product') {
+        const invItem = get().inventory.find(i => i.id === item.id);
+        if (invItem) {
+          await get().adjustStock(item.id, item.quantity, 'In', `Void Sale (Tx: ${id}) - ${reason}`);
+        }
+      }
+    }
+
+    // 4. Void related Journal Entry (if any)
+    const { error: jeError } = await supabase
+      .from('journal_entries')
+      .update({ status: 'Void' })
+      .eq('source_type', 'sales_transaction')
+      .eq('source_id', id);
+
+    if (jeError) {
+      console.error("Error voiding journal entry:", jeError);
+    }
+
+    // 5. Void related Billing Document (if any)
+    const txDateStr = transaction.createdAt ? transaction.createdAt.split('T')[0] : transaction.date;
+    const relatedDoc = get().billingDocuments.find(d => 
+      d.remarks === 'Auto-generated from POS' &&
+      d.date === txDateStr &&
+      d.totalAmount === transaction.amount &&
+      d.status === 'Paid'
+    );
+    
+    if (relatedDoc) {
+      await get().updateBillingDocumentStatus(relatedDoc.id, 'Cancelled');
+    }
+
+    // 6. Update transaction in local state
+    set(state => ({
+      transactions: state.transactions.map(t => 
+        t.id === id 
+          ? { ...t, status: 'voided', voidReason: reason, voidedBy: staffName, voidedAt: now }
+          : t
+      ),
+      journalEntries: state.journalEntries.map(e => 
+        (e.sourceType === 'sales_transaction' && e.sourceId === id) || (e as any).referenceNo === id || e.reference_no === id
+          ? { ...e, status: 'Void' }
+          : e
+      )
     }));
   },
 
@@ -1865,7 +1995,8 @@ export const useStore = create<AppState>()((set, get) => ({
       status,
       totalDebit,
       totalCredit,
-      createdBy: entry.createdBy || 'Admin'
+      createdBy: entry.createdBy || 'Admin',
+      createdAt: new Date().toISOString()
     };
 
     set(s => ({ journalEntries: [formattedEntry, ...s.journalEntries] }));
