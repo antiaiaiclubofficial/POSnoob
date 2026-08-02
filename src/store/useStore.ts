@@ -101,6 +101,7 @@ export const useStore = create<AppState>()((set, get) => ({
     { level: 'VIP', label: 'VIP', minSpent: 30000, discount: 15 }
   ],
   cart: [],
+  prCart: [],
   heldBills: [],
   disabledSlots: [],
   recurringHolidays: [],
@@ -1030,6 +1031,15 @@ export const useStore = create<AppState>()((set, get) => ({
       createdBy: state.currentUser?.name || 'Admin'
     });
   },
+  // --- PR Cart Actions ---
+  addToPrCart: (draft) => set(s => ({ prCart: [...s.prCart, draft] })),
+  updatePrCart: (id, draft) => set(s => ({
+    prCart: s.prCart.map(p => p.id === id ? draft : p)
+  })),
+  removeFromPrCart: (id) => set(s => ({
+    prCart: s.prCart.filter(p => p.id !== id)
+  })),
+  clearPrCart: () => set({ prCart: [] }),
 
   addQuotation: async (qt) => {
     const currentStoreId = get().storeId;

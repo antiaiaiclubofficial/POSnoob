@@ -51,7 +51,7 @@ const QueueWeekView = ({ currentDate, onDateSelect, onBookingClick, onUpdateStat
           .sort((a, b) => a.time.localeCompare(b.time));
 
         return (
-          <div key={idx} className="min-w-[280px] flex-1 flex flex-col gap-4">
+          <div key={idx} className="min-w-[150px] xl:min-w-0 flex-1 flex flex-col gap-4">
             <button 
               onClick={() => onDateSelect(day)}
               className={cn(

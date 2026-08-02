@@ -255,6 +255,12 @@ export interface PurchaseRequest {
   createdBy: string;
 }
 
+export interface DraftPR {
+  id: string;
+  partnerId: string;
+  items: PurchaseRequestItem[];
+}
+
 export interface QuotationItem {
   productId: string;
   productName: string;
@@ -479,6 +485,7 @@ export interface AppState {
   logs: ActivityLog[];
   roles: Role[]; // Add roles to AppState
   cart: any[];
+  prCart: DraftPR[];
   heldBills: HeldBill[];
   rolePermissions: Record<StaffRole, string[]>;
 
@@ -569,6 +576,12 @@ export interface AppState {
   updatePurchaseRequest: (id: string, updates: Partial<Omit<PurchaseRequest, 'id'>>) => void;
   updatePurchaseRequestStatus: (id: string, status: 'Pending' | 'Approved' | 'Cancelled') => void;
   approvePurchaseRequestToPO: (id: string) => void;
+
+  // PR Cart
+  addToPrCart: (draft: DraftPR) => void;
+  updatePrCart: (id: string, draft: DraftPR) => void;
+  removeFromPrCart: (id: string) => void;
+  clearPrCart: () => void;
 
   quotations: Quotation[];
   addQuotation: (qt: Omit<Quotation, 'id'>) => void;

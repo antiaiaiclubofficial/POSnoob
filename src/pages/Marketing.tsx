@@ -15,8 +15,10 @@ import PromotionModal from '@/components/PromotionModal';
 import CreditPackageModal from '@/components/CreditPackageModal';
 import PackageModal from '@/components/PackageModal';
 import TierEditModal from '@/components/TierEditModal';
+import { useLocation } from 'react-router-dom';
 
 const Marketing = () => {
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { 
     language, creditPackages, deleteCreditPackage, currency, tierRules, updateTierRules,
@@ -25,7 +27,7 @@ const Marketing = () => {
   } = useStore();
   const t = translations[language];
   
-  const [activeTab, setActiveTab] = useState('promotions');
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'promotions');
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modals

@@ -49,6 +49,7 @@ import {
   Pie
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   Popover,
   PopoverContent,
@@ -70,6 +71,7 @@ import { supabase } from '@/integrations/supabase/client';
 const Dashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('overview');
   const { queue, transactions, inventory, customers, currency, kennelCapacity, language, currentUser, storeId } = useStore();
   const t = translations[language];
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -201,7 +203,7 @@ const Dashboard = () => {
   const todayTransactions = transactions.filter(t => t.date === today);
 
   const metrics = useMemo(() => {
-    const validTransactions = transactions.filter(t => t.status !== 'voided');
+    const validTransactions = todayTransactions.filter(t => t.status !== 'voided');
     const revenue = validTransactions.reduce((acc, t) => acc + t.amount, 0);
     const avgTicket = validTransactions.length > 0 ? revenue / validTransactions.length : 0;
     const activePets = todayQueue.filter(q => q.status === 'Checked-in' || q.status === 'In Progress').length;
@@ -214,7 +216,7 @@ const Dashboard = () => {
       revenue,
       avgTicket
     };
-  }, [todayQueue, transactions]);
+  }, [todayQueue, todayTransactions]);
 
   // 1. คำนวณลูกค้าที่มาบ่อยที่สุด (Most Frequent Customers)
   const frequentCustomers = useMemo(() => {
@@ -323,7 +325,7 @@ const Dashboard = () => {
   };
 
   return (
-    <Tabs defaultValue="overview" className="flex-1 flex flex-col overflow-hidden bg-[#F9F9F9]">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden bg-[#F9F9F9]">
       {/* Header Section */}
       <header className="px-6 lg:px-12 py-8 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 shrink-0 bg-[#F9F9F9]/80 backdrop-blur-xl border-none pl-14 lg:pl-12 sticky top-0 z-10">
         <div>
@@ -339,10 +341,37 @@ const Dashboard = () => {
 
         {/* Tabs List */}
         <div className="flex-1 flex xl:justify-center w-full xl:w-auto overflow-x-auto scrollbar-hide">
-          <TabsList className="bg-gray-200/50 p-1.5 rounded-[2rem]">
-            <TabsTrigger value="overview" className="rounded-3xl px-6 py-2.5 text-xs font-black data-[state=active]:bg-white data-[state=active]:text-[#18234A] data-[state=active]:shadow-sm transition-all">{language === 'th' ? 'ภาพรวม' : 'Overview'}</TabsTrigger>
-            <TabsTrigger value="crm" className="rounded-3xl px-6 py-2.5 text-xs font-black data-[state=active]:bg-white data-[state=active]:text-[#18234A] data-[state=active]:shadow-sm transition-all">CRM</TabsTrigger>
-            <TabsTrigger value="inventory" className="rounded-3xl px-6 py-2.5 text-xs font-black data-[state=active]:bg-white data-[state=active]:text-[#18234A] data-[state=active]:shadow-sm transition-all">{language === 'th' ? 'คลังสินค้า' : 'Inventory'}</TabsTrigger>
+          <TabsList className="bg-gray-200/50 p-1.5 rounded-[2rem] relative z-0">
+            <TabsTrigger value="overview" className="relative rounded-3xl px-6 py-2.5 text-xs font-black data-[state=active]:text-[#18234A] text-gray-500 transition-colors z-10">
+              {activeTab === 'overview' && (
+                <motion.div
+                  layoutId="dashboardTab"
+                  className="absolute inset-0 bg-[#EAFD69] rounded-3xl shadow-sm -z-10"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              {language === 'th' ? 'ภาพรวม' : 'Overview'}
+            </TabsTrigger>
+            <TabsTrigger value="crm" className="relative rounded-3xl px-6 py-2.5 text-xs font-black data-[state=active]:text-[#18234A] text-gray-500 transition-colors z-10">
+              {activeTab === 'crm' && (
+                <motion.div
+                  layoutId="dashboardTab"
+                  className="absolute inset-0 bg-[#EAFD69] rounded-3xl shadow-sm -z-10"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              CRM
+            </TabsTrigger>
+            <TabsTrigger value="inventory" className="relative rounded-3xl px-6 py-2.5 text-xs font-black data-[state=active]:text-[#18234A] text-gray-500 transition-colors z-10">
+              {activeTab === 'inventory' && (
+                <motion.div
+                  layoutId="dashboardTab"
+                  className="absolute inset-0 bg-[#EAFD69] rounded-3xl shadow-sm -z-10"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              {language === 'th' ? 'คลังสินค้า' : 'Inventory'}
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -456,7 +485,7 @@ const Dashboard = () => {
               <div className="absolute -top-12 -right-12 w-32 h-32 bg-green-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
               <div className="flex justify-between items-start mb-2 relative z-10">
                 <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.totalRevenue}</h3>
-                <span className="text-[9px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-lg uppercase">All Time</span>
+                <span className="text-[9px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-lg uppercase">Today</span>
               </div>
               <div className="relative z-10">
                 <h2 className="text-3xl font-black text-[#1A1F3D]">{currency}{metrics.revenue.toLocaleString()}</h2>
@@ -465,7 +494,10 @@ const Dashboard = () => {
             </div>
 
             {/* Appointments Card */}
-            <div className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500">
+            <div 
+              onClick={() => navigate('/queue')}
+              className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500 cursor-pointer"
+            >
               <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
               <div className="flex justify-between items-start mb-2 relative z-10">
                 <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.todaysQueue}</h3>
@@ -478,7 +510,10 @@ const Dashboard = () => {
             </div>
 
             {/* Active Pets Card */}
-            <div className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500">
+            <div 
+              onClick={() => navigate('/queue', { state: { view: 'day' } })}
+              className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500 cursor-pointer"
+            >
               <div className="absolute -top-12 -right-12 w-32 h-32 bg-purple-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
               <div className="flex justify-between items-start mb-2 relative z-10">
                 <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.inShop}</h3>
@@ -491,7 +526,10 @@ const Dashboard = () => {
             </div>
 
             {/* Low Stock Alerts Card */}
-            <div className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500">
+            <div 
+              onClick={() => navigate('/inventory', { state: { tab: 'check' } })}
+              className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500 cursor-pointer"
+            >
               <div className="absolute -top-12 -right-12 w-32 h-32 bg-red-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
               <div className="flex justify-between items-start mb-2 relative z-10">
                 <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">Low Stock Items</h3>

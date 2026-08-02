@@ -9,9 +9,10 @@ import { cn } from '@/lib/utils';
 interface CreditPackageModalProps {
   onClose: () => void;
   customerId?: string; // If provided, we are performing a top-up
+  embedded?: boolean;
 }
 
-const CreditPackageModal = ({ onClose, customerId }: CreditPackageModalProps) => {
+const CreditPackageModal = ({ onClose, customerId, embedded }: CreditPackageModalProps) => {
   const { creditPackages, addCreditPackage, updateCreditPackage, deleteCreditPackage, buyCreditPackage, currency, language } = useStore();
   
   const [isCreating, setIsCreating] = useState(false);
@@ -54,9 +55,12 @@ const CreditPackageModal = ({ onClose, customerId }: CreditPackageModalProps) =>
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-2xl rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+  const content = (
+    <div className={cn(
+      "bg-white w-full flex flex-col overflow-hidden",
+      embedded ? "h-full" : "max-w-2xl rounded-[48px] shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh]"
+    )}>
+      {!embedded && (
         <div className="p-10 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
@@ -75,8 +79,9 @@ const CreditPackageModal = ({ onClose, customerId }: CreditPackageModalProps) =>
             <X size={20} className="text-gray-400" />
           </button>
         </div>
+      )}
 
-        <div className="flex-1 overflow-y-auto p-10 space-y-8 scrollbar-hide">
+      <div className={cn("flex-1 overflow-y-auto space-y-8 scrollbar-hide", embedded ? "p-0" : "p-10")}>
           {isCreating ? (
             <div className="space-y-6 animate-in slide-in-from-top-4">
               <div className="space-y-2">
@@ -161,16 +166,21 @@ const CreditPackageModal = ({ onClose, customerId }: CreditPackageModalProps) =>
               {!customerId && (
                 <button 
                   onClick={() => setIsCreating(true)}
-                  className="border-2 border-dashed border-gray-100 rounded-[32px] p-8 flex flex-col items-center justify-center text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-50 transition-all"
+                  className="col-span-full w-full border-2 border-dashed border-gray-200 bg-gray-50/50 hover:border-amber-300 hover:bg-amber-50/50 rounded-[32px] py-10 flex flex-col items-center justify-center text-gray-400 hover:text-amber-600 transition-all group"
                 >
-                  <Plus size={24} className="mb-2" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Add Credit Deal</span>
+                  <Plus size={24} className="mb-2 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-black uppercase tracking-widest">Add Credit Deal</span>
                 </button>
               )}
             </div>
           )}
         </div>
       </div>
+  );
+
+  return embedded ? content : (
+    <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
+      {content}
     </div>
   );
 };

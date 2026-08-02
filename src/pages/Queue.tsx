@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -28,7 +29,14 @@ const Queue = () => {
   const { queue, language, updateQueueStatus, removeQueueItem } = useStore();
   const t = translations[language];
   
-  const [view, setView] = useState<ViewType>('week');
+  const location = useLocation();
+  const [view, setView] = useState<ViewType>(location.state?.view || 'week');
+
+  useEffect(() => {
+    if (location.state?.view) {
+      setView(location.state.view);
+    }
+  }, [location.state?.view]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedQueueItem, setSelectedQueueItem] = useState<any>(null);
@@ -102,7 +110,7 @@ const Queue = () => {
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-6 lg:p-10 scrollbar-hide">
-        <div className="max-w-[1600px] mx-auto h-full">
+        <div className="w-full mx-auto h-full">
           {view === 'day' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in zoom-in-95 duration-300">
               {todayQueue.length === 0 ? (

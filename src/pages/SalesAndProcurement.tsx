@@ -33,6 +33,10 @@ const SalesAndProcurement = () => {
       setDepartment('procurement');
       setProcTab('pr');
       setProcAction('create');
+    } else if (location.state?.action === 'pr-list') {
+      setDepartment('procurement');
+      setProcTab('pr');
+      setProcAction('list');
     }
   }, [location.state]);
 

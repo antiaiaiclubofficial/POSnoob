@@ -9,9 +9,10 @@ import { cn } from '@/lib/utils';
 interface PackageModalProps {
   onClose: () => void;
   customerId?: string; // If provided, we are assigning a package to this customer
+  embedded?: boolean;
 }
 
-const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
+const PackageModal = ({ onClose, customerId, embedded }: PackageModalProps) => {
   const { services, packageTemplates, addPackageTemplate, updatePackageTemplate, deletePackageTemplate, assignPackageToCustomer, currency, language } = useStore();
   
   const [isCreating, setIsCreating] = useState(false);
@@ -98,9 +99,12 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[150] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-2xl rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+  const content = (
+    <div className={cn(
+      "bg-white w-full flex flex-col overflow-hidden",
+      embedded ? "h-full" : "max-w-2xl rounded-[48px] shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh]"
+    )}>
+      {!embedded && (
         <div className="p-10 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
@@ -119,8 +123,9 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
             <X size={20} className="text-gray-400" />
           </button>
         </div>
+      )}
 
-        <div className="flex-1 overflow-y-auto p-10 space-y-8 scrollbar-hide">
+      <div className={cn("flex-1 overflow-y-auto space-y-8 scrollbar-hide", embedded ? "p-0" : "p-10")}>
           {isCreating ? (
             <div className="space-y-6 animate-in slide-in-from-top-4">
               <div className="grid grid-cols-2 gap-6">
@@ -178,16 +183,22 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
               {/* Flexible Bonus Service Section */}
               <div className="p-6 bg-indigo-50/50 rounded-[32px] space-y-6 border border-indigo-100">
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1.5">
-                    <Sparkles size={14} /> แถมบริการเสริมพิเศษ (Bonus Service)
+                  <p className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1.5">
+                    <Sparkles size={16} /> แถมบริการเสริมพิเศษ (Bonus Service)
                   </p>
-                  <AlertCircle size={14} className="text-indigo-300" />
+                  <div className="relative group flex items-center justify-center">
+                    <AlertCircle size={16} className="text-indigo-300 hover:text-indigo-500 transition-colors cursor-help" />
+                    <div className="absolute bottom-full right-0 mb-3 w-64 p-4 bg-[#1A1F3D] text-white text-[11px] leading-relaxed rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 pointer-events-none">
+                      คุณสามารถเพิ่มบริการเสริมเป็นของแถมได้ โดยเลือก "แถมทุกครั้งที่มา" (เช่น สปาฟรีทุกครั้ง) หรือ "แถมแบบจำกัดครั้ง" ตลอดอายุแพ็กเกจ
+                      <div className="absolute -bottom-1.5 right-2 w-3 h-3 bg-[#1A1F3D] rotate-45"></div>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[9px] font-bold text-gray-400 uppercase mb-2 block">รูปแบบของแถม (Bonus Type)</label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase mb-3 block">รูปแบบของแถม (Bonus Type)</label>
+                    <div className="grid grid-cols-3 gap-3">
                       {[
                         { id: 'none', label: 'ไม่มีของแถม' },
                         { id: 'recurring', label: 'แถมทุกครั้งที่มา' },
@@ -198,10 +209,10 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
                           type="button"
                           onClick={() => setFormData({ ...formData, bonusType: opt.id as any, bonusName: opt.id === 'none' ? '' : formData.bonusName })}
                           className={cn(
-                            "py-2.5 rounded-xl text-[10px] font-black transition-all border",
+                            "py-3 rounded-xl text-xs font-black transition-all border",
                             formData.bonusType === opt.id 
                               ? "bg-[#1A1F3D] border-[#1A1F3D] text-white shadow-md" 
-                              : "bg-white border-gray-100 text-gray-400 hover:bg-gray-50"
+                              : "bg-white border-gray-100 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
                           )}
                         >
                           {opt.label}
@@ -305,9 +316,9 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
               {!customerId && (
                 <button 
                   onClick={() => setIsCreating(true)}
-                  className="w-full border-2 border-dashed border-gray-100 rounded-[32px] py-10 flex flex-col items-center justify-center text-gray-300 hover:text-[#1A1F3D] hover:bg-gray-50 transition-all"
+                  className="w-full border-2 border-dashed border-gray-200 bg-gray-50/50 hover:border-indigo-300 hover:bg-indigo-50/50 rounded-[32px] py-10 flex flex-col items-center justify-center text-gray-400 hover:text-indigo-600 transition-all group"
                 >
-                  <Plus size={24} className="mb-2" />
+                  <Plus size={24} className="mb-2 group-hover:scale-110 transition-transform" />
                   <span className="text-xs font-black uppercase tracking-widest">Create New Bundle Template</span>
                 </button>
               )}
@@ -315,6 +326,11 @@ const PackageModal = ({ onClose, customerId }: PackageModalProps) => {
           )}
         </div>
       </div>
+  );
+
+  return embedded ? content : (
+    <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[150] flex items-center justify-center p-6">
+      {content}
     </div>
   );
 };

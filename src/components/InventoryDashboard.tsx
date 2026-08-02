@@ -39,6 +39,8 @@ import {
 import { useStore, InventoryItem } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import ReorderModal from '@/components/ReorderModal';
+
 
 // Mock/Fallback data for trend and inventory if store is empty
 const MOCK_TREND_DATA = [
@@ -113,6 +115,10 @@ export default function InventoryDashboard() {
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [showSalesHistory, setShowSalesHistory] = useState(false);
   const [showGPHistory, setShowGPHistory] = useState(false);
+
+  // Reorder Modal State
+  const [reorderModalOpen, setReorderModalOpen] = useState(false);
+  const [reorderItemTarget, setReorderItemTarget] = useState<InventoryItem | null>(null);
 
   // Fallback to mock inventory if store has no products
   const activeInventory = useMemo(() => {
@@ -1166,42 +1172,11 @@ export default function InventoryDashboard() {
 
   // Handler for Reordering Action with micro-animation
   const handleReorder = async (productId: string, name: string) => {
-    setReorderingId(productId);
-    // Simulate API request to order stock
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
     const item = inventory.find(i => i.id === productId);
-    const orderQty = item?.reorderQuantity || 20;
-
     if (item) {
-      // Instead of adding PO directly, create a pending PR
-      addPurchaseRequest({
-        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        partnerId: item.partnerId || '', // Auto select vendor if available
-        items: [{
-          productId: item.id,
-          productName: item.name,
-          quantity: orderQty,
-          unitPrice: item.costPrice || 0,
-          total: (item.costPrice || 0) * orderQty,
-        }],
-        status: 'Pending',
-        totalAmount: (item.costPrice || 0) * orderQty,
-        createdBy: 'ระบบสั่งซื้ออัตโนมัติ (Reorder)'
-      });
+      setReorderItemTarget(item);
+      setReorderModalOpen(true);
     }
-
-    setReorderingId(null);
-    toast.success(`สร้างใบขอสั่งซื้อ (PR) ${name} จำนวน ${orderQty} ชิ้นเรียบร้อยแล้ว!`, {
-      description: 'สามารถตรวจสอบและอนุมัติ PR ได้ที่หน้า Inventory > เอกสาร',
-      icon: <CheckCircle2 className="text-[#EAFD69] w-5 h-5" />,
-      style: {
-        background: COLORS.primary,
-        color: '#FFFFFF',
-        border: 'none',
-        borderRadius: '20px'
-      }
-    });
   };
 
   // Filter transactions for the modal based on selected sales date
@@ -2526,6 +2501,12 @@ export default function InventoryDashboard() {
           </div>
         )}
       </AnimatePresence>
+
+      <ReorderModal
+        isOpen={reorderModalOpen}
+        onClose={() => setReorderModalOpen(false)}
+        item={reorderItemTarget}
+      />
     </motion.div>
   );
 }

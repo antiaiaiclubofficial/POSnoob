@@ -9,6 +9,7 @@ import CustomerModal from '@/components/CustomerModal';
 import GroomingServiceModal from '@/components/GroomingServiceModal';
 import AddOnModal from '@/components/AddOnModal';
 import ManageServicesModal from '@/components/ManageServicesModal';
+import PackagesAndCreditsModal from '@/components/PackagesAndCreditsModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
@@ -114,6 +115,7 @@ const Index = () => {
   const [productViewMode, setProductViewMode] = useState<'grid' | 'list'>('grid');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isManageServicesOpen, setIsManageServicesOpen] = useState(false);
+  const [isPackagesCreditsModalOpen, setIsPackagesCreditsModalOpen] = useState(false);
   const [isSavedBillsSheetOpen, setIsSavedBillsSheetOpen] = useState(false);
   const [isTransactionHistoryOpen, setIsTransactionHistoryOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
@@ -530,6 +532,13 @@ const Index = () => {
             >
               <History size={16} />
               {language === 'th' ? 'ประวัติการขาย' : 'Sales History'}
+            </button>
+            <button 
+              onClick={() => setIsPackagesCreditsModalOpen(true)}
+              className="hidden xl:flex items-center gap-2 bg-white border border-gray-100 text-[#1A1F3D] px-5 py-2.5 rounded-2xl shadow-sm text-xs font-black hover:scale-105 active:scale-95 transition-all"
+            >
+              <Package size={16} />
+              {language === 'th' ? 'จัดการแพ็กเกจและเครดิต' : 'Manage Package Bundles & Credits'}
             </button>
             <button 
               onClick={() => setIsManageServicesOpen(true)}
@@ -958,6 +967,7 @@ const Index = () => {
       {isManageServicesOpen && (
         <ManageServicesModal onClose={() => setIsManageServicesOpen(false)} />
       )}
+      <PackagesAndCreditsModal isOpen={isPackagesCreditsModalOpen} onClose={() => setIsPackagesCreditsModalOpen(false)} />
 
       {intakeItem && (
         <GroomingServiceModal item={intakeItem} onClose={() => setIntakeItem(null)} />

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutGrid, AlertTriangle, PlusCircle, FileText, Users, BarChart3,
   Search, Edit3, Package, Download, Save, Trash2,
@@ -19,9 +19,11 @@ import VendorInventoryView from '@/components/VendorInventoryView';
 import InventoryReportLivePreview from '@/components/InventoryReportLivePreview';
 import QuickAdjustModal from '@/components/QuickAdjustModal';
 import InventoryDashboard from '@/components/InventoryDashboard';
+import ReorderModal from '@/components/ReorderModal';
+import PRCartWidget from '@/components/PRCartWidget';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashboard';
 
@@ -33,7 +35,14 @@ const Inventory = () => {
     deleteInventoryItem
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<WmsTab>('dashboard');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<WmsTab>((location.state?.tab as WmsTab) || 'dashboard');
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab as WmsTab);
+    }
+  }, [location.state?.tab]);
   const [repPartnerFilter, setRepPartnerFilter] = useState('All');
   const [repCategoryFilter, setRepCategoryFilter] = useState('All');
   const [repStatusFilter, setRepStatusFilter] = useState('All');
@@ -66,6 +75,10 @@ const Inventory = () => {
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
   const [selectedVendorForView, setSelectedVendorForView] = useState<Partner | null>(null);
+
+  // Reorder Modal State
+  const [reorderModalOpen, setReorderModalOpen] = useState(false);
+  const [reorderItemTarget, setReorderItemTarget] = useState<InventoryItem | null>(null);
 
   // Quick Adjust Modal State
   const [quickAdjustItem, setQuickAdjustItem] = useState<InventoryItem | null>(null);
@@ -463,17 +476,23 @@ const Inventory = () => {
 
   return (
     <div className="flex-1 flex flex-col bg-[#F8F9FD] overflow-hidden">
-      <header className="px-10 py-8 bg-white border-b border-gray-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pl-14 lg:pl-10 shrink-0">
+      <header className="px-10 py-8 bg-white border-b border-gray-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pl-14 lg:pl-10 shrink-0 overflow-visible z-50">
         <div>
           <h1 className="text-3xl font-black text-[#1A1F3D] mb-1">Inventory & WMS</h1>
           <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Management System v2.0</p>
         </div>
-        <div className="flex bg-[#F5F6FA] p-1.5 rounded-[28px] border border-gray-100 shadow-sm gap-1 overflow-x-auto scrollbar-hide w-full lg:w-auto">
-          {menuItems.map((item) => (
-            <button key={item.id} onClick={() => setActiveTab(item.id as WmsTab)} className={cn("px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap", activeTab === item.id ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400 hover:bg-white")}>
-              <item.icon size={14} /> {item.label}
-            </button>
-          ))}
+        
+        <div className="flex flex-row-reverse lg:flex-row items-center gap-4 w-full lg:w-auto">
+          <motion.div layout className="flex bg-[#F5F6FA] p-1.5 rounded-[28px] border border-gray-100 shadow-sm gap-1 overflow-x-auto scrollbar-hide w-full lg:w-auto shrink-0 h-[52px]">
+            {menuItems.map((item) => (
+              <button key={item.id} onClick={() => setActiveTab(item.id as WmsTab)} className={cn("px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap", activeTab === item.id ? "bg-[#1A1F3D] text-white shadow-lg" : "text-gray-400 hover:bg-white")}>
+                <item.icon size={14} /> {item.label}
+              </button>
+            ))}
+          </motion.div>
+          
+          {/* Render PR Cart Inline */}
+          <PRCartWidget />
         </div>
       </header>
 
@@ -578,7 +597,8 @@ const Inventory = () => {
                           )}
                           onClick={() => {
                             if (item.stock <= item.minStock) {
-                              navigate('/sales-procurement', { state: { action: 'pr', reorderItem: item } });
+                              setReorderItemTarget(item);
+                              setReorderModalOpen(true);
                             }
                           }}
                           >
@@ -731,7 +751,8 @@ const Inventory = () => {
                         {(status === 'Out' || status === 'Low') && (
                           <button
                             onClick={() => {
-                              navigate('/sales-procurement', { state: { action: 'pr', reorderItem: item } });
+                              setReorderItemTarget(item);
+                              setReorderModalOpen(true);
                             }}
                             className={cn(
                               "flex-1 font-black text-[9px] uppercase py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm",
@@ -1092,6 +1113,13 @@ const Inventory = () => {
           onSave={handleSaveQuickAdjust}
         />
       )}
+
+      <ReorderModal
+        isOpen={reorderModalOpen}
+        onClose={() => setReorderModalOpen(false)}
+        item={reorderItemTarget}
+      />
+
     </div>
   );
 };
