@@ -33,13 +33,15 @@ const PRCartWidget = () => {
     <motion.div layout className="relative flex items-center h-[52px]">
       {/* Button */}
       <AnimatePresence>
-        {prCart.length > 0 && !isOpen && (
+        {prCart.length > 0 && (
           <motion.button
+            key="pr-cart-button"
             layout
             initial={{ opacity: 0, scale: 0.8, x: 20, width: 0 }}
             animate={{ opacity: 1, scale: 1, x: 0, width: 'auto' }}
             exit={{ opacity: 0, scale: 0.8, x: 20, width: 0 }}
-            onClick={() => setIsOpen(true)}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            onClick={() => setIsOpen(!isOpen)}
             className="h-full bg-[#1A1F3D] text-white px-6 rounded-[28px] shadow-sm flex items-center justify-center gap-3 hover:bg-[#2A3152] transition-colors group shrink-0 overflow-hidden whitespace-nowrap"
           >
             <div className="relative shrink-0">
@@ -57,10 +59,12 @@ const PRCartWidget = () => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.85 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.85 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            key="pr-cart-panel"
+            initial={{ opacity: 0, y: -30, scale: 0.85, filter: 'blur(12px)', rotateX: -15 }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', rotateX: 0 }}
+            exit={{ opacity: 0, y: -30, scale: 0.85, filter: 'blur(12px)', rotateX: -15 }}
+            transition={{ type: "spring", bounce: 0.35, duration: 0.5 }}
+            style={{ perspective: 1000 }}
             className="origin-top-right absolute top-[calc(100%+16px)] right-0 z-[95] bg-white rounded-3xl shadow-2xl w-[360px] max-w-[90vw] border border-gray-100 overflow-hidden flex flex-col max-h-[70vh]"
           >
             <div className="p-5 bg-[#1A1F3D] text-white flex justify-between items-center relative overflow-hidden shrink-0">

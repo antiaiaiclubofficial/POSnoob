@@ -572,7 +572,6 @@ const AuthInitializer = () => {
               isConsignment: p.is_consignment || false,
               partnerId: p.partner_id || '',
               consignmentRate: Number(p.consignment_rate || 0),
-              reorderQuantity: p.reorder_quantity || 20,
               fifoBatches: fifoBatches
             };
           });

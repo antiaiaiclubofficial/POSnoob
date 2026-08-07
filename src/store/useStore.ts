@@ -442,7 +442,6 @@ export const useStore = create<AppState>()((set, get) => ({
         is_consignment: item.isConsignment || false,
         partner_id: item.partnerId || null,
         consignment_rate: item.consignmentRate || item.consignment_rate || resolvedRate || 0,
-        reorder_quantity: item.reorderQuantity || 20,
         fifo_batches: []
       }])
       .select()
@@ -463,7 +462,6 @@ export const useStore = create<AppState>()((set, get) => ({
         isConsignment: data.is_consignment || false,
         partnerId: data.partner_id || '',
         consignmentRate: Number(data.consignment_rate || 0),
-        reorderQuantity: data.reorder_quantity || 20,
         fifoBatches: data.fifo_batches || []
       };
       set(s => ({ inventory: [...s.inventory, newItem] }));
@@ -491,8 +489,7 @@ export const useStore = create<AppState>()((set, get) => ({
         image_url: item.image,
         is_consignment: item.isConsignment,
         partner_id: item.partnerId || null,
-        consignment_rate: item.consignmentRate || item.consignment_rate || resolvedRate || 0,
-        reorder_quantity: item.reorderQuantity || 20
+        consignment_rate: item.consignmentRate || item.consignment_rate || resolvedRate || 0
       })
       .eq('id', id);
 

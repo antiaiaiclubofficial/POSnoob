@@ -15,8 +15,9 @@ interface GRSystemProps {
 const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange }) => {
   const {
     goodsReceipts, purchaseOrders, partners, inventory, currentUser,
+    companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
+    shopName, shopAddress: storeAddress, shopPhone: storePhone,
     addGoodsReceipt, updateGoodsReceipt, updateGoodsReceiptStatus,
-    companyName, companyAddress, companyTaxId, companyPhone, companyEmail
   } = useStore();
 
   const [view, setView] = useState<'list' | 'create'>(initialView);
@@ -743,10 +744,10 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                 <div id="printable-gr" className="bg-white p-8 shadow-sm border border-gray-200 mx-auto max-w-[800px] text-[10px] font-sans text-black">
                   {/* Header */}
                   <div className="flex justify-between items-start mb-6">
-                    <div className="text-2xl font-black tracking-tighter text-[#1A1F3D]">{companyName || "Company Name"}</div>
+                    <div className="text-2xl font-black tracking-tighter text-[#1A1F3D]">{companyName || shopName || "Company Name"}</div>
                     <div className="text-right text-[10px] text-gray-600 space-y-1">
-                      <p className="font-bold">{companyName || "Company Name"}</p>
-                      <p>{companyAddress || "111 อาคารเอไอเอ แคปปิตอล เซ็นเตอร์ แขวงดินแดง เขตดินแดง กรุงเทพฯ 10400"}</p>
+                      <p className="font-bold">{companyName || shopName || "Company Name"}</p>
+                      <p>{companyAddress || storeAddress || "111 อาคารเอไอเอ แคปปิตอล เซ็นเตอร์ แขวงดินแดง เขตดินแดง กรุงเทพฯ 10400"}</p>
                       <p>เลขที่ผู้เสียภาษี {companyTaxId || "0105555555555"} (สำนักงานใหญ่)</p>
                     </div>
                   </div>
@@ -852,7 +853,6 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                       <div>วันที่ / Date ........................................</div>
                     </div>
                     <div className="flex flex-col justify-end pt-12 space-y-2">
-                      <div className="text-lg font-black mb-2">{previewGR.receiverName}</div>
                       <div className="border-b border-dashed border-gray-400 mx-8"></div>
                       <div><span className="font-bold">ผู้รับสินค้า / Received By</span></div>
                       <div>วันที่ / Date ....{format(new Date(previewGR.date), 'dd/MM/yyyy')}....</div>
@@ -860,7 +860,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                   </div>
 
                   <div className="text-center text-[10px] text-gray-500 mt-4 bg-black text-white py-1">
-                    {companyName || "Company Name"} {companyAddress || "111 อาคารเอไอเอ แคปปิตอล เซ็นเตอร์ แขวงดินแดง เขตดินแดง กรุงเทพฯ 10400"}
+                    {companyName || shopName || "Company Name"} {companyAddress || storeAddress || "111 อาคารเอไอเอ แคปปิตอล เซ็นเตอร์ แขวงดินแดง เขตดินแดง กรุงเทพฯ 10400"}
                   </div>
                 </div>
               </div>

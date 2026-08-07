@@ -973,7 +973,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                                   onClick={() => updatePurchaseOrderStatus(po.id, 'To Order')}
                                   className="bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-purple-100 transition-colors shadow-sm"
                                 >
-                                  <Clock size={14} /> สั่งซื้อ
+                                  <Check size={14} /> อนุมัติ Approved
                                 </button>
                                 <button
                                   onClick={() => updatePurchaseOrderStatus(po.id, 'Cancelled')}
@@ -984,12 +984,20 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                               </>
                             )}
                             {(po.status === 'To Order' || (po.status as string) === 'On Order') && (
-                              <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'Completed')}
-                                className="bg-green-50 text-green-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-green-100 transition-colors shadow-sm"
-                              >
-                                <CheckCircle size={14} /> สั่งซื้อเสร็จสิ้น
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => updatePurchaseOrderStatus(po.id, 'Completed')}
+                                  className="bg-green-50 text-green-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-green-100 transition-colors shadow-sm"
+                                >
+                                  <CheckCircle size={14} /> สั่งสินค้าแล้ว
+                                </button>
+                                <button
+                                  onClick={() => updatePurchaseOrderStatus(po.id, 'Cancelled')}
+                                  className="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 hover:bg-red-100 transition-colors shadow-sm"
+                                >
+                                  <XCircle size={14} /> ยกเลิก
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -1035,9 +1043,9 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                         setPreviewPO({ ...previewPO, status: 'To Order' });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors text-xs font-bold"
-                      title="Mark as To Order"
+                      title="Approve PO"
                     >
-                      <Check size={14} /> รอสั่งซื้อ (To Order)
+                      <Check size={14} /> อนุมัติ Approved
                     </button>
                     <button
                       onClick={() => {
@@ -1051,21 +1059,7 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                     </button>
                   </div>
                 )}
-                {previewPO.status === 'To Order' && (
-                  <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
-                    <button
-                      onClick={() => {
-                        updatePurchaseOrderStatus(previewPO.id, 'On Order');
-                        setPreviewPO({ ...previewPO, status: 'On Order' });
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-xs font-bold"
-                      title="Mark as On Order"
-                    >
-                      <Truck size={14} /> สั่งซื้อแล้ว (On Order)
-                    </button>
-                  </div>
-                )}
-                {previewPO.status === 'On Order' && (
+                {(previewPO.status === 'To Order' || (previewPO.status as string) === 'On Order') && (
                   <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
                     <button
                       onClick={() => {
@@ -1073,9 +1067,19 @@ const POSystem: React.FC<POSystemProps> = ({ reorderItem, clearReorderItem, init
                         setPreviewPO({ ...previewPO, status: 'Completed' });
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-xs font-bold"
-                      title="Mark as Completed"
+                      title="Mark as Ordered"
                     >
-                      <CheckCircle size={14} /> ได้รับสินค้า (Completed)
+                      <CheckCircle size={14} /> สั่งสินค้าแล้ว
+                    </button>
+                    <button
+                      onClick={() => {
+                        updatePurchaseOrderStatus(previewPO.id, 'Cancelled');
+                        setPreviewPO({ ...previewPO, status: 'Cancelled' });
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-xs font-bold"
+                      title="Cancel PO"
+                    >
+                      <XCircle size={14} /> ยกเลิก
                     </button>
                   </div>
                 )}

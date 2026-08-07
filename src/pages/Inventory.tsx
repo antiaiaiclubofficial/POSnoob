@@ -21,8 +21,10 @@ import QuickAdjustModal from '@/components/QuickAdjustModal';
 import InventoryDashboard from '@/components/InventoryDashboard';
 import ReorderModal from '@/components/ReorderModal';
 import PRCartWidget from '@/components/PRCartWidget';
+import ReceiptPreview from '@/components/ReceiptPreview';
+import GRPreviewModal from '@/components/GRPreviewModal';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 type WmsTab = 'master' | 'check' | 'adjust' | 'report' | 'consignment' | 'dashboard';
@@ -32,7 +34,7 @@ const Inventory = () => {
     inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLineId,
     companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
     adjustStock, deletePartner, currency, currentUser, addReportLog, transactions,
-    deleteInventoryItem
+    deleteInventoryItem, goodsReceipts
   } = useStore();
 
   const location = useLocation();
@@ -82,6 +84,10 @@ const Inventory = () => {
 
   // Quick Adjust Modal State
   const [quickAdjustItem, setQuickAdjustItem] = useState<InventoryItem | null>(null);
+
+  // Preview Modal States
+  const [previewTx, setPreviewTx] = useState<any | null>(null);
+  const [previewGR, setPreviewGR] = useState<any | null>(null);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -474,9 +480,35 @@ const Inventory = () => {
     }
   };
 
+  const handleRowClick = (reason: string) => {
+    if (reason.includes("GR #")) {
+      const parts = reason.split("GR #");
+      if (parts.length > 1) {
+        const grId = parts[1].split('"')[0].trim();
+        const gr = goodsReceipts.find(g => g.id === grId);
+        if (gr) {
+          setPreviewGR(gr);
+        } else {
+          toast.error("ไม่พบข้อมูลใบรับสินค้า (GR)");
+        }
+      }
+    } else if (reason.includes("Tx: ")) {
+      const parts = reason.split("Tx: ");
+      if (parts.length > 1) {
+        const txId = parts[1].split(")")[0].trim();
+        const tx = transactions.find(t => t.id === txId);
+        if (tx) {
+          setPreviewTx(tx);
+        } else {
+          toast.error("ไม่พบข้อมูลใบเสร็จรับเงิน");
+        }
+      }
+    }
+  };
+
   return (
-    <div className="flex-1 flex flex-col bg-[#F8F9FD] overflow-hidden">
-      <header className="px-10 py-8 bg-white border-b border-gray-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pl-14 lg:pl-10 shrink-0 overflow-visible z-50">
+    <div className="flex-1 flex flex-col bg-[#F8F9FD] overflow-y-auto scrollbar-hide relative">
+      <header className="sticky top-0 px-10 py-8 bg-white/40 backdrop-blur-xl border-b border-white/40 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pl-14 lg:pl-10 shrink-0 overflow-visible z-[90]">
         <div>
           <h1 className="text-3xl font-black text-[#1A1F3D] mb-1">Inventory & WMS</h1>
           <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Management System v2.0</p>
@@ -496,7 +528,7 @@ const Inventory = () => {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
+      <div className="flex-1 p-10">
         {activeTab === 'dashboard' && (
           <InventoryDashboard />
         )}
@@ -773,7 +805,7 @@ const Inventory = () => {
 
         {activeTab === 'adjust' && (
           <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 animate-in slide-in-from-bottom-4 duration-300">
-            <div className="lg:col-span-4"><div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm space-y-8"><div><h3 className="text-xl font-black text-[#1A1F3D] mb-1">Update Balance</h3><p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Add stock or set quantity</p></div><form onSubmit={handleAdjustSubmit} className="space-y-6"><div className="space-y-2 relative"><label className="text-[10px] font-black uppercase text-gray-400 px-2">1. ค้นหาสินค้า</label><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold shadow-inner" placeholder="พิมพ์ชื่อหรือบาร์โค้ด..." value={adjustSearch} onChange={e => setAdjustSearch(e.target.value)} /></div>{adjustSearchItems.length > 0 && !selectedAdjustId && (<div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">{adjustSearchItems.map(item => (<button key={item.id} type="button" onClick={() => { setSelectedAdjustId(item.id); setAdjustSearch(item.name); }} className="w-full px-5 py-4 text-left hover:bg-gray-50 border-b border-gray-50 last:border-0 flex justify-between items-center transition-colors"><div><p className="text-sm font-black text-[#1A1F3D]">{item.name}</p><p className="text-[10px] text-gray-400 font-bold uppercase">{item.barcode || 'No Barcode'}</p></div><p className="text-xs font-black text-blue-500">Stock: {item.stock}</p></button>))}</div>)}</div>{selectedItemForAdjust && (<div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100 flex items-center gap-4 animate-in zoom-in-95"><div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-500 shadow-sm shrink-0"><Package size={24} /></div><div><p className="text-xs font-black text-[#1A1F3D]">{selectedItemForAdjust.name}</p><p className="text-[10px] text-blue-600 font-black uppercase">Current: {selectedItemForAdjust.stock}</p></div><button type="button" onClick={() => setSelectedAdjustId('')} className="ml-auto p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button></div>)}<div className="space-y-3"><label className="text-[10px] font-black uppercase text-gray-400 px-2">2. ประเภทการทำงาน</label><div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2"><button type="button" onClick={() => setAdjustMode('Add')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2", adjustMode === 'Add' ? "bg-white text-green-600 shadow-sm" : "text-gray-400")}><ArrowUp size={12} /> เติมเพิ่ม</button><button type="button" onClick={() => setAdjustMode('Set')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2", adjustMode === 'Set' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400")}><RotateCcw size={12} /> ปรับตามจริง</button></div></div><div className={cn("grid gap-4", adjustMode === 'Add' ? "grid-cols-3" : "grid-cols-2")}><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">3. จำนวน</label><input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xl font-black text-center" placeholder="0" value={adjustQty} onChange={e => setAdjustQty(e.target.value)} /></div>{adjustMode === 'Add' && (<div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">4. ต้นทุนต่อชิ้น ({currency})</label><input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xl font-black text-center" placeholder="0" value={adjustCostPrice} onChange={e => setAdjustCostPrice(e.target.value)} /></div>)}<div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">{adjustMode === 'Add' ? '5. หมายเหตุ' : '4. หมายเหตุ'}</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold" placeholder="..." value={adjustReason} onChange={e => setAdjustReason(e.target.value)} /></div></div><button type="submit" disabled={!selectedAdjustId || !adjustQty} className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[28px] shadow-xl shadow-[#1A1F3D]/20 flex items-center justify-center gap-3 transition-all active:scale-95"><Save size={20} /> บันทึกการปรับสต็อก</button></form></div></div>
+            <div className="lg:col-span-4"><div className="bg-white p-8 rounded-[48px] border border-gray-100 shadow-sm space-y-8"><div><h3 className="text-xl font-black text-[#1A1F3D] mb-1">Update Balance</h3><p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Add stock or set quantity</p></div><form onSubmit={handleAdjustSubmit} className="space-y-6"><div className="space-y-2 relative"><label className="text-[10px] font-black uppercase text-gray-400 px-2">1. ค้นหาสินค้า</label><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-bold shadow-inner" placeholder="พิมพ์ชื่อหรือบาร์โค้ด..." value={adjustSearch} onChange={e => setAdjustSearch(e.target.value)} /></div>{adjustSearchItems.length > 0 && !selectedAdjustId && (<div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">{adjustSearchItems.map(item => (<button key={item.id} type="button" onClick={() => { setSelectedAdjustId(item.id); setAdjustSearch(item.name); }} className="w-full px-5 py-4 text-left hover:bg-gray-50 border-b border-gray-50 last:border-0 flex justify-between items-center transition-colors"><div><p className="text-sm font-black text-[#1A1F3D]">{item.name}</p><p className="text-[10px] text-gray-400 font-bold uppercase">{item.barcode || 'No Barcode'}</p></div><p className="text-xs font-black text-blue-500">Stock: {item.stock}</p></button>))}</div>)}</div>{selectedItemForAdjust && (<div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100 flex items-center gap-4 animate-in zoom-in-95"><div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-500 shadow-sm shrink-0"><Package size={24} /></div><div><p className="text-xs font-black text-[#1A1F3D]">{selectedItemForAdjust.name}</p><p className="text-[10px] text-blue-600 font-black uppercase">Current: {selectedItemForAdjust.stock}</p></div><button type="button" onClick={() => setSelectedAdjustId('')} className="ml-auto p-2 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button></div>)}<div className="space-y-3"><label className="text-[10px] font-black uppercase text-gray-400 px-2">2. ประเภทการทำงาน</label><div className="flex bg-[#F5F6FA] p-1.5 rounded-[22px] gap-2"><button type="button" onClick={() => setAdjustMode('Add')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2", adjustMode === 'Add' ? "bg-white text-green-600 shadow-sm" : "text-gray-400")}><ArrowUp size={12} /> เติมเพิ่ม</button><button type="button" onClick={() => setAdjustMode('Set')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2", adjustMode === 'Set' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400")}><RotateCcw size={12} /> ปรับตามจริง</button></div></div><div className={cn("grid gap-4", adjustMode === 'Add' ? "grid-cols-3" : "grid-cols-2")}><div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">3. จำนวน</label><input type="number" className="w-full h-[60px] bg-[#F5F6FA] border-none rounded-2xl px-6 text-xl font-black text-center" placeholder="0" value={adjustQty} onChange={e => setAdjustQty(e.target.value)} /></div>{adjustMode === 'Add' && (<div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">4. ต้นทุนต่อชิ้น ({currency})</label><input type="number" className="w-full h-[60px] bg-[#F5F6FA] border-none rounded-2xl px-6 text-xl font-black text-center" placeholder="0" value={adjustCostPrice} onChange={e => setAdjustCostPrice(e.target.value)} /></div>)}<div className="space-y-2"><label className="text-[10px] font-black uppercase text-gray-400 px-2">{adjustMode === 'Add' ? '5. หมายเหตุ' : '4. หมายเหตุ'}</label><input className="w-full h-[60px] bg-[#F5F6FA] border-none rounded-2xl px-6 text-sm font-bold" placeholder="..." value={adjustReason} onChange={e => setAdjustReason(e.target.value)} /></div></div><button type="submit" disabled={!selectedAdjustId || !adjustQty} className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[28px] shadow-xl shadow-[#1A1F3D]/20 flex items-center justify-center gap-3 transition-all active:scale-95"><Save size={20} /> บันทึกการปรับสต็อก</button></form></div></div>
             <div className="lg:col-span-8">
               <div className="bg-white rounded-[48px] border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
                 <div className="p-8 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/20">
@@ -824,7 +856,14 @@ const Inventory = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {sortedStockLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-[#F8F9FD]">
+                        <tr 
+                          key={log.id} 
+                          className={cn(
+                            "hover:bg-[#F8F9FD] transition-colors",
+                            (log.reason.includes("GR #") || log.reason.includes("Tx: ")) ? "cursor-pointer" : ""
+                          )}
+                          onClick={() => handleRowClick(log.reason)}
+                        >
                           <td className="px-6 py-6">
                             <p className="text-xs font-black text-[#1A1F3D]">{format(new Date(log.timestamp), 'HH:mm • dd MMM')}</p>
                             <p className="text-[9px] text-gray-400 font-bold uppercase">{log.staffName}</p>
@@ -1119,7 +1158,20 @@ const Inventory = () => {
         onClose={() => setReorderModalOpen(false)}
         item={reorderItemTarget}
       />
-
+      {previewTx && (
+        <ReceiptPreview
+          shopName={shopName}
+          shopLogo={null}
+          shopAddress={shopAddress}
+          shopPhone={shopPhone}
+          header="ใบเสร็จรับเงิน"
+          footer="ขอบคุณที่ใช้บริการ"
+          paperSize="80mm"
+          onClose={() => setPreviewTx(null)}
+          transaction={previewTx}
+        />
+      )}
+      <GRPreviewModal previewGR={previewGR} onClose={() => setPreviewGR(null)} />
     </div>
   );
 };
