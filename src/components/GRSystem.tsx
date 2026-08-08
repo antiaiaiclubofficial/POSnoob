@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useStore, GoodsReceipt, GoodsReceiptItem, PurchaseOrder } from '@/store/useStore';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, FileText, CheckCircle, XCircle, Clock, Trash2, Save, X, Download, Printer, Check, Search as SearchIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatBahtText } from '@/lib/bahttext';
 import { toast } from 'sonner';
+import { POPreviewModal } from './POPreviewModal';
 
 interface GRSystemProps {
   initialView?: 'list' | 'create';
@@ -19,6 +21,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
     shopName, shopAddress: storeAddress, shopPhone: storePhone,
     addGoodsReceipt, updateGoodsReceipt, updateGoodsReceiptStatus,
   } = useStore();
+  const navigate = useNavigate();
 
   const [view, setView] = useState<'list' | 'create'>(initialView);
 
@@ -30,6 +33,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [previewGR, setPreviewGR] = useState<GoodsReceipt | null>(null);
+  const [previewPO, setPreviewPO] = useState<PurchaseOrder | null>(null);
 
   // Create GR State
   const [editingGRId, setEditingGRId] = useState<string | null>(null);
@@ -634,9 +638,10 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
               <table className="w-full text-left">
                 <thead className="bg-white border-b border-gray-100">
                   <tr>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 whitespace-nowrap">GR Number</th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 whitespace-nowrap">Date</th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400">Vendor</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400 whitespace-nowrap">GR Number / Date</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400 whitespace-nowrap">Ref PO</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase text-gray-400">Vendor</th>
+                    <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Items</th>
                     <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Total Amount</th>
                     <th className="px-8 py-5 text-center text-[10px] font-black uppercase text-gray-400">Status</th>
                     <th className="px-8 py-5 text-right text-[10px] font-black uppercase text-gray-400">Actions</th>
@@ -645,21 +650,40 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                 <tbody className="divide-y divide-gray-50">
                   {filteredGRs.map((gr) => (
                     <tr key={gr.id} className="hover:bg-gray-50/50 transition-colors group">
-                      <td className="px-8 py-5">
-                        <p className="font-black text-[#1A1F3D]">{gr.id}</p>
-                        {gr.poId && <p className="text-xs font-bold text-[#1A1F3D]/60">Ref: {gr.poId}</p>}
+                      <td className="px-8 py-6">
+                        <p className="text-sm font-black text-[#1A1F3D]">{gr.id}</p>
+                        <p className="text-[10px] text-gray-400 font-bold">{format(new Date(gr.date), 'dd MMM yyyy HH:mm')}</p>
+                        <p className="text-[10px] text-gray-400 font-medium mt-1">By: {gr.receiverName}</p>
                       </td>
-                      <td className="px-8 py-5">
-                        <p className="font-bold text-gray-600">{format(new Date(gr.date), 'dd/MM/yyyy')}</p>
-                        <p className="text-xs text-gray-400">{format(new Date(gr.date), 'HH:mm')}</p>
+                      <td className="px-8 py-6">
+                        {gr.poId ? (
+                          <button
+                            onClick={() => {
+                              const po = purchaseOrders.find(p => p.id === gr.poId);
+                              if (po) setPreviewPO(po);
+                            }}
+                            className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors text-left"
+                          >
+                            {gr.poId}
+                          </button>
+                        ) : (
+                          <span className="text-sm font-bold text-gray-400">-</span>
+                        )}
                       </td>
-                      <td className="px-8 py-5">
-                        <p className="font-bold text-[#1A1F3D]">{partners.find(p => p.id === gr.partnerId)?.companyName || 'Unknown Vendor'}</p>
+                      <td className="px-8 py-6">
+                        <p className="text-sm font-bold text-gray-700">
+                          {partners.find(p => p.id === gr.partnerId)?.companyName || 'Unknown Vendor'}
+                        </p>
                       </td>
-                      <td className="px-8 py-5 text-right font-black text-[#1A1F3D]">
+                      <td className="px-8 py-6 text-center">
+                        <span className="inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-lg px-3 py-1 font-black text-xs">
+                          {gr.items.length} รายการ
+                        </span>
+                      </td>
+                      <td className="px-8 py-6 text-right font-black text-[#1A1F3D]">
                         ฿{gr.totalAmount.toLocaleString()}
                       </td>
-                      <td className="px-8 py-5 text-center">
+                      <td className="px-8 py-6 text-center">
                         <span className={cn(
                           "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold",
                           getStatusColor(gr.status)
@@ -667,7 +691,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
                           {getStatusIcon(gr.status)} {gr.status}
                         </span>
                       </td>
-                        <td className="px-8 py-5 text-right">
+                        <td className="px-8 py-6 text-right">
                           <div className="flex flex-wrap items-center justify-end gap-2">
                             <button
                               onClick={() => setPreviewGR(gr)}
@@ -877,6 +901,14 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* PO Preview Modal */}
+      {previewPO && (
+        <POPreviewModal
+          previewPO={previewPO}
+          onClose={() => setPreviewPO(null)}
+        />
+      )}
     </div>
   );
 };

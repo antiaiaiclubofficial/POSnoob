@@ -12,7 +12,7 @@ interface CustomerModalProps {
 }
 
 const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
-  const { addCustomer, updateCustomer, language } = useStore();
+  const { addCustomer, updateCustomer, language, tierRules } = useStore();
   const t = translations[language];
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -111,7 +111,20 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.gender}</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold appearance-none" value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})}><option value="Male">{t.male}</option><option value="Female">{t.female}</option><option value="Other">{t.other}</option></select></div>
               <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.age}</label><input type="number" className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} /></div>
-              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.membershipLevel}</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold appearance-none" value={formData.membership} onChange={e => setFormData({...formData, membership: e.target.value as MembershipLevel})}><option value="Standard">Standard</option><option value="Silver">Silver</option><option value="Gold">Gold</option><option value="VIP">VIP</option></select></div>
+              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.membershipLevel}</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold appearance-none" value={formData.membership} onChange={e => setFormData({...formData, membership: e.target.value as MembershipLevel})}>
+                {tierRules && tierRules.length > 0 ? (
+                  tierRules.map(tier => (
+                    <option key={tier.level} value={tier.level}>{tier.label || tier.level}</option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Standard">Standard</option>
+                    <option value="Silver">Silver</option>
+                    <option value="Gold">Gold</option>
+                    <option value="VIP">VIP</option>
+                  </>
+                )}
+              </select></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">{t.phoneNumber}</label><div className="relative"><Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} /><input type="tel" className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} /></div></div>
@@ -120,10 +133,9 @@ const CustomerModal = ({ customer, onClose }: CustomerModalProps) => {
           </div>
 
           <div className="space-y-5">
-            <div className="flex items-center gap-2 mb-2"><FileText size={16} className="text-purple-500" /><h3 className="text-[11px] font-black uppercase text-[#1A1F3D] tracking-widest">{language === 'th' ? 'ข้อมูลภาษี' : 'Tax Information'}</h3></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-2 mb-2"><FileText size={16} className="text-purple-500" /><h3 className="text-[11px] font-black uppercase text-[#1A1F3D] tracking-widest">{language === 'th' ? 'ข้อมูลสำหรับออกใบกำกับภาษี (ไม่ระบุได้)' : 'Tax Information (Optional)'}</h3></div>
+            <div className="grid grid-cols-1 gap-4">
               <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Tax ID / เลขผู้เสียภาษี</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.taxId} onChange={e => setFormData({...formData, taxId: e.target.value})} placeholder="0123456789xxx" /></div>
-              <div><label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">Branch / สาขา</label><input className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-3.5 text-sm font-bold" value={formData.branchName} onChange={e => setFormData({...formData, branchName: e.target.value})} placeholder="Head Office / สาขา..." /></div>
             </div>
           </div>
 

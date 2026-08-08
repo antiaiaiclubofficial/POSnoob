@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, subYears, subMonths } from 'date-fns';
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -40,6 +40,8 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
   });
 
   const [isCustomSpecies, setIsCustomSpecies] = useState(false);
+  const [ageYears, setAgeYears] = useState<string>('');
+  const [ageMonths, setAgeMonths] = useState<string>('');
 
   useEffect(() => {
     if (pet) {
@@ -63,8 +65,62 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
         image: pet.image
       });
       setIsCustomSpecies(!isStandardSpecies);
+      
+      if (pet.birthday) {
+        const birthDate = new Date(pet.birthday);
+        const today = new Date();
+        let y = today.getFullYear() - birthDate.getFullYear();
+        let m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          y--;
+          m += 12;
+        }
+        setAgeYears(Math.max(0, y).toString());
+        setAgeMonths(Math.max(0, m).toString());
+      }
     }
   }, [pet]);
+
+  const handleBirthdayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newBirthday = e.target.value;
+    setFormData({ ...formData, birthday: newBirthday });
+    
+    if (newBirthday) {
+      const birthDate = new Date(newBirthday);
+      const today = new Date();
+      let y = today.getFullYear() - birthDate.getFullYear();
+      let m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        y--;
+        m += 12;
+      }
+      setAgeYears(Math.max(0, y).toString());
+      setAgeMonths(Math.max(0, m).toString());
+    } else {
+      setAgeYears('');
+      setAgeMonths('');
+    }
+  };
+
+  const handleAgeChange = (field: 'years' | 'months', value: string) => {
+    if (field === 'years') setAgeYears(value);
+    if (field === 'months') setAgeMonths(value);
+
+    const yStr = field === 'years' ? value : ageYears;
+    const mStr = field === 'months' ? value : ageMonths;
+    
+    const y = parseInt(yStr || '0', 10);
+    const m = parseInt(mStr || '0', 10);
+
+    if (isNaN(y) && isNaN(m)) {
+      setFormData(prev => ({ ...prev, birthday: '' }));
+      return;
+    }
+
+    const today = new Date();
+    const newBirthdayDate = subMonths(subYears(today, y || 0), m || 0);
+    setFormData(prev => ({ ...prev, birthday: format(newBirthdayDate, 'yyyy-MM-dd') }));
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'image' | 'vaccineBookImage') => {
     const file = e.target.files?.[0];
@@ -104,6 +160,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
       medicalCondition: formData.medicalCondition,
       notes: formData.notes,
       image: formData.image,
+      initialWeight: formData.initialWeight,
       weightHistory: pet ? undefined : [{ date: format(new Date(), 'yyyy-MM-dd'), value: Number(formData.initialWeight || 0) }]
     };
 
@@ -234,23 +291,43 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">วันเกิด (Birthday)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">วันเกิด / อายุ (Birthday / Age)</label>
                 <div className="relative">
                   <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={16} />
                   <input 
                     type="date"
                     className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-xs font-bold"
                     value={formData.birthday}
-                    onChange={e => setFormData({...formData, birthday: e.target.value})}
+                    onChange={handleBirthdayChange}
                     required
                   />
                 </div>
-                {formData.birthday && (
-                  <p className="text-[10px] text-indigo-500 font-bold mt-1.5 px-1">
-                    อายุคำนวณ: {calculateAge(formData.birthday)}
-                  </p>
-                )}
+                <div className="flex gap-2">
+                  <div className="relative flex-1 flex items-center bg-[#F5F6FA] rounded-2xl px-3">
+                    <input
+                      type="number"
+                      min="0"
+                      className="w-full bg-transparent border-none p-0 py-3 text-xs font-bold focus:ring-0 text-center [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none"
+                      value={ageYears}
+                      onChange={e => handleAgeChange('years', e.target.value)}
+                      placeholder="0"
+                    />
+                    <span className="text-[10px] text-gray-500 font-bold ml-1">ปี</span>
+                  </div>
+                  <div className="relative flex-1 flex items-center bg-[#F5F6FA] rounded-2xl px-3">
+                    <input
+                      type="number"
+                      min="0"
+                      max="11"
+                      className="w-full bg-transparent border-none p-0 py-3 text-xs font-bold focus:ring-0 text-center [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none"
+                      value={ageMonths}
+                      onChange={e => handleAgeChange('months', e.target.value)}
+                      placeholder="0"
+                    />
+                    <span className="text-[10px] text-gray-500 font-bold ml-1">เดือน</span>
+                  </div>
+                </div>
               </div>
 
               {!pet && (

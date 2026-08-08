@@ -55,19 +55,31 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
     if (reorderItem) {
       handleViewChange('create');
       const qty = Math.max(reorderItem.minStock - reorderItem.stock, 1);
+      const unitPrice = reorderItem.costPrice || 0;
+
       setPrItems([{
         productId: reorderItem.id,
         productName: reorderItem.name,
         quantity: qty,
-        unitPrice: reorderItem.costPrice || 0,
-        total: qty * (reorderItem.costPrice || 0)
+        unitPrice: unitPrice,
+        total: qty * unitPrice
       }]);
-      if (reorderItem.partnerId) {
-        setSelectedPartnerId(reorderItem.partnerId);
-      }
-      if (clearReorderItem) clearReorderItem();
+
+      // Populate form inputs (setTimeout to ensure React renders the list first and avoids router interruption)
+      setTimeout(() => {
+        setItemInputMode('system');
+        setSelectedProductId(reorderItem.id);
+        setQtyInput(qty.toString());
+        setPriceInput(unitPrice.toString());
+
+        if (reorderItem.partnerId) {
+          setVendorInputMode('system');
+          setSelectedPartnerId(reorderItem.partnerId);
+        }
+        if (clearReorderItem) clearReorderItem();
+      }, 50);
     }
-  }, [reorderItem, clearReorderItem]);
+  }, [reorderItem]);
 
   const totalPRs = purchaseRequests.length;
   const pendingPRs = purchaseRequests.filter(pr => pr.status === 'Pending').length;
@@ -419,21 +431,55 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                       <thead>
                         <tr className="border-b border-gray-50 text-[10px] font-black uppercase text-gray-400 text-left">
                           <th className="pb-3 px-2">สินค้า</th>
-                          <th className="pb-3 px-2 text-right">จำนวน</th>
-                          <th className="pb-3 px-2 text-right">ราคา/หน่วย</th>
-                          <th className="pb-3 px-2 text-right">รวม</th>
-                          <th className="pb-3 px-2 text-center">จัดการ</th>
+                          <th className="pb-3 px-2 text-right w-24">จำนวน</th>
+                          <th className="pb-3 px-2 text-left w-20">หน่วย</th>
+                          <th className="pb-3 px-2 text-right w-36 pr-8">ราคา/หน่วย</th>
+                          <th className="pb-3 px-2 text-right w-28">รวม</th>
+                          <th className="pb-3 px-2 text-center w-16">จัดการ</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {prItems.map((item, idx) => (
                           <tr key={idx}>
                             <td className="py-4 px-2 font-black text-sm">{item.productName}</td>
-                            <td className="py-4 px-2 text-right font-bold text-sm">{item.quantity}</td>
-                            <td className="py-4 px-2 text-right font-bold text-sm">฿{item.unitPrice.toLocaleString()}</td>
+                            <td className="py-4 px-2 text-right">
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity || ''}
+                                onChange={(e) => {
+                                  let val = parseInt(e.target.value, 10);
+                                  if (isNaN(val)) val = 0;
+                                  setPrItems(prev => prev.map(i => i.productId === item.productId ? { ...i, quantity: val, total: val * i.unitPrice } : i));
+                                }}
+                                title="คลิกเพื่อแก้ไขจำนวน"
+                                className="w-full max-w-[80px] ml-auto text-right font-bold text-sm bg-transparent border-b border-dashed border-gray-300 hover:border-gray-500 hover:bg-gray-50 focus:border-solid focus:border-[#1A1F3D] focus:bg-white outline-none focus:ring-0 px-1 py-0.5 cursor-text transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                            </td>
+                            <td className="py-4 px-2 text-left text-sm font-bold text-gray-500">
+                              {inventory.find(inv => inv.id === item.productId)?.unit || '-'}
+                            </td>
+                            <td className="py-4 px-2 text-right pr-8">
+                              <div className="flex items-center justify-end gap-1 group">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={item.unitPrice === 0 && item.total === 0 ? '' : item.unitPrice}
+                                  onChange={(e) => {
+                                    let val = parseFloat(e.target.value);
+                                    if (isNaN(val)) val = 0;
+                                    setPrItems(prev => prev.map(i => i.productId === item.productId ? { ...i, unitPrice: val, total: i.quantity * val } : i));
+                                  }}
+                                  title="คลิกเพื่อแก้ไขราคาต่อหน่วย"
+                                  className="w-full max-w-[96px] text-right font-bold text-sm bg-transparent border-b border-dashed border-gray-300 hover:border-gray-500 hover:bg-gray-50 focus:border-solid focus:border-[#1A1F3D] focus:bg-white outline-none focus:ring-0 px-1 py-0.5 cursor-text transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <span className="font-bold text-sm text-gray-500 shrink-0">฿</span>
+                              </div>
+                            </td>
                             <td className="py-4 px-2 text-right font-black text-indigo-600">฿{item.total.toLocaleString()}</td>
                             <td className="py-4 px-2 text-center">
-                              <button onClick={() => handleRemoveItem(item.productId)} className="text-red-400 hover:text-red-600 p-1">
+                              <button type="button" onClick={() => handleRemoveItem(item.productId)} className="text-red-400 hover:text-red-600 p-1">
                                 <Trash2 size={16} />
                               </button>
                             </td>
@@ -905,12 +951,12 @@ const PRSystem: React.FC<PRSystemProps> = ({ reorderItem, clearReorderItem, init
                         <td className="px-8 py-6">
                           <p className="text-sm font-black text-[#1A1F3D]">{pr.id}</p>
                           <p className="text-[10px] text-gray-400 font-bold">{format(new Date(pr.date), 'dd MMM yyyy HH:mm')}</p>
+                          <p className="text-[10px] text-gray-400 font-medium mt-1">By: {pr.createdBy}</p>
                         </td>
                         <td className="px-8 py-6">
                           <p className="text-sm font-bold text-gray-700">
                             {partners.find(p => p.id === pr.partnerId)?.companyName || 'Unknown Vendor'}
                           </p>
-                          <p className="text-[10px] text-gray-400 font-medium">By: {pr.createdBy}</p>
                         </td>
                         <td className="px-8 py-6 text-center">
                           <span className="inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-lg px-3 py-1 font-black text-xs">

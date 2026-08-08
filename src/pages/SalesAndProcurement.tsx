@@ -37,6 +37,10 @@ const SalesAndProcurement = () => {
       setDepartment('procurement');
       setProcTab('pr');
       setProcAction('list');
+    } else if (location.state?.action === 'open-po') {
+      setDepartment('procurement');
+      setProcTab('po');
+      setProcAction('list');
     }
   }, [location.state]);
 
@@ -220,7 +224,7 @@ const SalesAndProcurement = () => {
                   />
                 )}
                 {procTab === 'pr' && <PRSystem reorderItem={location.state?.reorderItem} clearReorderItem={() => navigate(location.pathname, { replace: true, state: {} })} initialView={procAction} onViewChange={setProcAction} />}
-                {procTab === 'po' && <POSystem initialView={procAction} onViewChange={setProcAction} />}
+                {procTab === 'po' && <POSystem initialView={procAction} onViewChange={setProcAction} openPreviewPO={location.state?.openPO} clearOpenPO={() => navigate(location.pathname, { replace: true, state: {} })} />}
                 {procTab === 'gr' && <GRSystem initialView={procAction} onViewChange={setProcAction} />}
               </motion.div>
             )}

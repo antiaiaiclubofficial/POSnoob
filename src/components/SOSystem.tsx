@@ -777,12 +777,12 @@ const SOSystem: React.FC<SOSystemProps> = ({ initialView = 'list', onViewChange 
                         <td className="px-8 py-6">
                           <p className="text-sm font-black text-[#1A1F3D]">{so.id}</p>
                           <p className="text-[10px] text-gray-400 font-bold">{format(new Date(so.date), 'dd MMM yyyy HH:mm')}</p>
+                          <p className="text-[10px] text-gray-400 font-medium mt-1">By: {so.createdBy}</p>
                         </td>
                         <td className="px-8 py-6">
                           <p className="text-sm font-bold text-gray-700">
                             {partners.find(p => p.id === so.partnerId)?.companyName || 'Unknown Vendor'}
                           </p>
-                          <p className="text-[10px] text-gray-400 font-medium">By: {so.createdBy}</p>
                         </td>
                         <td className="px-8 py-6 text-center">
                           <span className="inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-lg px-3 py-1 font-black text-xs">

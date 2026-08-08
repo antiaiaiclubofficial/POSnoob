@@ -83,6 +83,9 @@ const Customers = () => {
             birth_date,
             weight,
             medical_condition,
+            precautions,
+            fur_length,
+            custom_preferences,
             image_url,
             created_at,
             pet_weight_history (
@@ -176,8 +179,13 @@ const Customers = () => {
               birthday: p.birth_date || '',
               weightHistory,
               serviceHistory: serviceHistoryMap[p.id] || [], // แมปประวัติการใช้บริการจริงจาก Supabase
-              notes: p.medical_condition || '',
-              image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+              notes: p.custom_preferences?.notes || '',
+              image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop',
+              coatType: p.fur_length,
+              color: p.custom_preferences?.color,
+              temperament: p.custom_preferences?.temperament,
+              precautions: p.precautions,
+              medicalCondition: p.medical_condition,
             };
           })
         };

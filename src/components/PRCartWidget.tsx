@@ -5,7 +5,7 @@ import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 
 const PRCartWidget = () => {
-  const { prCart, removeFromPrCart, partners, addPurchaseRequest, clearPrCart } = useStore();
+  const { prCart, removeFromPrCart, partners, addPurchaseRequest, clearPrCart, currentUser } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const totalItems = prCart.reduce((sum, draft) => sum + draft.items.length, 0);
@@ -20,7 +20,7 @@ const PRCartWidget = () => {
         items: draft.items,
         status: 'Pending',
         totalAmount,
-        createdBy: 'Admin', // In real app, get from currentUser
+        createdBy: currentUser?.name || 'ระบบสั่งซื้ออัตโนมัติ (Reorder)',
       });
     });
 

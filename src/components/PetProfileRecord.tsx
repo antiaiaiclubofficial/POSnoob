@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { 
   Edit3, TrendingUp, History, ClipboardList, Calendar, 
-  ChevronDown, ChevronUp, Scale, FileSearch, Eye 
+  ChevronDown, ChevronUp, Scale, FileSearch, Eye, Plus
 } from 'lucide-react';
 import { useStore, Pet } from '@/store/useStore';
 import { calculateAge } from '@/utils/petData';
@@ -23,6 +23,10 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedIntake, setSelectedIntake] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isUpdateWeightOpen, setIsUpdateWeightOpen] = useState(false);
+  const [newWeight, setNewWeight] = useState('');
+  const [isSubmittingWeight, setIsSubmittingWeight] = useState(false);
+  const { customers, updatePetWeight } = useStore();
 
   const weightHistory = pet.weightHistory || [];
   const latestWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1]?.value : 'N/A';
@@ -30,16 +34,22 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
   return (
     <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden flex flex-col relative group/pet transition-all hover:shadow-md">
       {/* Action Buttons */}
-      <div className="absolute top-6 right-6 flex gap-2 z-10 opacity-0 group-hover/pet:opacity-100 transition-opacity">
+      <div className="absolute top-6 right-6 flex items-center gap-2 z-10">
+        <button
+          onClick={() => setIsUpdateWeightOpen(true)}
+          className="h-10 flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 hover:bg-indigo-100 px-4 rounded-2xl transition-all"
+        >
+          <Plus size={14} /> อัพเดตน้ำหนัก
+        </button>
         <button 
           onClick={() => setIsDetailOpen(true)}
-          className="p-3 bg-white text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-2xl transition-all shadow-sm border border-gray-100 flex items-center gap-1.5 text-xs font-bold"
+          className="h-10 flex items-center justify-center gap-1.5 text-xs font-bold text-gray-400 bg-white hover:text-gray-600 rounded-2xl transition-all shadow-sm border border-gray-100 px-4"
         >
           <Eye size={16} /> ดูข้อมูล
         </button>
         <button 
           onClick={() => onEdit(pet)}
-          className="p-3 bg-white text-gray-400 hover:bg-[#1A1F3D] hover:text-white rounded-2xl transition-all shadow-sm border border-gray-100"
+          className="w-10 h-10 flex items-center justify-center bg-[#1A1F3D] text-white hover:bg-[#2A3152] rounded-2xl transition-all shadow-sm"
         >
           <Edit3 size={16} />
         </button>
@@ -68,13 +78,17 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
                 <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Weight</p>
                 <p className="text-xs font-black text-[#1A1F3D]">{latestWeight} {latestWeight !== 'N/A' ? 'kg' : ''}</p>
               </div>
+              <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50/50 col-span-2">
+                <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Color (สีขน)</p>
+                <p className="text-xs font-black text-[#1A1F3D]">{pet.color || '-'}</p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Weight Chart & Notes */}
         <div className="flex-1 p-8 flex flex-col">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-4 mb-6">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-500">
                 <TrendingUp size={16} />
@@ -102,9 +116,23 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
             )}
           </div>
 
-          <div className="bg-[#FFF9F2] p-4 rounded-2xl border border-orange-100/50 mt-auto">
-            <p className="text-[10px] font-black uppercase text-orange-600 mb-1">Medical Notes</p>
-            <p className="text-xs text-orange-900/80 font-medium leading-relaxed italic">{pet.notes || 'No special instructions recorded.'}</p>
+          <div className="mt-auto grid grid-cols-2 gap-3">
+            {pet.precautions && (
+              <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
+                <p className="text-[10px] font-black uppercase text-red-600 mb-0.5">ข้อควรระวัง (Precautions)</p>
+                <p className="text-xs text-red-900/80 font-medium leading-relaxed">{pet.precautions}</p>
+              </div>
+            )}
+            {pet.medicalCondition && (
+              <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
+                <p className="text-[10px] font-black uppercase text-amber-600 mb-0.5">โรคประจำตัว (Medical Condition)</p>
+                <p className="text-xs text-amber-900/80 font-medium leading-relaxed">{pet.medicalCondition}</p>
+              </div>
+            )}
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 col-span-2">
+              <p className="text-[10px] font-black uppercase text-gray-500 mb-0.5">หมายเหตุ (Notes)</p>
+              <p className="text-xs text-gray-600 font-medium leading-relaxed italic">{pet.notes || 'No special instructions recorded.'}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -227,6 +255,67 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
           pet={pet} 
           onClose={() => setIsDetailOpen(false)} 
         />
+      )}
+
+      {/* Update Weight Modal */}
+      {isUpdateWeightOpen && (
+        <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
+          <div className="bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden p-8 animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-black text-[#1A1F3D] mb-2">อัพเดตน้ำหนัก</h3>
+            <p className="text-xs text-gray-400 font-medium mb-6">บันทึกน้ำหนักล่าสุดของ {pet.name}</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">น้ำหนัก (กก.)</label>
+                <div className="relative">
+                  <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={newWeight}
+                    onChange={(e) => setNewWeight(e.target.value)}
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500/20"
+                    placeholder="0.0"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setIsUpdateWeightOpen(false);
+                    setNewWeight('');
+                  }}
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold text-xs transition-colors"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!newWeight) return;
+                    setIsSubmittingWeight(true);
+                    try {
+                      const customerId = customers.find(c => c.pets.some(p => p.id === pet.id))?.id;
+                      if (customerId) {
+                        await updatePetWeight(customerId, pet.id, Number(newWeight));
+                        setIsUpdateWeightOpen(false);
+                        setNewWeight('');
+                      }
+                    } finally {
+                      setIsSubmittingWeight(false);
+                    }
+                  }}
+                  disabled={isSubmittingWeight || !newWeight}
+                  className="flex-1 py-3 bg-[#1A1F3D] hover:bg-[#2A3152] text-white rounded-xl font-bold text-xs shadow-lg disabled:opacity-50 transition-colors"
+                >
+                  {isSubmittingWeight ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

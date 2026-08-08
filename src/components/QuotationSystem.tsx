@@ -914,12 +914,12 @@ const QuotationSystem: React.FC<QuotationSystemProps> = ({ initialView = 'list',
                         <td className="px-8 py-6">
                           <p className="text-sm font-black text-[#1A1F3D]">{qt.id}</p>
                           <p className="text-[10px] text-gray-400 font-bold">{format(new Date(qt.date), 'dd MMM yyyy HH:mm')}</p>
+                          <p className="text-[10px] text-gray-400 font-medium mt-1">By: {qt.createdBy}</p>
                         </td>
                         <td className="px-8 py-6">
                           <p className="text-sm font-bold text-gray-700">
                             {qt.partnerId ? (partners.find(p => p.id === qt.partnerId)?.companyName || 'Unknown Vendor') : (qt.customerName || 'Unknown Customer')}
                           </p>
-                          <p className="text-[10px] text-gray-400 font-medium">By: {qt.createdBy}</p>
                         </td>
                         <td className="px-8 py-6 text-center">
                           <span className="inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-lg px-3 py-1 font-black text-xs">
