@@ -345,91 +345,18 @@ export default function InventoryDashboard() {
       return txs.reduce((sum, t) => sum + t.amount, 0);
     };
 
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
-
     let prevRevenue = 0;
-    let currentRevenueForTrend = salesRevenue;
+    const currentRevenue = salesRevenue;
 
-    if (kpiDateRange === 'today') {
-      const todayTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= startOfToday;
-      });
-      currentRevenueForTrend = getRevenue(todayTxs);
-
-      const yesterdayTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= startOfYesterday && txDate < startOfToday;
-      });
-      prevRevenue = getRevenue(yesterdayTxs);
-    } else if (kpiDateRange === 'yesterday') {
-      const dayBeforeYesterday = new Date(startOfYesterday.getTime() - 24 * 60 * 60 * 1000);
-      const dayBeforeTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= dayBeforeYesterday && txDate < startOfYesterday;
-      });
-      prevRevenue = getRevenue(dayBeforeTxs);
-    } else if (kpiDateRange === '7days') {
-      const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const fourteenDaysAgo = new Date(startOfToday.getTime() - 14 * 24 * 60 * 60 * 1000);
-      const prevPeriodTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= fourteenDaysAgo && txDate < sevenDaysAgo;
-      });
-      prevRevenue = getRevenue(prevPeriodTxs);
-    } else if (kpiDateRange === '30days' || kpiDateRange === 'all') {
-      const thirtyDaysAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const currentYear = startOfToday.getFullYear();
-    const q1Start = new Date(currentYear, 0, 1);
-    const q2Start = new Date(currentYear, 3, 1);
-    const q3Start = new Date(currentYear, 6, 1);
-    const q4Start = new Date(currentYear, 9, 1);
-    const nextYearStart = new Date(currentYear + 1, 0, 1);
-    const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
-      const sixtyDaysAgo = new Date(startOfToday.getTime() - 60 * 24 * 60 * 60 * 1000);
-
-      const currentPeriodTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= thirtyDaysAgo;
-      });
-      currentRevenueForTrend = getRevenue(currentPeriodTxs);
+    if (kpiCustomDateRange && kpiCustomDateRange.from) {
+      const fromTime = kpiCustomDateRange.from.getTime();
+      const toTime = kpiCustomDateRange.to ? kpiCustomDateRange.to.getTime() : new Date().getTime();
+      const duration = toTime - fromTime;
+      // Ensure at least 1 day duration for previous period calculation
+      const prevFromTime = fromTime - Math.max(duration, 24 * 60 * 60 * 1000);
+      const prevToTime = fromTime;
 
       const prevPeriodTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= sixtyDaysAgo && txDate < thirtyDaysAgo;
-      });
-      prevRevenue = getRevenue(prevPeriodTxs);
-    }
-
-    let growth = 0;
-    if (prevRevenue > 0) {
-      growth = Math.round(((currentRevenueForTrend - prevRevenue) / prevRevenue) * 100);
-    } else if (currentRevenueForTrend > 0) {
-      growth = 100;
-    } else if (currentRevenueForTrend === 0 && prevRevenue === 0) {
-      growth = 0;
-    } else if (currentRevenueForTrend === 0 && prevRevenue > 0) {
-      growth = -100;
-    }
-
-    return growth;
-  }, [kpiDateRange, processedTransactions, salesRevenue]);
-
-  // Sales History daily breakdown for the last 7 days (timezone-safe)
-  const salesHistory = useMemo(() => {
-    const history = [];
-    const now = new Date();
-    const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-    const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const months = language === 'th' ? TH_MONTHS : EN_MONTHS;
-
-    for (let i = 0; i < 7; i++) {
-      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 0, 0, 0, 0);
-      const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1, 0, 0, 0, 0);
-
-      const dayTransactions = processedTransactions.filter(t => {
         if (!t.date) return false;
         let txDate: Date;
         if (t.date.includes('T')) {
@@ -442,25 +369,22 @@ export default function InventoryDashboard() {
             txDate = new Date(t.date);
           }
         }
-        return txDate >= dayStart && txDate < dayEnd;
+        return txDate.getTime() >= prevFromTime && txDate.getTime() < prevToTime;
       });
-      const totalAmount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
-
-      const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const label = i === 0
-        ? (language === 'th' ? 'วันนี้' : 'Today')
-        : i === 1
-          ? (language === 'th' ? 'เมื่อวาน' : 'Yesterday')
-          : `${targetDate.getDate()} ${months[targetDate.getMonth()]}`;
-
-      history.push({
-        dateStr: `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`,
-        label,
-        amount: totalAmount
-      });
+      prevRevenue = getRevenue(prevPeriodTxs);
     }
-    return history;
-  }, [processedTransactions, language]);
+
+    let growth = 0;
+    if (prevRevenue > 0) {
+      growth = Math.round(((currentRevenue - prevRevenue) / prevRevenue) * 100);
+    } else if (currentRevenue > 0) {
+      growth = 100;
+    }
+
+    return growth;
+  }, [kpiCustomDateRange, processedTransactions, salesRevenue]);
+
+
 
   // Date range label for the sales widget
   const dateRangeLabel = useMemo(() => {
@@ -555,109 +479,13 @@ export default function InventoryDashboard() {
   const consignmentGPGrowth = useMemo(() => {
     const getGP = (txs: typeof processedTransactions) => {
       let totalGP = 0;
-      txs.forEach(t => {
-        (t.items || []).forEach(item => {
-          if (item.isConsignment && item.partnerId) {
-            const actualPrice = item.finalPrice !== undefined ? item.finalPrice : item.price;
-            const qty = item.quantity || 1;
-            const lineTotal = actualPrice * qty;
-            const partner = partners.find(p => p.id === item.partnerId);
-            const rate = item.consignmentRate || (partner ? partner.gpRate : 0);
-            totalGP += (lineTotal * rate) / 100;
-          }
-        });
-      });
-      return totalGP;
-    };
-
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
-
-    let prevGP = 0;
-    let currentGPForTrend = consignmentGP;
-
-    if (kpiDateRange === 'today') {
-      const todayTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= startOfToday;
-      });
-      currentGPForTrend = getGP(todayTxs);
-
-      const yesterdayTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= startOfYesterday && txDate < startOfToday;
-      });
-      prevGP = getGP(yesterdayTxs);
-    } else if (kpiDateRange === 'yesterday') {
-      const dayBeforeYesterday = new Date(startOfYesterday.getTime() - 24 * 60 * 60 * 1000);
-      const dayBeforeTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= dayBeforeYesterday && txDate < startOfYesterday;
-      });
-      prevGP = getGP(dayBeforeTxs);
-    } else if (kpiDateRange === '7days') {
-      const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const fourteenDaysAgo = new Date(startOfToday.getTime() - 14 * 24 * 60 * 60 * 1000);
-      const prevPeriodTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= fourteenDaysAgo && txDate < sevenDaysAgo;
-      });
-      prevGP = getGP(prevPeriodTxs);
-    } else if (kpiDateRange === '30days' || kpiDateRange === 'all') {
-      const thirtyDaysAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const currentYear = startOfToday.getFullYear();
-    const q1Start = new Date(currentYear, 0, 1);
-    const q2Start = new Date(currentYear, 3, 1);
-    const q3Start = new Date(currentYear, 6, 1);
-    const q4Start = new Date(currentYear, 9, 1);
-    const nextYearStart = new Date(currentYear + 1, 0, 1);
-    const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
-      const sixtyDaysAgo = new Date(startOfToday.getTime() - 60 * 24 * 60 * 60 * 1000);
-
-      const currentPeriodTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= thirtyDaysAgo;
-      });
-      currentGPForTrend = getGP(currentPeriodTxs);
-
-      const prevPeriodTxs = processedTransactions.filter(t => {
-        const txDate = new Date(t.date);
-        return txDate >= sixtyDaysAgo && txDate < thirtyDaysAgo;
-      });
-      prevGP = getGP(prevPeriodTxs);
-    }
-
-    let growth = 0;
-    if (prevGP > 0) {
-      growth = Math.round(((currentGPForTrend - prevGP) / prevGP) * 100);
-    } else if (currentGPForTrend > 0) {
-      growth = 100;
-    } else if (currentGPForTrend === 0 && prevGP === 0) {
-      growth = 0;
-    } else if (currentGPForTrend === 0 && prevGP > 0) {
-      growth = -100;
-    }
-
-    return growth;
-  }, [kpiDateRange, processedTransactions, consignmentGP, partners]);
-
-  // Consignment GP history daily breakdown for the last 7 days (timezone-safe)
-  const gpHistory = useMemo(() => {
-    const history = [];
-    const now = new Date();
-    const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-    const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const months = language === 'th' ? TH_MONTHS : EN_MONTHS;
-
-    const getGP = (txs: typeof processedTransactions) => {
-      let totalGP = 0;
       txs.forEach(tx => {
         if (tx.items) {
           tx.items.forEach(item => {
             const partner = partners.find(p => p.id === item.partnerId);
             if (partner || item.consignmentRate) {
-              const lineTotal = item.price * (item.quantity || 1);
+              const actualPrice = item.finalPrice !== undefined ? item.finalPrice : item.price;
+              const lineTotal = actualPrice * (item.quantity || 1);
               const rate = item.consignmentRate || (partner ? partner.gpRate : 0);
               totalGP += (lineTotal * rate) / 100;
             }
@@ -667,11 +495,17 @@ export default function InventoryDashboard() {
       return totalGP;
     };
 
-    for (let i = 0; i < 7; i++) {
-      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 0, 0, 0, 0);
-      const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1, 0, 0, 0, 0);
+    let prevGP = 0;
+    const currentGP = consignmentGP;
 
-      const dayTransactions = processedTransactions.filter(t => {
+    if (kpiCustomDateRange && kpiCustomDateRange.from) {
+      const fromTime = kpiCustomDateRange.from.getTime();
+      const toTime = kpiCustomDateRange.to ? kpiCustomDateRange.to.getTime() : new Date().getTime();
+      const duration = toTime - fromTime;
+      const prevFromTime = fromTime - Math.max(duration, 24 * 60 * 60 * 1000);
+      const prevToTime = fromTime;
+
+      const prevPeriodTxs = processedTransactions.filter(t => {
         if (!t.date) return false;
         let txDate: Date;
         if (t.date.includes('T')) {
@@ -684,26 +518,20 @@ export default function InventoryDashboard() {
             txDate = new Date(t.date);
           }
         }
-        return txDate >= dayStart && txDate < dayEnd;
+        return txDate.getTime() >= prevFromTime && txDate.getTime() < prevToTime;
       });
-
-      const dayGP = getGP(dayTransactions);
-
-      const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const label = i === 0
-        ? (language === 'th' ? 'วันนี้' : 'Today')
-        : i === 1
-          ? (language === 'th' ? 'เมื่อวาน' : 'Yesterday')
-          : `${targetDate.getDate()} ${months[targetDate.getMonth()]}`;
-
-      history.push({
-        dateStr: `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`,
-        label,
-        amount: dayGP
-      });
+      prevGP = getGP(prevPeriodTxs);
     }
-    return history;
-  }, [processedTransactions, partners, language]);
+
+    let growth = 0;
+    if (prevGP > 0) {
+      growth = -100;
+    }
+
+    return growth;
+  }, [kpiDateRange, processedTransactions, consignmentGP, partners]);
+
+
 
   // Filtered transactions (including both Products and Services) for the top sales widgets group based on selected time period
   const allKpiFilteredTransactions = useMemo(() => {
@@ -752,15 +580,23 @@ export default function InventoryDashboard() {
       case 'yesterday':
         return language === 'th' ? 'เทียบกับวันก่อนหน้า' : 'vs yesterday';
       case '7days':
-        return language === 'th' ? 'เทียบกับ 7 วันก่อนหน้า' : 'vs last 7 days';
+      case 'thisWeek':
+      case 'lastWeek':
+        return language === 'th' ? 'เทียบกับสัปดาห์ก่อนหน้า' : 'vs last week';
       case '30days':
-        return language === 'th' ? 'เทียบกับ 30 วันก่อนหน้า' : 'vs last 30 days';
+      case 'thisMonth':
+      case 'lastMonth':
+        return language === 'th' ? 'เทียบกับเดือนก่อนหน้า' : 'vs last month';
       case 'q1':
       case 'q2':
       case 'q3':
       case 'q4':
+      case 'quarterly':
         return language === 'th' ? 'เทียบกับไตรมาสก่อนหน้า' : 'vs last quarter';
       case 'yearly':
+        return language === 'th' ? 'เทียบกับ 1 ปีก่อนหน้า' : 'vs last 365 days';
+      case 'custom':
+        return language === 'th' ? 'เทียบกับช่วงเวลาก่อนหน้า' : 'vs previous period';
       case 'all':
       default:
         return language === 'th' ? 'เทียบกับ 1 ปีก่อนหน้า' : 'vs last 365 days';
@@ -792,75 +628,27 @@ export default function InventoryDashboard() {
     let currentCount = total;
     let prevCount = 0;
 
-    if (kpiDateRange === 'today') {
-      currentCount = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const txDate = new Date(t.date);
-        return txDate >= startOfToday;
-      }).length;
+    if (kpiCustomDateRange && kpiCustomDateRange.from) {
+      const fromTime = kpiCustomDateRange.from.getTime();
+      const toTime = kpiCustomDateRange.to ? kpiCustomDateRange.to.getTime() : new Date().getTime();
+      const duration = toTime - fromTime;
+      const prevFromTime = fromTime - Math.max(duration, 24 * 60 * 60 * 1000);
+      const prevToTime = fromTime;
+
       prevCount = activeTransactions.filter(t => {
         if (!t.date) return false;
-        const txDate = new Date(t.date);
-        return txDate >= startOfYesterday && txDate < startOfToday;
-      }).length;
-    } else if (kpiDateRange === 'yesterday') {
-      currentCount = total;
-      const dayBeforeYesterday = new Date(startOfYesterday.getTime() - 24 * 60 * 60 * 1000);
-      prevCount = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const txDate = new Date(t.date);
-        return txDate >= dayBeforeYesterday && txDate < startOfYesterday;
-      }).length;
-    } else if (kpiDateRange === '7days') {
-      currentCount = total;
-      const sevenDaysAgoDate = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const fourteenDaysAgoDate = new Date(startOfToday.getTime() - 14 * 24 * 60 * 60 * 1000);
-      prevCount = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const txDate = new Date(t.date);
-        return txDate >= fourteenDaysAgoDate && txDate < sevenDaysAgoDate;
-      }).length;
-    } else if (kpiDateRange === 'quarterly') {
-      const currentYear = startOfToday.getFullYear();
-    const q1Start = new Date(currentYear, 0, 1);
-    const q2Start = new Date(currentYear, 3, 1);
-    const q3Start = new Date(currentYear, 6, 1);
-    const q4Start = new Date(currentYear, 9, 1);
-    const nextYearStart = new Date(currentYear + 1, 0, 1);
-      const oneEightyDaysAgo = new Date(startOfToday.getTime() - 180 * 24 * 60 * 60 * 1000);
-      currentCount = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const txDate = new Date(t.date);
-        return txDate >= ninetyDaysAgo;
-      }).length;
-      prevCount = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const txDate = new Date(t.date);
-        return txDate >= oneEightyDaysAgo && txDate < ninetyDaysAgo;
-      }).length;
-    } else if (kpiDateRange === 'yearly') {
-      const yearlyAgo = new Date(startOfToday.getTime() - 365 * 24 * 60 * 60 * 1000);
-      const twoYearsAgo = new Date(startOfToday.getTime() - 730 * 24 * 60 * 60 * 1000);
-      currentCount = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const txDate = new Date(t.date);
-        return txDate >= yearlyAgo;
-      }).length;
-      prevCount = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const txDate = new Date(t.date);
-        return txDate >= twoYearsAgo && txDate < yearlyAgo;
-      }).length;
-    } else if (kpiDateRange === '30days' || kpiDateRange === 'all') {
-      currentCount = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const txDate = new Date(t.date);
-        return txDate >= thirtyDaysAgo;
-      }).length;
-      prevCount = activeTransactions.filter(t => {
-        if (!t.date) return false;
-        const txDate = new Date(t.date);
-        return txDate >= sixtyDaysAgo && txDate < thirtyDaysAgo;
+        let txDate: Date;
+        if (t.date.includes('T')) {
+          txDate = new Date(t.date);
+        } else {
+          const parts = t.date.split('-');
+          if (parts.length === 3) {
+            txDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+          } else {
+            txDate = new Date(t.date);
+          }
+        }
+        return txDate.getTime() >= prevFromTime && txDate.getTime() < prevToTime;
       }).length;
     }
 
@@ -868,10 +656,6 @@ export default function InventoryDashboard() {
       growth = Math.round(((currentCount - prevCount) / prevCount) * 100);
     } else if (currentCount > 0) {
       growth = 100;
-    } else if (currentCount === 0 && prevCount === 0) {
-      growth = 0;
-    } else if (currentCount === 0 && prevCount > 0) {
-      growth = -100;
     }
 
     const trend = [];
@@ -880,6 +664,26 @@ export default function InventoryDashboard() {
     const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const months = language === 'th' ? TH_MONTHS : EN_MONTHS;
 
+    const getProdMetrics = (dateFilter: (t: any) => boolean) => {
+      const pTxs = processedTransactions.filter(dateFilter);
+      let productAmount = 0;
+      let gpAmount = 0;
+      pTxs.forEach(tx => {
+        productAmount += tx.amount;
+        if (tx.items) {
+          tx.items.forEach((item: any) => {
+            const partner = partners.find(p => p.id === item.partnerId);
+            if (partner || item.consignmentRate) {
+              const lineTotal = item.price * (item.quantity || 1);
+              const rate = item.consignmentRate || (partner ? partner.gpRate : 0);
+              gpAmount += (lineTotal * rate) / 100;
+            }
+          });
+        }
+      });
+      return { productAmount, gpAmount };
+    };
+
     if (kpiDateRange === 'today' || kpiDateRange === 'yesterday') {
       const targetDay = kpiDateRange === 'today' ? new Date() : new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const targetDayStr = getLocalYMD(targetDay);
@@ -887,22 +691,26 @@ export default function InventoryDashboard() {
       for (let h = 8; h <= 19; h++) {
         const hourStr = h.toString().padStart(2, '0');
         const nextHourStr = (h + 1).toString().padStart(2, '0');
-        const hourTx = allKpiFilteredTransactions.filter(t => {
+        const dateFilter = (t: any) => {
           if (!t.date) return false;
           const d = new Date(t.date);
           const localHour = d.getHours();
           const localDateStr = getLocalYMD(d);
           return localDateStr === targetDayStr && localHour === h;
-        });
+        };
+        const hourTx = allKpiFilteredTransactions.filter(dateFilter);
 
         const count = hourTx.length;
         const amount = hourTx.reduce((sum, t) => sum + t.amount, 0);
+        const { productAmount, gpAmount } = getProdMetrics(dateFilter);
 
         trend.push({
           date: `${hourStr}:00 - ${nextHourStr}:00`,
           count,
           amount,
-          rawDate: targetDayStr
+          productAmount,
+          gpAmount,
+          rawDate: targetDayStr + '-' + hourStr
         });
       }
       labels = ["08:00", "11:00", "14:00", "17:00", "19:00"];
@@ -910,15 +718,19 @@ export default function InventoryDashboard() {
       for (let i = 6; i >= 0; i--) {
         const targetDate = new Date(now.getTime() - i * oneDay);
         const dateStr = getLocalYMD(targetDate);
-        const dayTransactions = allKpiFilteredTransactions.filter(t => t.date === dateStr || t.date?.startsWith(dateStr));
+        const dateFilter = (t: any) => t.date === dateStr || t.date?.startsWith(dateStr);
+        const dayTransactions = allKpiFilteredTransactions.filter(dateFilter);
         const count = dayTransactions.length;
         const amount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
+        const { productAmount, gpAmount } = getProdMetrics(dateFilter);
         const label = `${targetDate.getDate()} ${months[targetDate.getMonth()]}`;
 
         trend.push({
           date: label,
           count,
           amount,
+          productAmount,
+          gpAmount,
           rawDate: dateStr
         });
       }
@@ -941,15 +753,20 @@ export default function InventoryDashboard() {
       let currentMonthStart = new Date(cStart);
       while (currentMonthStart < cEnd) {
         const nextMonthStart = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth() + 1, 1);
-        const monthTx = allKpiFilteredTransactions.filter(t => {
+        const dateFilter = (t: any) => {
           if (!t.date) return false;
           const txDate = new Date(t.date);
           return txDate >= currentMonthStart && txDate < nextMonthStart;
-        });
+        };
+        const monthTx = allKpiFilteredTransactions.filter(dateFilter);
+        const { productAmount, gpAmount } = getProdMetrics(dateFilter);
+
         trend.push({
           date: `${months[currentMonthStart.getMonth()]} ${currentMonthStart.getFullYear() + (language === 'th' ? 543 : 0)}`,
           count: monthTx.length,
           amount: monthTx.reduce((sum, t) => sum + t.amount, 0),
+          productAmount,
+          gpAmount,
           rawDate: currentMonthStart.toISOString()
         });
         currentMonthStart = nextMonthStart;
@@ -958,16 +775,20 @@ export default function InventoryDashboard() {
     } else if (kpiDateRange === 'yearly') {
       for (let i = 11; i >= 0; i--) {
         const targetMonth = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthTx = allKpiFilteredTransactions.filter(t => {
+        const dateFilter = (t: any) => {
           if (!t.date) return false;
           const d = new Date(t.date);
           return d.getMonth() === targetMonth.getMonth() && d.getFullYear() === targetMonth.getFullYear();
-        });
+        };
+        const monthTx = allKpiFilteredTransactions.filter(dateFilter);
+        const { productAmount, gpAmount } = getProdMetrics(dateFilter);
 
         trend.push({
           date: `${months[targetMonth.getMonth()]} ${targetMonth.getFullYear() + (language === 'th' ? 543 : 0)}`,
           count: monthTx.length,
           amount: monthTx.reduce((sum, t) => sum + t.amount, 0),
+          productAmount,
+          gpAmount,
           rawDate: targetMonth.toISOString()
         });
       }
@@ -976,15 +797,19 @@ export default function InventoryDashboard() {
       for (let i = 29; i >= 0; i--) {
         const targetDate = new Date(now.getTime() - i * oneDay);
         const dateStr = getLocalYMD(targetDate);
-        const dayTransactions = allKpiFilteredTransactions.filter(t => t.date === dateStr || t.date?.startsWith(dateStr));
+        const dateFilter = (t: any) => t.date === dateStr || t.date?.startsWith(dateStr);
+        const dayTransactions = allKpiFilteredTransactions.filter(dateFilter);
         const count = dayTransactions.length;
         const amount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
+        const { productAmount, gpAmount } = getProdMetrics(dateFilter);
         const label = `${targetDate.getDate()} ${months[targetDate.getMonth()]}`;
 
         trend.push({
           date: label,
           count,
           amount,
+          productAmount,
+          gpAmount,
           rawDate: dateStr
         });
       }
@@ -994,15 +819,19 @@ export default function InventoryDashboard() {
       for (let i = 0; i < trendDays; i++) {
         const targetDate = new Date(now.getTime() - (trendDays - 1 - i) * oneDay);
         const dateStr = getLocalYMD(targetDate);
-        const dayTransactions = allKpiFilteredTransactions.filter(t => t.date === dateStr || t.date?.startsWith(dateStr));
+        const dateFilter = (t: any) => t.date === dateStr || t.date?.startsWith(dateStr);
+        const dayTransactions = allKpiFilteredTransactions.filter(dateFilter);
         const count = dayTransactions.length;
         const amount = dayTransactions.reduce((sum, t) => sum + t.amount, 0);
+        const { productAmount, gpAmount } = getProdMetrics(dateFilter);
         const label = `${targetDate.getDate()} ${months[targetDate.getMonth()]}`;
 
         trend.push({
           date: label,
           count,
           amount,
+          productAmount,
+          gpAmount,
           rawDate: dateStr
         });
       }
@@ -1016,50 +845,9 @@ export default function InventoryDashboard() {
       weeklySalesTrend: trend,
       trendLabels: labels
     };
-  }, [allKpiFilteredTransactions, transactions, language, kpiDateRange]);
+  }, [allKpiFilteredTransactions, transactions, language, kpiDateRange, processedTransactions, partners]);
 
-  const orderHistory = useMemo(() => {
-    const history = [];
-    const now = new Date();
-    const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-    const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const months = language === 'th' ? TH_MONTHS : EN_MONTHS;
 
-    for (let i = 0; i < 7; i++) {
-      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 0, 0, 0, 0);
-      const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1, 0, 0, 0, 0);
-
-      const count = transactions.filter(t => {
-        if (!t.date) return false;
-        let txDate: Date;
-        if (t.date.includes('T')) {
-          txDate = new Date(t.date);
-        } else {
-          const parts = t.date.split('-');
-          if (parts.length === 3) {
-            txDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-          } else {
-            txDate = new Date(t.date);
-          }
-        }
-        return txDate >= dayStart && txDate < dayEnd;
-      }).length;
-
-      const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const label = i === 0
-        ? (language === 'th' ? 'วันนี้' : 'Today')
-        : i === 1
-          ? (language === 'th' ? 'เมื่อวาน' : 'Yesterday')
-          : `${targetDate.getDate()} ${months[targetDate.getMonth()]}`;
-
-      history.push({
-        dateStr: `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`,
-        label,
-        count
-      });
-    }
-    return history;
-  }, [transactions, language]);
 
   // Trace actual historical Inventory Valuation trend based on stockLogs and activeInventory
   const valuationTrend = useMemo(() => {
@@ -1287,8 +1075,8 @@ export default function InventoryDashboard() {
         <div className="lg:col-span-8 flex flex-col gap-6">
           {/* Header row with Title and Filter pills */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
-            <span className="text-sm font-black text-[#18234A] uppercase tracking-wider">
-              {language === 'th' ? 'ภาพรวมการขายและผลประกอบการ' : 'Sales & Revenue Overview'}
+            <span className="text-lg font-black text-[#18234A] uppercase tracking-wider">
+              {language === 'th' ? 'ภาพรวมสต็อกสินค้าและผลประกอบการ' : 'Sales & Revenue Overview'}
             </span>
 
             {/* KPI Period Filter Pills */}
@@ -1341,11 +1129,11 @@ export default function InventoryDashboard() {
                         </button>
                       </div>
                       <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[120px] scrollbar-thin scrollbar-thumb-gray-200">
-                        {salesHistory.map((item) => (
-                          <div key={item.dateStr} className="flex justify-between items-center text-[10px] py-1 border-b border-gray-100 last:border-0">
-                            <span className="text-gray-600 font-medium">{item.label}</span>
+                        {weeklySalesTrend.slice().reverse().map((item, index) => (
+                          <div key={index} className="flex justify-between items-center text-[10px] py-1 border-b border-gray-100 last:border-0">
+                            <span className="text-gray-600 font-medium">{item.date}</span>
                             <span className="font-black text-blue-600">
-                              {item.amount < 0 ? `-${currency}${Math.abs(item.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : `${currency}${item.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                              {item.productAmount < 0 ? `-${currency}${Math.abs(item.productAmount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : `${currency}${item.productAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
                             </span>
                           </div>
                         ))}
@@ -1396,9 +1184,6 @@ export default function InventoryDashboard() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                      <DollarSign size={14} />
-                    </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1417,18 +1202,22 @@ export default function InventoryDashboard() {
               {/* Row 2: Order Received & GP ฝากขาย */}
               <div className="flex gap-6">
                 {/* Widget 3: Smartwatch Card */}
-                <div className="flex items-center justify-center z-10 w-full md:w-[200px] h-[200px] shrink-0">
-                  <div className="bg-[#0B1527] text-white p-5 rounded-[32px] w-full h-full flex flex-col justify-between shadow-[0_20px_40px_rgba(11,21,39,0.2)] relative border border-[#1E293B] group/watch hover:scale-[1.02] transition-all duration-300 overflow-hidden">
+                <motion.div
+                  variants={cardVariants}
+                  className="bg-white p-6 rounded-[32px] shadow-[0_20px_40px_rgba(24,35,74,0.02)] flex flex-col justify-between relative overflow-hidden group transition-shadow duration-300 hover:shadow-[0_30px_60px_rgba(24,35,74,0.06)] border border-gray-50 w-full md:w-[200px] h-[200px] shrink-0"
+                >
+                    <div className="absolute -top-24 -left-24 w-52 h-52 rounded-full bg-blue-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
+
                     <AnimatePresence>
                       {showOrderHistory && (
                         <motion.div
                           initial={{ opacity: 0, y: 15 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 15 }}
-                          className="absolute inset-0 bg-[#0B1527]/98 backdrop-blur-md rounded-[32px] p-5 flex flex-col z-20 border border-[#1E293B]"
+                          className="absolute inset-0 bg-white/98 backdrop-blur-md rounded-[32px] p-5 flex flex-col z-20 border border-gray-100"
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">
+                            <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">
                               {language === 'th' ? 'ประวัติออเดอร์' : 'Order History'}
                             </span>
                             <button
@@ -1436,18 +1225,18 @@ export default function InventoryDashboard() {
                                 e.stopPropagation();
                                 setShowOrderHistory(false);
                               }}
-                              className="w-5 h-5 rounded-full bg-[#1E293B] flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                              className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-800 transition-colors"
                             >
-                              <svg className="w-2.5 h-2.5 rotate-180 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-2.5 h-2.5 rotate-180 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
                               </svg>
                             </button>
                           </div>
-                          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[120px] scrollbar-thin scrollbar-thumb-gray-800">
-                            {orderHistory.map((item) => (
-                              <div key={item.dateStr} className="flex justify-between items-center text-[10px] py-1 border-b border-gray-800/40 last:border-0">
-                                <span className="text-gray-300 font-medium">{item.label}</span>
-                                <span className="font-black text-blue-400">{item.count} {language === 'th' ? 'ออเดอร์' : 'orders'}</span>
+                          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[120px] scrollbar-thin scrollbar-thumb-gray-200">
+                            {weeklySalesTrend.slice().reverse().map((item, index) => (
+                              <div key={index} className="flex justify-between items-center text-[10px] py-1 border-b border-gray-100 last:border-0">
+                                <span className="text-gray-600 font-medium">{item.date}</span>
+                                <span className="font-black text-blue-600">{item.count} {language === 'th' ? 'ออเดอร์' : 'orders'}</span>
                               </div>
                             ))}
                           </div>
@@ -1455,29 +1244,25 @@ export default function InventoryDashboard() {
                       )}
                     </AnimatePresence>
 
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-[#1E293B] flex items-center justify-center text-gray-300">
-                        <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                        </svg>
+                    <div className="z-10">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-[3px] h-5 bg-blue-400 rounded-full" />
+                        <h3 className="text-xs font-extrabold text-[#18234A] tracking-wider uppercase">
+                          {language === 'th' ? 'ออเดอร์ที่ได้รับ' : 'Order Received'}
+                        </h3>
                       </div>
-                      <div className="flex flex-col leading-none">
-                        <span className="text-[8px] font-black uppercase text-gray-400 tracking-wider">Order</span>
-                        <span className="text-[8px] font-black uppercase text-gray-400 tracking-wider">Received</span>
+                      <div className="text-3xl font-black font-sans tracking-tight text-[#18234A]">
+                        {totalOrders.toLocaleString()}
                       </div>
                     </div>
 
-                    <div className="my-1">
-                      <span className="text-5xl font-black tracking-tight font-sans">{totalOrders.toLocaleString()}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center justify-between w-full relative z-10 mt-auto">
                       <div className="flex items-center gap-2">
                         <div className={cn(
                           "w-7 h-7 rounded-full flex items-center justify-center transition-colors shrink-0",
                           orderGrowthPercent >= 0
-                            ? "bg-emerald-500/10 text-emerald-400"
-                            : "bg-rose-500/10 text-rose-400"
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-rose-50 text-rose-600"
                         )}>
                           {orderGrowthPercent >= 0 ? (
                             <TrendingUp size={14} />
@@ -1486,7 +1271,7 @@ export default function InventoryDashboard() {
                           )}
                         </div>
                         <div className="flex flex-col gap-0.5">
-                          <span className={cn("text-[10px] font-black uppercase tracking-wider leading-none", orderGrowthPercent >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                          <span className={cn("text-[10px] font-black uppercase tracking-wider leading-none", orderGrowthPercent >= 0 ? "text-emerald-600" : "text-rose-600")}>
                             {orderGrowthPercent >= 0 ? '+' : ''}{orderGrowthPercent}%
                           </span>
                           <span className="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider leading-none">
@@ -1501,7 +1286,7 @@ export default function InventoryDashboard() {
                             e.stopPropagation();
                             setShowOrderHistory(true);
                           }}
-                          className="w-7 h-7 rounded-full bg-[#1E293B] flex items-center justify-center text-gray-400 hover:text-white cursor-pointer transition-colors"
+                          className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 cursor-pointer transition-colors"
                         >
                           <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
@@ -1509,8 +1294,7 @@ export default function InventoryDashboard() {
                         </button>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
 
                 <motion.div
                   variants={cardVariants}
@@ -1543,11 +1327,11 @@ export default function InventoryDashboard() {
                           </button>
                         </div>
                         <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[120px] scrollbar-thin scrollbar-thumb-gray-200">
-                          {gpHistory.map((item) => (
-                            <div key={item.dateStr} className="flex justify-between items-center text-[10px] py-1 border-b border-gray-100 last:border-0">
-                              <span className="text-gray-600 font-medium">{item.label}</span>
+                          {weeklySalesTrend.slice().reverse().map((item, index) => (
+                            <div key={index} className="flex justify-between items-center text-[10px] py-1 border-b border-gray-100 last:border-0">
+                              <span className="text-gray-600 font-medium">{item.date}</span>
                               <span className="font-black text-purple-600">
-                                {item.amount < 0 ? `-${currency}${Math.abs(item.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : `${currency}${item.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                                {item.gpAmount < 0 ? `-${currency}${Math.abs(item.gpAmount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : `${currency}${item.gpAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
                               </span>
                             </div>
                           ))}
@@ -1766,8 +1550,8 @@ export default function InventoryDashboard() {
                 {stats.potentialRevenue > 0 && (
                   <span className={cn(
                     "text-[9px] font-black uppercase tracking-widest whitespace-nowrap",
-                    stats.totalValue > 0 && ((stats.potentialRevenue - stats.totalValue) / stats.totalValue) * 100 >= 0 
-                      ? "text-emerald-600" 
+                    stats.totalValue > 0 && ((stats.potentialRevenue - stats.totalValue) / stats.totalValue) * 100 >= 0
+                      ? "text-emerald-600"
                       : "text-rose-600"
                   )}>
                     {stats.totalValue > 0 ? Math.abs(Math.round(((stats.potentialRevenue - stats.totalValue) / stats.totalValue) * 100)) : 100}% {language === 'th' ? 'กำไรจากทุน' : 'Margin'}
@@ -1778,7 +1562,7 @@ export default function InventoryDashboard() {
           </div>
 
           {/* Widget 7: Status Capsules */}
-          <motion.div 
+          <motion.div
             variants={cardVariants}
             className="bg-white/80 backdrop-blur-2xl p-6 rounded-[3rem] border border-white/40 shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col justify-between flex-1 min-h-[250px]"
           >
@@ -1837,7 +1621,7 @@ export default function InventoryDashboard() {
                     className="bg-gray-50/50 rounded-[20px] p-3 flex flex-col justify-between items-center text-center relative group hover:shadow-md transition-all duration-300"
                   >
                     <div className="z-10 mt-1">
-                      <motion.span 
+                      <motion.span
                         initial={{ scale: 0.5, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ delay: 0.2 + idx * 0.1, type: "spring", stiffness: 200, damping: 12 }}
@@ -1895,7 +1679,6 @@ export default function InventoryDashboard() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div>
               <div className="flex items-center gap-2">
-                <TrendingUp className="text-indigo-500 w-5 h-5" />
                 <h3 className="text-xl font-bold text-[#18234A]">Inbound vs Outbound Trend</h3>
               </div>
               <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
@@ -1907,8 +1690,8 @@ export default function InventoryDashboard() {
                       ? (language === 'th' ? 'การเคลื่อนไหวของสินค้า 7 วันย้อนหลัง' : 'Product movement (last 7 days)')
                       : kpiDateRange === '30days'
                         ? (language === 'th' ? 'การเคลื่อนไหวของสินค้า 30 วันย้อนหลัง' : 'Product movement (last 30 days)')
-                        : ['q1','q2','q3','q4'].includes(kpiDateRange)
-                          ? (language === 'th' ? `การเคลื่อนไหวของสินค้าไตรมาส ${kpiDateRange.replace('q','')}` : `Product movement (${kpiDateRange.toUpperCase()})`)
+                        : ['q1', 'q2', 'q3', 'q4'].includes(kpiDateRange)
+                          ? (language === 'th' ? `การเคลื่อนไหวของสินค้าไตรมาส ${kpiDateRange.replace('q', '')}` : `Product movement (${kpiDateRange.toUpperCase()})`)
                           : kpiDateRange === 'yearly'
                             ? (language === 'th' ? 'การเคลื่อนไหวของสินค้ารายปี' : 'Product movement (yearly)')
                             : (language === 'th' ? 'การเคลื่อนไหวของสินค้าทั้งหมด' : 'All-time product movement')

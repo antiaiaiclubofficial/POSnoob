@@ -362,7 +362,7 @@ const HotelSettingsTab = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel' | '
       <div>
         <div className="flex justify-between items-center mb-[1.5rem]">
           <h2 className="text-[24px] font-bold text-[#020d35]" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
-            {serviceMode === 'daycare' ? 'แพ็กเกจฝากเลี้ยง (Day Care Packages)' : 'ห้องพักทั้งหมด'}
+            ห้องพักทั้งหมด
           </h2>
           <button 
             onClick={() => { setEditingRoom({ roomName: '', pricePerNight: 0, capacity: 1, status: 'available', isActive: true }); setIsEditingRoom(true); }}
@@ -370,12 +370,11 @@ const HotelSettingsTab = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel' | '
             style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}
           >
             <Plus size={16} />
-            {serviceMode === 'daycare' ? 'เพิ่มแพ็กเกจ' : 'เพิ่มห้องพัก'}
+            เพิ่มห้องพัก
           </button>
         </div>
 
         {/* Filter Section */}
-        {serviceMode !== 'daycare' && (
         <div className="flex gap-2 overflow-x-auto pb-4 mb-4" style={{ fontFamily: '"IBM Plex Sans Thai", sans-serif' }}>
           <button
             onClick={() => setFilterTypeId('all')}
@@ -393,7 +392,6 @@ const HotelSettingsTab = ({ serviceMode = 'hotel' }: { serviceMode?: 'hotel' | '
             </button>
           ))}
         </div>
-        )}
 
         {isEditingRoom && editingRoom && (
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
