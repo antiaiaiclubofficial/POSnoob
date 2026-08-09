@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  LayoutGrid, AlertTriangle, PlusCircle, FileText, Users, BarChart3,
+  LayoutGrid, AlertTriangle, List, PlusCircle, FileText, Users, BarChart3,
   Search, Edit3, Package, Download, Save, Trash2,
   DollarSign, PieChart as PieIcon, LineChart as LineIcon, BarChart as BarIcon,
   ChevronRight, Camera, CheckCircle2, Plus, Tag, Building2, Filter,
@@ -58,8 +58,8 @@ const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
-  const [checkSearch, setCheckSearch] = useState('');
-  const [checkStatusFilter, setCheckStatusFilter] = useState<'All' | 'Low' | 'Out'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Low' | 'Out'>('All');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [adjustSearch, setAdjustSearch] = useState('');
   const [selectedAdjustId, setSelectedAdjustId] = useState('');
   const [adjustMode, setAdjustMode] = useState<'Add' | 'Set'>('Add');
@@ -91,8 +91,7 @@ const Inventory = () => {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'master', label: 'สินค้าทั้งหมด', icon: LayoutGrid },
-    { id: 'check', label: 'เช็คสต็อก/แจ้งเตือน', icon: AlertTriangle },
+    { id: 'master', label: 'จัดการสินค้า/สต็อก', icon: LayoutGrid },
     { id: 'adjust', label: 'เติม/ปรับยอด', icon: PlusCircle },
     { id: 'report', label: 'เอกสาร', icon: FileText },
     { id: 'consignment', label: 'คู่ค้าฝากขาย', icon: Users },
@@ -105,18 +104,11 @@ const Inventory = () => {
       const matchesSearch = i.name.toLowerCase().includes(searchQuery.toLowerCase()) || i.barcode?.includes(searchQuery);
       const matchesCategory = !categoryFilter || i.category === categoryFilter;
       const matchesPartner = !partnerFilter || i.partnerId === partnerFilter;
-      return matchesSearch && matchesCategory && matchesPartner;
-    });
-  }, [inventory, searchQuery, categoryFilter, partnerFilter]);
-
-  const filteredCheckItems = useMemo(() => {
-    return inventory.filter(i => {
-      const matchesSearch = i.name.toLowerCase().includes(checkSearch.toLowerCase()) || i.barcode?.includes(checkSearch);
       const status = i.stock === 0 ? 'Out' : i.stock <= i.minStock ? 'Low' : 'OK';
-      const matchesStatus = checkStatusFilter === 'All' || status === checkStatusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesStatus = statusFilter === 'All' || status === statusFilter;
+      return matchesSearch && matchesCategory && matchesPartner && matchesStatus;
     });
-  }, [inventory, checkSearch, checkStatusFilter]);
+  }, [inventory, searchQuery, categoryFilter, partnerFilter, statusFilter]);
 
   const adjustSearchItems = useMemo(() => {
     if (!adjustSearch) return [];
@@ -528,21 +520,38 @@ const Inventory = () => {
         </div>
       </header>
 
-      <div className="flex-1 p-10">
+      <div className="flex-1 p-10 flex flex-col">
         {activeTab === 'dashboard' && (
           <InventoryDashboard />
         )}
 
         {activeTab === 'master' && (
-          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
-            <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-4 sticky top-0 z-30">
+          <div className="flex-1 flex flex-col space-y-8 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm space-y-4 sticky top-0 z-30 shrink-0">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1 w-full">
                   <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-gray-400 px-2">ค้นหาสินค้า</label><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-2.5 text-sm font-bold shadow-inner" placeholder="ค้นหา..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>
                   <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-gray-400 px-2">หมวดหมู่</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-2.5 text-sm font-bold shadow-inner appearance-none" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}><option value="">ทั้งหมด</option>{categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}</select></div>
                   <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-gray-400 px-2">คู่ค้า</label><select className="w-full bg-[#F5F6FA] border-none rounded-2xl px-5 py-2.5 text-sm font-bold shadow-inner appearance-none" value={partnerFilter} onChange={e => setPartnerFilter(e.target.value)}><option value="">ทั้งหมด</option>{partners.map(p => <option key={p.id} value={p.id}>{p.companyName}</option>)}</select></div>
+                  <div className="space-y-1.5"><label className="text-[10px] font-black uppercase text-gray-400 px-2">สถานะสต็อก</label>
+                    <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1 h-[40px]">
+                      {(['All', 'Low', 'Out'] as const).map(status => (
+                        <button key={status} onClick={() => setStatusFilter(status)} className={cn("flex-1 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", statusFilter === status ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:bg-gray-100")}>
+                          {status === 'All' ? 'ทั้งหมด' : status === 'Low' ? 'สต็อกต่ำ' : 'หมด'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:w-auto">
+                  <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1 shrink-0 h-[48px] self-start sm:self-auto w-full sm:w-auto">
+                    <button onClick={() => setViewMode('list')} className={cn("flex-1 sm:flex-none px-4 rounded-xl transition-all flex items-center justify-center", viewMode === 'list' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:bg-gray-100")}>
+                      <List size={18} />
+                    </button>
+                    <button onClick={() => setViewMode('grid')} className={cn("flex-1 sm:flex-none px-4 rounded-xl transition-all flex items-center justify-center", viewMode === 'grid' ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:bg-gray-100")}>
+                      <LayoutGrid size={18} />
+                    </button>
+                  </div>
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -571,15 +580,18 @@ const Inventory = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
+            
+            <div className="flex-1 bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden p-4 flex flex-col">
+              {viewMode === 'list' ? (
+                <div className="flex-1 overflow-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50/50">
                       <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400">SKU</th>
                       <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400">สินค้า</th>
                       <th className="px-8 py-6 text-center text-[10px] font-black uppercase text-gray-400">ราคาขาย</th>
-                      <th className="px-8 py-6 text-center text-[10px] font-black uppercase text-gray-400">สต็อก</th>
+                      <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400">สต็อก</th>
+                      <th className="px-8 py-6 text-left text-[10px] font-black uppercase text-gray-400">ชั้นวาง</th>
                       <th className="px-8 py-6 text-center text-[10px] font-black uppercase text-gray-400">ต้นทุนเฉลี่ย</th>
                       <th className="px-8 py-6 text-center text-[10px] font-black uppercase text-gray-400">ต้นทุนทั้งหมด</th>
                       <th className="px-8 py-6 text-center text-[10px] font-black uppercase text-gray-400">สถานะ Reorder</th>
@@ -611,6 +623,9 @@ const Inventory = () => {
                         </td>
                         <td className="px-8 py-6 text-center text-sm font-black">฿{item.price.toLocaleString()}</td>
                         <td className="px-8 py-6 text-center font-black text-blue-600">{item.stock} {item.unit}</td>
+                        <td className="px-8 py-6 text-left">
+                          <p className="text-xs font-bold text-gray-500">{item.shelf || '-'}</p>
+                        </td>
                         <td className="px-8 py-6 text-center text-sm font-black text-gray-600">
                           ฿{(item.costPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
@@ -652,24 +667,15 @@ const Inventory = () => {
                   </tbody>
                 </table>
               </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'check' && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-30">
-              <div className="flex-1 w-full relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} /><input className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-2.5 text-sm font-bold shadow-inner" placeholder="ค้นหาสินค้าเพื่อเช็คสต็อก..." value={checkSearch} onChange={e => setCheckSearch(e.target.value)} /></div>
-              <div className="flex bg-[#F5F6FA] p-1 rounded-2xl gap-1 shrink-0">{(['All', 'Low', 'Out'] as const).map(status => (<button key={status} onClick={() => setCheckStatusFilter(status)} className={cn("px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", checkStatusFilter === status ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400")}>{status === 'All' ? 'ทั้งหมด' : status === 'Low' ? 'สต็อกต่ำ' : 'สินค้าหมด'}</button>))}</div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredCheckItems.map(item => {
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {filteredInventory.map(item => {
                 const status = item.stock === 0 ? 'Out' : item.stock <= item.minStock ? 'Low' : 'OK';
                 return (
                   <div
                     key={item.id}
                     className={cn(
-                      "p-5 rounded-[24px] border transition-all group hover:shadow-xl relative overflow-hidden",
+                      "p-4 rounded-[20px] border transition-all group hover:shadow-xl relative overflow-hidden aspect-[4/3] flex flex-col",
                       status === 'Out' ? "bg-red-50/40 border-red-100/80 hover:border-red-200" :
                         status === 'Low' ? "bg-amber-50/40 border-amber-100/80 hover:border-amber-200" :
                           "bg-emerald-50/20 border-emerald-100/60 hover:border-emerald-200"
@@ -683,9 +689,9 @@ const Inventory = () => {
                           "bg-emerald-500"
                     )} />
 
-                    <div className="flex justify-between items-start mb-4 relative z-10">
+                    <div className="flex justify-between items-start mb-3 relative z-10 shrink-0">
                       <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
+                        "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm shrink-0",
                         status === 'Out' ? "bg-red-100 text-red-700" :
                           status === 'Low' ? "bg-amber-100 text-amber-700" :
                             "bg-emerald-100 text-emerald-700"
@@ -702,9 +708,9 @@ const Inventory = () => {
                       </div>
                     </div>
 
-                    <h3 className="text-sm font-black text-[#1A1F3D] mb-0.5 line-clamp-1 relative z-10">{item.name}</h3>
+                    <h3 className="text-lg font-black text-[#1A1F3D] mb-0.5 line-clamp-1 relative z-10 shrink-0">{item.name}</h3>
 
-                    <div className="flex items-center gap-2 mb-4 relative z-10">
+                    <div className="flex flex-wrap items-center gap-2 mb-2 relative z-10 shrink-0">
                       <p className={cn(
                         "text-[9px] font-black uppercase tracking-widest",
                         status === 'Out' ? "text-red-600/80" :
@@ -721,9 +727,14 @@ const Inventory = () => {
                       )}>
                         {item.isConsignment ? "ฝากขาย" : "ขายเอง"}
                       </span>
+                      {item.shelf && (
+                        <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full border bg-[#F5F6FA] text-gray-600 border-gray-200 flex items-center gap-1">
+                           Shelf: {item.shelf}
+                        </span>
+                      )}
                     </div>
 
-                    <div className="space-y-3 relative z-10">
+                    <div className="space-y-2 relative z-10 mt-auto">
                       <div className="flex justify-between items-end">
                         <div>
                           <p className={cn(
@@ -735,12 +746,12 @@ const Inventory = () => {
                             Current Balance
                           </p>
                           <p className={cn(
-                            "text-xl font-black",
+                            "text-3xl font-black",
                             status === 'Out' ? "text-red-950" :
                               status === 'Low' ? "text-amber-950" :
                                 "text-emerald-950"
                           )}>
-                            {item.stock} <span className="text-[10px] opacity-60">{item.unit}</span>
+                            {item.stock} <span className="text-xs opacity-60">{item.unit}</span>
                           </p>
                         </div>
                         <div className="text-right">
@@ -753,7 +764,7 @@ const Inventory = () => {
                             Min. Required
                           </p>
                           <p className={cn(
-                            "text-xs font-black",
+                            "text-base font-black",
                             status === 'Out' ? "text-red-900" :
                               status === 'Low' ? "text-amber-900" :
                                 "text-emerald-900"
@@ -764,7 +775,7 @@ const Inventory = () => {
                       </div>
 
                       <div className={cn(
-                        "pt-3 border-t flex gap-2",
+                        "pt-2 border-t flex gap-2",
                         status === 'Out' ? "border-red-100" :
                           status === 'Low' ? "border-amber-100" :
                             "border-emerald-100"
@@ -800,8 +811,10 @@ const Inventory = () => {
                 );
               })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      </div>
+    )}
 
         {activeTab === 'adjust' && (
           <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 animate-in slide-in-from-bottom-4 duration-300">

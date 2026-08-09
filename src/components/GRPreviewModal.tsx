@@ -102,6 +102,7 @@ const GRPreviewModal: React.FC<GRPreviewModalProps> = ({ previewGR, onClose }) =
                   <tr className="bg-black text-white text-[10px]">
                     <th className="border border-black p-2 font-normal w-12">เลขที่<br />No.</th>
                     <th className="border border-black p-2 font-normal text-left">รายการ<br />Description</th>
+                    <th className="border border-black p-2 font-normal w-16">ชั้นวาง<br />Shelf</th>
                     <th className="border border-black p-2 font-normal w-16">จำนวนสั่ง<br />Expected</th>
                     <th className="border border-black p-2 font-normal w-16">จำนวนรับ<br />Received</th>
                     <th className="border border-black p-2 font-normal w-24">ราคา/หน่วย<br />Unit Price</th>
@@ -113,6 +114,7 @@ const GRPreviewModal: React.FC<GRPreviewModalProps> = ({ previewGR, onClose }) =
                     <tr key={idx} className="text-[10px]">
                       <td className="border-l border-r border-black p-2 text-center align-top">{idx + 1}</td>
                       <td className="border-l border-r border-black p-2 align-top">{item.productName} {item.remarks && <span className="text-gray-500 block">หมายเหตุ: {item.remarks}</span>}</td>
+                      <td className="border-l border-r border-black p-2 text-center align-top font-bold text-gray-500">{item.shelf || '-'}</td>
                       <td className="border-l border-r border-black p-2 text-center align-top text-gray-500">{item.quantityExpected}</td>
                       <td className="border-l border-r border-black p-2 text-center align-top font-bold">{item.quantityReceived}</td>
                       <td className="border-l border-r border-black p-2 text-right align-top">{item.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -123,6 +125,7 @@ const GRPreviewModal: React.FC<GRPreviewModalProps> = ({ previewGR, onClose }) =
                   {Array.from({ length: Math.max(0, 5 - previewGR.items.length) }).map((_, i) => (
                     <tr key={`empty-${i}`}>
                       <td className="border-l border-r border-black p-2 text-center text-transparent">.</td>
+                      <td className="border-l border-r border-black p-2 text-transparent">.</td>
                       <td className="border-l border-r border-black p-2 text-transparent">.</td>
                       <td className="border-l border-r border-black p-2 text-transparent">.</td>
                       <td className="border-l border-r border-black p-2 text-transparent">.</td>

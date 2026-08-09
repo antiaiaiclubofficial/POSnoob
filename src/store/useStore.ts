@@ -439,6 +439,7 @@ export const useStore = create<AppState>()((set, get) => ({
         unit: item.unit || 'ชิ้น',
         category: item.category || 'ทั่วไป',
         image_url: item.image || '',
+        shelf: item.shelf || null,
         is_consignment: item.isConsignment || false,
         partner_id: item.partnerId || null,
         consignment_rate: item.consignmentRate || item.consignment_rate || resolvedRate || 0,
@@ -487,6 +488,7 @@ export const useStore = create<AppState>()((set, get) => ({
         unit: item.unit,
         category: item.category,
         image_url: item.image,
+        shelf: item.shelf || null,
         is_consignment: item.isConsignment,
         partner_id: item.partnerId || null,
         consignment_rate: item.consignmentRate || item.consignment_rate || resolvedRate || 0

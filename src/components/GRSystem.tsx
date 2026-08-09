@@ -88,15 +88,19 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
     if (po) {
       setSelectedPartnerId(po.partnerId);
       setVendorInputMode('system');
-      setGrItems(po.items.map(item => ({
-        productId: item.productId,
-        productName: item.productName,
-        quantityExpected: item.quantity,
-        quantityReceived: item.quantity, // Default to receiving all expected
-        unitPrice: item.unitPrice,
-        total: item.quantity * item.unitPrice,
-        remarks: ''
-      })));
+      setGrItems(po.items.map(item => {
+        const invItem = inventory.find(inv => inv.id === item.productId);
+        return {
+          productId: item.productId,
+          productName: item.productName,
+          quantityExpected: item.quantity,
+          quantityReceived: item.quantity, // Default to receiving all expected
+          unitPrice: item.unitPrice,
+          total: item.quantity * item.unitPrice,
+          remarks: '',
+          shelf: invItem?.shelf || ''
+        };
+      }));
     } else {
       setGrItems([]);
     }
@@ -160,6 +164,7 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
       });
       return;
     } else {
+      const invItem = inventory.find(inv => inv.id === productId);
       setGrItems([...grItems, {
         productId: productId,
         productName: productName,
@@ -167,7 +172,8 @@ const GRSystem: React.FC<GRSystemProps> = ({ initialView = 'list', onViewChange 
         quantityReceived: qty,
         unitPrice: price,
         total: qty * price,
-        remarks: ''
+        remarks: '',
+        shelf: invItem?.shelf || ''
       }]);
     }
 

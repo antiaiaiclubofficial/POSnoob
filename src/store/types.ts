@@ -136,6 +136,7 @@ export interface InventoryItem {
   partnerId?: string;
   consignmentRate?: number;
   fifoBatches?: FifoBatch[];
+  shelf?: string;
 }
 
 export interface Partner {
@@ -205,6 +206,7 @@ export interface GoodsReceiptItem {
   unitPrice: number;
   total: number;
   remarks?: string;
+  shelf?: string;
 }
 
 export interface GoodsReceipt {

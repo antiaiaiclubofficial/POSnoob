@@ -30,7 +30,8 @@ const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment 
     category: 'ทั่วไป',
     image: '',
     isConsignment: defaultIsConsignment !== undefined ? defaultIsConsignment : !!initialPartnerId,
-    partnerId: initialPartnerId || ''
+    partnerId: initialPartnerId || '',
+    shelf: ''
   });
 
   useEffect(() => {
@@ -46,7 +47,8 @@ const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment 
         category: item.category,
         image: item.image || '',
         isConsignment: item.isConsignment,
-        partnerId: item.partnerId || ''
+        partnerId: item.partnerId || '',
+        shelf: item.shelf || ''
       });
     }
   }, [item]);
@@ -159,6 +161,10 @@ const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment 
                  <label className={labelClasses}><Layers size={12}/> บาร์โค้ด / รหัสสินค้า</label>
                  <input className={inputClasses} value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} placeholder="Scan or Type..." />
               </div>
+           </div>
+
+           {/* Section 2.5: Category, Unit, Shelf */}
+           <div className="grid grid-cols-3 gap-6">
               <div className="space-y-2">
                  <label className={labelClasses}><Tag size={12}/> หมวดหมู่</label>
                  <input className={inputClasses} value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} placeholder="เช่น อาหาร, แชมพู" />
@@ -166,6 +172,10 @@ const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment 
               <div className="space-y-2">
                  <label className={labelClasses}><Layers size={12}/> หน่วยนับ</label>
                  <input className={inputClasses} value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} placeholder="ชิ้น, ขวด..." />
+              </div>
+              <div className="space-y-2">
+                 <label className={labelClasses}><Package size={12}/> ชั้นวาง (Shelf)</label>
+                 <input className={inputClasses} value={formData.shelf} onChange={e => setFormData({...formData, shelf: e.target.value})} placeholder="เช่น A1, ชั้น 2 (ไม่บังคับ)" />
               </div>
            </div>
 

@@ -1926,6 +1926,7 @@ export default function InventoryDashboard() {
               <tr className="bg-[#F9F9F9] border-none text-[10px] font-black text-gray-400 uppercase tracking-widest">
                 <th className="px-8 py-5">ชื่อสินค้า</th>
                 <th className="px-6 py-5">หมวดหมู่</th>
+                <th className="px-6 py-5">ชั้นวาง</th>
                 <th className="px-6 py-5 text-center">คงเหลือ / ขั้นต่ำ</th>
                 <th className="px-6 py-5 text-right">ราคาต้นทุน</th>
                 <th className="px-6 py-5 text-center">ประเภทสินค้า</th>
@@ -1956,6 +1957,13 @@ export default function InventoryDashboard() {
                       <td className="px-6 py-5">
                         <span className="text-xs font-bold text-gray-500 bg-[#F3F3F3] px-2.5 py-1 rounded-xl">
                           {item.category}
+                        </span>
+                      </td>
+
+                      {/* Shelf */}
+                      <td className="px-6 py-5">
+                        <span className="text-xs font-bold text-gray-500">
+                          {item.shelf || '-'}
                         </span>
                       </td>
 

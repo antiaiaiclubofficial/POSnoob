@@ -569,6 +569,7 @@ const AuthInitializer = () => {
               unit: p.unit || 'ชิ้น',
               category: p.category || 'ทั่วไป',
               image: p.image_url || '',
+              shelf: p.shelf || '',
               isConsignment: p.is_consignment || false,
               partnerId: p.partner_id || '',
               consignmentRate: Number(p.consignment_rate || 0),
