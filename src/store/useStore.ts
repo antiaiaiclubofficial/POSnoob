@@ -94,12 +94,7 @@ export const useStore = create<AppState>()((set, get) => ({
       deductionPresets: [],
     },
   },
-  tierRules: [
-    { level: 'Standard', label: 'Standard', minSpent: 0, discount: 0 },
-    { level: 'Silver', label: 'Silver', minSpent: 5000, discount: 5 },
-    { level: 'Gold', label: 'Gold', minSpent: 15000, discount: 10 },
-    { level: 'VIP', label: 'VIP', minSpent: 30000, discount: 15 }
-  ],
+  tierRules: [],
   cart: [],
   prCart: [],
   heldBills: [],
@@ -1436,9 +1431,71 @@ export const useStore = create<AppState>()((set, get) => ({
     set(s => ({ roles: s.roles.filter(r => r.id !== id) }));
   },
 
-  addPackageTemplate: (pkg) => set(s => ({ packageTemplates: [...s.packageTemplates, { ...pkg, id: Math.random().toString() }] })),
-  updatePackageTemplate: (id, pkg) => set(s => ({ packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p) })),
-  deletePackageTemplate: (id) => set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) })),
+  addPackageTemplate: async (pkg) => {
+    const currentStoreId = get().storeId;
+    const { data, error } = await supabase.from('package_templates').insert([{
+      store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+      title: pkg.name,
+      total_sessions: (pkg.paidSlots || 0) + (pkg.freeSlots || 0),
+      service_id: pkg.serviceId || null,
+      paid_slots: pkg.paidSlots || 0,
+      free_slots: pkg.freeSlots || 0,
+      price: pkg.price || 0,
+      bonus_type: pkg.bonusType || 'none',
+      bonus_name: pkg.bonusName || null,
+      bonus_count: pkg.bonusCount || 1,
+    }]).select().single();
+    
+    if (error) {
+      console.error("Error adding package template:", error);
+      toast.error("Failed to save bundle");
+      return;
+    }
+    
+    const newTemplate = {
+      id: data.id,
+      name: data.title || data.name,
+      serviceId: data.service_id,
+      paidSlots: data.paid_slots,
+      freeSlots: data.free_slots,
+      price: Number(data.price),
+      bonusType: data.bonus_type,
+      bonusName: data.bonus_name,
+      bonusCount: data.bonus_count
+    };
+    
+    set(s => ({ packageTemplates: [...s.packageTemplates, newTemplate] }));
+  },
+  updatePackageTemplate: async (id, pkg) => {
+    const { error } = await supabase.from('package_templates').update({
+      title: pkg.name,
+      total_sessions: (pkg.paidSlots || 0) + (pkg.freeSlots || 0),
+      service_id: pkg.serviceId || null,
+      paid_slots: pkg.paidSlots,
+      free_slots: pkg.freeSlots,
+      price: pkg.price,
+      bonus_type: pkg.bonusType,
+      bonus_name: pkg.bonusName,
+      bonus_count: pkg.bonusCount
+    }).eq('id', id);
+    
+    if (error) {
+      console.error("Error updating package template:", error);
+      toast.error("Failed to update bundle");
+      return;
+    }
+    
+    set(s => ({ packageTemplates: s.packageTemplates.map(p => p.id === id ? { ...p, ...pkg } : p) }));
+  },
+  deletePackageTemplate: async (id) => {
+    const { error } = await supabase.from('package_templates').delete().eq('id', id);
+    if (error) {
+      console.error("Error deleting package template:", error);
+      toast.error("Failed to delete bundle");
+      return;
+    }
+    set(s => ({ packageTemplates: s.packageTemplates.filter(p => p.id !== id) }));
+  },
   assignPackageToCustomer: (customerId, templateId) => {
     const template = get().packageTemplates.find(t => t.id === templateId);
     if (!template) return;
@@ -1468,18 +1525,78 @@ export const useStore = create<AppState>()((set, get) => ({
     });
   },
 
-  addCreditPackage: (pkg) => set(s => ({ creditPackages: [...s.creditPackages, { ...pkg, id: Math.random().toString() }] })),
-  updateCreditPackage: (id, pkg) => set(s => ({ creditPackages: s.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p) })),
-  deleteCreditPackage: (id) => set(s => ({ creditPackages: s.creditPackages.filter(p => p.id !== id) })),
-  buyCreditPackage: (customerId, packageId) => {
+  addCreditPackage: async (pkg) => {
+    const currentStoreId = get().storeId;
+    const { data, error } = await supabase.from('credit_packages').insert([{
+      store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+      name: pkg.name,
+      price: pkg.price,
+      credit_value: pkg.creditValue
+    }]).select().single();
+
+    if (error) {
+      console.error("Error adding credit package:", error);
+      toast.error("Failed to save credit package");
+      return;
+    }
+    
+    const newPkg = {
+      id: data.id,
+      name: data.name,
+      price: Number(data.price),
+      creditValue: Number(data.credit_value)
+    };
+    
+    set(s => ({ creditPackages: [...s.creditPackages, newPkg] }));
+  },
+  updateCreditPackage: async (id, pkg) => {
+    const { error } = await supabase.from('credit_packages').update({
+      name: pkg.name,
+      price: pkg.price,
+      credit_value: pkg.creditValue
+    }).eq('id', id);
+
+    if (error) {
+      console.error("Error updating credit package:", error);
+      toast.error("Failed to update credit package");
+      return;
+    }
+    
+    set(s => ({ creditPackages: s.creditPackages.map(p => p.id === id ? { ...p, ...pkg } : p) }));
+  },
+  deleteCreditPackage: async (id) => {
+    const { error } = await supabase.from('credit_packages').delete().eq('id', id);
+    if (error) {
+      console.error("Error deleting credit package:", error);
+      toast.error("Failed to delete credit package");
+      return;
+    }
+    set(s => ({ creditPackages: s.creditPackages.filter(p => p.id !== id) }));
+  },
+  buyCreditPackage: async (customerId, packageId) => {
     const pkg = get().creditPackages.find(p => p.id === packageId);
     if (!pkg) return;
+
+    const customer = get().customers.find(c => c.id === customerId);
+    if (!customer) return;
+
+    const prevBalance = customer.creditBalance || 0;
+    const newBalance = prevBalance + pkg.creditValue;
+
+    const { error } = await supabase
+      .from('customers')
+      .update({ credit_balance: newBalance })
+      .eq('id', customerId);
+
+    if (error) {
+      console.error("Error updating credit balance:", error);
+      toast.error("Failed to update credit balance in database");
+      return;
+    }
 
     set(s => ({
       customers: s.customers.map(c => {
         if (c.id !== customerId) return c;
-        const prevBalance = c.creditBalance || 0;
-        const newBalance = prevBalance + pkg.creditValue;
         return {
           ...c,
           creditBalance: newBalance,
@@ -1494,7 +1611,21 @@ export const useStore = create<AppState>()((set, get) => ({
             }
           ]
         };
-      })
+      }),
+      selectedOwner: s.selectedOwner?.id === customerId ? {
+        ...s.selectedOwner,
+        creditBalance: newBalance,
+        creditHistory: [
+          ...(s.selectedOwner.creditHistory || []),
+          {
+            id: `cr-${Date.now()}`,
+            date: format(new Date(), 'yyyy-MM-dd'),
+            amount: pkg.creditValue,
+            type: 'Top-up',
+            description: `Purchased ${pkg.name}`
+          }
+        ]
+      } : s.selectedOwner
     }));
   },
 
@@ -1633,6 +1764,23 @@ export const useStore = create<AppState>()((set, get) => ({
           newCreditBalance = Math.max(0, newCreditBalance - total);
         }
 
+        // Add credit balance if purchasing credit packages
+        let addedCreditValue = 0;
+        for (const item of items) {
+          if (item.type === 'Credit') {
+            if (item.creditValue) {
+               addedCreditValue += item.creditValue * item.quantity;
+            } else if (item.id.startsWith('credit-')) {
+               const pkgId = item.id.replace('credit-', '');
+               const pkg = get().creditPackages.find(p => p.id === pkgId);
+               if (pkg) {
+                 addedCreditValue += pkg.creditValue * item.quantity;
+               }
+            }
+          }
+        }
+        newCreditBalance += addedCreditValue;
+
         // Deduct package slots if payment method is Package
         let updatedPackages = [...(customer.packages || [])];
         if (method === 'Package' && details.packageId) {
@@ -1665,6 +1813,17 @@ export const useStore = create<AppState>()((set, get) => ({
 
         if (updateError) {
           console.error("Error updating customer points:", updateError);
+        }
+
+        const { error: creditError } = await supabase
+          .from('customers')
+          .update({
+            credit_balance: newCreditBalance
+          })
+          .eq('id', customerId);
+
+        if (creditError) {
+          console.error("Error updating credit balance:", creditError);
         }
 
         // Update local state
@@ -1758,6 +1917,10 @@ export const useStore = create<AppState>()((set, get) => ({
         remarks: `Auto-generated from POS`
       });
     }
+
+    if (customerId && customerId !== 'walk-in' && customerId !== 'walk-id') {
+      await get().recalculateCustomerTier(customerId);
+    }
   },
 
   deleteTransaction: async (id) => {
@@ -1814,6 +1977,23 @@ export const useStore = create<AppState>()((set, get) => ({
           newCreditBalance += transaction.amount;
         }
 
+        // Revert added credit if the voided transaction included credit packages
+        let revertedCreditValue = 0;
+        for (const item of transaction.items) {
+          if (item.type === 'Credit') {
+            if (item.creditValue) {
+              revertedCreditValue += item.creditValue * item.quantity;
+            } else if (item.id.startsWith('credit-')) {
+              const pkgId = item.id.replace('credit-', '');
+              const pkg = get().creditPackages.find(p => p.id === pkgId);
+              if (pkg) {
+                revertedCreditValue += pkg.creditValue * item.quantity;
+              }
+            }
+          }
+        }
+        newCreditBalance = Math.max(0, newCreditBalance - revertedCreditValue);
+
         if (transaction.paymentMethod === 'Package' && transaction.details?.packageId) {
           updatedPackages = updatedPackages.map(pkg => {
             if (pkg.id === transaction.details.packageId) {
@@ -1836,6 +2016,15 @@ export const useStore = create<AppState>()((set, get) => ({
           .update({ points: newPoints })
           .eq('customer_id', customerId)
           .eq('store_id', currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null);
+
+        const { error: creditError } = await supabase
+          .from('customers')
+          .update({ credit_balance: newCreditBalance })
+          .eq('id', customerId);
+
+        if (creditError) {
+          console.error("Error reverting credit balance:", creditError);
+        }
 
         if (!updateError) {
           set(state => ({
@@ -1900,6 +2089,71 @@ export const useStore = create<AppState>()((set, get) => ({
           : e
       )
     }));
+
+    if (transaction.customerId && transaction.customerId !== 'walk-in' && transaction.customerId !== 'walk-id') {
+      await get().recalculateCustomerTier(transaction.customerId);
+    }
+  },
+
+  recalculateCustomerTier: async (customerId) => {
+    if (!customerId || customerId === 'walk-in' || customerId === 'walk-id') return;
+    
+    // 1. Fetch total sum of completed transactions
+    const { data: txData, error: txError } = await supabase
+      .from('sales_transactions')
+      .select('amount')
+      .eq('customer_id', customerId)
+      .neq('status', 'voided');
+
+    if (txError) {
+      console.error("Error fetching transactions for tier recalculation:", txError);
+      return;
+    }
+
+    const totalSpent = (txData || []).reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+    // 2. Fetch tier rules
+    const tierRules = get().tierRules || [];
+    if (!tierRules || tierRules.length === 0) return;
+
+    // 3. Find the highest qualifying tier
+    let newTier = 'Standard';
+    let maxMinSpent = -1;
+    for (const rule of tierRules) {
+      if (totalSpent >= rule.minSpent && rule.minSpent > maxMinSpent) {
+        newTier = rule.level;
+        maxMinSpent = rule.minSpent;
+      }
+    }
+
+    // 4. Get current tier
+    const customer = get().customers.find(c => c.id === customerId);
+    if (!customer) return;
+    
+    if (customer.membership !== newTier) {
+      // 5. Update Supabase
+      const currentStoreId = get().storeId;
+      const { error: updateError } = await supabase
+        .from('store_customers')
+        .update({ tier: newTier })
+        .eq('customer_id', customerId)
+        .eq('store_id', currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null);
+
+      if (updateError) {
+        console.error("Error updating customer tier:", updateError);
+        return;
+      }
+
+      // 6. Update local state
+      set(state => ({
+        customers: state.customers.map(c => 
+          c.id === customerId ? { ...c, membership: newTier as any } : c
+        ),
+        selectedOwner: state.selectedOwner?.id === customerId ? {
+          ...state.selectedOwner, membership: newTier as any
+        } : state.selectedOwner
+      }));
+    }
   },
 
   updateStaffSettings: async (settings) => {

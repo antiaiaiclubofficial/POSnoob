@@ -404,6 +404,7 @@ export interface PackageTemplate {
   bonusType?: 'none' | 'recurring' | 'limited';
   bonusName?: string;
   bonusCount?: number;
+  isActive?: boolean;
 }
 
 export interface CreditPackageTemplate {
@@ -411,6 +412,7 @@ export interface CreditPackageTemplate {
   name: string;
   price: number;
   creditValue: number;
+  isActive?: boolean;
 }
 
 // App State Interface
@@ -543,6 +545,7 @@ export interface AppState {
   processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean, redeemedPoints?: number, subtotal?: number, vatAmount?: number, vatRate?: number) => Promise<any>;
   deleteTransaction: (id: string) => void;
   voidTransaction: (id: string, reason: string) => Promise<void>;
+  recalculateCustomerTier: (customerId: string) => Promise<void>;
   holdBill: (customerId: string, customerName: string, items: any[]) => void;
   removeHeldBill: (id: string) => void;
   setHeldBills: (bills: HeldBill[]) => void;
@@ -606,15 +609,15 @@ export interface AppState {
   updateRole: (id: string, role: Partial<Omit<Role, 'id' | 'created_at'>>) => Promise<void>;
   deleteRole: (id: string) => Promise<void>;
 
-  addPackageTemplate: (pkg: any) => void;
-  updatePackageTemplate: (id: string, pkg: any) => void;
-  deletePackageTemplate: (id: string) => void;
+  addPackageTemplate: (pkg: any) => Promise<void>;
+  updatePackageTemplate: (id: string, pkg: any) => Promise<void>;
+  deletePackageTemplate: (id: string) => Promise<void>;
   assignPackageToCustomer: (customerId: string, templateId: string) => void;
 
-  addCreditPackage: (pkg: any) => void;
-  updateCreditPackage: (id: string, pkg: any) => void;
-  deleteCreditPackage: (id: string) => void;
-  buyCreditPackage: (customerId: string, packageId: string) => void;
+  addCreditPackage: (pkg: any) => Promise<void>;
+  updateCreditPackage: (id: string, pkg: any) => Promise<void>;
+  deleteCreditPackage: (id: string) => Promise<void>;
+  buyCreditPackage: (customerId: string, packageId: string) => Promise<void>;
 
   // Staff Settings
   staffSettings: StaffSettings;

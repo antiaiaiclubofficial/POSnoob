@@ -302,6 +302,8 @@ const AuthInitializer = () => {
             district,
             province,
             postal_code,
+            credit_balance,
+            points,
             store_customers!inner (
               points,
               tier,
@@ -346,9 +348,9 @@ const AuthInitializer = () => {
               lineId: c.line_user_id || '',
               avatarUrl: c.avatar_url || '',
               membership: storeCustomer.tier || 'Standard',
-              points: storeCustomer.points || 0,
+              points: c.points || storeCustomer.points || 0,
               totalSpent: 0,
-              creditBalance: 0,
+              creditBalance: c.credit_balance || 0,
               gender: c.gender || 'Male',
               age: c.age || '',
               houseNo: c.house_no || '',
@@ -666,7 +668,7 @@ const AuthInitializer = () => {
         if (packageData) {
           const formattedPackages = packageData.map(p => ({
             id: p.id,
-            name: p.name,
+            name: p.title || p.name,
             serviceId: p.service_id,
             paidSlots: p.paid_slots || 0,
             freeSlots: p.free_slots || 0,
@@ -707,9 +709,12 @@ const AuthInitializer = () => {
 
       // 9. Fetch Tier Rules
       try {
-        const { data: tiersData } = await supabase
-          .from('membership_tiers')
-          .select('*');
+        let tiersQuery = supabase.from('membership_tiers').select('*');
+        if (storeId && storeId !== 'default-store') {
+          tiersQuery = tiersQuery.eq('store_id', storeId);
+        }
+        
+        const { data: tiersData } = await tiersQuery;
         if (tiersData && tiersData.length > 0) {
           const formattedTiers = tiersData.map(t => ({
             level: (t.tier_key.charAt(0).toUpperCase() + t.tier_key.slice(1)) as MembershipLevel,
@@ -718,9 +723,12 @@ const AuthInitializer = () => {
             discount: 0
           }));
           useStore.setState({ tierRules: formattedTiers });
+        } else {
+          useStore.setState({ tierRules: [] });
         }
       } catch (e) {
         console.warn("Failed to fetch membership tiers:", e);
+        useStore.setState({ tierRules: [] });
       }
 
       // 10. Fetch Report History

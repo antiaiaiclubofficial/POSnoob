@@ -915,7 +915,8 @@ const Index = () => {
                             price: pkg.price,
                             quantity: 1,
                             ownerName: selectedOwner.name,
-                            type: 'Credit'
+                            type: 'Credit',
+                            creditValue: pkg.creditValue
                           });
                           toast.success(`Added ${pkg.name} to cart`);
                         }}

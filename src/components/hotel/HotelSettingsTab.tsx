@@ -10,7 +10,7 @@ import { COLOR_MAP } from './roomColorMap';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { SketchPicker } from 'react-color';
 
-const CustomColorPicker = ({ color, onChange }: { color: string, onChange: (hex: string) => void }) => {
+export const CustomColorPicker = ({ color, onChange }: { color: string, onChange: (hex: string) => void }) => {
   return (
     <SketchPicker
       color={color || '#ffffff'}

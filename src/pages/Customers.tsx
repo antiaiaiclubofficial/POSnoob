@@ -36,11 +36,17 @@ const Customers = () => {
 
   // ดึงข้อมูลระดับสมาชิกจากฐานข้อมูลโดยตรงเพื่อนำสีมาใช้
   const { data: membershipTiers } = useQuery({
-    queryKey: ['membership_tiers'],
+    queryKey: ['membership_tiers', storeId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('membership_tiers')
         .select('tier_key, name, color_class');
+      
+      if (storeId && storeId !== 'default-store') {
+        query = query.eq('store_id', storeId);
+      }
+      
+      const { data, error } = await query;
       if (error) return [];
       return data;
     }
@@ -70,6 +76,8 @@ const Customers = () => {
           district,
           province,
           postal_code,
+          credit_balance,
+          points,
           store_customers!inner (
             points,
             tier,
@@ -144,9 +152,9 @@ const Customers = () => {
           lineId: item.line_user_id || '',
           avatarUrl: item.avatar_url || '',
           membership: (storeCustomer.tier || 'Standard') as MembershipLevel,
-          points: storeCustomer.points || 0,
+          points: item.points || storeCustomer.points || 0,
           totalSpent: 0,
-          creditBalance: 0,
+          creditBalance: item.credit_balance || 0,
           gender: item.gender || 'Male',
           age: item.age || '',
           houseNo: item.house_no || '',
@@ -302,7 +310,8 @@ const Customers = () => {
                 <div>
                   <p className="font-bold text-sm">{customer.name}</p>
                   <p className={cn("text-[10px]", selectedCustomerId === customer.id ? "text-white/60" : "text-gray-400")}>
-                    {customer.pets.length} {language === 'th' ? 'ตัว' : 'Pets'} • {customer.membership}
+                    {customer.pets.length} {language === 'th' ? 'ตัว' : 'Pets'}
+                    {membershipTiers && membershipTiers.length > 0 && ` • ${customer.membership}`}
                   </p>
                 </div>
               </div>
@@ -398,15 +407,19 @@ const Customers = () => {
               
               {/* Horizontal Layout for Membership, Credit, and Points */}
               <div className="flex flex-wrap items-center gap-6 bg-[#F5F6FA] p-6 rounded-[32px] w-full xl:w-auto">
-                <div className="text-center sm:text-left">
-                  <span className={cn(
-                    "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-block",
-                    getTierColorClass(selectedCustomer.membership)
-                  )}>
-                    {selectedCustomer.membership} MEMBER
-                  </span>
-                </div>
-                <div className="h-8 w-px bg-gray-200 hidden sm:block" />
+                {membershipTiers && membershipTiers.length > 0 && (
+                  <>
+                    <div className="text-center sm:text-left">
+                      <span className={cn(
+                        "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-block",
+                        getTierColorClass(selectedCustomer.membership)
+                      )}>
+                        {selectedCustomer.membership} MEMBER
+                      </span>
+                    </div>
+                    <div className="h-8 w-px bg-gray-200 hidden sm:block" />
+                  </>
+                )}
                 <div>
                   <p className="text-[10px] text-gray-400 font-black uppercase mb-0.5">Credit Balance</p>
                   <p className="text-xl font-black text-[#1A1F3D]">{currency}{selectedCustomer.creditBalance.toLocaleString()}</p>

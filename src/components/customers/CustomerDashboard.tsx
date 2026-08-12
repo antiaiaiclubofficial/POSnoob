@@ -708,7 +708,9 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer,
                   </div>
                   <div>
                     <p className="font-bold text-sm text-[#1A1F3D]">{customer.name}</p>
-                    <p className="text-[10px] text-gray-400">{customer.membership}</p>
+                    {dbTiers && dbTiers.length > 0 && customer.membership && (
+                      <p className="text-[10px] text-gray-400">{customer.membership}</p>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
@@ -816,7 +818,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer,
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-sm text-[#1A1F3D] truncate">{customer.name}</p>
-                        {customer.membership && (
+                        {dbTiers && dbTiers.length > 0 && customer.membership && (
                           <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100/50">
                             {customer.membership}
                           </span>

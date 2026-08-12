@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Package, DollarSign, Save, Tag, Layers, Bell, Upload, Camera } from 'lucide-react';
+import { X, Package, DollarSign, Save, Tag, Layers, Bell, Upload, Camera, ChevronDown } from 'lucide-react';
 import { useStore, InventoryItem } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -15,9 +15,36 @@ interface InventoryModalProps {
 }
 
 const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment }: InventoryModalProps) => {
-  const { addInventoryItem, updateInventoryItem, partners, currency } = useStore();
+  const { addInventoryItem, updateInventoryItem, partners, currency, inventory } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const unitDropdownRef = useRef<HTMLDivElement>(null);
+  const shelfDropdownRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
+  const [isShelfDropdownOpen, setIsShelfDropdownOpen] = useState(false);
+
+  const categories = React.useMemo(() => Array.from(new Set(inventory.map(i => i.category))).filter(Boolean), [inventory]);
+  const units = React.useMemo(() => Array.from(new Set(inventory.map(i => i.unit))).filter(Boolean), [inventory]);
+  const shelves = React.useMemo(() => Array.from(new Set(inventory.map(i => i.shelf))).filter(Boolean), [inventory]);
+
+  // Click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setIsCategoryDropdownOpen(false);
+      }
+      if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target as Node)) {
+        setIsUnitDropdownOpen(false);
+      }
+      if (shelfDropdownRef.current && !shelfDropdownRef.current.contains(event.target as Node)) {
+        setIsShelfDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -165,17 +192,128 @@ const InventoryModal = ({ item, onClose, initialPartnerId, defaultIsConsignment 
 
            {/* Section 2.5: Category, Unit, Shelf */}
            <div className="grid grid-cols-3 gap-6">
-              <div className="space-y-2">
+              <div className="space-y-2 relative" ref={categoryDropdownRef}>
                  <label className={labelClasses}><Tag size={12}/> หมวดหมู่</label>
-                 <input className={inputClasses} value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} placeholder="เช่น อาหาร, แชมพู" />
+                 <div className="relative inline-flex w-full align-top">
+                   <input 
+                     className={cn(inputClasses, "pr-10")} 
+                     value={formData.category} 
+                     onChange={e => {
+                        setFormData({...formData, category: e.target.value});
+                        setIsCategoryDropdownOpen(true);
+                     }} 
+                     onFocus={() => setIsCategoryDropdownOpen(true)}
+                     placeholder="เช่น อาหาร, แชมพู" 
+                   />
+                   <button 
+                     type="button" 
+                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none flex items-center justify-center h-full"
+                     onClick={(e) => {
+                        e.stopPropagation();
+                        setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
+                     }}
+                   >
+                     <ChevronDown size={18} className={cn("transition-transform duration-200", isCategoryDropdownOpen && "rotate-180")} />
+                   </button>
+                 </div>
+                 {isCategoryDropdownOpen && categories.length > 0 && (
+                   <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                     {categories.map((cat, idx) => (
+                       <div 
+                         key={idx} 
+                         className="px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer transition-colors"
+                         onClick={() => {
+                           setFormData({...formData, category: cat as string});
+                           setIsCategoryDropdownOpen(false);
+                         }}
+                       >
+                         {cat}
+                       </div>
+                     ))}
+                   </div>
+                 )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 relative" ref={unitDropdownRef}>
                  <label className={labelClasses}><Layers size={12}/> หน่วยนับ</label>
-                 <input className={inputClasses} value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} placeholder="ชิ้น, ขวด..." />
+                 <div className="relative inline-flex w-full align-top">
+                   <input 
+                     className={cn(inputClasses, "pr-10")} 
+                     value={formData.unit} 
+                     onChange={e => {
+                        setFormData({...formData, unit: e.target.value});
+                        setIsUnitDropdownOpen(true);
+                     }} 
+                     onFocus={() => setIsUnitDropdownOpen(true)}
+                     placeholder="ชิ้น, ขวด..." 
+                   />
+                   <button 
+                     type="button" 
+                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none flex items-center justify-center h-full"
+                     onClick={(e) => {
+                        e.stopPropagation();
+                        setIsUnitDropdownOpen(!isUnitDropdownOpen);
+                     }}
+                   >
+                     <ChevronDown size={18} className={cn("transition-transform duration-200", isUnitDropdownOpen && "rotate-180")} />
+                   </button>
+                 </div>
+                 {isUnitDropdownOpen && units.length > 0 && (
+                   <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                     {units.map((u, idx) => (
+                       <div 
+                         key={idx} 
+                         className="px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer transition-colors"
+                         onClick={() => {
+                           setFormData({...formData, unit: u as string});
+                           setIsUnitDropdownOpen(false);
+                         }}
+                       >
+                         {u}
+                       </div>
+                     ))}
+                   </div>
+                 )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 relative" ref={shelfDropdownRef}>
                  <label className={labelClasses}><Package size={12}/> ชั้นวาง (Shelf)</label>
-                 <input className={inputClasses} value={formData.shelf} onChange={e => setFormData({...formData, shelf: e.target.value})} placeholder="เช่น A1, ชั้น 2 (ไม่บังคับ)" />
+                 <div className="relative inline-flex w-full align-top">
+                   <input 
+                     className={cn(inputClasses, "pr-10")} 
+                     value={formData.shelf} 
+                     onChange={e => {
+                        setFormData({...formData, shelf: e.target.value});
+                        setIsShelfDropdownOpen(true);
+                     }} 
+                     onFocus={() => setIsShelfDropdownOpen(true)}
+                     placeholder="เช่น A1, ชั้น 2 (ไม่บังคับ)" 
+                   />
+                   <button 
+                     type="button" 
+                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none flex items-center justify-center h-full"
+                     onClick={(e) => {
+                        e.stopPropagation();
+                        setIsShelfDropdownOpen(!isShelfDropdownOpen);
+                     }}
+                   >
+                     <ChevronDown size={18} className={cn("transition-transform duration-200", isShelfDropdownOpen && "rotate-180")} />
+                   </button>
+                 </div>
+                 {isShelfDropdownOpen && shelves.length > 0 && (
+                   <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                     {shelves.map((s, idx) => (
+                       <div 
+                         key={idx} 
+                         className="px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer transition-colors"
+                         onClick={() => {
+                           setFormData({...formData, shelf: s as string});
+                           setIsShelfDropdownOpen(false);
+                         }}
+                       >
+                         {s}
+                       </div>
+                     ))}
+                   </div>
+                 )}
               </div>
            </div>
 
