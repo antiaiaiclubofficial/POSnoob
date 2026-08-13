@@ -12,7 +12,6 @@ interface HotelTimelineViewProps {
   serviceMode: 'hotel' | 'daycare';
   onToggleActivity: (activityId: string, currentStatus: string) => void;
   onCheckout: (bookingId: string) => void;
-  onCheckout: (bookingId: string) => void;
   onEdit?: (booking: any) => void;
   onCreateBooking?: (date: Date) => void;
 }
