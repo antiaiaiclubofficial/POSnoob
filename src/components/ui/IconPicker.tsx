@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { 
@@ -53,10 +53,11 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   className,
   triggerClassName 
 }) => {
+  const [open, setOpen] = useState(false);
   const CurrentIcon = getIconComponent(value);
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button 
           className={cn(
@@ -78,7 +79,10 @@ export const IconPicker: React.FC<IconPickerProps> = ({
             return (
               <button
                 key={iconName}
-                onClick={() => onChange(iconName)}
+                onClick={() => {
+                  onChange(iconName);
+                  setOpen(false);
+                }}
                 className={cn(
                   "flex flex-col items-center justify-center p-2 rounded-xl gap-1 transition-all hover:bg-gray-50",
                   value === iconName && "bg-[#1A1F3D] text-white hover:bg-[#1A1F3D]"
