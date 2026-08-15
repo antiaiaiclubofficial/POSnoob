@@ -19,14 +19,14 @@ interface PetProfileRecordProps {
 }
 
 const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
-  const { currency } = useStore();
+  const { currency, language, customers, updatePetWeight } = useStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedIntake, setSelectedIntake] = useState<any>(null);
+  const [selectedHistory, setSelectedHistory] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isUpdateWeightOpen, setIsUpdateWeightOpen] = useState(false);
   const [newWeight, setNewWeight] = useState('');
   const [isSubmittingWeight, setIsSubmittingWeight] = useState(false);
-  const { customers, updatePetWeight } = useStore();
 
   const weightHistory = pet.weightHistory || [];
   const latestWeight = weightHistory.length > 0 ? weightHistory[weightHistory.length - 1]?.value : 'N/A';
@@ -71,16 +71,24 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
             <p className="text-xs text-gray-400 font-bold uppercase mb-4 tracking-wider">{pet.breed}</p>
             <div className="grid grid-cols-2 gap-3 w-full">
               <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50/50">
-                <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Age</p>
+                <p className="text-[9px] text-gray-400 font-black uppercase mb-1">{language === 'th' ? 'อายุ' : 'Age'}</p>
                 <p className="text-xs font-black text-[#1A1F3D]">{calculateAge(pet.birthday)}</p>
               </div>
               <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50/50">
-                <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Weight</p>
+                <p className="text-[9px] text-gray-400 font-black uppercase mb-1">{language === 'th' ? 'น้ำหนัก' : 'Weight'}</p>
                 <p className="text-xs font-black text-[#1A1F3D]">{latestWeight} {latestWeight !== 'N/A' ? 'kg' : ''}</p>
               </div>
-              <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50/50 col-span-2">
-                <p className="text-[9px] text-gray-400 font-black uppercase mb-1">Color (สีขน)</p>
+              <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50/50">
+                <p className="text-[9px] text-gray-400 font-black uppercase mb-1">{language === 'th' ? 'สีขน' : 'Color'}</p>
                 <p className="text-xs font-black text-[#1A1F3D]">{pet.color || '-'}</p>
+              </div>
+              <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50/50">
+                <p className="text-[9px] text-gray-400 font-black uppercase mb-1">{language === 'th' ? 'เพศ' : 'Gender'}</p>
+                <p className="text-xs font-black text-[#1A1F3D]">
+                  {pet.gender === 'Male' ? (language === 'th' ? 'ตัวผู้' : 'Male') : 
+                   pet.gender === 'Female' ? (language === 'th' ? 'ตัวเมีย' : 'Female') : 
+                   pet.gender === 'Unknown' || !pet.gender ? (language === 'th' ? 'ไม่ระบุ' : 'Unknown') : pet.gender}
+                </p>
               </div>
             </div>
           </div>
@@ -93,7 +101,7 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
               <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-500">
                 <TrendingUp size={16} />
               </div>
-              <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Weight Progression</span>
+              <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">{language === 'th' ? 'ประวัติน้ำหนัก' : 'Weight Progression'}</span>
             </div>
           </div>
           
@@ -111,24 +119,20 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center border border-dashed border-gray-100 rounded-2xl">
-                <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">No weight data</p>
+                <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{language === 'th' ? 'ไม่มีข้อมูลน้ำหนัก' : 'No weight data'}</p>
               </div>
             )}
           </div>
 
           <div className="mt-auto grid grid-cols-2 gap-3">
-            {pet.precautions && (
-              <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
-                <p className="text-[10px] font-black uppercase text-red-600 mb-0.5">ข้อควรระวัง (Precautions)</p>
-                <p className="text-xs text-red-900/80 font-medium leading-relaxed">{pet.precautions}</p>
-              </div>
-            )}
-            {pet.medicalCondition && (
-              <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
-                <p className="text-[10px] font-black uppercase text-amber-600 mb-0.5">โรคประจำตัว (Medical Condition)</p>
-                <p className="text-xs text-amber-900/80 font-medium leading-relaxed">{pet.medicalCondition}</p>
-              </div>
-            )}
+            <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
+              <p className="text-[10px] font-black uppercase text-red-600 mb-0.5">ข้อควรระวัง (Precautions)</p>
+              <p className="text-xs text-red-900/80 font-medium leading-relaxed">{pet.precautions || '-'}</p>
+            </div>
+            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
+              <p className="text-[10px] font-black uppercase text-amber-600 mb-0.5">โรคประจำตัว (Medical Condition)</p>
+              <p className="text-xs text-amber-900/80 font-medium leading-relaxed">{pet.medicalCondition || '-'}</p>
+            </div>
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 col-span-2">
               <p className="text-[10px] font-black uppercase text-gray-500 mb-0.5">หมายเหตุ (Notes)</p>
               <p className="text-xs text-gray-600 font-medium leading-relaxed italic">{pet.notes || 'No special instructions recorded.'}</p>
@@ -141,14 +145,14 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
       <button 
         onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
-          "w-full py-4 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors border-t border-gray-50",
+          "w-full py-4 flex items-center justify-center gap-2 text-sm font-black uppercase tracking-[0.2em] transition-colors border-t border-gray-50",
           isExpanded ? "bg-[#1A1F3D] text-white" : "bg-gray-50/50 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
         )}
       >
         {isExpanded ? (
-          <>Close History <ChevronUp size={14} /></>
+          <>{language === 'th' ? 'ปิดประวัติ' : 'Close History'} <ChevronUp size={14} /></>
         ) : (
-          <>View Records & Intake Forms <ChevronDown size={14} /></>
+          <>{language === 'th' ? 'ดูประวัติและแบบฟอร์ม' : 'View Records & Intake Forms'} <ChevronDown size={14} /></>
         )}
       </button>
 
@@ -165,11 +169,20 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
             <div className="p-8 space-y-6">
               {/* Service History */}
               <div className="space-y-3">
-                 <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-2 mb-2">Service History</p>
+                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest px-2 mb-2">{language === 'th' ? 'ประวัติการใช้บริการและฟอร์ม' : 'Service History & Forms'}</p>
                  {pet.serviceHistory && pet.serviceHistory.length > 0 ? (
-                    [...pet.serviceHistory].reverse().map((history) => (
-                      <div key={history.id} className="bg-white p-5 rounded-2xl flex items-center justify-between border border-gray-100 shadow-sm transition-all hover:border-[#1A1F3D]/20">
-                        <div className="flex items-center gap-4">
+                    [...pet.serviceHistory].reverse().map((history) => {
+                      const historyTime = new Date(history.date).getTime();
+                      const closestForm = pet.intakeHistory?.slice().sort((a, b) => {
+                        return Math.abs(new Date(a.date).getTime() - historyTime) - Math.abs(new Date(b.date).getTime() - historyTime);
+                      })[0];
+                      const associatedForm = (closestForm && Math.abs(new Date(closestForm.date).getTime() - historyTime) <= 2 * 24 * 60 * 60 * 1000) 
+                        ? closestForm 
+                        : undefined;
+
+                      return (
+                      <div key={history.id} className="bg-white p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between border border-gray-100 shadow-sm transition-all hover:border-[#1A1F3D]/20 gap-4">
+                        <div className="flex items-center gap-4 flex-1">
                           <div className="w-12 h-12 bg-[#F5F6FA] rounded-xl flex items-center justify-center text-[#1A1F3D]">
                             <ClipboardList size={20} />
                           </div>
@@ -181,46 +194,35 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-black text-[#1A1F3D]">{currency}{history.price.toFixed(2)}</p>
-                          <span className="bg-green-100 text-green-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Paid</span>
+                        <div className="flex items-center gap-4 justify-between md:justify-end border-t border-gray-50 pt-3 md:border-t-0 md:pt-0">
+                          <button 
+                            onClick={() => {
+                              if (associatedForm) {
+                                setSelectedIntake(associatedForm);
+                                setSelectedHistory(history);
+                              }
+                            }}
+                            disabled={!associatedForm}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                              associatedForm 
+                                ? "bg-blue-50 text-blue-500 hover:bg-blue-100" 
+                                : "bg-gray-50 text-gray-300 cursor-not-allowed"
+                            )}
+                          >
+                            <FileSearch size={14} />
+                            {language === 'th' ? 'ดูฟอร์ม' : 'View Form'}
+                          </button>
+                          <div className="text-right border-l border-gray-100 pl-4">
+                            <p className="text-lg font-black text-[#1A1F3D]">{currency}{history.price.toFixed(2)}</p>
+                            <span className="bg-green-100 text-green-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">{language === 'th' ? 'ชำระแล้ว' : 'Paid'}</span>
+                          </div>
                         </div>
                       </div>
-                    ))
+                    )})
                  ) : (
                     <div className="py-8 text-center bg-white rounded-2xl border border-dashed border-gray-200 opacity-50">
-                       <p className="text-[10px] font-bold uppercase tracking-widest">No previous services</p>
-                    </div>
-                 )}
-              </div>
-
-              {/* Intake Records */}
-              <div className="space-y-3">
-                 <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest px-2 mb-2">Saved Intake Forms</p>
-                 {pet.intakeHistory && pet.intakeHistory.length > 0 ? (
-                    pet.intakeHistory.map((record) => (
-                      <button 
-                        key={record.id} 
-                        onClick={() => setSelectedIntake(record)}
-                        className="w-full bg-white p-5 rounded-2xl flex items-center justify-between border border-gray-100 shadow-sm transition-all hover:border-blue-200 group"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <FileSearch size={20} />
-                          </div>
-                          <div className="text-left">
-                            <p className="text-sm font-black text-[#1A1F3D]">Grooming Intake Form</p>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(record.date).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                           <span className="text-[9px] font-black uppercase text-gray-300 group-hover:text-blue-500 transition-colors">View Details</span>
-                        </div>
-                      </button>
-                    ))
-                 ) : (
-                    <div className="py-8 text-center bg-white rounded-2xl border border-dashed border-gray-200 opacity-50">
-                       <p className="text-[10px] font-bold uppercase tracking-widest">No intake forms recorded</p>
+                       <p className="text-sm font-bold uppercase tracking-widest">{language === 'th' ? 'ไม่มีประวัติการใช้บริการ' : 'No previous services'}</p>
                     </div>
                  )}
               </div>
@@ -230,24 +232,33 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
       </AnimatePresence>
 
       {/* Intake Viewer Modal */}
-      {selectedIntake && (
-        <GroomingServiceModal 
-          item={{
-            id: selectedIntake.queueItemId,
-            petId: pet.id,
-            petName: pet.name,
-            ownerName: 'Customer', // Simple mock for detail view
-            serviceName: 'Past Service',
-            date: selectedIntake.date,
-            time: 'Recorded',
-            status: 'Completed',
-            image: pet.image
-          }} 
-          intakeData={selectedIntake}
-          readOnly={true}
-          onClose={() => setSelectedIntake(null)} 
-        />
-      )}
+      {selectedIntake && (() => {
+        const customer = customers.find(c => c.pets.some(p => p.id === pet.id));
+        const ownerName = customer ? customer.name || customer.display_name : 'Customer';
+        
+        return (
+          <GroomingServiceModal 
+            item={{
+              id: selectedIntake.queueItemId || selectedHistory?.id || 'unknown',
+              petId: pet.id,
+              petName: pet.name,
+              ownerName: ownerName,
+              serviceName: selectedHistory?.serviceName || 'Past Service',
+              date: selectedIntake.date,
+              time: selectedIntake.details?.time || selectedHistory?.time || '-',
+              status: 'Completed',
+              image: pet.image,
+              weight: selectedIntake.weight
+            }} 
+            intakeData={selectedIntake}
+            readOnly={true}
+            onClose={() => {
+              setSelectedIntake(null);
+              setSelectedHistory(null);
+            }} 
+          />
+        );
+      })()}
 
       {/* Pet Detail Modal */}
       {isDetailOpen && (

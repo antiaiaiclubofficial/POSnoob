@@ -1849,12 +1849,26 @@ export const useStore = create<AppState>()((set, get) => ({
       }
     }
 
-    // 3. Deduct inventory stock for products in the cart
+    // 3. Deduct inventory stock for products in the cart and record service history
     for (const item of items) {
       if (item.type === 'Product') {
         const invItem = get().inventory.find(i => i.id === item.id);
         if (invItem) {
           await get().adjustStock(item.id, item.quantity, 'Out', `Sale (Tx: ${data?.id || 'N/A'})`);
+        }
+      } else if ((item.type === 'Service' || item.type === 'Package' || item.type === 'Add-on' || item.type === 'Hotel') && item.petId) {
+        // Record into service history
+        const { error: serviceHistoryError } = await supabase
+          .from('service_history')
+          .insert([{
+            store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+            pet_id: item.petId,
+            note: item.title || item.name || 'Service',
+            price: item.finalPrice !== undefined ? item.finalPrice : item.price
+          }]);
+        
+        if (serviceHistoryError) {
+          console.error("Error inserting into service history:", serviceHistoryError);
         }
       }
     }

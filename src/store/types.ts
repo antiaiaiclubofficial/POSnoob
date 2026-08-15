@@ -37,6 +37,7 @@ export interface Pet {
   image: string;
   coatType?: 'Short' | 'Long' | string;
   color?: string;
+  gender?: string;
   temperament?: string;
   vaccineBookImage?: string;
   precautions?: string;

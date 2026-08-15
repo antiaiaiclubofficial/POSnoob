@@ -352,6 +352,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         type: petData.species,
         breed: petData.breed,
         birth_date: petData.birthday,
+        gender: petData.gender === 'Unknown' ? null : petData.gender,
         weight: Number(petData.initialWeight),
         medical_condition: petData.medicalCondition,
         precautions: petData.precautions,
@@ -360,7 +361,10 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         custom_preferences: {
           color: petData.color,
           temperament: petData.temperament,
-          notes: petData.notes
+          notes: petData.notes,
+          precautions: petData.precautions,
+          medicalCondition: petData.medicalCondition,
+          medical_condition: petData.medicalCondition
         }
       }])
       .select()
@@ -388,13 +392,14 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         birthday: data.birth_date,
         weightHistory: data.weight ? [{ date: format(new Date(), 'yyyy-MM-dd'), value: Number(data.weight) }] : [],
         serviceHistory: [],
-        notes: data.medical_condition || '',
+        notes: data.custom_preferences?.notes || '',
         image: data.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop',
         coatType: data.fur_length,
         color: data.custom_preferences?.color,
         temperament: data.custom_preferences?.temperament,
-        precautions: data.precautions,
-        medicalCondition: data.medical_condition,
+        gender: data.gender || 'Unknown',
+        precautions: data.precautions || data.custom_preferences?.precautions || '',
+        medicalCondition: data.medical_condition || data.custom_preferences?.medicalCondition || data.custom_preferences?.medical_condition || '',
       };
 
       set(state => ({
@@ -413,6 +418,7 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         type: petData.species,
         breed: petData.breed,
         birth_date: petData.birthday,
+        gender: petData.gender === 'Unknown' ? null : petData.gender,
         medical_condition: petData.medicalCondition,
         precautions: petData.precautions,
         fur_length: petData.coatType,
@@ -420,7 +426,10 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         custom_preferences: {
           color: petData.color,
           temperament: petData.temperament,
-          notes: petData.notes
+          notes: petData.notes,
+          precautions: petData.precautions,
+          medicalCondition: petData.medicalCondition,
+          medical_condition: petData.medicalCondition
         }
       })
       .eq('id', petId);
@@ -442,10 +451,11 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
                   species: petData.species,
                   breed: petData.breed,
                   birthday: petData.birthday,
-                  notes: petData.medicalCondition, // This maps to medical_condition in DB
+                  notes: petData.notes,
                   image: petData.image,
                   coatType: petData.coatType,
                   color: petData.color,
+                  gender: petData.gender,
                   temperament: petData.temperament,
                   precautions: petData.precautions,
                   medicalCondition: petData.medicalCondition,
@@ -496,11 +506,15 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
       .insert([{
         pet_id: petId,
         type: 'intake',
+        title: 'Service Intake Form',
         date: record.date || format(new Date(), 'yyyy-MM-dd'),
-        description: JSON.stringify(record.details),
-        staff_name: record.staffName,
-        signature_url: record.signature,
-        weight: record.weight
+        description: JSON.stringify({
+          ...record.details,
+          queueItemId: record.queueItemId,
+          signature: record.signature,
+          staffName: record.staffName,
+          weight: record.weight
+        })
       }]);
 
     if (error) {

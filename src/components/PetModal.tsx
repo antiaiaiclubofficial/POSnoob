@@ -31,6 +31,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
     initialWeight: '',
     coatType: 'Short',
     color: '',
+    gender: 'Unknown',
     temperament: '',
     vaccineBookImage: '',
     precautions: '',
@@ -57,6 +58,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
         initialWeight: history.length > 0 ? history[history.length - 1].value.toString() : '',
         coatType: pet.coatType || 'Short',
         color: pet.color || '',
+        gender: pet.gender || 'Unknown',
         temperament: pet.temperament || '',
         vaccineBookImage: pet.vaccineBookImage || '',
         precautions: pet.precautions || '',
@@ -154,6 +156,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
       birthday: formData.birthday,
       coatType: formData.coatType,
       color: formData.color,
+      gender: formData.gender,
       temperament: formData.temperament,
       vaccineBookImage: formData.vaccineBookImage,
       precautions: formData.precautions,
@@ -361,7 +364,7 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">สีขน (Color)</label>
                 <input 
@@ -370,6 +373,18 @@ const PetModal = ({ customerId, pet, onClose }: PetModalProps) => {
                   onChange={e => setFormData({...formData, color: e.target.value})}
                   placeholder="เช่น สีน้ำตาล, ขาว-ดำ"
                 />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">เพศ (Gender)</label>
+                <select 
+                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-4 py-3.5 text-sm font-bold appearance-none"
+                  value={formData.gender}
+                  onChange={e => setFormData({...formData, gender: e.target.value})}
+                >
+                  <option value="Unknown">ไม่ระบุ (Unknown)</option>
+                  <option value="Male">ตัวผู้ (Male)</option>
+                  <option value="Female">ตัวเมีย (Female)</option>
+                </select>
               </div>
               <div>
                 <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-wider">ลักษณะนิสัย (Temperament)</label>

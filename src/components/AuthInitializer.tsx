@@ -315,8 +315,12 @@ const AuthInitializer = () => {
               type,
               breed,
               birth_date,
+              gender,
               weight,
               medical_condition,
+              precautions,
+              fur_length,
+              custom_preferences,
               image_url,
               created_at,
               pet_weight_history (
@@ -334,6 +338,35 @@ const AuthInitializer = () => {
         const { data: customersData, error: customersError } = await customersQuery;
 
         if (customersError) throw customersError;
+
+        // Fetch Intake History separately to avoid join errors
+        const { data: intakeHistoryData } = await supabase
+          .from('pet_health_logs')
+          .select('*')
+          .eq('type', 'intake');
+          
+        const intakeHistoryMap: Record<string, any[]> = {};
+        if (intakeHistoryData) {
+          intakeHistoryData.forEach(log => {
+            if (log.pet_id) {
+              if (!intakeHistoryMap[log.pet_id]) intakeHistoryMap[log.pet_id] = [];
+              let parsedDetails: any = {};
+              if (log.description) {
+                try { parsedDetails = JSON.parse(log.description); } catch (e) {}
+              }
+              intakeHistoryMap[log.pet_id].push({
+                id: log.id,
+                date: log.date || (log.created_at ? format(new Date(log.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')),
+                time: log.created_at ? format(new Date(log.created_at), 'HH:mm') : '-',
+                details: parsedDetails,
+                staffName: parsedDetails.staffName || log.staff_name,
+                signature: parsedDetails.signature || log.signature_url,
+                weight: parsedDetails.weight || log.weight,
+                queueItemId: parsedDetails.queueItemId
+              });
+            }
+          });
+        }
 
         if (customersData && customersData.length > 0) {
           const formattedCustomers = customersData.map(c => {
@@ -374,6 +407,8 @@ const AuthInitializer = () => {
                   weightHistory = [{ date: p.created_at ? format(new Date(p.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }];
                 }
 
+                const intakeHistory = intakeHistoryMap[p.id] || [];
+
                 return {
                   id: p.id,
                   name: p.name,
@@ -382,9 +417,15 @@ const AuthInitializer = () => {
                   birthday: p.birth_date || '',
                   weightHistory,
                   serviceHistory: [],
-                  intakeHistory: [],
-                  notes: p.medical_condition || '',
-                  image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+                  intakeHistory,
+                  notes: p.custom_preferences?.notes || '',
+                  image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop',
+                  coatType: p.fur_length,
+                  color: p.custom_preferences?.color,
+                  gender: p.gender || 'Unknown',
+                  temperament: p.custom_preferences?.temperament,
+                  precautions: p.precautions || p.custom_preferences?.precautions || '',
+                  medicalCondition: p.medical_condition || p.custom_preferences?.medicalCondition || p.custom_preferences?.medical_condition || ''
                 };
               })
             };

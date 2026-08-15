@@ -89,6 +89,7 @@ const Customers = () => {
             type,
             breed,
             birth_date,
+            gender,
             weight,
             medical_condition,
             precautions,
@@ -133,8 +134,49 @@ const Customers = () => {
             serviceHistoryMap[sh.pet_id].push({
               id: sh.id,
               serviceName: sh.note || 'บริการ',
-              date: sh.created_at.split('T')[0],
+              date: sh.created_at ? format(new Date(sh.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+              time: sh.created_at ? format(new Date(sh.created_at), 'HH:mm') : '-',
               price: Number(sh.price || 0)
+            });
+          }
+        });
+      }
+
+      // Fetch Intake History
+      const { data: intakeHistoryData, error: intakeError } = await supabase
+        .from('pet_health_logs')
+        .select('*')
+        .eq('type', 'intake');
+
+      if (intakeError) {
+        console.error("Error fetching intake history:", intakeError);
+      }
+
+      const intakeHistoryMap: Record<string, any[]> = {};
+      if (intakeHistoryData) {
+        intakeHistoryData.forEach(log => {
+          if (log.pet_id) {
+            if (!intakeHistoryMap[log.pet_id]) {
+              intakeHistoryMap[log.pet_id] = [];
+            }
+            let parsedDetails = {};
+            if (log.description) {
+              try {
+                parsedDetails = JSON.parse(log.description);
+              } catch (e) {
+                console.warn("Failed to parse intake details:", log.description);
+              }
+            }
+            
+            intakeHistoryMap[log.pet_id].push({
+              id: log.id,
+              date: log.date || (log.created_at ? format(new Date(log.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')),
+              time: log.created_at ? format(new Date(log.created_at), 'HH:mm') : '-',
+              details: parsedDetails,
+              staffName: parsedDetails.staffName || log.staff_name,
+              signature: parsedDetails.signature || log.signature_url,
+              weight: parsedDetails.weight || log.weight,
+              queueItemId: undefined // Map back to original logic if needed
             });
           }
         });
@@ -187,13 +229,15 @@ const Customers = () => {
               birthday: p.birth_date || '',
               weightHistory,
               serviceHistory: serviceHistoryMap[p.id] || [], // แมปประวัติการใช้บริการจริงจาก Supabase
+              intakeHistory: intakeHistoryMap[p.id] || [], // แมปประวัติ Intake 
               notes: p.custom_preferences?.notes || '',
               image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop',
               coatType: p.fur_length,
               color: p.custom_preferences?.color,
+              gender: p.gender || 'Unknown',
               temperament: p.custom_preferences?.temperament,
-              precautions: p.precautions,
-              medicalCondition: p.medical_condition,
+              precautions: p.precautions || p.custom_preferences?.precautions || '',
+              medicalCondition: p.medical_condition || p.custom_preferences?.medicalCondition || p.custom_preferences?.medical_condition || '',
             };
           })
         };
@@ -433,9 +477,9 @@ const Customers = () => {
             </div>
 
             <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xl lg:text-2xl font-black text-[#1A1F3D]">Pet Registry</h3>
+              <h3 className="text-xl lg:text-2xl font-black text-[#1A1F3D]">{language === 'th' ? 'ทะเบียนสัตว์เลี้ยง' : 'Pet Registry'}</h3>
               <button onClick={() => { setEditingPet(null); setIsPetModalOpen(true); }} className="bg-[#1A1F3D] text-white px-6 py-3 rounded-xl text-xs font-black shadow-xl shadow-[#1A1F3D]/10 hover:scale-105 transition-all">
-                <Plus size={16} className="mr-2 inline" /> Register Pet
+                <Plus size={16} className="mr-2 inline" /> {language === 'th' ? 'ลงทะเบียนสัตว์เลี้ยง' : 'Register Pet'}
               </button>
             </div>
 
@@ -447,7 +491,7 @@ const Customers = () => {
               ) : (
                 <div className="bg-white border-2 border-dashed border-gray-100 rounded-[40px] py-16 flex flex-col items-center justify-center text-gray-300">
                    <User size={40} className="mb-4 opacity-20" />
-                   <p className="text-xs font-bold uppercase tracking-widest">No pets registered yet</p>
+                   <p className="text-xs font-bold uppercase tracking-widest">{language === 'th' ? 'ยังไม่มีสัตว์เลี้ยงลงทะเบียน' : 'No pets registered yet'}</p>
                 </div>
               )}
             </div>

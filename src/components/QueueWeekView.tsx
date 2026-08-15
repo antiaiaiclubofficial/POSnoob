@@ -59,7 +59,7 @@ const QueueWeekView = ({ currentDate, onDateSelect, onBookingClick, onUpdateStat
                 isToday(day) ? "bg-[#1A1F3D] border-[#1A1F3D] shadow-xl shadow-[#1A1F3D]/10" : "bg-white border-gray-100 hover:border-gray-300"
               )}
             >
-              <p className={cn("text-[9px] font-black uppercase tracking-widest mb-1", isToday(day) ? "text-[#D9ED5F]" : "text-gray-400")}>
+              <p className={cn("text-[10px] font-black uppercase tracking-widest mb-1", isToday(day) ? "text-[#D9ED5F]" : "text-gray-400")}>
                 {format(day, 'EEEE')}
               </p>
               <h3 className={cn("text-xl font-black", isToday(day) ? "text-white" : "text-[#1A1F3D]")}>
@@ -70,7 +70,7 @@ const QueueWeekView = ({ currentDate, onDateSelect, onBookingClick, onUpdateStat
             <div className="flex-1 space-y-3">
               {dayBookings.length === 0 ? (
                 <div className="py-10 text-center opacity-20 border-2 border-dashed border-gray-200 rounded-[32px]">
-                   <p className="text-[10px] font-black uppercase tracking-widest">No Bookings</p>
+                   <p className="text-xs font-black uppercase tracking-widest">No Bookings</p>
                 </div>
               ) : (
                 dayBookings.map(booking => (
@@ -85,22 +85,22 @@ const QueueWeekView = ({ currentDate, onDateSelect, onBookingClick, onUpdateStat
                            <h4 
                              onClick={() => booking.status === 'Waiting' && onBookingClick?.(booking)}
                              className={cn(
-                               "text-xs font-black text-[#1A1F3D] truncate",
+                               "text-sm font-black text-[#1A1F3D] truncate",
                                booking.status === 'Waiting' ? "cursor-pointer hover:underline hover:text-blue-600" : ""
                              )}
                            >
                              {booking.petName}
                            </h4>
-                           <span className="text-[9px] font-black text-blue-500">{booking.time}</span>
+                           <span className="text-[10px] font-black text-blue-500">{booking.time}</span>
                         </div>
-                        <p className="text-[8px] text-gray-400 font-bold uppercase truncate">{booking.serviceName}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase truncate">{booking.serviceName}</p>
                       </div>
                     </div>
 
                     {/* Status Badge & Action Button */}
                     <div className="flex items-center justify-between pt-2 border-t border-gray-50">
                       <span className={cn(
-                        "px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-tighter",
+                        "px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter",
                         booking.status === 'Waiting' ? "bg-orange-50 text-orange-600" :
                         booking.status === 'In Progress' ? "bg-blue-50 text-blue-600" : "bg-green-50 text-green-600"
                       )}>
@@ -110,7 +110,7 @@ const QueueWeekView = ({ currentDate, onDateSelect, onBookingClick, onUpdateStat
                       {booking.status === 'Waiting' && (
                         <button
                           onClick={() => onBookingClick?.(booking)}
-                          className="bg-[#1A1F3D] text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-[#2A3152] transition-all"
+                          className="bg-[#1A1F3D] text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase hover:bg-[#2A3152] transition-all"
                         >
                           Check-in
                         </button>
@@ -119,15 +119,15 @@ const QueueWeekView = ({ currentDate, onDateSelect, onBookingClick, onUpdateStat
                       {booking.status === 'In Progress' && (
                         <button
                           onClick={() => onUpdateStatus?.(booking.id, 'Completed')}
-                          className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase hover:bg-green-600 transition-all flex items-center gap-1"
+                          className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase hover:bg-green-600 transition-all flex items-center gap-1"
                         >
-                          <CheckCircle2 size={10} /> {language === 'th' ? 'เสร็จสิ้น' : 'Finish'}
+                          <CheckCircle2 size={12} /> {language === 'th' ? 'เสร็จสิ้น' : 'Finish'}
                         </button>
                       )}
 
                       {booking.status === 'Completed' && (
-                        <span className="text-[9px] font-black text-green-500 flex items-center gap-1">
-                          <CheckCircle2 size={10} /> {language === 'th' ? 'เสร็จสิ้นแล้ว' : 'Completed'}
+                        <span className="text-[10px] font-black text-green-500 flex items-center gap-1">
+                          <CheckCircle2 size={12} /> {language === 'th' ? 'เสร็จสิ้นแล้ว' : 'Completed'}
                         </span>
                       )}
                     </div>
