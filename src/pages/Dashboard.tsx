@@ -72,7 +72,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
-  const { queue, transactions, inventory, customers, currency, kennelCapacity, language, currentUser, storeId } = useStore();
+  const { queue, transactions, inventory, customers, currency, kennelCapacity, language, currentUser, storeId, openTime, closeTime } = useStore();
   const t = translations[language];
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -251,27 +251,35 @@ const Dashboard = () => {
 
   const busyHoursData = useMemo(() => {
     const hoursMap: Record<string, number> = {};
-    for (let i = 9; i <= 19; i += 2) {
+    const startHour = parseInt((openTime || '09:00').split(':')[0]) || 9;
+    const endHour = parseInt((closeTime || '19:00').split(':')[0]) || 19;
+    
+    for (let i = startHour; i <= endHour; i++) {
       const label = `${i.toString().padStart(2, '0')}:00`;
       hoursMap[label] = 0;
     }
 
     todayQueue.forEach(q => {
-      const hour = q.time.split(':')[0];
-      const slot = `${hour.padStart(2, '0')}:00`;
-      const closestSlot = Object.keys(hoursMap).find(s => {
-        const sHour = parseInt(s.split(':')[0]);
-        const qHour = parseInt(hour);
-        return qHour >= sHour && qHour < sHour + 2;
-      }) || slot;
-
-      if (hoursMap[closestSlot] !== undefined) {
-        hoursMap[closestSlot]++;
+      if (!q.time) return;
+      const hourStr = q.time.split(':')[0];
+      const slot = `${hourStr.padStart(2, '0')}:00`;
+      const qHour = parseInt(hourStr);
+      
+      if (hoursMap[slot] !== undefined) {
+        hoursMap[slot]++;
+      } else {
+        if (qHour < startHour) {
+          const startSlot = `${startHour.toString().padStart(2, '0')}:00`;
+          hoursMap[startSlot] = (hoursMap[startSlot] || 0) + 1;
+        } else if (qHour > endHour) {
+          const endSlot = `${endHour.toString().padStart(2, '0')}:00`;
+          hoursMap[endSlot] = (hoursMap[endSlot] || 0) + 1;
+        }
       }
     });
 
     return Object.entries(hoursMap).map(([hour, pets]) => ({ hour, pets }));
-  }, [todayQueue]);
+  }, [todayQueue, openTime, closeTime]);
 
   const loyaltyData = useMemo(() => {
     if (todayTransactions.length === 0) return { regulars: 0, new: 0, percentRegular: 0, percentNew: 0 };
@@ -484,7 +492,7 @@ const Dashboard = () => {
             <div className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500">
               <div className="absolute -top-12 -right-12 w-32 h-32 bg-green-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
               <div className="flex justify-between items-start mb-2 relative z-10">
-                <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.totalRevenue}</h3>
+                <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.todayRevenue}</h3>
                 <span className="text-[9px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-lg uppercase">Today</span>
               </div>
               <div className="relative z-10">
@@ -495,13 +503,13 @@ const Dashboard = () => {
 
             {/* Appointments Card */}
             <div 
-              onClick={() => navigate('/queue')}
+              onClick={() => navigate('/queue', { state: { view: 'day' } })}
               className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500 cursor-pointer"
             >
-              <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-purple-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
               <div className="flex justify-between items-start mb-2 relative z-10">
                 <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.todaysQueue}</h3>
-                <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg uppercase">Schedule</span>
+                <span className="text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-1 rounded-lg uppercase">Schedule</span>
               </div>
               <div className="relative z-10">
                 <h2 className="text-3xl font-black text-[#1A1F3D]">{metrics.totalAppointments} <span className="text-xs text-gray-400 font-bold">คิว</span></h2>
@@ -514,10 +522,10 @@ const Dashboard = () => {
               onClick={() => navigate('/queue', { state: { view: 'day' } })}
               className="bg-white/70 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(24,35,74,0.04)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(24,35,74,0.08)] p-6 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group transition-all duration-500 cursor-pointer"
             >
-              <div className="absolute -top-12 -right-12 w-32 h-32 bg-purple-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-700" />
               <div className="flex justify-between items-start mb-2 relative z-10">
                 <h3 className="text-sm font-black text-[#1A1F3D] tracking-wide mt-1">{t.inShop}</h3>
-                <span className="text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-1 rounded-lg uppercase">In Shop</span>
+                <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg uppercase">In Shop</span>
               </div>
               <div className="relative z-10">
                 <h2 className="text-3xl font-black text-[#1A1F3D]">{metrics.activePets} <span className="text-xs text-gray-400 font-bold">ตัว</span></h2>
@@ -557,7 +565,7 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={busyHoursData}>
                     <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }} allowDecimals={false} />
                     <Tooltip cursor={{ fill: '#F9FAFB' }} contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)' }} />
                     <Bar dataKey="pets" radius={[8, 8, 8, 8]} barSize={24}>
                       {busyHoursData.map((entry, index) => (
@@ -630,7 +638,7 @@ const Dashboard = () => {
                   <h3 className="text-xl font-black text-[#1A1F3D]">{t.liveTimeline}</h3>
                   <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{language === 'th' ? 'ตรวจสอบคิวแบบเรียลไทม์' : 'Real-time queue monitoring'}</p>
                 </div>
-                <button onClick={() => navigate('/queue')} className="text-xs font-black text-indigo-600 hover:underline flex items-center gap-1">
+                <button onClick={() => navigate('/queue', { state: { view: 'day' } })} className="text-xs font-black text-indigo-600 hover:underline flex items-center gap-1">
                   {language === 'th' ? 'ดูทั้งหมด' : 'View All'} <ChevronRight size={14} />
                 </button>
               </div>
@@ -643,29 +651,47 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   [...todayQueue].sort((a, b) => a.time.localeCompare(b.time)).map((item) => (
-                    <div key={item.id} className="flex gap-6 group">
-                      <div className="flex flex-col items-center">
-                        <span className="text-xs font-black text-[#1A1F3D] w-12">{item.time}</span>
-                        <div className="w-0.5 flex-1 bg-gray-100 my-2 group-last:hidden" />
+                    <div key={item.id} className="flex gap-6 lg:gap-10 relative group mb-2">
+                      {/* Time Label */}
+                      <div className="w-[80px] shrink-0 pt-6 relative z-10 flex flex-col items-center">
+                         <span className="text-[#1A1F3D] opacity-30 font-black text-2xl tracking-tighter leading-none">{item.time.split(':')[0]}</span>
+                         <span className="text-[#1A1F3D] opacity-20 font-bold text-xs uppercase mt-1">{item.time.split(':')[1]}</span>
                       </div>
-                      <div className={cn(
-                        "flex-1 p-5 rounded-[32px] border flex items-center justify-between transition-all hover:border-gray-200",
-                        item.status === 'In Progress' ? "bg-blue-50/50 border-blue-100" : "bg-[#F8F9FD]/50 border-gray-50"
-                      )}>
-                        <div className="flex items-center gap-4">
-                          <img src={item.image} className="w-12 h-12 rounded-2xl object-cover shadow-sm" />
-                          <div>
-                            <h4 className="font-black text-[#1A1F3D] text-sm">{item.petName}</h4>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{item.serviceName}</p>
+
+                      {/* Content Area */}
+                      <div className="flex-1 pb-4 pt-2 relative">
+                        <div className="absolute -left-10 top-12 bottom-0 w-[2px] bg-gradient-to-b from-[#18234A]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <div className="bg-white rounded-[48px] shadow-[0_8px_24px_rgba(24,35,74,0.06)] border border-gray-200 hover:border-gray-300 hover:shadow-[0_16px_40px_rgba(24,35,74,0.1)] transition-all overflow-hidden flex flex-col">
+                          <div onClick={() => navigate('/queue', { state: { view: 'day', selectedItemId: item.id } })} className="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50/50 transition-colors">
+                            <div className="flex items-center gap-5">
+                              <div className="relative">
+                                <div className="absolute inset-0 bg-[#EAFD69] blur-xl opacity-20 rounded-full" />
+                                <img src={item.image} className="relative w-14 h-14 rounded-2xl object-cover shadow-sm border border-white/50" />
+                                <div className="absolute -bottom-1 -right-1 bg-white/90 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-white/50">
+                                   <Scissors size={12} className="text-[#18234A]" />
+                                </div>
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-black text-[#1A1F3D] leading-tight tracking-tight">{item.petName}</h3>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <p className="text-xs text-[#45464E] font-bold uppercase">{item.time}</p>
+                                  <span className="w-1 h-1 bg-[#1A1F3D]/20 rounded-full"></span>
+                                  <p className="text-xs text-[#45464E] font-bold truncate max-w-[150px]">{item.serviceName}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className={cn(
+                                "px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap",
+                                item.status === 'Waiting' ? "bg-orange-50 text-orange-600" :
+                                item.status === 'Checked-in' ? "bg-[#d9d6fe] text-[#5d5c7e]" : "bg-[#EAFD69]/30 text-[#434b00]"
+                              )}>
+                                {item.status}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <span className={cn(
-                          "px-3 py-1.5 rounded-full text-[9px] font-black uppercase",
-                          item.status === 'Waiting' ? "bg-orange-100 text-orange-700" :
-                            item.status === 'In Progress' ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
-                        )}>
-                          {item.status}
-                        </span>
                       </div>
                     </div>
                   ))

@@ -329,7 +329,7 @@ const PackageModal = ({ onClose, customerId, embedded }: PackageModalProps) => {
   );
 
   return embedded ? content : (
-    <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[150] flex items-center justify-center p-6">
+    <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[150] flex items-center justify-center p-6">
       {content}
     </div>
   );

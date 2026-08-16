@@ -10,12 +10,13 @@ import { Clock, Scissors, CheckCircle2, Play } from 'lucide-react';
 
 interface QueueWeekViewProps {
   currentDate: Date;
+  filterStatus?: 'All' | 'Waiting' | 'In Progress' | 'Completed';
   onDateSelect: (date: Date) => void;
   onBookingClick?: (booking: any) => void;
   onUpdateStatus?: (id: string, status: any) => void;
 }
 
-const QueueWeekView = ({ currentDate, onDateSelect, onBookingClick, onUpdateStatus }: QueueWeekViewProps) => {
+const QueueWeekView = ({ currentDate, filterStatus = 'All', onDateSelect, onBookingClick, onUpdateStatus }: QueueWeekViewProps) => {
   const { queue, language } = useStore();
   
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -47,7 +48,7 @@ const QueueWeekView = ({ currentDate, onDateSelect, onBookingClick, onUpdateStat
       {weekDays.map((day, idx) => {
         const dateStr = format(day, 'yyyy-MM-dd');
         const dayBookings = [...queue]
-          .filter(q => q.date === dateStr && !q.isPaid)
+          .filter(q => q.date === dateStr && (filterStatus === 'All' || q.status === filterStatus))
           .sort((a, b) => a.time.localeCompare(b.time));
 
         return (

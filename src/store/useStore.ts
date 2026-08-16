@@ -8,7 +8,7 @@ import {
   AppState, QueueStatus, TierRule, MembershipLevel, Pet, Customer,
   QueueItem, Service, InventoryItem, Partner, StockLog, Transaction,
   Staff, ActivityLog, AddonItem, PackageTemplate, CreditPackageTemplate,
-  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory, Role
+  PaymentMethod, ServicePriceInfo, SubService, BookingType, ServiceIcon, StaffRole, ReportHistory, Role, JournalEntry
 } from './types';
 import { createAuthSlice } from './slices/authSlice';
 import { createCRMSlice } from './slices/crmSlice';
@@ -1877,7 +1877,7 @@ export const useStore = create<AppState>()((set, get) => ({
     if (data) {
       const newTx: Transaction = {
         id: data.id,
-        date: data.created_at.split('T')[0],
+        date: format(new Date(data.created_at), 'yyyy-MM-dd'),
         createdAt: data.created_at,
         amount: Number(data.amount || 0),
         discountAmount: Number(data.discount_amount || 0),
@@ -1918,7 +1918,7 @@ export const useStore = create<AppState>()((set, get) => ({
       get().addBillingDocument({
         documentNo: newDocNo,
         type: 'short_receipt',
-        date: data.created_at.split('T')[0],
+        date: format(new Date(data.created_at), 'yyyy-MM-dd'),
         customerId: data.customer_id && data.customer_id !== 'walk-in' ? data.customer_id : undefined,
         customerName: data.customer_name || 'Walk-in Customer',
         items: shortReceiptItems,
@@ -2078,7 +2078,7 @@ export const useStore = create<AppState>()((set, get) => ({
     }
 
     // 5. Void related Billing Document (if any)
-    const txDateStr = transaction.createdAt ? transaction.createdAt.split('T')[0] : transaction.date;
+    const txDateStr = transaction.createdAt ? format(new Date(transaction.createdAt), 'yyyy-MM-dd') : transaction.date;
     const relatedDoc = get().billingDocuments.find(d => 
       d.remarks === 'Auto-generated from POS' &&
       d.date === txDateStr &&
@@ -2098,7 +2098,7 @@ export const useStore = create<AppState>()((set, get) => ({
           : t
       ),
       journalEntries: state.journalEntries.map(e => 
-        (e.sourceType === 'sales_transaction' && e.sourceId === id) || (e as any).referenceNo === id || e.reference_no === id
+        (e.sourceType === 'sales_transaction' && e.sourceId === id) || e.referenceNo === id
           ? { ...e, status: 'Void' }
           : e
       )
@@ -2259,7 +2259,7 @@ export const useStore = create<AppState>()((set, get) => ({
   addJournalEntry: async (entry) => {
     const storeId = get().storeId;
     const effectiveStoreId = (storeId && storeId !== 'default-store') ? storeId : null;
-    const newId = entry.id || `JE-${Date.now()}`;
+    const newId = (entry as any).id || `JE-${Date.now()}`;
     
     const totalDebit = (entry.lines || []).reduce((s, l) => s + Number(l.debit || 0), 0);
     const totalCredit = (entry.lines || []).reduce((s, l) => s + Number(l.credit || 0), 0);

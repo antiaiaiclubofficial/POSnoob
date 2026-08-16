@@ -10,10 +10,11 @@ import { cn } from '@/lib/utils';
 
 interface QueueMonthViewProps {
   currentDate: Date;
+  filterStatus?: 'All' | 'Waiting' | 'In Progress' | 'Completed';
   onDateSelect: (date: Date) => void;
 }
 
-const QueueMonthView = ({ currentDate, onDateSelect }: QueueMonthViewProps) => {
+const QueueMonthView = ({ currentDate, filterStatus = 'All', onDateSelect }: QueueMonthViewProps) => {
   const { queue, language } = useStore();
   
   const monthStart = startOfMonth(currentDate);
@@ -38,7 +39,7 @@ const QueueMonthView = ({ currentDate, onDateSelect }: QueueMonthViewProps) => {
       <div className="grid grid-cols-7">
         {calendarDays.map((day, idx) => {
           const dateStr = format(day, 'yyyy-MM-dd');
-          const dayBookings = queue.filter(q => q.date === dateStr && !q.isPaid);
+          const dayBookings = queue.filter(q => q.date === dateStr && (filterStatus === 'All' || q.status === filterStatus));
           const isCurrentMonth = isSameMonth(day, monthStart);
           
           return (

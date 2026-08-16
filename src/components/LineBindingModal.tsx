@@ -34,7 +34,7 @@ const LineBindingModal = ({ customer, onClose }: LineBindingModalProps) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
+    <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-md rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="p-10 border-b border-gray-50 flex justify-between items-start">
           <div className="flex items-center gap-4">

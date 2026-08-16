@@ -24,6 +24,7 @@ import BookingModal from '@/components/BookingModal';
 import GroomingServiceModal from '@/components/GroomingServiceModal';
 
 type ViewType = 'day' | 'week' | 'month';
+type FilterStatus = 'All' | 'Waiting' | 'In Progress' | 'Completed';
 
 const Queue = () => {
   const { queue, language, updateQueueStatus, removeQueueItem, customers, openTime, closeTime } = useStore();
@@ -31,12 +32,19 @@ const Queue = () => {
   
   const location = useLocation();
   const [view, setView] = useState<ViewType>(location.state?.view || 'week');
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('All');
 
   useEffect(() => {
     if (location.state?.view) {
       setView(location.state.view);
     }
-  }, [location.state?.view]);
+    if (location.state?.selectedItemId) {
+      const item = queue.find(q => q.id === location.state.selectedItemId);
+      if (item) {
+        setSelectedDayItem(item);
+      }
+    }
+  }, [location.state?.view, location.state?.selectedItemId, queue]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedQueueItem, setSelectedQueueItem] = useState<any>(null);
@@ -59,7 +67,8 @@ const Queue = () => {
   const goToday = () => setCurrentDate(new Date());
 
   const dateStr = format(currentDate, 'yyyy-MM-dd');
-  const todayQueue = queue.filter(q => q.date === dateStr && !q.isPaid);
+  const unfilteredTodayQueue = queue.filter(q => q.date === dateStr);
+  const todayQueue = unfilteredTodayQueue.filter(q => filterStatus === 'All' || q.status === filterStatus);
 
   return (
     <div className="flex-1 flex flex-col bg-[#F8F9FD] overflow-hidden h-screen">
@@ -77,6 +86,25 @@ const Queue = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
+            {/* Status Filter */}
+            <div className="bg-[#F5F6FA] p-1 rounded-2xl hidden md:flex gap-1">
+              {(['All', 'Waiting', 'In Progress', 'Completed'] as FilterStatus[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setFilterStatus(s)}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all",
+                    filterStatus === s ? "bg-white text-[#1A1F3D] shadow-sm" : "text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  {s === 'All' ? (language === 'th' ? 'ทั้งหมด' : 'All') : 
+                   s === 'Waiting' ? (language === 'th' ? 'นัดหมาย' : 'Waiting') :
+                   s === 'In Progress' ? (language === 'th' ? 'กำลังทำ' : 'In Progress') :
+                   (language === 'th' ? 'เสร็จแล้ว' : 'Completed')}
+                </button>
+              ))}
+            </div>
+
             {/* View Switcher */}
             <div className="bg-[#F5F6FA] p-1 rounded-2xl flex gap-1">
               {(['day', 'week', 'month'] as ViewType[]).map((v) => (
@@ -204,7 +232,7 @@ const Queue = () => {
               <div className="w-full lg:w-[40%]">
                 <div className="sticky top-6">
                   {selectedDayItem ? (() => {
-                    const item = selectedDayItem;
+                    const item = queue.find(q => q.id === selectedDayItem.id) || selectedDayItem;
                     const owner = customers.find(c => c.pets.some(p => p.id === item.petId));
                     const pet = owner?.pets.find(p => p.id === item.petId);
                     let intakeRecord = pet?.intakeHistory?.find(r => r.queueItemId === item.id);
@@ -294,10 +322,10 @@ const Queue = () => {
                       </div>
                     );
                   })() : (() => {
-                    const total = todayQueue.length;
-                    const completed = todayQueue.filter(q => q.status === 'Completed').length;
-                    const inProgress = todayQueue.filter(q => q.status === 'In Progress').length;
-                    const waiting = todayQueue.filter(q => q.status === 'Waiting' || q.status === 'Checked-in').length;
+                    const total = unfilteredTodayQueue.length;
+                    const completed = unfilteredTodayQueue.filter(q => q.status === 'Completed').length;
+                    const inProgress = unfilteredTodayQueue.filter(q => q.status === 'In Progress').length;
+                    const waiting = unfilteredTodayQueue.filter(q => q.status === 'Waiting' || q.status === 'Checked-in').length;
                     
                     return (
                       <div className="bg-white rounded-[48px] p-8 shadow-[0_20px_40px_rgba(24,35,74,0.04)] border border-white/60 animate-in fade-in duration-300 flex flex-col items-center justify-center text-center min-h-[400px]">
@@ -336,6 +364,7 @@ const Queue = () => {
           {view === 'week' && (
             <QueueWeekView 
               currentDate={currentDate} 
+              filterStatus={filterStatus}
               onDateSelect={(d) => { setCurrentDate(d); setView('day'); }} 
               onBookingClick={(booking) => setSelectedQueueItem(booking)}
               onUpdateStatus={updateQueueStatus}
@@ -343,7 +372,11 @@ const Queue = () => {
           )}
 
           {view === 'month' && (
-            <QueueMonthView currentDate={currentDate} onDateSelect={(d) => { setCurrentDate(d); setView('day'); }} />
+            <QueueMonthView 
+              currentDate={currentDate} 
+              filterStatus={filterStatus}
+              onDateSelect={(d) => { setCurrentDate(d); setView('day'); }} 
+            />
           )}
         </div>
       </div>

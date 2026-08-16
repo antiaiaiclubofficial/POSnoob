@@ -474,8 +474,8 @@ const AuthInitializer = () => {
             const ownerName = customer.display_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Walk-in';
 
             const dateObj = new Date(app.start_time);
-            const date = dateObj.toISOString().split('T')[0];
-            const time = dateObj.toTimeString().slice(0, 5);
+            const date = format(dateObj, 'yyyy-MM-dd');
+            const time = format(dateObj, 'HH:mm');
 
             let status: QueueStatus = 'Waiting';
             if (app.status === 'confirmed') status = 'Checked-in';
@@ -669,7 +669,7 @@ const AuthInitializer = () => {
         if (txData) {
           const formattedTransactions = txData.map((tx: any) => ({
             id: tx.id,
-            date: tx.created_at.split('T')[0],
+            date: format(new Date(tx.created_at), 'yyyy-MM-dd'),
             createdAt: tx.created_at,
             amount: Number(tx.amount || 0),
             discountAmount: Number(tx.discount_amount || 0),

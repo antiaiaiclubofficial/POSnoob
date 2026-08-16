@@ -1,6 +1,5 @@
-"use client";
-
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Printer, Save, Dog, Scissors, AlertCircle, User, Info, Check, Pencil, Scale, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStore, QueueItem } from '@/store/useStore';
@@ -21,7 +20,9 @@ const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: G
   
   // Form State
   const [weight, setWeight] = useState('');
-  const [formData, setFormData] = useState(intakeData?.details || {
+  
+  // Safely initialize form data
+  const defaultForm = {
     spayed: 'No',
     sex: 'Male',
     basicGrooming: [] as string[],
@@ -35,6 +36,17 @@ const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: G
     itemBrought: '',
     pickupTime: '',
     groomerAssigned: '',
+  };
+
+  const initialDetails = intakeData?.details;
+  const initialFormData = typeof initialDetails === 'string' 
+    ? { ...defaultForm, ...(JSON.parse(initialDetails) || {}) } 
+    : { ...defaultForm, ...(initialDetails || {}) };
+
+  const [formData, setFormData] = useState({
+    ...initialFormData,
+    basicGrooming: Array.isArray(initialFormData.basicGrooming) ? initialFormData.basicGrooming : [],
+    addOns: Array.isArray(initialFormData.addOns) ? initialFormData.addOns : [],
   });
 
   useEffect(() => {
@@ -143,8 +155,10 @@ const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: G
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 bg-[#18234A]/10 backdrop-blur-md z-[150] flex items-center justify-center p-4 lg:p-10 overflow-y-auto">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4 lg:p-10 overflow-y-auto">
       <div className="bg-[#f3f3f3] w-full max-w-4xl rounded-[48px] shadow-[0_20px_40px_rgba(24,35,74,0.04)] overflow-hidden flex flex-col my-auto max-h-[95vh] border border-white/40">
         
         {/* Header */}
@@ -305,7 +319,8 @@ const GroomingServiceModal = ({ item, onClose, readOnly = false, intakeData }: G
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

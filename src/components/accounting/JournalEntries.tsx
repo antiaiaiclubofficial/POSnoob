@@ -23,7 +23,7 @@ const JournalEntries = () => {
 
   // New Journal Entry Form state
   const [entryForm, setEntryForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: format(new Date(), 'yyyy-MM-dd'),
     journalType: 'JV' as JournalType,
     referenceNo: '',
     description: '',
@@ -96,7 +96,7 @@ const JournalEntries = () => {
     setIsAddModalOpen(false);
     // Reset form
     setEntryForm({
-      date: new Date().toISOString().split('T')[0],
+      date: format(new Date(), 'yyyy-MM-dd'),
       journalType: 'JV',
       referenceNo: '',
       description: '',

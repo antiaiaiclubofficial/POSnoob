@@ -889,7 +889,7 @@ export default function InventoryDashboard() {
     for (const dateKey of days) {
       while (logIndex < sortedLogs.length) {
         const log = sortedLogs[logIndex];
-        const logDateStr = new Date(log.timestamp).toISOString().split('T')[0];
+        const logDateStr = format(new Date(log.timestamp), 'yyyy-MM-dd');
 
         if (logDateStr > dateKey) {
           const diff = log.newQty - log.oldQty;

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Edit3, TrendingUp, History, ClipboardList, Calendar, 
   ChevronDown, ChevronUp, Scale, FileSearch, Eye, Plus
@@ -20,7 +21,7 @@ interface PetProfileRecordProps {
 
 const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
   const { currency, language, customers, updatePetWeight } = useStore();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [selectedIntake, setSelectedIntake] = useState<any>(null);
   const [selectedHistory, setSelectedHistory] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -269,7 +270,7 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
       )}
 
       {/* Update Weight Modal */}
-      {isUpdateWeightOpen && (
+      {isUpdateWeightOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 bg-[#1A1F3D]/40 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
           <div className="bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden p-8 animate-in zoom-in-95 duration-200">
             <h3 className="text-lg font-black text-[#1A1F3D] mb-2">อัพเดตน้ำหนัก</h3>
@@ -326,7 +327,8 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

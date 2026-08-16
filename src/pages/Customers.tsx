@@ -122,7 +122,11 @@ const Customers = () => {
       if (storeId && storeId !== 'default-store') {
         serviceHistoryQuery = serviceHistoryQuery.eq('store_id', storeId);
       }
-      const { data: serviceHistoryData } = await serviceHistoryQuery;
+      const { data: serviceHistoryData, error: serviceHistoryError } = await serviceHistoryQuery;
+      
+      if (serviceHistoryError) {
+        console.error("Error fetching service history:", serviceHistoryError);
+      }
       
       const serviceHistoryMap: Record<string, any[]> = {};
       if (serviceHistoryData) {
