@@ -45,8 +45,15 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
     { icon: LayoutDashboard, label: t.dashboard, path: '/' },
     { icon: ShoppingBag, label: t.pos, path: '/pos' },
     { icon: CalendarDays, label: t.queue, path: '/queue' },
-    { icon: Users, label: t.customers, path: '/customers' },
     { icon: Building2, label: t.hotel || 'โรงแรม', path: '/hotel' },
+    {
+      icon: Users,
+      label: 'CRM & Marketing',
+      submenu: [
+        { icon: Users, label: t.customers, path: '/customers' },
+        { icon: Megaphone, label: t.marketing, path: '/marketing' },
+      ]
+    },
     {
       icon: Package, 
       label: 'สต๊อก & บัญชี',
@@ -64,11 +71,11 @@ export const SidebarContent = ({ className, onClose }: SidebarProps) => {
         { icon: Target, label: t.performance, path: '/staff/performance' },
       ]
     },
+
     {
       icon: BarChart3, 
       label: 'รายงาน & ระบบ',
       submenu: [
-        { icon: Megaphone, label: t.marketing, path: '/marketing' },
         { icon: BarChart3, label: t.reports, path: '/reports' },
         { icon: History, label: t.logs, path: '/logs' }
       ]

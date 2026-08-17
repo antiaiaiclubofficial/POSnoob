@@ -217,11 +217,11 @@ const Marketing = () => {
     <div className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FD]">
       <header className="px-6 lg:px-12 py-10 shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 pl-14 lg:pl-12">
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <h1 className="text-4xl font-black text-[#1A1F3D] mb-2">{t.marketing}</h1>
+          <div className="flex items-center gap-2">
             <Megaphone size={16} className="text-[#D9ED5F]" />
             <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">{t.marketing}</p>
           </div>
-          <h1 className="text-4xl font-black text-[#1A1F3D]">{t.marketing}</h1>
         </div>
         {activeTab !== 'points' && (
           <button
