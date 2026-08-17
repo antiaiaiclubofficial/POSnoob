@@ -16,6 +16,43 @@ import { createCRMSlice } from './slices/crmSlice';
 // Re-export all types so that other files can import them from '@/store/useStore'
 export * from './types';
 
+export const walkInCustomer: Customer = {
+  id: 'walk-in',
+  name: 'ลูกค้าทั่วไป (Walk-in)',
+  phone: '-',
+  email: '-',
+  membership: 'Standard',
+  pets: [
+    {
+      id: 'walk-in-dog',
+      name: 'สุนัขทั่วไป',
+      species: 'Dog',
+      breed: 'Mixed Breed',
+      birthday: format(new Date(), 'yyyy-MM-dd'),
+      weightHistory: [],
+      serviceHistory: [],
+      notes: '',
+      image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
+    },
+    {
+      id: 'walk-in-cat',
+      name: 'แมวทั่วไป',
+      species: 'Cat',
+      breed: 'Mixed Breed',
+      birthday: format(new Date(), 'yyyy-MM-dd'),
+      weightHistory: [],
+      serviceHistory: [],
+      notes: '',
+      image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200&h=200&fit=crop'
+    }
+  ],
+  packages: [],
+  points: 0,
+  creditBalance: 0,
+  totalSpent: 0,
+  createdAt: new Date().toISOString()
+};
+
 export const useStore = create<AppState>()((set, get) => ({
   shopName: 'Mellow Fellow Sanctuary',
   shopLogo: null,
@@ -1636,13 +1673,21 @@ export const useStore = create<AppState>()((set, get) => ({
   })),
 
   addToCart: (item) => set(state => {
-    const existingIndex = state.cart.findIndex(i => i.id === item.id && i.petId === item.petId);
+    const owner = state.selectedOwner || walkInCustomer;
+    
+    // Ensure item has ownerName if not set
+    const finalItem = {
+      ...item,
+      ownerName: item.ownerName || owner.name
+    };
+
+    const existingIndex = state.cart.findIndex(i => i.id === finalItem.id && i.petId === finalItem.petId);
     if (existingIndex > -1) {
       const newCart = [...state.cart];
-      newCart[existingIndex].quantity += item.quantity;
-      return { cart: newCart };
+      newCart[existingIndex].quantity += finalItem.quantity;
+      return { cart: newCart, selectedOwner: owner };
     }
-    return { cart: [...state.cart, item] };
+    return { cart: [...state.cart, finalItem], selectedOwner: owner };
   }),
 
   removeFromCart: (index) => set(state => ({
@@ -1716,7 +1761,7 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
 
-  processPayment: async (customerId, total, discount, items, method, details, isTaxInvoice, redeemedPoints, subtotal, vatAmount, vatRate) => {
+  processPayment: async (customerId, total, discount, items, method, details, isTaxInvoice, redeemedPoints, subtotal, vatAmount, vatRate, customDate) => {
     const currentStoreId = get().storeId;
     const staffName = get().currentUser?.name || 'Admin';
     const staffId = get().currentUser?.id;
@@ -1741,7 +1786,8 @@ export const useStore = create<AppState>()((set, get) => ({
         is_tax_invoice: isTaxInvoice,
         subtotal: subtotal !== undefined ? subtotal : total,
         vat_amount: vatAmount !== undefined ? vatAmount : 0,
-        vat_rate: vatRate !== undefined ? vatRate : 0
+        vat_rate: vatRate !== undefined ? vatRate : 0,
+        ...(customDate ? { created_at: customDate } : {})
       }])
       .select()
       .single();
@@ -1913,12 +1959,12 @@ export const useStore = create<AppState>()((set, get) => ({
         itemType: item.type?.toLowerCase() as any
       }));
       
-      const newDocNo = `ABB-${format(new Date(), 'yyyy-MM-dd').replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const newDocNo = data.details?.receiptNo || `ABB-${format(new Date(), 'yyyy-MM-dd').replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       get().addBillingDocument({
         documentNo: newDocNo,
         type: 'short_receipt',
-        date: format(new Date(data.created_at), 'yyyy-MM-dd'),
+        date: data.created_at,
         customerId: data.customer_id && data.customer_id !== 'walk-in' ? data.customer_id : undefined,
         customerName: data.customer_name || 'Walk-in Customer',
         items: shortReceiptItems,

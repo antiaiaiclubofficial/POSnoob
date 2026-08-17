@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Wallet, Banknote, CreditCard, QrCode, Check, ArrowRight, DollarSign } from 'lucide-react';
+import { X, Wallet, Banknote, CreditCard, QrCode, Check, ArrowRight, DollarSign, Delete } from 'lucide-react';
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -63,67 +63,90 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
 
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[110] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-md rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+      <div className={cn("bg-white w-full rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300", method === 'Cash' ? "max-w-2xl" : "max-w-md")}>
         {/* Header */}
-        <div className="p-10 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+        <div className="p-8 pb-4 flex justify-between items-start">
           <div className="flex items-center gap-4">
             <div className={cn(
-              "w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg",
-              method === 'Cash' ? "bg-orange-500" : method === 'Transfer' ? "bg-blue-500" : "bg-purple-500"
+              "w-12 h-12 rounded-[1.25rem] flex items-center justify-center shadow-sm",
+              method === 'Cash' ? "bg-[#daed5b] text-[#1a1e00]" : method === 'Transfer' ? "bg-[#020d35] text-white" : "bg-[#18234a] text-white"
             )}>
-              {method === 'Cash' ? <Wallet size={24}/> : method === 'Transfer' ? <QrCode size={24}/> : <CreditCard size={24}/>}
+              {method === 'Cash' ? <Banknote size={24}/> : method === 'Transfer' ? <QrCode size={24}/> : <CreditCard size={24}/>}
             </div>
             <div>
-              <h3 className="text-xl font-black text-[#1A1F3D]">{methodLabel}</h3>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{language === 'th' ? 'สรุปธุรกรรม' : 'Finalize Transaction'}</p>
+              <h3 className="text-[20px] font-black text-[#1a1c1c] leading-tight">{methodLabel}</h3>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{language === 'th' ? 'สรุปธุรกรรม' : 'Finalize Transaction'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all">
-            <X size={20} className="text-gray-400" />
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 bg-transparent hover:bg-gray-50 rounded-full transition-colors">
+            <X size={20} />
           </button>
         </div>
 
-        <div className="p-10 space-y-8">
+        <div className="p-8 pt-0 space-y-8">
           {/* Total Amount Display */}
-          <div className="text-center">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">{t.total}</p>
-            <h2 className="text-5xl font-black text-[#1A1F3D]">{currency}{total.toFixed(2)}</h2>
+          <div className="text-center mt-2">
+            <p className="text-[10px] font-bold text-gray-400 tracking-[0.2em] mb-2">{t.total}</p>
+            <h2 className="text-[48px] font-black text-[#020d35] tracking-tight">{currency}{total.toFixed(2)}</h2>
           </div>
 
           {/* Dynamic Payment Content */}
           <div className="space-y-6">
             {method === 'Cash' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.received}</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-lg font-black">{currency}</span>
-                    <input 
-                      type="number"
-                      autoFocus
-                      className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-12 pr-6 py-4 text-xl font-black text-[#1A1F3D] focus:ring-4 focus:ring-orange-500/10"
-                      placeholder="0.00"
-                      value={received}
-                      onChange={e => setReceived(e.target.value)}
-                    />
+              <div className="flex flex-col md:flex-row gap-8">
+                <div className="flex-1 space-y-6">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 mb-2 block">{t.received}</label>
+                    <div className="relative">
+                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 text-xl font-bold">{currency}</span>
+                      <input 
+                        type="number"
+                        autoFocus
+                        className="w-full bg-[#f3f3f3] border-2 border-[#18234a]/10 focus:border-[#daed5b] rounded-[1.5rem] pl-12 pr-6 py-4 text-[20px] font-bold text-[#1a1c1c] outline-none transition-colors"
+                        placeholder="0.00"
+                        value={received}
+                        onChange={e => setReceived(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-4">
+                    {[20, 50, 100, 500, 1000].map(amount => (
+                      <button 
+                        key={amount}
+                        onClick={() => handleQuickCash(amount)}
+                        className="flex-1 py-3 bg-white border border-gray-100 rounded-[1rem] text-[12px] font-bold text-gray-600 hover:bg-[#f9f9f9] transition-colors"
+                      >
+                        {currency}{amount}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="bg-[#daed5b]/20 p-6 rounded-[2rem] flex justify-between items-center mt-6">
+                    <span className="text-sm font-bold text-[#1a1e00]">{t.change}</span>
+                    <span className="text-[28px] font-black text-[#1a1e00]">{currency}{change.toFixed(2)}</span>
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  {[50, 100, 500, 1000].map(amount => (
-                    <button 
-                      key={amount}
-                      onClick={() => handleQuickCash(amount)}
-                      className="flex-1 py-3 bg-white border border-gray-100 rounded-xl text-xs font-black text-gray-500 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all"
-                    >
-                      {currency}{amount}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="bg-orange-50 p-6 rounded-[28px] border border-orange-100 flex justify-between items-center">
-                  <span className="text-xs font-black text-orange-600 uppercase tracking-widest">{t.change}</span>
-                  <span className="text-2xl font-black text-orange-600">{currency}{change.toFixed(2)}</span>
+                <div className="w-full md:w-[280px] shrink-0">
+                  <div className="grid grid-cols-3 gap-3">
+                    {['1','2','3','4','5','6','7','8','9','C','0','⌫'].map((key) => (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          if (key === 'C') setReceived('');
+                          else if (key === '⌫') setReceived(prev => prev.slice(0, -1));
+                          else setReceived(prev => prev + key);
+                        }}
+                        className={cn(
+                          "py-5 bg-[#f9f9f9] rounded-[1rem] text-[20px] font-bold transition-colors hover:bg-[#f3f3f3] active:bg-[#e8e8e8]",
+                          key === 'C' ? "text-[#ff0000]" : key === '⌫' ? "text-gray-400 flex justify-center items-center" : "text-[#1a1c1c]"
+                        )}
+                      >
+                        {key === '⌫' ? <Delete size={20} /> : key}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -208,11 +231,11 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
           <button 
             onClick={handleFinish}
             className={cn(
-              "w-full text-white font-black py-5 rounded-[28px] flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95",
-              method === 'Cash' ? "bg-orange-500 shadow-orange-500/20" : method === 'Transfer' ? "bg-blue-500 shadow-blue-500/20" : "bg-[#1A1F3D] shadow-[#1A1F3D]/20"
+              "w-full font-bold text-[16px] py-5 rounded-[2rem] flex items-center justify-center gap-3 shadow-lg transition-all active:scale-95",
+              method === 'Cash' ? "bg-[#daed5b] text-[#1a1e00] shadow-[#daed5b]/30" : method === 'Transfer' ? "bg-[#020d35] text-white shadow-[#020d35]/30" : "bg-[#18234a] text-white shadow-[#18234a]/30"
             )}
           >
-            <Check size={24} /> {t.confirmPayment}
+            <Check size={20} strokeWidth={3} /> {t.confirmPayment}
           </button>
         </div>
       </div>

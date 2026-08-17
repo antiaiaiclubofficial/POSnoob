@@ -1,17 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  ShoppingBag, Dog, ArrowDownCircle, Banknote, Check, CreditCard, Wallet, X, Trash2, Package, Plus, Minus, FileText, Landmark, Percent, Tag, Save, ClipboardList, ChevronUp, ChevronDown
+  ShoppingBag, Dog, Banknote, X, Plus, Minus, Package, Save, ClipboardList, Tag, ArrowDownCircle
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { useStore, PaymentMethod } from '@/store/useStore';
-import { toast } from 'sonner';
+import { useStore, walkInCustomer } from '@/store/useStore';
 import { cn } from '@/lib/utils';
-import PaymentModal from './PaymentModal';
-import ReceiptPreview from './ReceiptPreview';
 import { translations } from '@/utils/translations';
-import { Switch } from "@/components/ui/switch";
+import { toast } from 'sonner';
+import CheckoutDrawer from './CheckoutDrawer';
 
 interface OrderSummaryProps {
   isMobile?: boolean;
@@ -21,11 +20,9 @@ interface OrderSummaryProps {
 const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
   const { 
     cart, removeFromCart, updateCartQuantity, updateCartItemDiscount, clearCart, 
-    selectedOwner, activePet, markAsPaid, processPayment, tierRules, inventory, 
-    addToCart, currency, language, shopName, shopLogo, shopAddress, shopPhone,
-    receiptHeader, receiptFooter, receiptPaperSize, vatEnabled, vatRate, vatInclusive,
-    serviceChargeEnabled, serviceChargeRate,
-    holdBill, heldBills, queue
+    selectedOwner, tierRules, inventory, addToCart, currency, language,
+    holdBill, heldBills, queue, vatEnabled, vatRate, vatInclusive,
+    serviceChargeEnabled, serviceChargeRate
   } = useStore();
   
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -33,61 +30,15 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
   
   const t = translations[language];
   
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isPaymentExpanded, setIsPaymentExpanded] = useState(false);
-  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-  const [isTaxInvoice, setIsTaxInvoice] = useState(false);
   const [barcodeQuery, setBarcodeQuery] = useState('');
   const [activeDiscountIndex, setActiveDiscountIndex] = useState<number | null>(null);
   const [tempDiscountVal, setTempDiscountVal] = useState('');
   const [tempDiscountType, setTempDiscountType] = useState<'percent' | 'amount'>('percent');
-  const [width, setWidth] = useState(384);
-  const [isResizing, setIsResizing] = useState(false);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      const newWidth = window.innerWidth - e.clientX;
-      if (newWidth >= 300 && newWidth <= 800) {
-        setWidth(newWidth);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      // Prevent text selection during drag
-      document.body.style.userSelect = 'none';
-    } else {
-      document.body.style.userSelect = '';
-    }
-    
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.userSelect = '';
-    };
-  }, [isResizing]);
-
-  // เก็บข้อมูลธุรกรรมที่เพิ่งทำเสร็จเพื่อแสดงใบเสร็จ
-  const [completedTransaction, setCompletedTransaction] = useState<any | null>(null);
-
-  useEffect(() => {
-    setSelectedPackageId(null);
-  }, [activePet]);
+  const [isCheckoutDrawerOpen, setIsCheckoutDrawerOpen] = useState(false);
+  const [isBackdatedCheckout, setIsBackdatedCheckout] = useState(false);
 
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedOwner) {
-      toast.error("Please select a customer first");
-      setBarcodeQuery('');
-      return;
-    }
     const product = inventory.find(i => i.barcode === barcodeQuery);
     if (product) {
       addToCart({
@@ -95,7 +46,7 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
         title: product.name,
         price: product.price,
         quantity: 1,
-        ownerName: selectedOwner.name,
+        ownerName: selectedOwner?.name || walkInCustomer.name,
         type: 'Product'
       });
       toast.success(`Scanned: ${product.name}`);
@@ -107,7 +58,6 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
 
   const round2 = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
 
-  // คำนวณราคาสินค้าแต่ละรายการหลังหักส่วนลดรายรายการ
   const getItemPriceAfterDiscount = (item: any) => {
     if (!item.discountType || !item.discountValue) return item.price;
     let price = item.price;
@@ -119,13 +69,11 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
     return Math.max(0, round2(price));
   };
 
-  // คำนวณยอดรวมของตะกร้า
   const subtotal = round2(cart.reduce((acc, item) => {
     const finalPrice = getItemPriceAfterDiscount(item);
     return acc + round2(finalPrice * item.quantity);
   }, 0));
 
-  // คำนวณส่วนลดรวมของตะกร้า (จากส่วนลดรายรายการ)
   const totalItemDiscounts = round2(cart.reduce((acc, item) => {
     if (!item.discountType || !item.discountValue) return acc;
     const originalTotal = round2(item.price * item.quantity);
@@ -133,18 +81,15 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
     return acc + round2(originalTotal - discountedTotal);
   }, 0));
 
-  // ส่วนลดระดับสมาชิก (Tier Discount) จะคำนวณจากยอดรวมหลังหักส่วนลดรายรายการแล้ว
   const userTier = selectedOwner ? tierRules.find(r => r.level === selectedOwner.membership) : null;
   const tierDiscountPercent = userTier?.discount || 0;
   const tierDiscountAmount = round2((subtotal * tierDiscountPercent) / 100);
   
-  // ยอดรวมหลังหักส่วนลดสมาชิก
   const discountableSubtotal = round2(subtotal - tierDiscountAmount);
   
   const serviceChargeAmount = serviceChargeEnabled ? round2(discountableSubtotal * (serviceChargeRate || 10) / 100) : 0;
   const subtotalAfterServiceCharge = discountableSubtotal + serviceChargeAmount;
 
-  // คำนวณภาษีและยอดสุทธิ
   const vatRateVal = vatRate || 7;
   let tax = 0;
   let total = 0;
@@ -166,92 +111,12 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
     subtotalBeforeTax = total;
   }
 
-  const availablePackages = selectedOwner?.packages?.filter(pkg => {
-    return cart.some(item => pkg.targetServiceId === item.id && pkg.remainingSlots > 0);
-  }) || [];
-
-  const handleInitiatePayment = () => {
-    if (cart.length === 0 || !selectedOwner) return;
-    
-    if (paymentMethod === 'Package' && !selectedPackageId) {
-      toast.error("Please select a service package to use");
-      return;
-    }
-
-    if (paymentMethod === 'Store Credit') {
-      const balance = selectedOwner.creditBalance || 0;
-      if (balance < total) {
-        toast.error(`Insufficient credits. Balance: ${currency}${balance.toLocaleString()}`);
-        return;
-      }
-    }
-
-    setIsPaymentModalOpen(true);
-  };
-
   const handleHoldBill = () => {
     if (cart.length === 0) return;
     const customerId = selectedOwner?.id || 'walk-in';
     const customerName = selectedOwner?.name || 'Walk-in Customer';
     holdBill(customerId, customerName, cart);
     toast.success(language === 'th' ? "พักบิลสำเร็จ" : "Bill put on hold");
-  };
-
-  const handleCompletePayment = (details: any) => {
-    if (!selectedOwner) return;
-    const finalDetails = {
-      ...details,
-      packageId: paymentMethod === 'Package' ? selectedPackageId : undefined
-    };
-
-    const finalCart = cart.map(item => ({
-      ...item,
-      finalPrice: getItemPriceAfterDiscount(item)
-    }));
-
-    // สร้างข้อมูลจำลองของ Transaction เพื่อส่งให้ ReceiptPreview แสดงผล
-    const txId = `TX-${Date.now()}`;
-    const txData = {
-      id: txId,
-      date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-      customerName: selectedOwner.name,
-      items: finalCart,
-      amount: total,
-      discountAmount: totalItemDiscounts + tierDiscountAmount,
-      subtotal: subtotalBeforeTax,
-      vatAmount: tax,
-      vatRate: vatRateVal,
-      isTaxInvoice: isTaxInvoice,
-      paymentMethod: paymentMethod,
-      details: {
-        ...finalDetails,
-        vatInclusive: vatInclusive
-      }
-    };
-
-    processPayment(
-      selectedOwner.id, 
-      total, 
-      totalItemDiscounts + tierDiscountAmount, 
-      finalCart, 
-      paymentMethod, 
-      finalDetails, 
-      isTaxInvoice,
-      undefined, 
-      subtotalBeforeTax,
-      tax,
-      vatRateVal
-    );
-    cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
-    
-    toast.success("Transaction Complete!");
-    
-    // แสดงใบเสร็จรับเงินทันที
-    setCompletedTransaction(txData);
-    
-    clearCart();
-    setIsPaymentModalOpen(false);
-    setSelectedPackageId(null);
   };
 
   const handleApplyDiscount = (index: number) => {
@@ -282,34 +147,22 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
   };
 
   return (
-    <div 
-      className={cn(
-        "bg-white h-full flex flex-col shrink-0 relative transition-all duration-75",
-        isMobile ? "w-full p-6" : "p-8 border-l border-gray-100"
-      )}
-      style={!isMobile ? { width: `${width}px` } : undefined}
-    >
-      {!isMobile && (
-        <div 
-          className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-[#1A1F3D] active:bg-[#1A1F3D] z-50 transition-colors"
-          style={{ transform: 'translateX(-50%)' }}
-          onMouseDown={() => setIsResizing(true)}
-        >
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-8 bg-gray-300 rounded-full group-hover:bg-[#D9ED5F]" />
-        </div>
-      )}
-      <div className="flex items-center justify-between mb-8">
+    <div className={cn(
+      "bg-white h-full flex flex-col shrink-0 relative transition-all duration-300 border-l border-gray-100",
+      isMobile ? "w-full p-6" : "w-96 p-6"
+    )}>
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-[#1A1F3D]">{t.orderSummary}</h2>
-          {selectedOwner && (
-            <div className="flex items-center gap-2 mt-1">
+          <h2 className="text-xl font-bold text-[#1A1F3D]">{t.orderSummary}</h2>
+          {selectedOwner && selectedOwner.id !== 'walk-in' && (
+            <div className="flex items-center gap-2 mt-2">
               <span className={cn(
-                "text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter",
+                "text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider whitespace-nowrap",
                 getTierColorClass(selectedOwner.membership)
               )}>
                 {selectedOwner.membership} MEMBER
               </span>
-              <span className="text-[8px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
+              <span className="text-[10px] bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider whitespace-nowrap">
                 CREDIT: {currency}{(selectedOwner.creditBalance || 0).toLocaleString()}
               </span>
             </div>
@@ -327,7 +180,7 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
             className="flex items-center gap-2 bg-[#D9ED5F] text-[#1A1F3D] px-3 py-2 rounded-xl shadow-sm text-[10px] font-black hover:brightness-95 hover:scale-105 active:scale-95 transition-all"
           >
             <ClipboardList size={14} />
-            <span className="hidden sm:inline">{language === 'th' ? 'บิลที่พัก/คิว' : 'Saved Bills/Queue'}</span>
+            <span className="hidden sm:inline">{language === 'th' ? 'บิลที่พัก/คิว' : 'Saved Bills'}</span>
             {((heldBills?.length || 0) > 0 || todayQueue.length > 0) && (
               <span className="bg-red-500 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full ml-0.5">
                 {(heldBills?.length || 0) + todayQueue.length}
@@ -337,12 +190,11 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
         </div>
       </div>
 
-      {/* Barcode Input */}
-      <form onSubmit={handleBarcodeSubmit} className="mb-6">
+      <form onSubmit={handleBarcodeSubmit} className="mb-4">
         <div className="relative">
           <Package size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
           <input 
-            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-3 text-[10px] font-bold focus:ring-2 focus:ring-[#1A1F3D]/5"
+            className="w-full bg-[#F5F6FA] border-none rounded-2xl pl-10 pr-4 py-3 text-[10px] font-bold focus:ring-2 focus:ring-[#1A1F3D]/5 outline-none"
             placeholder="Scan Barcode / Enter code..."
             value={barcodeQuery}
             onChange={e => setBarcodeQuery(e.target.value)}
@@ -350,33 +202,52 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
         </div>
       </form>
 
-      <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide -mx-2 px-2">
         {cart.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-30 py-10">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><ShoppingBag size={32} className="text-gray-400" /></div>
             <p className="text-sm font-bold text-gray-500">Cart is empty</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.services}</p>
-            {cart.map((item, idx) => {
-              const hasDiscount = item.discountType && item.discountValue > 0;
-              const finalPrice = getItemPriceAfterDiscount(item);
+          <div className="flex flex-col gap-4 pb-4">
+            {['Service', 'Product', 'Package', 'Credit'].map(type => {
+              const itemsOfType = cart.map((item, idx) => ({ item, idx })).filter(x => x.item.type === type || (!x.item.type && type === 'Product'));
+              if (itemsOfType.length === 0) return null;
               
+              let label = '';
+              if (type === 'Service') label = t.services;
+              else if (type === 'Product') label = language === 'th' ? 'สินค้า' : 'Products';
+              else if (type === 'Package') label = language === 'th' ? 'แพ็กเกจ' : 'Packages';
+              else if (type === 'Credit') label = language === 'th' ? 'เครดิต' : 'Credits';
+
               return (
-                <div key={`${item.id}-${idx}`} className="flex flex-col gap-3 p-4 bg-white border border-gray-100 rounded-[24px] shadow-sm">
-                  <div className="flex items-center gap-4">
+                <div key={type} className="flex flex-col gap-4">
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2 -mb-2 mt-2">{label}</p>
+                  <AnimatePresence>
+                    {itemsOfType.map(({ item, idx }) => {
+                      const hasDiscount = item.discountType && item.discountValue > 0;
+                const finalPrice = getItemPriceAfterDiscount(item);
+                
+                return (
+                  <motion.div 
+                    key={`${item.id}-${idx}`}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9, y: -20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                    className="flex flex-col gap-3 p-4 bg-white border border-gray-100 rounded-[20px] shadow-sm"
+                  >
+                  <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-[#F5F6FA] rounded-xl flex items-center justify-center shrink-0">
                       <Dog className="text-[#1A1F3D] w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-[#1A1F3D] text-[18px] leading-tight truncate">{item.title}</h4>
-                      <p className="text-[10px] text-gray-400 font-black uppercase mt-0.5">{item.petName || 'Retail Item'}</p>
+                      <h4 className="font-bold text-[#1A1F3D] text-[14px] leading-tight truncate">{item.title}</h4>
+                      <p className="text-[9px] text-gray-400 font-black uppercase mt-0.5">{item.petName || 'Retail Item'}</p>
                     </div>
                     <button onClick={() => removeFromCart(idx)} className="p-1.5 text-red-200 hover:text-red-500"><X size={14} /></button>
                   </div>
 
-                  {/* ส่วนลดรายรายการ */}
                   <div className="px-2 py-1 bg-gray-50 rounded-xl flex flex-col gap-2">
                     {activeDiscountIndex === idx ? (
                       <div className="flex items-center gap-2 animate-in slide-in-from-top-1">
@@ -398,7 +269,7 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
                         </div>
                         <input 
                           type="number"
-                          className="w-16 bg-white border border-gray-100 rounded-lg px-2 py-1 text-[10px] font-bold text-center"
+                          className="w-16 bg-white border border-gray-100 rounded-lg px-2 py-1 text-[10px] font-bold text-center outline-none"
                           placeholder="0"
                           value={tempDiscountVal}
                           onChange={e => setTempDiscountVal(e.target.value)}
@@ -422,7 +293,7 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
                       <div className="flex items-center justify-between">
                         {hasDiscount ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-[12px] bg-red-50 text-red-600 px-2 py-0.5 rounded-md font-black">
+                            <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-md font-black">
                               Discount: -{item.discountType === 'percent' ? `${item.discountValue}%` : `${currency}${item.discountValue}`}
                             </span>
                             <button 
@@ -441,9 +312,9 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
                               setTempDiscountType('percent');
                               setTempDiscountVal('');
                             }}
-                            className="text-[12px] text-blue-500 hover:text-blue-700 font-black flex items-center gap-1.5"
+                            className="text-[10px] text-blue-500 hover:text-blue-700 font-black flex items-center gap-1.5"
                           >
-                            <Tag size={12} /> Add Item Discount
+                            <Tag size={10} /> Add Item Discount
                           </button>
                         )}
                       </div>
@@ -452,21 +323,25 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
                   
                   <div className="flex items-center justify-between pt-2 border-t border-gray-50">
                      <div className="flex items-center bg-[#F5F6FA] rounded-xl p-1 gap-3">
-                        <button onClick={() => updateCartQuantity(idx, -1)} className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Minus size={16} /></button>
-                        <span className="text-[16px] font-black w-6 text-center">{item.quantity}</span>
-                        <button onClick={() => updateCartQuantity(idx, 1)} className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Plus size={16} /></button>
+                        <button onClick={() => updateCartQuantity(idx, -1)} className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Minus size={14} /></button>
+                        <span className="text-[14px] font-black w-4 text-center">{item.quantity}</span>
+                        <button onClick={() => updateCartQuantity(idx, 1)} className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-400 hover:text-[#1A1F3D]"><Plus size={14} /></button>
                      </div>
                      <div className="text-right">
                        {hasDiscount && (
-                         <p className="text-[14px] text-gray-300 line-through font-bold">
+                         <p className="text-[12px] text-gray-300 line-through font-bold">
                            {currency}{(item.price * item.quantity).toFixed(2)}
                          </p>
                        )}
-                       <span className="font-black text-[24px] text-[#1A1F3D]">
+                       <span className="font-black text-[18px] text-[#1A1F3D]">
                          {currency}{(finalPrice * item.quantity).toFixed(2)}
                        </span>
                      </div>
                   </div>
+                  </motion.div>
+                );
+              })}
+                  </AnimatePresence>
                 </div>
               );
             })}
@@ -475,97 +350,53 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
       </div>
 
       <div className="mt-auto pt-4 flex flex-col">
-        <div className="flex items-center justify-center border-t border-gray-100 pt-4 pb-2">
-          <button 
-            onClick={() => setIsPaymentExpanded(!isPaymentExpanded)}
-            className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-[#1A1F3D] transition-colors bg-gray-50 px-4 py-1.5 rounded-full"
-          >
-            {isPaymentExpanded ? (
-               <><ChevronDown size={14} /> {language === 'th' ? 'ย่อรายละเอียดชำระเงิน' : 'Hide Payment Details'}</>
-            ) : (
-               <><ChevronUp size={14} /> {language === 'th' ? 'แสดงรายละเอียดชำระเงิน' : 'Show Payment Details'}</>
-            )}
-          </button>
+        <div className="pt-4 space-y-2 border-t border-dashed border-gray-200 mb-4">
+          <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
+            <span>{language === 'th' ? 'ยอดรวม' : 'Subtotal'}</span>
+            <span>{currency}{round2(cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)).toFixed(2)}</span>
+          </div>
+
+          {totalItemDiscounts > 0 && (
+            <div className="flex justify-between items-center text-xs text-red-500 font-medium px-2 py-0.5">
+              <span className="flex items-center gap-1.5"><Tag size={12}/> {language === 'th' ? 'ส่วนลดสินค้า' : 'Item Discounts'}</span>
+              <span>-{currency}{totalItemDiscounts.toFixed(2)}</span>
+            </div>
+          )}
+
+          {tierDiscountPercent > 0 && (
+            <div className="flex justify-between items-center text-xs text-green-600 font-medium px-2 py-0.5">
+              <span className="flex items-center gap-1.5"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
+              <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
+            </div>
+          )}
+
+          {serviceChargeEnabled && (
+            <div className="flex justify-between items-center text-xs text-indigo-500 font-medium px-2 py-0.5">
+              <span className="flex items-center gap-1.5">Service Charge ({serviceChargeRate || 10}%)</span>
+              <span>+{currency}{serviceChargeAmount.toFixed(2)}</span>
+            </div>
+          )}
+
+          {vatEnabled && (
+            <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
+              <span>{language === 'th' ? 'ยอดก่อนภาษี' : 'Subtotal Before VAT'}</span>
+              <span>{currency}{subtotalBeforeTax.toFixed(2)}</span>
+            </div>
+          )}
+
+          {vatEnabled && (
+            <div className="flex justify-between items-center text-xs text-gray-400 px-2 py-0.5">
+              <span>{vatInclusive ? (language === 'th' ? `VAT (${vatRateVal}% รวมในราคา)` : `VAT (${vatRateVal}% Incl.)`) : (language === 'th' ? `ภาษีมูลค่าเพิ่ม VAT (${vatRateVal}%)` : `VAT (${vatRateVal}%)`)}</span>
+              <span>{currency}{tax.toFixed(2)}</span>
+            </div>
+          )}
         </div>
 
-        {isPaymentExpanded && (
-          <div className="animate-in slide-in-from-bottom-2 fade-in duration-200">
-            <div className="pt-2 mb-6 space-y-4">
-               <div className="bg-[#F8F9FD] p-4 rounded-2xl flex items-center justify-between border border-gray-100">
-                  <div className="flex items-center gap-2">
-                     <FileText size={16} className="text-gray-400" />
-                     <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{language === 'th' ? 'ขอใบกำกับภาษี' : 'Tax Invoice'}</span>
-                  </div>
-                  <Switch checked={isTaxInvoice && vatEnabled} onCheckedChange={setIsTaxInvoice} disabled={!vatEnabled} className="data-[state=checked]:bg-[#1A1F3D]" />
-               </div>
-
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{t.paymentMethod}</p>
-              <div className="grid grid-cols-5 gap-1.5">
-                {(['Cash', 'Transfer', 'Credit Card', 'Package', 'Store Credit'] as const).map((method) => {
-                  const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Landmark : method === 'Credit Card' ? CreditCard : method === 'Package' ? Package : Wallet;
-                  const isDisabled = (method === 'Package' && availablePackages.length === 0) || (method === 'Store Credit' && (!selectedOwner || (selectedOwner.creditBalance || 0) < total));
-                  return (
-                    <button key={method} disabled={isDisabled} onClick={() => setPaymentMethod(method)} className={cn("flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition-all", paymentMethod === method ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-lg" : "bg-white border-gray-100 text-gray-400", isDisabled && "opacity-20 cursor-not-allowed grayscale")}>
-                      <Icon size={14} />
-                      <span className="text-[7px] font-black uppercase whitespace-nowrap">{method === 'Package' ? "PKG" : method === 'Store Credit' ? "CREDIT" : method.split(' ')[0]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="pt-4 space-y-2 border-t border-dashed border-gray-200">
-              <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
-                <span>{language === 'th' ? 'ยอดรวม' : 'Subtotal'}</span>
-                <span>{currency}{round2(cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)).toFixed(2)}</span>
-              </div>
-
-              {totalItemDiscounts > 0 && (
-                <div className="flex justify-between items-center text-xs text-red-500 font-medium px-2 py-0.5">
-                  <span className="flex items-center gap-1.5"><Tag size={12}/> {language === 'th' ? 'ส่วนลดสินค้า' : 'Item Discounts'}</span>
-                  <span>-{currency}{totalItemDiscounts.toFixed(2)}</span>
-                </div>
-              )}
-
-              {tierDiscountPercent > 0 && paymentMethod !== 'Package' && (
-                <div className="flex justify-between items-center text-xs text-green-600 font-medium px-2 py-0.5">
-                  <span className="flex items-center gap-1.5"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
-                  <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
-                </div>
-              )}
-
-              {serviceChargeEnabled && paymentMethod !== 'Package' && (
-                <div className="flex justify-between items-center text-xs text-indigo-500 font-medium px-2 py-0.5">
-                  <span className="flex items-center gap-1.5">Service Charge ({serviceChargeRate || 10}%)</span>
-                  <span>+{currency}{serviceChargeAmount.toFixed(2)}</span>
-                </div>
-              )}
-
-              {vatEnabled && (
-                <div className="flex justify-between items-center text-xs text-gray-500 px-2 py-0.5">
-                  <span>{language === 'th' ? 'ยอดก่อนภาษี' : 'Subtotal Before VAT'}</span>
-                  <span>{currency}{subtotalBeforeTax.toFixed(2)}</span>
-                </div>
-              )}
-
-              {vatEnabled && (
-                <div className="flex justify-between items-center text-xs text-gray-400 px-2 py-0.5">
-                  <span>{vatInclusive ? (language === 'th' ? `VAT (${vatRateVal}% รวมในราคา)` : `VAT (${vatRateVal}% Incl.)`) : (language === 'th' ? `ภาษีมูลค่าเพิ่ม VAT (${vatRateVal}%)` : `VAT (${vatRateVal}%)`)}</span>
-                  <span>{currency}{tax.toFixed(2)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="flex justify-between items-end pt-4 px-2 border-t border-gray-50 mt-4">
+        <div className="flex justify-between items-end px-2">
           <div className="flex flex-col">
             <span className="text-xl font-bold text-[#1A1F3D]">{t.total}</span>
-            {!isPaymentExpanded && (
-              <span className="text-[10px] font-bold text-gray-400 uppercase">{paymentMethod}</span>
-            )}
           </div>
-          <span className="text-3xl font-extrabold text-[#1A1F3D]">{paymentMethod === 'Package' ? "0.00" : `${currency}${total.toFixed(2)}`}</span>
+          <span className="text-3xl font-extrabold text-[#1A1F3D]">{currency}{total.toFixed(2)}</span>
         </div>
       </div>
 
@@ -573,35 +404,40 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
         <button 
           onClick={handleHoldBill} 
           disabled={cart.length === 0} 
-          className="flex-1 bg-white border border-[#1A1F3D] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-all"
+          className="flex-1 bg-white border border-[#1A1F3D] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-2 shadow-sm hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Save size={20} /> {language === 'th' ? 'พักบิล' : 'Hold'}
+          <Save size={20} /> <span className="hidden sm:inline">{language === 'th' ? 'พักบิล' : 'Hold'}</span>
         </button>
         <button 
-          onClick={handleInitiatePayment} 
+          onClick={() => {
+            setIsBackdatedCheckout(false);
+            setIsCheckoutDrawerOpen(true);
+          }} 
           disabled={cart.length === 0} 
-          className="flex-[2] bg-[#D9ED5F] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 shadow-xl transition-all"
+          className="flex-[2] bg-[#D9ED5F] text-[#1A1F3D] font-extrabold py-5 rounded-[28px] flex items-center justify-center gap-3 shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-95"
         >
-          <Banknote size={20} /> {paymentMethod === 'Package' ? "Deduct from Package" : paymentMethod === 'Store Credit' ? "Deduct Credit" : t.checkout}
+          <Banknote size={20} /> {language === 'th' ? 'ชำระเงิน' : 'Checkout'}
         </button>
       </div>
 
-      {isPaymentModalOpen && <PaymentModal total={paymentMethod === 'Package' || paymentMethod === 'Store Credit' ? 0 : total} method={paymentMethod === 'Store Credit' ? 'Cash' : paymentMethod} onClose={() => setIsPaymentModalOpen(false)} onComplete={handleCompletePayment} />}
-      
-      {/* แสดงใบเสร็จรับเงินทันทีหลังชำระเงินเสร็จสิ้น */}
-      {completedTransaction && (
-        <ReceiptPreview 
-          shopName={shopName}
-          shopLogo={shopLogo}
-          shopAddress={shopAddress}
-          shopPhone={shopPhone}
-          header={receiptHeader}
-          footer={receiptFooter}
-          paperSize={receiptPaperSize}
-          transaction={completedTransaction}
-          onClose={() => setCompletedTransaction(null)}
-        />
-      )}
+      <div className="mt-4 text-center">
+        <button
+          onClick={() => {
+            setIsBackdatedCheckout(true);
+            setIsCheckoutDrawerOpen(true);
+          }}
+          disabled={cart.length === 0}
+          className="text-sm font-bold text-gray-400 hover:text-[#1A1F3D] transition-colors underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+        >
+          {language === 'th' ? 'บันทึกบิลย้อนหลัง (Record Past Transaction)' : 'Record Past Transaction'}
+        </button>
+      </div>
+
+      <CheckoutDrawer 
+        isOpen={isCheckoutDrawerOpen} 
+        isBackdated={isBackdatedCheckout}
+        onClose={() => setIsCheckoutDrawerOpen(false)} 
+      />
     </div>
   );
 };

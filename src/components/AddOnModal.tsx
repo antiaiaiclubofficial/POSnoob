@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Sparkles, Zap, Check } from 'lucide-react';
-import { useStore } from '@/store/useStore';
+import { useStore, walkInCustomer } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -24,10 +24,8 @@ const AddOnModal = ({ addOn, onClose }: AddOnModalProps) => {
   if (!addOn) return null;
 
   const handleAdd = () => {
-    if (!activePet || !selectedOwner) {
-      toast.error("Please select a customer and pet first");
-      return;
-    }
+    const owner = selectedOwner || walkInCustomer;
+    const pet = activePet || owner.pets[0];
 
     const finalPrice = Number(price);
     if (isNaN(finalPrice)) {
@@ -40,13 +38,13 @@ const AddOnModal = ({ addOn, onClose }: AddOnModalProps) => {
       title: `${addOn.name} (Add-on)`,
       price: finalPrice,
       quantity: 1,
-      petId: activePet.id,
-      petName: activePet.name,
-      ownerName: selectedOwner.name,
+      petId: pet.id,
+      petName: pet.name,
+      ownerName: owner.name,
       type: 'Service'
     });
 
-    toast.success(`Added ${addOn.name} for ${activePet.name}`);
+    toast.success(`Added ${addOn.name} for ${pet.name}`);
     onClose();
   };
 

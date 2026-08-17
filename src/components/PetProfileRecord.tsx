@@ -235,7 +235,7 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
       {/* Intake Viewer Modal */}
       {selectedIntake && (() => {
         const customer = customers.find(c => c.pets.some(p => p.id === pet.id));
-        const ownerName = customer ? customer.name || customer.display_name : 'Customer';
+        const ownerName = customer ? customer.name : 'Customer';
         
         return (
           <GroomingServiceModal 
@@ -248,8 +248,7 @@ const PetProfileRecord = ({ pet, onEdit }: PetProfileRecordProps) => {
               date: selectedIntake.date,
               time: selectedIntake.details?.time || selectedHistory?.time || '-',
               status: 'Completed',
-              image: pet.image,
-              weight: selectedIntake.weight
+              image: pet.image
             }} 
             intakeData={selectedIntake}
             readOnly={true}

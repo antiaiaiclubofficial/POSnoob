@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatBahtText } from '@/lib/bahttext';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, VerticalAlign } from 'docx';
 import ReceiptPreview from '../ReceiptPreview';
+import { DateRangeDropdown, DateRange } from '@/components/ui/date-range-dropdown';
+import { startOfDay, endOfDay } from 'date-fns';
 
 const BillingSystem = () => {
   const { 
@@ -30,6 +32,7 @@ const BillingSystem = () => {
   const [receiptFilter, setReceiptFilter] = useState<'all' | 'receipt' | 'short_receipt'>('all');
   const [view, setView] = useState<'list' | 'create'>('list');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [previewDoc, setPreviewDoc] = useState<BillingDocument | null>(null);
   
   // Form State
@@ -114,8 +117,17 @@ const BillingSystem = () => {
   const filteredDocs = currentDocs.filter(doc => {
     const matchesSearch = doc.documentNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           doc.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
+    
+    let matchesDate = true;
+    if (dateRange?.from) {
+      const docDate = new Date(doc.date).getTime();
+      const from = startOfDay(dateRange.from).getTime();
+      const to = dateRange.to ? endOfDay(dateRange.to).getTime() : endOfDay(dateRange.from).getTime();
+      matchesDate = docDate >= from && docDate <= to;
+    }
+                          
+    return matchesSearch && matchesDate;
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -533,6 +545,11 @@ const BillingSystem = () => {
                     <option value="short_receipt">เฉพาะอย่างย่อ (POS)</option>
                   </select>
                 )}
+                <DateRangeDropdown 
+                  language="th"
+                  value={dateRange}
+                  onChange={(range) => setDateRange(range)}
+                />
               </div>
               
               {activeTab === 'receipt_all' ? (

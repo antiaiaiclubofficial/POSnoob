@@ -15,7 +15,7 @@ import {
   UserPlus, X, Search, Home, CreditCard, Sparkles, ShoppingBag, 
   CheckCircle2, Dog, Cat, Scissors, Package, ClipboardList, Clock, Zap, Star, Heart, Brush, Wind, Stethoscope, Award, Bone, Bath, Wallet, Plus, AlertCircle, ArrowRight, History, LayoutGrid, List
 } from 'lucide-react';
-import { useStore, QueueItem, ServiceIcon, Customer } from '@/store/useStore';
+import { useStore, QueueItem, ServiceIcon, Customer, walkInCustomer } from '@/store/useStore';
 import { translations } from '@/utils/translations';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -43,40 +43,6 @@ const getIcon = (iconName: ServiceIcon) => {
   }
 };
 
-// ข้อมูลลูกค้า Walk-in สำหรับระบบ Quick Sale
-const walkInCustomer: Customer = {
-  id: 'walk-in',
-  name: 'ลูกค้าทั่วไป (Walk-in)',
-  phone: '-',
-  email: '-',
-  membership: 'Standard',
-  pets: [
-    {
-      id: 'walk-in-dog',
-      name: 'สุนัขทั่วไป',
-      species: 'Dog',
-      breed: 'Mixed Breed',
-      birthday: format(new Date(), 'yyyy-MM-dd'),
-      weightHistory: [],
-      serviceHistory: [],
-      notes: '',
-      image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop'
-    },
-    {
-      id: 'walk-in-cat',
-      name: 'แมวทั่วไป',
-      species: 'Cat',
-      breed: 'Mixed Breed',
-      birthday: format(new Date(), 'yyyy-MM-dd'),
-      weightHistory: [],
-      serviceHistory: [],
-      notes: '',
-      image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200&h=200&fit=crop'
-    }
-  ],
-  totalSpent: 0,
-  creditBalance: 0
-};
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -849,22 +815,22 @@ const Index = () => {
                           )}
                         </div>
 
-                        <button 
-                          onClick={() => {
-                            if (!selectedOwner) {
-                              toast.error("Please select a customer first");
-                              return;
-                            }
-                            addToCart({
-                              id: `package-${pkg.id}`,
-                              title: pkg.name,
-                              price: pkg.price,
-                              quantity: 1,
-                              ownerName: selectedOwner.name,
-                              type: 'Package'
-                            });
-                            toast.success(`Added ${pkg.name} to cart`);
-                          }}
+                          <button 
+                            onClick={() => {
+                              if (!selectedOwner || selectedOwner.id === 'walk-in') {
+                                toast.error(language === 'th' ? "กรุณาเลือกลูกค้าสมาชิกก่อนซื้อแพ็กเกจ" : "Please select a registered customer first");
+                                return;
+                              }
+                              addToCart({
+                                id: `package-${pkg.id}`,
+                                title: pkg.name,
+                                price: pkg.price,
+                                quantity: 1,
+                                ownerName: selectedOwner.name,
+                                type: 'Package'
+                              });
+                              toast.success(`Added ${pkg.name} to cart`);
+                            }}
                           className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xl shadow-[#1A1F3D]/10"
                         >
                           <Plus size={20} /> {language === 'th' ? 'เพิ่มลงตะกร้า' : 'Add to Cart'}
@@ -905,8 +871,8 @@ const Index = () => {
 
                       <button 
                         onClick={() => {
-                          if (!selectedOwner) {
-                            toast.error("Please select a customer first");
+                          if (!selectedOwner || selectedOwner.id === 'walk-in') {
+                            toast.error(language === 'th' ? "กรุณาเลือกลูกค้าสมาชิกก่อนซื้อเครดิต" : "Please select a registered customer first");
                             return;
                           }
                           addToCart({

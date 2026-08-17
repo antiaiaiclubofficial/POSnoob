@@ -6,7 +6,7 @@ import {
   Wind, Stethoscope, Brush, Home, Heart, Bone, Award
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { useStore, Service, ServiceIcon } from '@/store/useStore';
+import { useStore, Service, ServiceIcon, walkInCustomer } from '@/store/useStore';
 import { toast } from 'sonner';
 
 interface ServiceCardProps {
@@ -53,10 +53,9 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
   const IconComponent = getIconComponent(service.icon);
 
   const handleAdd = () => {
-    if (!activePet || !selectedOwner) {
-      toast.error("Please select a customer and pet first");
-      return;
-    }
+    const owner = selectedOwner || walkInCustomer;
+    const pet = activePet || (service.targetSpecies === 'Cat' ? owner.pets.find(p => p.species === 'Cat') : owner.pets.find(p => p.species === 'Dog')) || owner.pets[0];
+
 
     const itemTitle = isFixedPrice ? service.title : `${service.title} (${selectedSize})`;
 
@@ -66,14 +65,14 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       title: itemTitle,
       price: totalPrice,
       quantity: 1,
-      petId: activePet.id,
-      petName: activePet.name,
-      ownerName: selectedOwner.name,
+      petId: pet.id,
+      petName: pet.name,
+      ownerName: selectedOwner?.name || walkInCustomer.name,
       size: isFixedPrice ? undefined : selectedSize,
       queueItemId: activeQueueItemId || undefined,
       type: 'Service'
     });
-    toast.success(`Added ${service.title} for ${activePet.name}`);
+    toast.success(`Added ${service.title} for ${pet.name}`);
   };
 
   return (

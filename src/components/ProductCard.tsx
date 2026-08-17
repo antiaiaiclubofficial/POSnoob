@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Package, Plus, ShoppingBag } from 'lucide-react';
-import { useStore, InventoryItem } from '@/store/useStore';
+import { useStore, InventoryItem, walkInCustomer } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -15,10 +15,6 @@ const ProductCard = ({ product, viewMode = 'grid' }: ProductCardProps) => {
   const { addToCart, selectedOwner, currency, partners } = useStore();
 
   const handleAdd = () => {
-    if (!selectedOwner) {
-      toast.error("Please select a customer first");
-      return;
-    }
 
     if (product.stock <= 0) {
       toast.error("Item out of stock");
@@ -33,7 +29,7 @@ const ProductCard = ({ product, viewMode = 'grid' }: ProductCardProps) => {
       title: product.name,
       price: product.price,
       quantity: 1,
-      ownerName: selectedOwner.name,
+      ownerName: selectedOwner?.name || walkInCustomer.name,
       type: 'Product',
       isConsignment: product.isConsignment,
       partnerId: product.partnerId,
