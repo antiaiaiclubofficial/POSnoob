@@ -198,6 +198,7 @@ export interface Transaction {
   voidReason?: string;
   voidedBy?: string;
   voidedAt?: string;
+  note?: string;
 }
 export interface GoodsReceiptItem {
   productId: string;

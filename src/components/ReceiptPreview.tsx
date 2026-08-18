@@ -18,6 +18,7 @@ interface ReceiptPreviewProps {
   transaction?: {
     id: string;
     date: string;
+    createdAt?: string;
     customerId?: string;
     customerName: string;
     items: any[];
@@ -46,36 +47,43 @@ interface ReceiptPreviewProps {
   } | null;
 }
 
-const ReceiptPreview = ({ 
-  shopName, shopLogo, shopAddress, shopPhone, 
-  header, footer, paperSize, onClose, transaction 
+const ReceiptPreview = ({
+  shopName, shopLogo, shopAddress, shopPhone,
+  header, footer, paperSize, onClose, transaction
 }: ReceiptPreviewProps) => {
-  
+
   const { vatEnabled, vatRate, vatInclusive, companyTaxId, customers, serviceChargeEnabled, serviceChargeRate } = useStore();
 
   const is80mm = paperSize === '80mm';
-  
+
   // Use real data or demo data
   const isDemo = !transaction;
-  const txId = transaction?.id || "000101000109";
   // Thai year format for demo
-  const txDate = transaction?.date ? format(new Date(transaction.date), 'dd/MM/yyyy HH:mm') : format(new Date(), 'dd/MM/yyyy HH:mm');
-  
+  const txDate = transaction ? format(new Date(transaction.createdAt || transaction.date), 'dd/MM/yyyy HH:mm') : format(new Date(), 'dd/MM/yyyy HH:mm');
+
+  let defaultTxId = "000101000109";
+  if (transaction && transaction.id) {
+    const dateStr = format(new Date(transaction.createdAt || transaction.date || new Date()), 'yyyyMMdd');
+    const shortId = transaction.id.substring(0, 6);
+    defaultTxId = `REC-${dateStr}-${shortId}`;
+  }
+  const txId = transaction?.details?.receiptNo || defaultTxId;
+
   const customerName = transaction?.customerName || "นายบัณฑิตา มีเจริญ";
-  
+
   // Find customer to get their phone number
   const customerInfo = transaction?.customerId ? customers.find(c => c.id === transaction.customerId) : null;
   const memberCode = customerInfo?.phone || transaction?.customerPhone || transaction?.memberCode || (isDemo ? "0812345678" : "-");
   const pointsEarned = transaction?.pointsEarned ?? (isDemo ? 2020.00 : 0);
   const accumulatedPoints = transaction?.accumulatedPoints ?? (isDemo ? 0.00 : 0);
-  
+
   const paymentMethod = transaction?.paymentMethod || "TFB CARD";
   const cardNumber = transaction?.cardNumber || "1234543215667";
   const cardExp = transaction?.cardExp || "1223";
   const appCode = transaction?.appCode || "8888";
   const cashier = transaction?.cashier || "BUSINESS";
   const terminalId = transaction?.terminalId || "000101000109";
-  
+
   const items = transaction?.items || [
     { title: "น้ำยารีดอัดกลีบผ้า Hi-Cl", price: 2520.00, quantity: 99, isVat: true },
     { title: "นมสดโฟร์โมสต์ UHTแบบกล่อง", price: 140.00, quantity: 1, isVat: false }
@@ -84,19 +92,19 @@ const ReceiptPreview = ({
   const rawSubtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const totalQuantity = items.reduce((acc, item) => acc + item.quantity, 0);
   const totalItems = items.length;
-  
+
   const memberDiscount = transaction?.memberDiscount ?? (isDemo ? 24962.00 : 0);
   const percentDiscount = transaction?.percentDiscount ?? (isDemo ? 22465.80 : 0);
   const discountAmountVal = transaction?.discountAmount ?? (memberDiscount + percentDiscount);
-  
+
   const subtotalAfterDiscount = rawSubtotal - memberDiscount - percentDiscount;
-  
+
   const currentVatRate = transaction?.vatRate ?? vatRate ?? 7;
   const activeServiceChargeRate = serviceChargeRate || 10;
-  
+
   const demoFeeAmount = serviceChargeEnabled ? subtotalAfterDiscount * (activeServiceChargeRate / 100) : 0;
   const feeAmount = transaction?.feeAmount ?? (isDemo ? demoFeeAmount : 0);
-  
+
   // Calculate VAT based on item isVat flag if available
   let nonVatableAmount = 0;
   let vatableAmount = 0;
@@ -115,7 +123,7 @@ const ReceiptPreview = ({
     nonVatableAmount = 0; // fallback
   }
 
-  const formatNumber = (num: number, decimals = 2) => 
+  const formatNumber = (num: number, decimals = 2) =>
     num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
   const handlePrint = () => {
@@ -123,9 +131,15 @@ const ReceiptPreview = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6 print:p-0 print:bg-white">
-      <div className="bg-[#E5E7EB] w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:shadow-none print:rounded-none print:w-auto print:h-auto print:max-h-none">
-        
+    <div
+      className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6 print:p-0 print:bg-white pointer-events-auto"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#E5E7EB] w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:shadow-none print:rounded-none print:w-auto print:h-auto print:max-h-none"
+        onClick={(e) => e.stopPropagation()}
+      >
+
         {/* Toolbar */}
         <div className="p-6 bg-white border-b border-gray-100 flex justify-between items-center shrink-0 print:hidden">
           <div className="flex items-center gap-3">
@@ -138,7 +152,7 @@ const ReceiptPreview = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={handlePrint}
               className="bg-[#1A1F3D] text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-[#2A3152] transition-all"
             >
@@ -151,7 +165,7 @@ const ReceiptPreview = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-10 flex justify-center bg-[#D1D5DB] scrollbar-hide print:bg-white print:p-0">
-          <div 
+          <div
             className={cn(
               "bg-white shadow-xl h-fit min-h-full p-4 flex flex-col font-sans text-black transition-all duration-500 print:shadow-none relative overflow-hidden",
               is80mm ? "w-[380px]" : "w-[300px]"
@@ -168,7 +182,7 @@ const ReceiptPreview = ({
                 </div>
               )}
               <h2 className="text-2xl font-bold mb-2 uppercase">{shopName || "MAGURO"}</h2>
-              
+
               <p className="whitespace-pre-wrap">{shopAddress}</p>
               <div className="flex justify-center gap-4 mt-1">
                 <span>Tax ID : {companyTaxId || "0107566000453"}</span>
@@ -178,7 +192,7 @@ const ReceiptPreview = ({
             <div className="border-t border-b border-black py-1 my-2 text-center font-bold">
               ใบเสร็จรับเงิน/ใบกำกับภาษี
             </div>
-            
+
             {/* Meta Info */}
             <div className="grid grid-cols-[130px_1fr] gap-x-2 w-full mb-2">
               <span>ใบเสร็จรับเงินเลขที่:</span>
@@ -246,7 +260,7 @@ const ReceiptPreview = ({
                 <span>VAT {currentVatRate}%</span>
                 <span className="text-right">{formatNumber(vatAmount)}</span>
               </div>
-              
+
               <div className="flex justify-between items-center py-2 font-bold">
                 <span>Grand Total(Amount Inc. VAT)</span>
                 <span className="text-base">{formatNumber(totalAmount)}</span>

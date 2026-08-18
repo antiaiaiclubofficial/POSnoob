@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import ServiceCard from '@/components/ServiceCard';
 import ProductCard from '@/components/ProductCard';
 import OrderSummary from '@/components/OrderSummary';
+import ReceiptPreview from '@/components/ReceiptPreview';
 import CustomerSearch from '@/components/CustomerSearch';
 import CustomerModal from '@/components/CustomerModal';
 import GroomingServiceModal from '@/components/GroomingServiceModal';
@@ -68,7 +69,14 @@ const Index = () => {
     currency,
     language,
     transactions,
-    voidTransaction
+    voidTransaction,
+    shopName,
+    shopLogo,
+    shopAddress,
+    shopPhone,
+    receiptHeader,
+    receiptFooter,
+    receiptPaperSize
   } = useStore();
 
   const t = translations[language];
@@ -93,6 +101,7 @@ const Index = () => {
   const [historyStatusFilter, setHistoryStatusFilter] = useState('all');
   const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
   const [voidReasonInput, setVoidReasonInput] = useState('');
+  const [viewingReceiptTx, setViewingReceiptTx] = useState<any>(null);
 
   useEffect(() => {
     if (activePet) {
@@ -257,7 +266,7 @@ const Index = () => {
               <SheetContent 
                 className="w-[95vw] sm:max-w-[700px] border-l-0 rounded-l-[40px] p-8 shadow-2xl flex flex-col"
                 onInteractOutside={(e) => {
-                  if (isVoidModalOpen) {
+                  if (isVoidModalOpen || viewingReceiptTx) {
                     e.preventDefault();
                   }
                 }}
@@ -283,13 +292,50 @@ const Index = () => {
                     <div className="flex-1 overflow-y-auto pr-2 space-y-4">
                       <div className="bg-gray-50 p-4 rounded-2xl space-y-3">
                         <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500 font-bold">{language === 'th' ? 'เลขที่ใบเสร็จ' : 'Receipt No.'}</span>
+                          <button 
+                            onClick={() => setViewingReceiptTx(selectedTransaction)}
+                            className="font-black text-blue-600 hover:text-blue-800 underline underline-offset-2 transition-colors cursor-pointer text-right"
+                          >
+                            {selectedTransaction.details?.receiptNo || selectedTransaction.id}
+                          </button>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-500 font-bold">{language === 'th' ? 'ช่องทางการชำระ' : 'Payment Method'}</span>
                           <span className="font-black text-[#1A1F3D]">{selectedTransaction.paymentMethod}</span>
                         </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-500 font-bold">{language === 'th' ? 'ยอดรวม' : 'Total Amount'}</span>
-                          <span className="font-black text-[#1A1F3D] text-lg">{currency} {selectedTransaction.amount.toLocaleString()}</span>
+                        
+                        <div className="border-t border-gray-200 pt-3 mt-1 space-y-2">
+                          {(selectedTransaction.subtotal !== undefined && selectedTransaction.subtotal !== selectedTransaction.amount) && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-500 font-bold">{language === 'th' ? 'ยอดก่อนหักส่วนลด' : 'Subtotal'}</span>
+                              <span className="font-bold text-gray-700">{currency} {selectedTransaction.subtotal.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {(selectedTransaction.discountAmount > 0) && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-red-500 font-bold">{language === 'th' ? 'ส่วนลด' : 'Discount'}</span>
+                              <span className="font-bold text-red-500">-{currency} {selectedTransaction.discountAmount.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {(selectedTransaction.vatAmount > 0) && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-500 font-bold">VAT ({selectedTransaction.vatRate}%)</span>
+                              <span className="font-bold text-gray-700">{currency} {selectedTransaction.vatAmount.toLocaleString()}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center text-sm pt-1">
+                            <span className="text-[#1A1F3D] font-black">{language === 'th' ? 'ยอดรวมสุทธิ' : 'Total Amount'}</span>
+                            <span className="font-black text-[#1A1F3D] text-lg">{currency} {selectedTransaction.amount.toLocaleString()}</span>
+                          </div>
                         </div>
+
+                        {selectedTransaction.note && (
+                          <div className="mt-3 text-sm font-medium w-full text-left bg-yellow-50 p-3 rounded-xl border border-yellow-100/50 flex flex-col gap-1">
+                            <span className="font-bold text-yellow-700">{language === 'th' ? 'หมายเหตุ:' : 'Note:'}</span>
+                            <span className="text-yellow-800 whitespace-pre-wrap">{selectedTransaction.note}</span>
+                          </div>
+                        )}
                       </div>
 
                       <h3 className="font-black text-[#1A1F3D] mt-6 mb-3">{language === 'th' ? 'รายการสินค้า/บริการ' : 'Items'}</h3>
@@ -481,6 +527,12 @@ const Index = () => {
                             {tx.items && tx.items.length > 0 && (
                               <div className="text-xs text-gray-500 font-medium truncate w-full text-left bg-gray-50 p-2 rounded-xl border border-gray-100/50">
                                 {tx.items.map((item: any) => item.title || item.name).join(', ')}
+                              </div>
+                            )}
+                            {tx.note && (
+                              <div className="text-xs text-gray-500 font-medium w-full text-left bg-yellow-50 p-2 rounded-xl border border-yellow-100/50 flex gap-2">
+                                <span className="font-bold text-yellow-700 whitespace-nowrap">{language === 'th' ? 'หมายเหตุ:' : 'Note:'}</span>
+                                <span className="text-yellow-800 line-clamp-2">{tx.note}</span>
                               </div>
                             )}
                           </div>
@@ -944,6 +996,19 @@ const Index = () => {
         <AddOnModal addOn={selectedAddOn} onClose={() => setSelectedAddOn(null)} />
       )}
 
+      {viewingReceiptTx && (
+        <ReceiptPreview 
+          shopName={shopName}
+          shopLogo={shopLogo}
+          shopAddress={shopAddress}
+          shopPhone={shopPhone}
+          header={receiptHeader}
+          footer={receiptFooter}
+          paperSize={receiptPaperSize}
+          transaction={viewingReceiptTx}
+          onClose={() => setViewingReceiptTx(null)}
+        />
+      )}
     </div>
   );
 };

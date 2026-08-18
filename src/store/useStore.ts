@@ -1766,6 +1766,8 @@ export const useStore = create<AppState>()((set, get) => ({
     const staffName = get().currentUser?.name || 'Admin';
     const staffId = get().currentUser?.id;
 
+    const newDocNo = details?.receiptNo || `ABB-${format(new Date(), 'yyyy-MM-dd').replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
     // 1. Insert transaction into Supabase
     const { data, error } = await supabase
       .from('sales_transactions')
@@ -1781,6 +1783,7 @@ export const useStore = create<AppState>()((set, get) => ({
         staff_id: staffId,
         details: {
           ...details,
+          receiptNo: newDocNo,
           vatInclusive: get().vatInclusive
         },
         is_tax_invoice: isTaxInvoice,
@@ -1942,7 +1945,8 @@ export const useStore = create<AppState>()((set, get) => ({
         status: data.status || 'completed',
         voidReason: data.void_reason,
         voidedBy: data.voided_by,
-        voidedAt: data.voided_at
+        voidedAt: data.voided_at,
+        note: data.details?.note
       };
 
       set(state => ({
@@ -1958,8 +1962,6 @@ export const useStore = create<AppState>()((set, get) => ({
         total: (item.quantity || 1) * (item.price || 0),
         itemType: item.type?.toLowerCase() as any
       }));
-      
-      const newDocNo = data.details?.receiptNo || `ABB-${format(new Date(), 'yyyy-MM-dd').replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       get().addBillingDocument({
         documentNo: newDocNo,
@@ -1974,7 +1976,8 @@ export const useStore = create<AppState>()((set, get) => ({
         paymentMethod: data.payment_method,
         status: 'Paid',
         createdBy: data.staff_name || 'Admin',
-        remarks: `Auto-generated from POS`
+        remarks: `Auto-generated from POS`,
+        referenceDocumentNo: data.id
       });
     }
 
@@ -2126,10 +2129,11 @@ export const useStore = create<AppState>()((set, get) => ({
     // 5. Void related Billing Document (if any)
     const txDateStr = transaction.createdAt ? format(new Date(transaction.createdAt), 'yyyy-MM-dd') : transaction.date;
     const relatedDoc = get().billingDocuments.find(d => 
-      d.remarks === 'Auto-generated from POS' &&
-      d.date === txDateStr &&
+      d.referenceDocumentNo === id ||
+      (d.remarks === 'Auto-generated from POS' &&
+      (d.date === txDateStr || d.date === transaction.createdAt || (d.date && d.date.startsWith(txDateStr))) &&
       d.totalAmount === transaction.amount &&
-      d.status === 'Paid'
+      d.status === 'Paid')
     );
     
     if (relatedDoc) {

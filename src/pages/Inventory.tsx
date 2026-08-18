@@ -34,7 +34,7 @@ const Inventory = () => {
     inventory, partners, stockLogs, reportHistory, shopName, shopAddress, shopPhone, shopLineId,
     companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
     adjustStock, deletePartner, currency, currentUser, addReportLog, transactions,
-    deleteInventoryItem, goodsReceipts
+    deleteInventoryItem, goodsReceipts, billingDocuments
   } = useStore();
 
   const location = useLocation();
@@ -457,6 +457,29 @@ const Inventory = () => {
     toast.success("บันทึกการปรับยอดเรียบร้อย");
     setAdjustQty(''); setAdjustReason(''); setAdjustSearch(''); setSelectedAdjustId(''); setAdjustCostPrice('');
   };
+
+  const getDisplayReason = (reason: string) => {
+    if (!reason) return reason;
+    const match = reason.match(/(Tx:\s*)([a-f0-9\-]{36})/i);
+    if (match) {
+      const txId = match[2];
+      let doc = billingDocuments.find(d => d.referenceDocumentNo === txId);
+      
+      // Fallback for old documents that lack referenceDocumentNo
+      if (!doc) {
+        const tx = transactions.find(t => t.id === txId);
+        if (tx) {
+          doc = billingDocuments.find(d => d.date === tx.createdAt && d.totalAmount === tx.amount);
+        }
+      }
+
+      if (doc) {
+        return reason.replace(txId, doc.documentNo);
+      }
+    }
+    return reason;
+  };
+
 
   const handleQuickAdjust = (id: string) => {
     const item = inventory.find(i => i.id === id);
@@ -883,7 +906,7 @@ const Inventory = () => {
                           </td>
                           <td className="px-6 py-6">
                             <p className="text-sm font-black text-[#1A1F3D]">{log.productName}</p>
-                            <p className="text-[9px] text-gray-400 font-bold italic line-clamp-1">"{log.reason}"</p>
+                            <p className="text-[9px] text-gray-400 font-bold italic line-clamp-1">"{getDisplayReason(log.reason)}"</p>
                           </td>
                           <td className="px-6 py-6 text-center">
                             <span className={cn(

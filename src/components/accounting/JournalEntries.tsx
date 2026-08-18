@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { useStore, JournalEntry, JournalType, JournalEntryLine } from '@/store/useStore';
-import { Plus, Search, FileText, CheckCircle2, XCircle, X, Trash2, Calendar, Hash, BookOpen } from 'lucide-react';
+import { Plus, Search, FileText, CheckCircle2, XCircle, X, Trash2, Calendar, Hash, BookOpen, ExternalLink, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import ReceiptPreview from '@/components/ReceiptPreview';
+import { Transaction } from '@/store/types';
 
 const JOURNAL_TYPES: Record<JournalType, string> = {
   JV: 'สมุดรายวันทั่วไป (JV)',
@@ -13,13 +17,71 @@ const JOURNAL_TYPES: Record<JournalType, string> = {
 };
 
 const JournalEntries = () => {
-  const { journalEntries, accountCodes, addJournalEntry } = useStore();
+  const { journalEntries, accountCodes, addJournalEntry, shopName, shopLogo, shopAddress, shopPhone, receiptHeader, receiptFooter, receiptPaperSize } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<JournalType | 'ALL'>('ALL');
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
+
+  // Preview state
+  const [previewTransaction, setPreviewTransaction] = useState<Transaction | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  const handleReferenceClick = async (entry: JournalEntry) => {
+    const sourceId = entry.sourceId || (entry.journalType === 'SJ' ? entry.referenceNo : null);
+    if (!sourceId) return;
+
+    setIsPreviewLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('sales_transactions')
+        .select('*')
+        .eq('id', sourceId)
+        .single();
+        
+      if (error) throw error;
+      if (data) {
+        const tx: Transaction = {
+          id: data.id,
+          date: data.date || data.created_at,
+          createdAt: data.created_at,
+          amount: data.amount,
+          discountAmount: data.discount_amount || 0,
+          subtotal: data.subtotal,
+          vatAmount: data.vat_amount,
+          vatRate: data.vat_rate,
+          isTaxInvoice: data.is_tax_invoice,
+          customerId: data.customer_id,
+          customerName: data.customer_name || 'ลูกค้าทั่วไป',
+          items: data.items || [],
+          paymentMethod: data.payment_method as any,
+          staffName: data.staff_name,
+          species: data.species || [],
+          bookingType: data.booking_type as any,
+          status: data.status,
+          voidReason: data.void_reason
+        };
+
+        // Try to find the actual receipt number from billingDocuments if missing
+        if (!tx.details?.receiptNo) {
+          const { billingDocuments } = useStore.getState();
+          const doc = billingDocuments.find(d => d.referenceDocumentNo === data.id || (d.date === data.created_at && d.totalAmount === data.amount));
+          if (doc) {
+            tx.details = { ...tx.details, receiptNo: doc.documentNo };
+          }
+        }
+
+        setPreviewTransaction(tx);
+      }
+    } catch (err) {
+      console.error("Error fetching transaction preview:", err);
+      toast.error("ไม่สามารถดึงข้อมูลรายการอ้างอิงได้");
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
 
   // New Journal Entry Form state
   const [entryForm, setEntryForm] = useState({
@@ -54,6 +116,20 @@ const JournalEntries = () => {
 
   const handleAddLine = () => {
     setLines([...lines, { accountId: '', description: '', debit: 0, credit: 0 }]);
+  };
+
+  const getDisplayReferenceNo = (entry: JournalEntry) => {
+    if ((entry.sourceType === 'sales_transaction' || entry.journalType === 'SJ') && entry.sourceId) {
+      if (entry.referenceNo && entry.referenceNo.length === 36) {
+        const { billingDocuments } = useStore.getState();
+        const doc = billingDocuments.find(d => 
+          d.referenceDocumentNo === entry.sourceId || 
+          (d.date === entry.createdAt && d.totalAmount === entry.totalDebit)
+        );
+        if (doc) return doc.documentNo;
+      }
+    }
+    return entry.referenceNo || '-';
   };
 
   const handleRemoveLine = (index: number) => {
@@ -171,7 +247,7 @@ const JournalEntries = () => {
                     className="border-b border-gray-50 hover:bg-[#F9F9F9] transition-colors cursor-pointer group"
                   >
                     <td className="p-4 text-sm font-medium text-gray-600 whitespace-nowrap">
-                      {entry.createdAt ? format(new Date(entry.createdAt), 'dd/MM/yyyy HH:mm') : entry.date}
+                      {entry.createdAt ? format(new Date(entry.createdAt), 'dd/MM/yyyy HH:mm') : format(new Date(entry.date), 'dd/MM/yyyy')}
                     </td>
                     <td className="p-4 text-sm font-bold text-blue-600 whitespace-nowrap group-hover:underline">{entry.id}</td>
                     <td className="p-4 text-sm">
@@ -418,8 +494,10 @@ const JournalEntries = () => {
               <div className="p-6 space-y-4 overflow-y-auto">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-2xl text-xs">
                   <div>
-                    <span className="text-gray-400 block font-bold">วันที่</span>
-                    <span className="font-bold text-gray-800">{selectedEntry.date}</span>
+                    <span className="text-gray-400 block font-bold">วันที่/เวลา</span>
+                    <span className="font-bold text-gray-800">
+                      {selectedEntry.createdAt ? format(new Date(selectedEntry.createdAt), 'dd/MM/yyyy HH:mm') : format(new Date(selectedEntry.date), 'dd/MM/yyyy')}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-400 block font-bold">ประเภท</span>
@@ -427,7 +505,18 @@ const JournalEntries = () => {
                   </div>
                   <div>
                     <span className="text-gray-400 block font-bold">อ้างอิง</span>
-                    <span className="font-bold text-gray-800">{selectedEntry.referenceNo || '-'}</span>
+                    {(selectedEntry.sourceType === 'sales_transaction' || selectedEntry.journalType === 'SJ') && (selectedEntry.sourceId || selectedEntry.referenceNo) ? (
+                      <button 
+                        onClick={() => handleReferenceClick(selectedEntry)}
+                        disabled={isPreviewLoading}
+                        className="font-bold text-blue-600 hover:underline hover:text-blue-800 transition-colors flex items-center gap-1 text-left"
+                      >
+                        {getDisplayReferenceNo(selectedEntry)}
+                        {isPreviewLoading && <Loader2 size={12} className="animate-spin" />}
+                      </button>
+                    ) : (
+                      <span className="font-bold text-gray-800">{getDisplayReferenceNo(selectedEntry)}</span>
+                    )}
                   </div>
                   <div>
                     <span className="text-gray-400 block font-bold">สถานะ</span>
@@ -490,6 +579,21 @@ const JournalEntries = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Receipt Preview Modal */}
+      {previewTransaction && (
+        <ReceiptPreview
+          shopName={shopName}
+          shopLogo={shopLogo}
+          shopAddress={shopAddress}
+          shopPhone={shopPhone}
+          header={receiptHeader}
+          footer={receiptFooter}
+          paperSize={receiptPaperSize}
+          transaction={previewTransaction}
+          onClose={() => setPreviewTransaction(null)}
+        />
+      )}
     </div>
   );
 };

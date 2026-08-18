@@ -689,7 +689,8 @@ const AuthInitializer = () => {
             status: tx.status || 'completed',
             voidReason: tx.void_reason,
             voidedBy: tx.voided_by,
-            voidedAt: tx.voided_at
+            voidedAt: tx.voided_at,
+            note: tx.details?.note
           }));
           useStore.setState({ transactions: formattedTransactions });
         } else {
@@ -923,7 +924,9 @@ const AuthInitializer = () => {
               createdBy: j.created_by,
               isOpeningBalance: j.is_opening_balance,
               isClosingEntry: j.is_closing_entry,
-              createdAt: j.created_at
+              createdAt: j.created_at,
+              sourceType: j.source_type,
+              sourceId: j.source_id
             }))
           });
         }
@@ -1045,7 +1048,9 @@ const AuthInitializer = () => {
                   createdBy: j.created_by,
                   isOpeningBalance: j.is_opening_balance,
                   isClosingEntry: j.is_closing_entry,
-                  createdAt: j.created_at
+                  createdAt: j.created_at,
+                  sourceType: j.source_type,
+                  sourceId: j.source_id
                 }))
               });
             }

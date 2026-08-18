@@ -163,7 +163,7 @@ const Customers = () => {
             if (!intakeHistoryMap[log.pet_id]) {
               intakeHistoryMap[log.pet_id] = [];
             }
-            let parsedDetails = {};
+            let parsedDetails: Record<string, any> = {};
             if (log.description) {
               try {
                 parsedDetails = JSON.parse(log.description);
