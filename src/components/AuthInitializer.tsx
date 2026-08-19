@@ -233,6 +233,10 @@ const AuthInitializer = () => {
               maxStaff: storeData.max_staff || 10,
               recurringHolidays: storeData.recurring_holidays || [],
               specificHolidays: storeData.specific_holidays || [],
+              openTime: storeData.open_time || '09:00',
+              closeTime: storeData.close_time || '18:00',
+              slotDuration: storeData.slot_duration || 60,
+              maxCapacity: storeData.max_capacity || 3,
               staffSettings: storeData.staff_settings ? {
                 attendance: {
                   requireGps: storeData.staff_settings.attendance?.requireGps ?? false,
