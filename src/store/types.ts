@@ -382,6 +382,7 @@ export interface HeldBill {
 
 export interface TierRule {
   level: MembershipLevel;
+  tier_key?: string;
   label: string;
   minSpent: number;
   discount: number;
@@ -493,6 +494,8 @@ export interface AppState {
   prCart: DraftPR[];
   heldBills: HeldBill[];
   rolePermissions: Record<StaffRole, string[]>;
+  applyTierDiscount: boolean;
+  setApplyTierDiscount: (apply: boolean) => void;
 
   // Rules & Settings
   slotDuration: number;

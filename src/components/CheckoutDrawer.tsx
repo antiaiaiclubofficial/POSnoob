@@ -26,7 +26,8 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
     shopName, shopLogo, shopAddress, shopPhone,
     receiptHeader, receiptFooter, receiptPaperSize, 
     vatEnabled, vatRate, vatInclusive,
-    serviceChargeEnabled, serviceChargeRate
+    serviceChargeEnabled, serviceChargeRate,
+    applyTierDiscount, setApplyTierDiscount
   } = useStore();
 
   const t = translations[language];
@@ -65,9 +66,13 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
     return acc + round2(originalTotal - discountedTotal);
   }, 0));
 
-  const userTier = selectedOwner ? tierRules.find(r => r.level === selectedOwner.membership) : null;
+  const userTier = (selectedOwner && selectedOwner.id !== 'walk-in') ? tierRules.find(r => 
+    (r.tier_key && r.tier_key.toLowerCase() === selectedOwner.membership?.toLowerCase()) || 
+    r.level.toLowerCase() === selectedOwner.membership?.toLowerCase()
+  ) : null;
   const tierDiscountPercent = userTier?.discount || 0;
-  const tierDiscountAmount = round2((subtotal * tierDiscountPercent) / 100);
+  const calculatedTierDiscount = round2((subtotal * tierDiscountPercent) / 100);
+  const tierDiscountAmount = applyTierDiscount ? calculatedTierDiscount : 0;
   
   const discountableSubtotal = round2(subtotal - tierDiscountAmount);
   
@@ -143,7 +148,9 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
       ...details,
       note: orderNote,
       packageId: paymentMethod === 'Package' ? selectedPackageId : undefined,
-      receiptNo: txId
+      receiptNo: txId,
+      memberDiscount: tierDiscountAmount,
+      itemDiscounts: totalItemDiscounts
     };
 
     const finalCart = cart.map(item => ({
@@ -151,10 +158,16 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
       finalPrice: getItemPriceAfterDiscount(item)
     }));
 
+    const earnRate = useStore.getState().pointsEarnRate || 10;
+    const earnedPoints = selectedOwner.id !== 'walk-in' ? Math.floor(total / earnRate) : 0;
+    const accumulatedPoints = selectedOwner.id !== 'walk-in' ? (selectedOwner.points || 0) + earnedPoints : 0;
+
     const txData = {
       id: txId,
       date: format(txDate, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+      customerId: selectedOwner.id,
       customerName: selectedOwner.name,
+      customerPhone: selectedOwner.phone,
       items: finalCart,
       amount: total,
       discountAmount: totalItemDiscounts + tierDiscountAmount,
@@ -165,7 +178,9 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
       paymentMethod: paymentMethod,
       details: {
         ...finalDetails,
-        vatInclusive: vatInclusive
+        vatInclusive: vatInclusive,
+        pointsEarned: earnedPoints,
+        accumulatedPoints: accumulatedPoints
       }
     };
 
@@ -363,9 +378,20 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
                 )}
 
                 {tierDiscountPercent > 0 && paymentMethod !== 'Package' && (
-                  <div className="flex justify-between items-center text-sm text-green-600 font-bold">
-                    <span className="flex items-center gap-1.5"><ArrowDownCircle size={14}/> {t.discount} ({tierDiscountPercent}%)</span>
-                    <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
+                  <div className={cn("flex justify-between items-center text-sm font-bold", applyTierDiscount ? "text-green-600" : "text-gray-400")}>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5"><ArrowDownCircle size={14}/> {t.discount} ({tierDiscountPercent}%)</span>
+                      <Switch 
+                        checked={applyTierDiscount} 
+                        onCheckedChange={setApplyTierDiscount} 
+                        className="data-[state=checked]:bg-green-500 border border-black/10 scale-75 origin-left" 
+                      />
+                    </div>
+                    {applyTierDiscount ? (
+                      <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
+                    ) : (
+                      <span className="line-through">-{currency}{calculatedTierDiscount.toFixed(2)}</span>
+                    )}
                   </div>
                 )}
 

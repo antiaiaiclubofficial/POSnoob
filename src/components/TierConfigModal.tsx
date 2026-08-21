@@ -24,6 +24,7 @@ const TierConfigModal = ({ tier, onClose }: TierConfigModalProps) => {
   const [formData, setFormData] = useState({
     name: '',
     min_points: 0,
+    discount_percentage: 0,
     color_class: '#f59e0b',
     icon_name: 'Crown',
     description: '',
@@ -48,6 +49,7 @@ const TierConfigModal = ({ tier, onClose }: TierConfigModalProps) => {
       setFormData({
         name: tier.name || '',
         min_points: tier.min_points || 0,
+        discount_percentage: tier.discount_percentage || 0,
         color_class: tier.color_class || '#f59e0b',
         icon_name: tier.icon_name || 'Crown',
         description: tier.description || '',
@@ -59,8 +61,10 @@ const TierConfigModal = ({ tier, onClose }: TierConfigModalProps) => {
   const upsertMutation = useMutation({
     mutationFn: async (data: any) => {
       const payload = {
+        tier_key: data.name.toLowerCase().replace(/\s+/g, '_'),
         name: data.name,
         min_points: Number(data.min_points),
+        discount_percentage: Number(data.discount_percentage),
         color_class: data.color_class,
         icon_name: data.icon_name,
         description: data.description,
@@ -144,18 +148,20 @@ const TierConfigModal = ({ tier, onClose }: TierConfigModalProps) => {
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อระดับสมาชิก (Tier Name)</label>
-              <input
-                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                required
-                placeholder="เช่น Gold, VIP"
-              />
-            </div>
+            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อระดับสมาชิก (Tier Name)</label>
+            <input
+              className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              required
+              placeholder="เช่น Gold, VIP"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ยอด/คะแนนขั้นต่ำ (Min Spent/Points)</label>
               <input
@@ -164,6 +170,19 @@ const TierConfigModal = ({ tier, onClose }: TierConfigModalProps) => {
                 value={formData.min_points}
                 onChange={e => setFormData({ ...formData, min_points: Number(e.target.value) })}
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ส่วนลดบริการ % (Discount %)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                value={formData.discount_percentage}
+                onChange={e => setFormData({ ...formData, discount_percentage: Number(e.target.value) })}
+                required
+                placeholder="0"
               />
             </div>
           </div>
@@ -259,14 +278,17 @@ const TierConfigModal = ({ tier, onClose }: TierConfigModalProps) => {
               )}
             </div>
           </div>
+          </div>
 
-          <button
-            type="submit"
-            disabled={upsertMutation.isPending}
-            className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all disabled:opacity-50"
-          >
-            {upsertMutation.isPending ? "Saving..." : <><Save size={18} /> บันทึกการเปลี่ยนแปลง</>}
-          </button>
+          <div className="p-8 pt-4 border-t border-gray-50 bg-white shrink-0 z-10">
+            <button
+              type="submit"
+              disabled={upsertMutation.isPending}
+              className="w-full bg-[#1A1F3D] text-white font-black py-5 rounded-[24px] flex items-center justify-center gap-3 shadow-xl shadow-[#1A1F3D]/10 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {upsertMutation.isPending ? "Saving..." : <><Save size={18} /> บันทึกการเปลี่ยนแปลง</>}
+            </button>
+          </div>
         </form>
       </div>
     </div>

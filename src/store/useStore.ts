@@ -138,6 +138,8 @@ export const useStore = create<AppState>()((set, get) => ({
   disabledSlots: [],
   recurringHolidays: [],
   specificHolidays: [],
+  applyTierDiscount: true,
+  setApplyTierDiscount: (apply) => set({ applyTierDiscount: apply }),
 
   rolePermissions: {
     'superadmin': ['/', '/pos', '/queue', '/customers', '/inventory', '/marketing', '/staff', '/staff/performance', '/logs', '/reports', '/settings', '/hotel'],
@@ -1768,6 +1770,18 @@ export const useStore = create<AppState>()((set, get) => ({
 
     const newDocNo = details?.receiptNo || `ABB-${format(new Date(), 'yyyy-MM-dd').replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    // Calculate points before insert to save in transaction details
+    let earnedPoints = 0;
+    let accumulatedPoints = 0;
+    if (customerId && customerId !== 'walk-in' && customerId !== 'walk-id') {
+      const customer = get().customers.find(c => c.id === customerId);
+      if (customer) {
+        const earnRate = get().pointsEarnRate || 10;
+        earnedPoints = Math.floor(total / earnRate);
+        accumulatedPoints = (customer.points || 0) + earnedPoints - (redeemedPoints || 0);
+      }
+    }
+
     // 1. Insert transaction into Supabase
     const { data, error } = await supabase
       .from('sales_transactions')
@@ -1784,7 +1798,9 @@ export const useStore = create<AppState>()((set, get) => ({
         details: {
           ...details,
           receiptNo: newDocNo,
-          vatInclusive: get().vatInclusive
+          vatInclusive: get().vatInclusive,
+          pointsEarned: earnedPoints,
+          accumulatedPoints: accumulatedPoints
         },
         is_tax_invoice: isTaxInvoice,
         subtotal: subtotal !== undefined ? subtotal : total,
@@ -1841,15 +1857,7 @@ export const useStore = create<AppState>()((set, get) => ({
           });
         }
 
-        // Add points based on pointsEarnRate
-        const earnRate = get().pointsEarnRate || 10;
-        const earnedPoints = Math.floor(total / earnRate);
-        newPoints += earnedPoints;
-
-        // Deduct redeemed points if applicable
-        if (redeemedPoints) {
-          newPoints = Math.max(0, newPoints - redeemedPoints);
-        }
+        newPoints = accumulatedPoints;
 
         // Update in Supabase
         const { error: updateError } = await supabase

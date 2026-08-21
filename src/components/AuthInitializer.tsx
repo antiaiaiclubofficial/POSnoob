@@ -763,10 +763,11 @@ const AuthInitializer = () => {
         const { data: tiersData } = await tiersQuery;
         if (tiersData && tiersData.length > 0) {
           const formattedTiers = tiersData.map(t => ({
-            level: (t.tier_key.charAt(0).toUpperCase() + t.tier_key.slice(1)) as MembershipLevel,
+            level: (t.name) as MembershipLevel,
+            tier_key: t.tier_key,
             label: t.name,
             minSpent: Number(t.min_points || 0),
-            discount: 0
+            discount: Number(t.discount_percentage || 0)
           }));
           useStore.setState({ tierRules: formattedTiers });
         } else {

@@ -525,6 +525,10 @@ const Marketing = () => {
                                 <span className="text-lg font-black text-[#1A1F3D]">{tier.min_points} {currency}</span>
                               </div>
                               <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">ส่วนลด</span>
+                                <span className="text-lg font-black text-[#1A1F3D]">{tier.discount_percentage || 0} %</span>
+                              </div>
+                              <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-1.5 text-gray-400">
                                   <Gift size={12} />
                                   <span className="text-[10px] font-black uppercase tracking-widest">สิทธิประโยชน์</span>
@@ -574,9 +578,10 @@ const Marketing = () => {
                       <div className="bg-white/60 backdrop-blur-xl rounded-[2rem] border border-white/60 shadow-sm p-4">
                         <div className="grid grid-cols-12 gap-4 px-4 py-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                           <div className="col-span-1 text-center">ไอคอน</div>
-                          <div className="col-span-4">ชื่อระดับสมาชิก</div>
+                          <div className="col-span-3">ชื่อระดับสมาชิก</div>
                           <div className="col-span-2">ยอดขั้นต่ำ</div>
-                          <div className="col-span-4">รายละเอียด</div>
+                          <div className="col-span-2">ส่วนลด</div>
+                          <div className="col-span-3">รายละเอียด</div>
                           <div className="col-span-1 text-right">จัดการ</div>
                         </div>
                         <div className="space-y-2 mt-2">

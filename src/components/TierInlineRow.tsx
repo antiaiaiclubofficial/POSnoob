@@ -37,6 +37,7 @@ const TierInlineRow = ({ tier, currency, onEdit, onDelete }: TierInlineRowProps)
   const [localData, setLocalData] = useState({
     name: tier.name || '',
     min_points: tier.min_points || 0,
+    discount_percentage: tier.discount_percentage || 0,
     color_class: tier.color_class || '#f59e0b',
     icon_name: tier.icon_name || 'Crown'
   });
@@ -55,17 +56,18 @@ const TierInlineRow = ({ tier, currency, onEdit, onDelete }: TierInlineRowProps)
   useEffect(() => {
     // Only update if it actually differs to prevent resetting while typing
     if (
-      (tier.name !== localData.name || tier.min_points !== localData.min_points || tier.color_class !== localData.color_class || tier.icon_name !== localData.icon_name) && 
+      (tier.name !== localData.name || tier.min_points !== localData.min_points || tier.discount_percentage !== localData.discount_percentage || tier.color_class !== localData.color_class || tier.icon_name !== localData.icon_name) && 
       saveStatus === 'idle'
     ) {
       setLocalData({
         name: tier.name || '',
         min_points: tier.min_points || 0,
+        discount_percentage: tier.discount_percentage || 0,
         color_class: tier.color_class || '#f59e0b',
         icon_name: tier.icon_name || 'Crown'
       });
     }
-  }, [tier, localData.name, localData.min_points, localData.color_class, localData.icon_name, saveStatus]);
+  }, [tier, localData.name, localData.min_points, localData.discount_percentage, localData.color_class, localData.icon_name, saveStatus]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -74,6 +76,7 @@ const TierInlineRow = ({ tier, currency, onEdit, onDelete }: TierInlineRowProps)
         .update({
           name: data.name,
           min_points: Number(data.min_points),
+          discount_percentage: Number(data.discount_percentage),
           color_class: data.color_class,
           icon_name: data.icon_name
         })
@@ -168,7 +171,7 @@ const TierInlineRow = ({ tier, currency, onEdit, onDelete }: TierInlineRowProps)
         </Popover>
       </div>
 
-      <div className="col-span-4 flex items-center gap-3">
+      <div className="col-span-3 flex items-center gap-3">
         <input 
           type="text"
           value={localData.name}
@@ -194,7 +197,20 @@ const TierInlineRow = ({ tier, currency, onEdit, onDelete }: TierInlineRowProps)
         <span className="font-black text-gray-400 text-xs uppercase tracking-widest shrink-0">{currency}</span>
       </div>
 
-      <div className="col-span-4 pl-4 border-l border-gray-100 flex items-center justify-between">
+      <div className="col-span-2 flex items-center gap-2">
+        <input 
+          type="number"
+          min="0"
+          max="100"
+          value={localData.discount_percentage}
+          onChange={(e) => handleChange('discount_percentage', e.target.value)}
+          className="font-bold text-[#1A1F3D] text-center bg-gray-50/80 border border-gray-100/80 px-4 py-2 rounded-full hover:bg-gray-100 focus:bg-white focus:border-indigo-200 focus:ring-4 focus:ring-indigo-50 outline-none w-full transition-all"
+          placeholder="0"
+        />
+        <span className="font-black text-gray-400 text-xs uppercase tracking-widest shrink-0">%</span>
+      </div>
+
+      <div className="col-span-3 pl-4 border-l border-gray-100 flex items-center justify-between">
         <p className="text-xs text-gray-500 line-clamp-1">{tier.description || "-"}</p>
         
         {/* Save Status Indicator */}

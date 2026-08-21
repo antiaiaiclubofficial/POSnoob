@@ -52,7 +52,7 @@ const ReceiptPreview = ({
   header, footer, paperSize, onClose, transaction
 }: ReceiptPreviewProps) => {
 
-  const { vatEnabled, vatRate, vatInclusive, companyTaxId, customers, serviceChargeEnabled, serviceChargeRate } = useStore();
+  const { vatEnabled, vatRate, vatInclusive, companyTaxId, customers, serviceChargeEnabled, serviceChargeRate, pointsEarnRate } = useStore();
 
   const is80mm = paperSize === '80mm';
 
@@ -71,11 +71,15 @@ const ReceiptPreview = ({
 
   const customerName = transaction?.customerName || "นายบัณฑิตา มีเจริญ";
 
-  // Find customer to get their phone number
+  // Find customer to get their phone number and points
   const customerInfo = transaction?.customerId ? customers.find(c => c.id === transaction.customerId) : null;
   const memberCode = customerInfo?.phone || transaction?.customerPhone || transaction?.memberCode || (isDemo ? "0812345678" : "-");
-  const pointsEarned = transaction?.pointsEarned ?? (isDemo ? 2020.00 : 0);
-  const accumulatedPoints = transaction?.accumulatedPoints ?? (isDemo ? 0.00 : 0);
+  
+  const earnRate = pointsEarnRate || 10;
+  const calculatedPointsEarned = transaction?.amount ? Math.floor(transaction.amount / earnRate) : 0;
+
+  const pointsEarned = transaction?.details?.pointsEarned ?? transaction?.pointsEarned ?? (customerInfo ? calculatedPointsEarned : (isDemo ? 2020.00 : 0));
+  const accumulatedPoints = transaction?.details?.accumulatedPoints ?? transaction?.accumulatedPoints ?? (customerInfo?.points ?? (isDemo ? 0.00 : 0));
 
   const paymentMethod = transaction?.paymentMethod || "TFB CARD";
   const cardNumber = transaction?.cardNumber || "1234543215667";
@@ -93,11 +97,18 @@ const ReceiptPreview = ({
   const totalQuantity = items.reduce((acc, item) => acc + item.quantity, 0);
   const totalItems = items.length;
 
-  const memberDiscount = transaction?.memberDiscount ?? (isDemo ? 24962.00 : 0);
-  const percentDiscount = transaction?.percentDiscount ?? (isDemo ? 22465.80 : 0);
-  const discountAmountVal = transaction?.discountAmount ?? (memberDiscount + percentDiscount);
+  const memberDiscount = transaction?.details?.memberDiscount ?? transaction?.memberDiscount ?? 0;
+  const itemDiscounts = transaction?.details?.itemDiscounts ?? transaction?.percentDiscount ?? 0;
+  
+  const totalDiscountKnown = memberDiscount + itemDiscounts;
+  const fallbackDiscount = transaction && transaction.discountAmount !== undefined && transaction.discountAmount > totalDiscountKnown
+    ? transaction.discountAmount - totalDiscountKnown
+    : (isDemo ? 30.00 : 0);
+    
+  const finalItemDiscounts = itemDiscounts + fallbackDiscount;
+  const discountAmountVal = memberDiscount + finalItemDiscounts;
 
-  const subtotalAfterDiscount = rawSubtotal - memberDiscount - percentDiscount;
+  const subtotalAfterDiscount = rawSubtotal - discountAmountVal;
 
   const currentVatRate = transaction?.vatRate ?? vatRate ?? 7;
   const activeServiceChargeRate = serviceChargeRate || 10;
@@ -236,10 +247,18 @@ const ReceiptPreview = ({
                 <span>Sub Total</span>
                 <span className="text-right">{formatNumber(rawSubtotal)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Discount</span>
-                <span className="text-right">{formatNumber(discountAmountVal)}</span>
-              </div>
+              {finalItemDiscounts > 0 && (
+                <div className="flex justify-between">
+                  <span>Discount</span>
+                  <span className="text-right">-{formatNumber(finalItemDiscounts)}</span>
+                </div>
+              )}
+              {memberDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span>Member Disc.</span>
+                  <span className="text-right">-{formatNumber(memberDiscount)}</span>
+                </div>
+              )}
               {!vatInclusive && (
                 <div className="flex justify-between">
                   <span>Net Amount Ex. VAT</span>
@@ -261,9 +280,13 @@ const ReceiptPreview = ({
                 <span className="text-right">{formatNumber(vatAmount)}</span>
               </div>
 
-              <div className="flex justify-between items-center py-2 font-bold">
+              <div className="flex justify-between items-center pt-2 font-bold">
                 <span>Grand Total(Amount Inc. VAT)</span>
                 <span className="text-base">{formatNumber(totalAmount)}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 text-gray-600">
+                <span>Paid by {paymentMethod}</span>
+                <span>{formatNumber(totalAmount)}</span>
               </div>
             </div>
 
@@ -287,24 +310,15 @@ const ReceiptPreview = ({
               {(pointsEarned > 0 || accumulatedPoints > 0 || customerInfo) && (
                 <>
                   <div className="grid grid-cols-[120px_1fr]">
-                    <span>แต้มที่ได้รับ:</span>
+                    <span>คะแนนที่ได้รับ:</span>
                     <span className="text-right">{formatNumber(pointsEarned)}</span>
                   </div>
                   <div className="grid grid-cols-[120px_1fr]">
-                    <span>แต้มสะสม:</span>
+                    <span>คะแนนสะสม:</span>
                     <span className="text-right">{formatNumber(accumulatedPoints)}</span>
                   </div>
                 </>
               )}
-            </div>
-
-            {/* Payment Details */}
-            <div className="space-y-1 w-full mb-4">
-              <div>ชำระเงิน</div>
-              <div className="flex justify-between">
-                <span>{paymentMethod}</span>
-                <span className="text-right">{formatNumber(totalAmount)}</span>
-              </div>
             </div>
 
             <div className="border-t border-dashed border-gray-400 my-4 w-full" />

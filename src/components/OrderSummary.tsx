@@ -10,6 +10,7 @@ import { useStore, walkInCustomer } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { translations } from '@/utils/translations';
 import { toast } from 'sonner';
+import { Switch } from "@/components/ui/switch";
 import CheckoutDrawer from './CheckoutDrawer';
 
 interface OrderSummaryProps {
@@ -22,7 +23,8 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
     cart, removeFromCart, updateCartQuantity, updateCartItemDiscount, clearCart, 
     selectedOwner, tierRules, inventory, addToCart, currency, language,
     holdBill, heldBills, queue, vatEnabled, vatRate, vatInclusive,
-    serviceChargeEnabled, serviceChargeRate
+    serviceChargeEnabled, serviceChargeRate,
+    applyTierDiscount, setApplyTierDiscount
   } = useStore();
   
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -81,9 +83,13 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
     return acc + round2(originalTotal - discountedTotal);
   }, 0));
 
-  const userTier = selectedOwner ? tierRules.find(r => r.level === selectedOwner.membership) : null;
+  const userTier = (selectedOwner && selectedOwner.id !== 'walk-in') ? tierRules.find(r => 
+    (r.tier_key && r.tier_key.toLowerCase() === selectedOwner.membership?.toLowerCase()) || 
+    r.level.toLowerCase() === selectedOwner.membership?.toLowerCase()
+  ) : null;
   const tierDiscountPercent = userTier?.discount || 0;
-  const tierDiscountAmount = round2((subtotal * tierDiscountPercent) / 100);
+  const calculatedTierDiscount = round2((subtotal * tierDiscountPercent) / 100);
+  const tierDiscountAmount = applyTierDiscount ? calculatedTierDiscount : 0;
   
   const discountableSubtotal = round2(subtotal - tierDiscountAmount);
   
@@ -364,9 +370,20 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
           )}
 
           {tierDiscountPercent > 0 && (
-            <div className="flex justify-between items-center text-xs text-green-600 font-medium px-2 py-0.5">
-              <span className="flex items-center gap-1.5"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
-              <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
+            <div className={cn("flex justify-between items-center text-xs font-medium px-2 py-0.5", applyTierDiscount ? "text-green-600" : "text-gray-400")}>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5"><ArrowDownCircle size={12}/> {t.discount} ({tierDiscountPercent}%)</span>
+                <Switch 
+                  checked={applyTierDiscount} 
+                  onCheckedChange={setApplyTierDiscount} 
+                  className="data-[state=checked]:bg-green-500 border border-black/10 scale-75 origin-left" 
+                />
+              </div>
+              {applyTierDiscount ? (
+                <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
+              ) : (
+                <span className="line-through">-{currency}{calculatedTierDiscount.toFixed(2)}</span>
+              )}
             </div>
           )}
 
