@@ -74,10 +74,10 @@ export const useStore = create<AppState>()((set, get) => ({
   vatInclusive: true,
   serviceChargeEnabled: false,
   serviceChargeRate: 10,
-  liffId: '',
-  liffChannelId: '',
-  liffChannelSecret: '',
-  liffEnabled: false,
+  liffId: (typeof window !== 'undefined' ? localStorage.getItem('liff_id') : null) || '',
+  liffChannelId: (typeof window !== 'undefined' ? localStorage.getItem('liff_channel_id') : null) || '',
+  liffChannelSecret: (typeof window !== 'undefined' ? localStorage.getItem('liff_channel_secret') : null) || '',
+  liffEnabled: (typeof window !== 'undefined' ? localStorage.getItem('liff_enabled') === 'true' : false),
   scannerType: (typeof window !== 'undefined' ? localStorage.getItem('scanner_type') as any : null) || 'hid',
   printerType: (typeof window !== 'undefined' ? localStorage.getItem('printer_type') as any : null) || 'none',
   maxUsers: 5,
@@ -200,6 +200,10 @@ export const useStore = create<AppState>()((set, get) => ({
       if (profile.vatInclusive !== undefined) localStorage.setItem('vat_inclusive', String(profile.vatInclusive));
       if (profile.serviceChargeEnabled !== undefined) localStorage.setItem('service_charge_enabled', String(profile.serviceChargeEnabled));
       if (profile.serviceChargeRate !== undefined) localStorage.setItem('service_charge_rate', String(profile.serviceChargeRate));
+      if (profile.liffId !== undefined) localStorage.setItem('liff_id', profile.liffId);
+      if (profile.liffChannelId !== undefined) localStorage.setItem('liff_channel_id', profile.liffChannelId);
+      if (profile.liffChannelSecret !== undefined) localStorage.setItem('liff_channel_secret', profile.liffChannelSecret);
+      if (profile.liffEnabled !== undefined) localStorage.setItem('liff_enabled', String(profile.liffEnabled));
     }
     const storeId = get().storeId;
     if (storeId && storeId !== 'default-store') {
@@ -229,6 +233,10 @@ export const useStore = create<AppState>()((set, get) => ({
             points_redeem_rate: profile.pointsRedeemRate !== undefined ? profile.pointsRedeemRate : undefined,
             max_users: profile.maxUsers !== undefined ? profile.maxUsers : undefined,
             max_staff: profile.maxStaff !== undefined ? profile.maxStaff : undefined,
+            liff_id: profile.liffId !== undefined ? profile.liffId : undefined,
+            liff_channel_id: profile.liffChannelId !== undefined ? profile.liffChannelId : undefined,
+            liff_channel_secret: profile.liffChannelSecret !== undefined ? profile.liffChannelSecret : undefined,
+            liff_enabled: profile.liffEnabled !== undefined ? profile.liffEnabled : undefined,
           })
           .eq('id', storeId);
         if (error) throw error;

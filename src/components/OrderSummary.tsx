@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { 
-  ShoppingBag, Dog, Banknote, X, Plus, Minus, Package, Save, ClipboardList, Tag, ArrowDownCircle
+  ShoppingBag, Dog, Cat, Banknote, X, Plus, Minus, Package, Save, ClipboardList, Tag, ArrowDownCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -248,8 +248,32 @@ const OrderSummary = ({ isMobile, onOpenSavedBills }: OrderSummaryProps) => {
                       <Dog className="text-[#1A1F3D] w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-[#1A1F3D] text-[14px] leading-tight truncate">{item.title}</h4>
-                      <p className="text-[9px] text-gray-400 font-black uppercase mt-0.5">{item.petName || 'Retail Item'}</p>
+                      <h4 className="font-bold text-[#1A1F3D] text-[14px] leading-normal truncate py-0.5">{item.title}</h4>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span className="text-[10px] text-gray-400 font-black uppercase">{item.petName || 'Retail Item'}</span>
+                        {item.type === 'Service' && (
+                          <>
+                            {item.targetSpecies && (
+                              <span className={cn(
+                                "px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1 border",
+                                item.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-orange-50 text-orange-600 border-orange-100"
+                              )}>
+                                {item.targetSpecies === 'Dog' ? <Dog size={10} /> : <Cat size={10} />}
+                                {language === 'th' 
+                                  ? (item.targetSpecies === 'Dog' ? 'สุนัข' : item.targetSpecies === 'Cat' ? 'แมว' : item.targetSpecies)
+                                  : item.targetSpecies}
+                              </span>
+                            )}
+                            <span className="px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1 border bg-gray-50 text-gray-600 border-gray-200">
+                              {(!item.coatType || item.coatType === 'All') 
+                                ? (language === 'th' ? 'ทุกประเภทขน' : 'All Coats')
+                                : (language === 'th' 
+                                    ? (item.coatType === 'Short' ? 'ขนสั้น' : item.coatType === 'Long' ? 'ขนยาว' : item.coatType)
+                                    : `${item.coatType} Coat`)}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <button onClick={() => removeFromCart(idx)} className="p-1.5 text-red-200 hover:text-red-500"><X size={14} /></button>
                   </div>

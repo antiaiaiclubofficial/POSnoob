@@ -70,7 +70,9 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       ownerName: selectedOwner?.name || walkInCustomer.name,
       size: isFixedPrice ? undefined : selectedSize,
       queueItemId: activeQueueItemId || undefined,
-      type: 'Service'
+      type: 'Service',
+      targetSpecies: service.targetSpecies,
+      coatType: service.coatType
     });
     toast.success(language === 'th' ? `เพิ่ม ${service.title} สำหรับ ${pet.name}` : `Added ${service.title} for ${pet.name}`);
   };
@@ -81,7 +83,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
         <div className="w-14 h-14 bg-[#F5F6FA] rounded-[20px] flex items-center justify-center text-[#1A1F3D] transition-transform group-hover:scale-110">
           <IconComponent className="w-7 h-7" />
         </div>
-        <div className="text-right">
+        <div className="flex flex-col items-end">
           <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">
             {language === 'th' ? 'ราคารวม' : 'Total Price'}
           </p>
@@ -90,30 +92,32 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       </div>
 
       <div className="mb-8">
-        <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">{service.title}</h3>
-        {service.description && (
-          <p className="text-xs text-gray-400 leading-relaxed line-clamp-2 mb-2">{service.description}</p>
-        )}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {service.targetSpecies && (
-            <span className={cn(
-              "px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1 border",
-              service.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-orange-50 text-orange-600 border-orange-100"
-            )}>
-              {service.targetSpecies === 'Dog' ? <Dog size={10} /> : <Cat size={10} />}
-              {language === 'th' 
-                ? (service.targetSpecies === 'Dog' ? 'สุนัข' : service.targetSpecies === 'Cat' ? 'แมว' : service.targetSpecies)
-                : service.targetSpecies}
+        <div className="flex justify-between items-center mb-2 gap-2">
+          <h3 className="text-2xl font-black text-[#1A1F3D]">{service.title}</h3>
+          <div className="flex flex-wrap justify-end gap-1.5">
+            {service.targetSpecies && (
+              <span className={cn(
+                "px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1 border",
+                service.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-orange-50 text-orange-600 border-orange-100"
+              )}>
+                {service.targetSpecies === 'Dog' ? <Dog size={10} /> : <Cat size={10} />}
+                {language === 'th' 
+                  ? (service.targetSpecies === 'Dog' ? 'สุนัข' : service.targetSpecies === 'Cat' ? 'แมว' : service.targetSpecies)
+                  : service.targetSpecies}
+              </span>
+            )}
+            <span className="px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1 border bg-gray-50 text-gray-600 border-gray-200">
+              {(!service.coatType || service.coatType === 'All') 
+                ? (language === 'th' ? 'ทุกประเภทขน' : 'All Coats')
+                : (language === 'th' 
+                    ? (service.coatType === 'Short' ? 'ขนสั้น' : service.coatType === 'Long' ? 'ขนยาว' : service.coatType)
+                    : `${service.coatType} Coat`)}
             </span>
-          )}
-          <span className="px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1 border bg-gray-50 text-gray-600 border-gray-200">
-            {(!service.coatType || service.coatType === 'All') 
-              ? (language === 'th' ? 'ทุกประเภทขน' : 'All Coats')
-              : (language === 'th' 
-                  ? (service.coatType === 'Short' ? 'ขนสั้น' : service.coatType === 'Long' ? 'ขนยาว' : service.coatType)
-                  : `${service.coatType} Coat`)}
-          </span>
+          </div>
         </div>
+        {service.description && (
+          <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">{service.description}</p>
+        )}
       </div>
 
       {!isFixedPrice && (
