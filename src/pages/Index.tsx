@@ -607,7 +607,7 @@ const Index = () => {
                     {selectedOwner.pets.map(pet => (
                       <button
                         key={pet.id}
-                        onClick={() => setActivePet(pet)}
+                        onClick={() => activePet?.id === pet.id ? setActivePet(null) : setActivePet(pet)}
                         className={cn(
                           "px-4 py-1.5 rounded-full text-[10px] font-black uppercase transition-all flex items-center gap-1.5",
                           activePet?.id === pet.id 
@@ -667,21 +667,39 @@ const Index = () => {
 
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-gray-100 pb-2">
             <Tabs value={posTab} onValueChange={setPosTab} className="w-full sm:w-auto">
-              <TabsList className="bg-[#F5F6FA] p-1 rounded-[20px] flex gap-1 h-auto overflow-x-auto scrollbar-hide">
-                <TabsTrigger value="services" className="flex-1 sm:px-6 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all whitespace-nowrap">
-                  <Scissors size={14} className="mr-2" /> Services
+              <TabsList className="bg-[#F5F6FA] p-1.5 rounded-full flex gap-1 h-auto overflow-x-auto scrollbar-hide items-center">
+                <TabsTrigger 
+                  value="services" 
+                  className={cn(
+                    "flex-1 sm:px-6 py-3 rounded-full text-[11px] font-black uppercase transition-all duration-300 whitespace-nowrap flex items-center justify-center outline-none",
+                    posTab === 'services' ? "!bg-[#1A1F3D] !text-[#D9ED5F] shadow-md scale-105" : "text-gray-500 hover:text-[#1A1F3D]"
+                  )}
+                >
+                  <Scissors size={16} className="mr-2" /> {language === 'th' ? 'บริการ' : 'Services'}
                 </TabsTrigger>
-                <TabsTrigger value="addons" className="flex-1 sm:px-6 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all whitespace-nowrap">
-                  <Zap size={14} className="mr-2" /> Add-ons
+                <TabsTrigger 
+                  value="addons" 
+                  className={cn(
+                    "flex-1 sm:px-6 py-3 rounded-full text-[11px] font-black uppercase transition-all duration-300 whitespace-nowrap flex items-center justify-center outline-none",
+                    posTab === 'addons' ? "!bg-[#1A1F3D] !text-[#D9ED5F] shadow-md scale-105" : "text-gray-500 hover:text-[#1A1F3D]"
+                  )}
+                >
+                  <Zap size={16} className="mr-2" /> {language === 'th' ? 'บริการเสริม' : 'Add-ons'}
                 </TabsTrigger>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <TabsTrigger value="products" className="flex-1 sm:px-6 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all whitespace-nowrap outline-none cursor-pointer">
-                      <Package size={14} className="mr-2" /> 
-                      {productCategory === 'All' ? 'Products' : productCategory}
+                    <TabsTrigger 
+                      value="products" 
+                      className={cn(
+                        "flex-1 sm:px-6 py-3 rounded-full text-[11px] font-black uppercase transition-all duration-300 whitespace-nowrap flex items-center justify-center outline-none cursor-pointer",
+                        posTab === 'products' ? "!bg-[#1A1F3D] !text-[#D9ED5F] shadow-md scale-105" : "text-gray-500 hover:text-[#1A1F3D]"
+                      )}
+                    >
+                      <Package size={16} className="mr-2" /> 
+                      {productCategory === 'All' ? (language === 'th' ? 'สินค้า' : 'Products') : productCategory}
                     </TabsTrigger>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48 bg-white border-gray-100 rounded-xl shadow-lg z-50">
+                  <DropdownMenuContent align="start" className="w-48 bg-white border-gray-100 rounded-2xl shadow-xl z-50 p-2">
                     {productCategories.map(cat => (
                       <DropdownMenuItem 
                         key={cat} 
@@ -690,18 +708,30 @@ const Index = () => {
                           setProductCategory(cat);
                           setPosTab('products');
                         }}
-                        className="text-xs font-bold focus:bg-gray-50 focus:text-[#1A1F3D] cursor-pointer"
+                        className="text-xs font-bold rounded-xl focus:bg-gray-50 focus:text-[#1A1F3D] cursor-pointer py-2 px-3 transition-colors"
                       >
                         {cat === 'All' ? (language === 'th' ? 'สินค้าทั้งหมด' : 'All Products') : cat}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <TabsTrigger value="packages" className="flex-1 sm:px-6 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all whitespace-nowrap">
-                  <Package size={14} className="mr-2" /> Packages
+                <TabsTrigger 
+                  value="packages" 
+                  className={cn(
+                    "flex-1 sm:px-6 py-3 rounded-full text-[11px] font-black uppercase transition-all duration-300 whitespace-nowrap flex items-center justify-center outline-none",
+                    posTab === 'packages' ? "!bg-[#1A1F3D] !text-[#D9ED5F] shadow-md scale-105" : "text-gray-500 hover:text-[#1A1F3D]"
+                  )}
+                >
+                  <Package size={16} className="mr-2" /> {language === 'th' ? 'แพ็กเกจ' : 'Packages'}
                 </TabsTrigger>
-                <TabsTrigger value="credits" className="flex-1 sm:px-6 py-2.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#1A1F3D] data-[state=active]:shadow-sm text-[10px] font-black uppercase transition-all whitespace-nowrap">
-                  <Wallet size={14} className="mr-2" /> Credits
+                <TabsTrigger 
+                  value="credits" 
+                  className={cn(
+                    "flex-1 sm:px-6 py-3 rounded-full text-[11px] font-black uppercase transition-all duration-300 whitespace-nowrap flex items-center justify-center outline-none",
+                    posTab === 'credits' ? "!bg-[#1A1F3D] !text-[#D9ED5F] shadow-md scale-105" : "text-gray-500 hover:text-[#1A1F3D]"
+                  )}
+                >
+                  <Wallet size={16} className="mr-2" /> {language === 'th' ? 'เครดิต' : 'Credits'}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -709,15 +739,15 @@ const Index = () => {
             {posTab === 'services' && (
                <div className="flex gap-4 animate-in zoom-in-95">
                  {/* Species Filter */}
-                 <div className="bg-white p-1 rounded-2xl border border-gray-100 flex gap-1">
-                   <button onClick={() => setSpeciesFilter('Dog')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black flex items-center gap-2 transition-all", speciesFilter === 'Dog' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}><Dog size={12} /> DOG</button>
-                   <button onClick={() => setSpeciesFilter('Cat')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black flex items-center gap-2 transition-all", speciesFilter === 'Cat' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}><Cat size={12} /> CAT</button>
+                 <div className="bg-white p-1.5 rounded-full border border-gray-100 flex gap-1 shadow-sm h-full">
+                   <button onClick={() => setSpeciesFilter('Dog')} className={cn("px-5 py-2 rounded-full text-[11px] font-black uppercase flex items-center gap-2 transition-all duration-300", speciesFilter === 'Dog' ? "bg-[#1A1F3D] text-[#D9ED5F] shadow-md scale-105" : "text-gray-400 hover:text-[#1A1F3D]")}><Dog size={16} /> {language === 'th' ? 'สุนัข' : 'DOG'}</button>
+                   <button onClick={() => setSpeciesFilter('Cat')} className={cn("px-5 py-2 rounded-full text-[11px] font-black uppercase flex items-center gap-2 transition-all duration-300", speciesFilter === 'Cat' ? "bg-[#1A1F3D] text-[#D9ED5F] shadow-md scale-105" : "text-gray-400 hover:text-[#1A1F3D]")}><Cat size={16} /> {language === 'th' ? 'แมว' : 'CAT'}</button>
                  </div>
 
                  {/* Coat Filter */}
-                 <div className="bg-white p-1 rounded-2xl border border-gray-100 flex gap-1">
-                   <button onClick={() => setCoatFilter('Short')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black transition-all", coatFilter === 'Short' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}>SHORT COAT</button>
-                   <button onClick={() => setCoatFilter('Long')} className={cn("px-5 py-2 rounded-xl text-[9px] font-black transition-all", coatFilter === 'Long' ? "bg-[#1A1F3D] text-white shadow-md" : "text-gray-400")}>LONG COAT</button>
+                 <div className="bg-white p-1.5 rounded-full border border-gray-100 flex gap-1 shadow-sm h-full">
+                   <button onClick={() => setCoatFilter('Short')} className={cn("px-5 py-2 rounded-full text-[11px] font-black uppercase transition-all duration-300", coatFilter === 'Short' ? "bg-[#1A1F3D] text-[#D9ED5F] shadow-md scale-105" : "text-gray-400 hover:text-[#1A1F3D]")}>{language === 'th' ? 'ขนสั้น' : 'SHORT COAT'}</button>
+                   <button onClick={() => setCoatFilter('Long')} className={cn("px-5 py-2 rounded-full text-[11px] font-black uppercase transition-all duration-300", coatFilter === 'Long' ? "bg-[#1A1F3D] text-[#D9ED5F] shadow-md scale-105" : "text-gray-400 hover:text-[#1A1F3D]")}>{language === 'th' ? 'ขนยาว' : 'LONG COAT'}</button>
                  </div>
                </div>
             )}

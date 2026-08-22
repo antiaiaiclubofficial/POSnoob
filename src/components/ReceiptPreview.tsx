@@ -181,7 +181,7 @@ const ReceiptPreview = ({
               "bg-white shadow-xl h-fit min-h-full p-4 flex flex-col font-sans text-black transition-all duration-500 print:shadow-none relative overflow-hidden",
               is80mm ? "w-[380px]" : "w-[300px]"
             )}
-            style={{ fontSize: is80mm ? '13px' : '11px', fontFamily: "'IBM Plex Sans Thai', sans-serif" }}
+            style={{ fontSize: is80mm ? '15px' : '13px', fontFamily: "'IBM Plex Sans Thai', sans-serif" }}
           >
             {/* Header Area */}
             <div className="text-center space-y-1 mb-2">

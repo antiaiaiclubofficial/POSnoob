@@ -14,7 +14,7 @@ interface ServiceCardProps {
 }
 
 const ServiceCard = ({ service }: ServiceCardProps) => {
-  const { addToCart, activePet, selectedOwner, activeQueueItemId, currency, services } = useStore();
+  const { addToCart, activePet, selectedOwner, activeQueueItemId, currency, services, language } = useStore();
   const [selectedSize, setSelectedSize] = useState<string>('');
 
   const availableSizes = useMemo(() => Object.keys(service.prices), [service.prices]);
@@ -72,7 +72,7 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
       queueItemId: activeQueueItemId || undefined,
       type: 'Service'
     });
-    toast.success(`Added ${service.title} for ${pet.name}`);
+    toast.success(language === 'th' ? `เพิ่ม ${service.title} สำหรับ ${pet.name}` : `Added ${service.title} for ${pet.name}`);
   };
 
   return (
@@ -82,14 +82,38 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
           <IconComponent className="w-7 h-7" />
         </div>
         <div className="text-right">
-          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Total Price</p>
+          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">
+            {language === 'th' ? 'ราคารวม' : 'Total Price'}
+          </p>
           <p className="text-3xl font-black text-[#1A1F3D]">{currency}{totalPrice.toLocaleString()}</p>
         </div>
       </div>
 
       <div className="mb-8">
         <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">{service.title}</h3>
-        <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">{service.description}</p>
+        {service.description && (
+          <p className="text-xs text-gray-400 leading-relaxed line-clamp-2 mb-2">{service.description}</p>
+        )}
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {service.targetSpecies && (
+            <span className={cn(
+              "px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1 border",
+              service.targetSpecies === 'Dog' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-orange-50 text-orange-600 border-orange-100"
+            )}>
+              {service.targetSpecies === 'Dog' ? <Dog size={10} /> : <Cat size={10} />}
+              {language === 'th' 
+                ? (service.targetSpecies === 'Dog' ? 'สุนัข' : service.targetSpecies === 'Cat' ? 'แมว' : service.targetSpecies)
+                : service.targetSpecies}
+            </span>
+          )}
+          <span className="px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1 border bg-gray-50 text-gray-600 border-gray-200">
+            {(!service.coatType || service.coatType === 'All') 
+              ? (language === 'th' ? 'ทุกประเภทขน' : 'All Coats')
+              : (language === 'th' 
+                  ? (service.coatType === 'Short' ? 'ขนสั้น' : service.coatType === 'Long' ? 'ขนยาว' : service.coatType)
+                  : `${service.coatType} Coat`)}
+          </span>
+        </div>
       </div>
 
       {!isFixedPrice && (
@@ -116,7 +140,10 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
           isFixedPrice && "mt-auto"
         )}
       >
-        <Plus size={20} /> {activePet ? `Add for ${activePet.name}` : 'Add Service'}
+        <Plus size={20} /> 
+        {activePet 
+          ? (language === 'th' ? `เพิ่มให้ ${activePet.name}` : `Add for ${activePet.name}`) 
+          : (language === 'th' ? 'เพิ่มบริการ' : 'Add Service')}
       </button>
     </div>
   );
