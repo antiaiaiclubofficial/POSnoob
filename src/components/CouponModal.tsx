@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Ticket } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { IconPicker, getIconComponent } from '@/components/ui/IconPicker';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '@/store/useStore';
 import { translations } from '@/utils/translations';
@@ -76,15 +75,13 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
     upsertMutation.mutate(formData);
   };
 
-  const SelectedIcon = getIconComponent(formData.icon_name);
-
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[150] flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-md rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="p-10 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-pink-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
-              <SelectedIcon size={24} />
+              <Ticket size={24} />
             </div>
             <div>
               <h3 className="text-xl font-black text-[#1A1F3D]">{coupon ? t.editCoupon : t.createCoupon}</h3>
@@ -132,15 +129,7 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
               </div>
             </div>
 
-            <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.couponIcon}</label>
-              <IconPicker
-                value={formData.icon_name}
-                onChange={(iconName) => setFormData({ ...formData, icon_name: iconName })}
-                triggerClassName="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold shadow-none hover:bg-[#E5E7EB]"
-                className="z-[200]"
-              />
-            </div>
+
 
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.promoDesc}</label>

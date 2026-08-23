@@ -84,10 +84,10 @@ const Marketing = () => {
 
   // Fetch Promotions
   const { data: promotions, isLoading: promosLoading } = useQuery({
-    queryKey: ['deal_templates', storeId],
+    queryKey: ['promotion_templates', storeId],
     queryFn: async () => {
       let query = supabase
-        .from('deal_templates')
+        .from('promotion_templates')
         .select('*');
 
       if (storeId && storeId !== 'default-store') {
@@ -304,7 +304,7 @@ const Marketing = () => {
                       <div className="flex items-center gap-3 shrink-0">
                         <Switch
                           checked={promo.is_active}
-                          onCheckedChange={(val) => toggleMutation.mutate({ table: 'deal_templates', id: promo.id, is_active: val })}
+                          onCheckedChange={(val) => toggleMutation.mutate({ table: 'promotion_templates', id: promo.id, is_active: val })}
                           className="data-[state=checked]:bg-green-500"
                         />
                         <div className="flex gap-1 transition-opacity">
@@ -324,7 +324,7 @@ const Marketing = () => {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel className="rounded-xl">{language === 'th' ? 'ยกเลิก' : 'Cancel'}</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteMutation.mutate({ table: 'deal_templates', id: promo.id })} className="rounded-xl bg-red-500 hover:bg-red-600 text-white">
+                                <AlertDialogAction onClick={() => deleteMutation.mutate({ table: 'promotion_templates', id: promo.id })} className="rounded-xl bg-red-500 hover:bg-red-600 text-white">
                                   {language === 'th' ? 'ลบ' : 'Delete'}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
@@ -376,17 +376,17 @@ const Marketing = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative z-10">
                 {filteredCoupons?.map((coupon) => {
-                  const Icon = getIconComponent(coupon.icon_name);
                   return (
                     <div key={coupon.id} className={cn(
                       "flex flex-col h-full bg-gradient-to-br from-white/90 to-white/40 backdrop-blur-2xl p-8 rounded-[2rem] border border-white/60 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(24,35,74,0.06)] relative overflow-hidden group",
                       !coupon.is_active && "opacity-60"
                     )}>
-                      <div className="flex justify-between items-start mb-6">
-                        <div className={cn("w-14 h-14 rounded-3xl flex items-center justify-center", coupon.bg_color || "bg-pink-50")}>
-                          <Icon className={cn(coupon.bg_color?.replace('bg-', 'text-').replace('-50', '-600') || "text-pink-600")} size={24} />
+                      <div className="flex justify-between items-start mb-6 gap-4">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-black mb-2">{coupon.title}</h3>
+                          <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">{coupon.description || "No description provided."}</p>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 shrink-0">
                           <Switch
                             checked={coupon.is_active}
                             onCheckedChange={(val) => toggleMutation.mutate({ table: 'coupon_templates', id: coupon.id, is_active: val })}
@@ -407,8 +407,6 @@ const Marketing = () => {
                           </div>
                         </div>
                       </div>
-                      <h3 className="text-xl font-black mb-2">{coupon.title}</h3>
-                      <p className="text-xs text-gray-400 mb-6 leading-relaxed line-clamp-2">{coupon.description || "No description provided."}</p>
 
                       <div className="space-y-4 pt-6 border-t border-gray-50 mt-auto">
                         <div className="flex justify-between items-center">

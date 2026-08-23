@@ -41,20 +41,20 @@ const PromotionModal = ({ promotion, onClose }: PromotionModalProps) => {
   const upsertMutation = useMutation({
     mutationFn: async (data: any) => {
       if (promotion) {
-        const { error } = await supabase.from('deal_templates').update(data).eq('id', promotion.id);
+        const { error } = await supabase.from('promotion_templates').update(data).eq('id', promotion.id);
         if (error) throw error;
       } else {
         const payload = {
           ...data,
           store_id: storeId && storeId !== 'default-store' ? storeId : null
         };
-        const { error } = await supabase.from('deal_templates').insert([payload]);
+        const { error } = await supabase.from('promotion_templates').insert([payload]);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       // รีเฟรชข้อมูลหน้าจอหลักทันที
-      queryClient.invalidateQueries({ queryKey: ['deal_templates'] });
+      queryClient.invalidateQueries({ queryKey: ['promotion_templates'] });
       toast.success(promotion ? (language === 'th' ? "อัปเดตโปรโมชั่นเรียบร้อย" : "Promotion updated") : (language === 'th' ? "สร้างโปรโมชั่นเรียบร้อย" : "Promotion created"));
       onClose();
     },

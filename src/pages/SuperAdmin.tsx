@@ -216,7 +216,7 @@ const SuperAdmin = () => {
       let query = supabase.from(selectedTable).select('*');
       
       if (selectedStoreId !== 'all') {
-        const tablesWithStoreId = ['appointments', 'services', 'coupon_templates', 'deal_templates', 'package_templates', 'customer_coupons', 'customers_deals', 'customer_packages', 'store_customers'];
+        const tablesWithStoreId = ['appointments', 'services', 'coupon_templates', 'promotion_templates', 'package_templates', 'customer_coupons', 'customers_deals', 'customer_packages', 'store_customers'];
         if (tablesWithStoreId.includes(selectedTable)) {
           query = query.eq('store_id', selectedStoreId);
         }
@@ -1247,7 +1247,7 @@ const SuperAdmin = () => {
                       <option value="appointments">นัดหมาย (appointments)</option>
                       <option value="services">บริการ (services)</option>
                       <option value="coupon_templates">เทมเพลตคูปอง (coupon_templates)</option>
-                      <option value="deal_templates">เทมเพลตดีล (deal_templates)</option>
+                      <option value="promotion_templates">เทมเพลตโปรโมชัน (promotion_templates)</option>
                       <option value="package_templates">เทมเพลตแพ็กเกจ (package_templates)</option>
                       <option value="customer_coupons">คูปองของลูกค้า (customer_coupons)</option>
                       <option value="customer_packages">แพ็กเกจของลูกค้า (customer_packages)</option>
