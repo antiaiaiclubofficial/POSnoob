@@ -242,6 +242,12 @@ const Settings = () => {
     toast.success("LIFF URL copied to clipboard!");
   };
 
+  const handleCopyEndpointUrl = () => {
+    const url = `https://pos-crm-khaki.vercel.app/?liffId=${localLiffId || 'liff-id'}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Endpoint URL copied to clipboard!");
+  };
+
   const navItems = [
     { id: 'profile', label: 'Store Profile', icon: Store, desc: 'Identity & Contacts' },
     { id: 'company', label: 'Company Profile', icon: Building2, desc: 'Legal & Tax Settings' },
@@ -645,6 +651,24 @@ const Settings = () => {
                       <button 
                         type="button" 
                         onClick={handleCopyLiffUrl} 
+                        className="bg-[#1A1F3D] text-white px-6 py-4 rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-[#2A3152] transition-all"
+                      >
+                        <Copy size={14} /> Copy
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Endpoint URL (สำหรับนำไปใส่ใน LINE Developers)</label>
+                    <div className="flex gap-3">
+                      <input 
+                        className="flex-1 bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-xs font-mono text-gray-500 select-all" 
+                        value={`https://pos-crm-khaki.vercel.app/?liffId=${localLiffId || 'liff-id'}`} 
+                        readOnly 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={handleCopyEndpointUrl} 
                         className="bg-[#1A1F3D] text-white px-6 py-4 rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-[#2A3152] transition-all"
                       >
                         <Copy size={14} /> Copy
