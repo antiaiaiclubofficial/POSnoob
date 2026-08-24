@@ -547,7 +547,8 @@ export interface AppState {
   updateCartQuantity: (index: number, delta: number) => void;
   updateCartItemDiscount: (index: number, discountType: 'percent' | 'amount' | null, discountValue: number) => void;
   clearCart: () => void;
-  processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean, redeemedPoints?: number, subtotal?: number, vatAmount?: number, vatRate?: number, customDate?: string) => Promise<any>;
+  validateCouponCode: (code: string) => Promise<any>;
+  processPayment: (customerId: string, total: number, discount: number, items: any[], method: PaymentMethod, details: any, isTaxInvoice: boolean, redeemedPoints?: number, subtotal?: number, vatAmount?: number, vatRate?: number, customDate?: string, usedCouponCodeId?: string) => Promise<any>;
   deleteTransaction: (id: string) => void;
   voidTransaction: (id: string, reason: string) => Promise<void>;
   recalculateCustomerTier: (customerId: string) => Promise<void>;

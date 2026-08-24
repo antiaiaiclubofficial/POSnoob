@@ -27,7 +27,8 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
     receiptHeader, receiptFooter, receiptPaperSize, 
     vatEnabled, vatRate, vatInclusive,
     serviceChargeEnabled, serviceChargeRate,
-    applyTierDiscount, setApplyTierDiscount
+    applyTierDiscount, setApplyTierDiscount,
+    validateCouponCode
   } = useStore();
 
   const t = translations[language];
@@ -40,6 +41,11 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [completedTransaction, setCompletedTransaction] = useState<any | null>(null);
   const [customDate, setCustomDate] = useState<string>(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState('');
 
   const round2 = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
 
@@ -74,7 +80,24 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
   const calculatedTierDiscount = round2((subtotal * tierDiscountPercent) / 100);
   const tierDiscountAmount = applyTierDiscount ? calculatedTierDiscount : 0;
   
-  const discountableSubtotal = round2(subtotal - tierDiscountAmount);
+  let couponDiscountAmount = 0;
+  if (appliedCoupon) {
+    let template = appliedCoupon.template_type === 'promotion' ? appliedCoupon.promotion_templates : appliedCoupon.coupon_templates;
+    // Handle case where Supabase returns an array for the relationship
+    if (Array.isArray(template)) {
+      template = template[0];
+    }
+    
+    if (template) {
+      if (template.discount_type === 'percent') {
+        couponDiscountAmount = round2(((subtotal - tierDiscountAmount) * (Number(template.discount_value) || 0)) / 100);
+      } else {
+        couponDiscountAmount = Number(template.discount_value) || 0;
+      }
+    }
+  }
+  
+  const discountableSubtotal = Math.max(0, round2(subtotal - tierDiscountAmount - couponDiscountAmount));
   
   const serviceChargeAmount = serviceChargeEnabled ? round2(discountableSubtotal * (serviceChargeRate || 10) / 100) : 0;
   const subtotalAfterServiceCharge = discountableSubtotal + serviceChargeAmount;
@@ -115,6 +138,22 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
     }
   }, [isOpen]);
 
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setIsApplyingCoupon(true);
+    setCouponError('');
+    try {
+      const result = await validateCouponCode(couponCode.trim());
+      setAppliedCoupon(result);
+      toast.success(language === 'th' ? "ใช้คูปองสำเร็จ" : "Coupon applied successfully");
+    } catch (err: any) {
+      setCouponError(err.message || 'Invalid coupon');
+      setAppliedCoupon(null);
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
   const handleInitiatePayment = () => {
     if (cart.length === 0 || !selectedOwner) return;
 
@@ -148,8 +187,9 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
       ...details,
       note: orderNote,
       packageId: paymentMethod === 'Package' ? selectedPackageId : undefined,
-      receiptNo: txId,
       memberDiscount: tierDiscountAmount,
+      couponDiscount: couponDiscountAmount,
+      usedCouponCode: appliedCoupon?.code,
       itemDiscounts: totalItemDiscounts
     };
 
@@ -170,7 +210,7 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
       customerPhone: selectedOwner.phone,
       items: finalCart,
       amount: total,
-      discountAmount: totalItemDiscounts + tierDiscountAmount,
+      discountAmount: totalItemDiscounts + tierDiscountAmount + couponDiscountAmount,
       subtotal: subtotalBeforeTax,
       vatAmount: tax,
       vatRate: vatRateVal,
@@ -187,7 +227,7 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
     processPayment(
       selectedOwner.id, 
       total, 
-      totalItemDiscounts + tierDiscountAmount, 
+      totalItemDiscounts + tierDiscountAmount + couponDiscountAmount, 
       finalCart, 
       paymentMethod, 
       finalDetails, 
@@ -196,7 +236,8 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
       subtotalBeforeTax,
       tax,
       vatRateVal,
-      isBackdated ? format(txDate, "yyyy-MM-dd'T'HH:mm:ssXXX") : undefined
+      isBackdated ? format(txDate, "yyyy-MM-dd'T'HH:mm:ssXXX") : undefined,
+      appliedCoupon?.id
     );
     cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
     
@@ -415,6 +456,56 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
                       <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
                     ) : (
                       <span className="line-through">-{currency}{calculatedTierDiscount.toFixed(2)}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Coupon Code Input Area */}
+                {paymentMethod !== 'Package' && (
+                  <div className="py-2">
+                    {appliedCoupon ? (
+                      <div className="flex justify-between items-center bg-green-50 p-3 rounded-2xl border border-green-100">
+                        <div>
+                          <div className="text-xs font-bold text-green-700 flex items-center gap-1.5"><Tag size={12}/> {appliedCoupon.code}</div>
+                          <div className="text-[10px] text-green-600">
+                            {(() => {
+                              const template = appliedCoupon.template_type === 'promotion' ? appliedCoupon.promotion_templates : appliedCoupon.coupon_templates;
+                              const t = Array.isArray(template) ? template[0] : template;
+                              return t?.title || '';
+                            })()}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-green-700">-{currency}{Number(couponDiscountAmount || 0).toFixed(2)}</span>
+                          <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="p-1 hover:bg-green-100 rounded-full text-green-700">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            placeholder={language === 'th' ? "รหัสคูปอง" : "Coupon Code"}
+                            value={couponCode}
+                            onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
+                            onKeyDown={(e) => { if(e.key === 'Enter') handleApplyCoupon(); }}
+                            className={cn(
+                              "flex-1 bg-[#F5F6FA] border-none rounded-2xl px-4 py-2.5 text-xs font-bold uppercase",
+                              couponError ? "ring-2 ring-red-500/20 text-red-500" : ""
+                            )}
+                          />
+                          <button 
+                            onClick={handleApplyCoupon}
+                            disabled={!couponCode || isApplyingCoupon}
+                            className="bg-[#1A1F3D] text-white px-4 py-2.5 rounded-2xl text-xs font-bold disabled:opacity-50"
+                          >
+                            {isApplyingCoupon ? (language === 'th' ? 'กำลังตรวจสอบ...' : 'Applying...') : (language === 'th' ? 'ใช้คูปอง' : 'Apply')}
+                          </button>
+                        </div>
+                        {couponError && <div className="text-[10px] text-red-500 font-bold px-2">{couponError}</div>}
+                      </div>
                     )}
                   </div>
                 )}

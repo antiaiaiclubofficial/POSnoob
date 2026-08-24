@@ -1771,7 +1771,53 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
 
-  processPayment: async (customerId, total, discount, items, method, details, isTaxInvoice, redeemedPoints, subtotal, vatAmount, vatRate, customDate) => {
+  validateCouponCode: async (code: string) => {
+    const storeId = get().storeId;
+    let query = supabase
+      .from('coupon_codes')
+      .select(`
+        *,
+        promotion_templates ( title, discount_type, discount_value, start_date, end_date ),
+        coupon_templates ( title, discount_type, discount_value )
+      `)
+      .eq('code', code.toUpperCase())
+      .eq('status', 'active');
+      
+    if (storeId && storeId !== 'default-store') {
+      query = query.eq('store_id', storeId);
+    }
+    
+    const { data, error } = await query.single();
+    
+    if (error || !data) {
+      throw new Error('Invalid or expired coupon code');
+    }
+    
+    // Check expiry
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      throw new Error('Coupon code has expired');
+    }
+    
+    // Check max uses
+    if (data.max_uses !== null && data.used_count >= data.max_uses) {
+      throw new Error('Coupon code usage limit reached');
+    }
+
+    // Check promotion template start and end dates
+    if (data.template_type === 'promotion' && data.promotion_templates) {
+      const now = new Date();
+      if (data.promotion_templates.start_date && new Date(data.promotion_templates.start_date) > now) {
+        throw new Error('Promotion has not started yet');
+      }
+      if (data.promotion_templates.end_date && new Date(data.promotion_templates.end_date) < now) {
+        throw new Error('Promotion has ended');
+      }
+    }
+    
+    return data;
+  },
+
+  processPayment: async (customerId, total, discount, items, method, details, isTaxInvoice, redeemedPoints, subtotal, vatAmount, vatRate, customDate, usedCouponCodeId) => {
     const currentStoreId = get().storeId;
     const staffName = get().currentUser?.name || 'Admin';
     const staffId = get().currentUser?.id;
@@ -1999,6 +2045,27 @@ export const useStore = create<AppState>()((set, get) => ({
 
     if (customerId && customerId !== 'walk-in' && customerId !== 'walk-id') {
       await get().recalculateCustomerTier(customerId);
+    }
+
+    if (usedCouponCodeId) {
+      const { data: couponData } = await supabase
+        .from('coupon_codes')
+        .select('used_count, max_uses')
+        .eq('id', usedCouponCodeId)
+        .single();
+        
+      if (couponData) {
+        const newUsedCount = couponData.used_count + 1;
+        const newStatus = (couponData.max_uses !== null && newUsedCount >= couponData.max_uses) ? 'used' : 'active';
+        
+        await supabase
+          .from('coupon_codes')
+          .update({ 
+            used_count: newUsedCount,
+            status: newStatus 
+          })
+          .eq('id', usedCouponCodeId);
+      }
     }
   },
 

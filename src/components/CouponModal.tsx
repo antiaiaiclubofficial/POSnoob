@@ -26,7 +26,9 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
     expiry_days: 30,
     icon_name: 'Ticket',
     bg_color: 'bg-pink-50',
-    is_active: true
+    is_active: true,
+    discount_type: 'percent',
+    discount_value: 0
   });
 
   useEffect(() => {
@@ -38,13 +40,16 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
         expiry_days: coupon.expiry_days,
         icon_name: coupon.icon_name || 'Ticket',
         bg_color: coupon.bg_color || 'bg-pink-50',
-        is_active: coupon.is_active
+        is_active: coupon.is_active,
+        discount_type: coupon.discount_type || 'percent',
+        discount_value: coupon.discount_value || 0
       });
     }
   }, [coupon]);
 
   const upsertMutation = useMutation({
     mutationFn: async (data: any) => {
+      let templateId = coupon?.id;
       if (coupon) {
         const { error } = await supabase.from('coupon_templates').update(data).eq('id', coupon.id);
         if (error) throw error;
@@ -53,18 +58,18 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
           ...data,
           store_id: storeId && storeId !== 'default-store' ? storeId : null
         };
-        const { error } = await supabase.from('coupon_templates').insert([payload]);
+        const { data: inserted, error } = await supabase.from('coupon_templates').insert([payload]).select().single();
         if (error) throw error;
+        templateId = inserted.id;
       }
     },
     onSuccess: () => {
-      // บังคับให้หน้าจอหลักรีเฟรชข้อมูลใหม่
       queryClient.invalidateQueries({ queryKey: ['coupon_templates'] });
       toast.success(coupon ? (language === 'th' ? "อัปเดตคูปองเรียบร้อย" : "Coupon updated") : (language === 'th' ? "สร้างคูปองเรียบร้อย" : "Coupon created"));
       onClose();
     },
-    onError: (error) => {
-      toast.error(language === 'th' ? "บันทึกข้อมูลไม่สำเร็จ" : "Failed to save data");
+    onError: (error: any) => {
+      toast.error(error.message || (language === 'th' ? "บันทึกข้อมูลไม่สำเร็จ" : "Failed to save data"));
       console.error(error);
     }
   });
@@ -129,7 +134,29 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
               </div>
             </div>
 
-
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">ประเภทส่วนลด</label>
+                <select 
+                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold appearance-none cursor-pointer"
+                  value={formData.discount_type}
+                  onChange={e => setFormData({ ...formData, discount_type: e.target.value as 'percent' | 'amount' })}
+                >
+                  <option value="percent">เปอร์เซ็นต์ (%)</option>
+                  <option value="amount">จำนวนเงิน (บาท)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">มูลค่าส่วนลด</label>
+                <input 
+                  type="number"
+                  className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold"
+                  value={formData.discount_value}
+                  onChange={e => setFormData({ ...formData, discount_value: Number(e.target.value) })}
+                  required
+                />
+              </div>
+            </div>
 
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 mb-2 block tracking-widest">{t.promoDesc}</label>
@@ -137,7 +164,7 @@ const CouponModal = ({ coupon, onClose }: CouponModalProps) => {
                 className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none focus:ring-4 focus:ring-pink-500/5 transition-all"
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe this reward..."
+                placeholder="Details of the coupon..."
               />
             </div>
           </div>

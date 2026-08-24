@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { format } from 'date-fns';
 import { Plus, Tag, Ticket, Edit3, Trash2, Search, Clock, Gift, Star, Award, Zap, Heart, Megaphone, Wallet, Crown, Gem, Percent, Save, Scissors, Package, ShieldCheck, FileText, Sparkles, ChevronDown, CheckCircle2, Loader2, LayoutGrid, List } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -30,6 +31,7 @@ import CreditPackageModal from '@/components/CreditPackageModal';
 import PackageModal from '@/components/PackageModal';
 import TierConfigModal from '@/components/TierConfigModal';
 import TierInlineRow from '@/components/TierInlineRow';
+import CouponCodeModal from '@/components/CouponCodeModal';
 import { useLocation } from 'react-router-dom';
 
 const Marketing = () => {
@@ -51,6 +53,7 @@ const Marketing = () => {
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [isTierConfigModalOpen, setIsTierConfigModalOpen] = useState(false);
+  const [isCouponCodeModalOpen, setIsCouponCodeModalOpen] = useState(false);
   const [tierViewMode, setTierViewMode] = useState<'grid' | 'list'>('grid');
 
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -117,6 +120,29 @@ const Marketing = () => {
       const { data, error } = await query
         .order('created_at', { ascending: false })
         .order('id', { ascending: true });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch Coupon Codes
+  const { data: couponCodes, isLoading: couponCodesLoading } = useQuery({
+    queryKey: ['coupon_codes', storeId],
+    queryFn: async () => {
+      let query = supabase
+        .from('coupon_codes')
+        .select(`
+          *,
+          promotion_templates ( title, discount_type, discount_value ),
+          coupon_templates ( title, discount_type, discount_value )
+        `);
+
+      if (storeId && storeId !== 'default-store') {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     }
@@ -194,6 +220,7 @@ const Marketing = () => {
     setSelectedItem(null);
     if (activeTab === 'promotions') setIsPromoModalOpen(true);
     else if (activeTab === 'coupons') setIsCouponModalOpen(true);
+    else if (activeTab === 'coupon_codes') setIsCouponCodeModalOpen(true);
     else if (activeTab === 'credits') setIsCreditModalOpen(true);
     else if (activeTab === 'bundles') setIsPackageModalOpen(true);
     else if (activeTab === 'tiers') {
@@ -231,9 +258,9 @@ const Marketing = () => {
             <Plus size={20} /> {
               activeTab === 'promotions' ? t.createPromo :
                 activeTab === 'coupons' ? t.createCoupon :
-                  activeTab === 'credits' ? 'สร้างแพ็กเกจเครดิต' :
-                    activeTab === 'tiers' ? 'สร้างระดับสมาชิก' :
-                      'สร้างแพ็กเกจบริการ'
+                    activeTab === 'credits' ? 'สร้างแพ็กเกจเครดิต' :
+                      activeTab === 'tiers' ? 'สร้างระดับสมาชิก' :
+                        'สร้างแพ็กเกจบริการ'
             }
           </button>
         )}
@@ -247,6 +274,9 @@ const Marketing = () => {
             </TabsTrigger>
             <TabsTrigger value="coupons" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Ticket size={16} className="mr-2" /> {t.coupons}
+            </TabsTrigger>
+            <TabsTrigger value="coupon_codes" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
+              <span className="font-bold">#</span> <span className="ml-2">ประวัติการใช้รหัส</span>
             </TabsTrigger>
             <TabsTrigger value="credits" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Wallet size={16} className="mr-2" /> แพ็กเกจเครดิต
@@ -300,6 +330,12 @@ const Marketing = () => {
                       <div className="flex-1">
                         <h3 className="text-xl font-black mb-2">{promo.title}</h3>
                         <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">{promo.description || "No description provided."}</p>
+                        {(promo.start_date || promo.end_date) && (
+                          <div className="mt-2 text-[10px] text-gray-500 font-bold bg-white/50 inline-block px-2 py-1 rounded-lg">
+                            {promo.start_date && <span>เริ่ม: {format(new Date(promo.start_date), 'dd/MM/yyyy HH:mm')} </span>}
+                            {promo.end_date && <span>สิ้นสุด: {format(new Date(promo.end_date), 'dd/MM/yyyy HH:mm')}</span>}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <Switch
@@ -430,6 +466,78 @@ const Marketing = () => {
             </section>
           </TabsContent>
 
+
+          <TabsContent value="coupon_codes" className="m-0">
+            <section className="relative overflow-hidden bg-[#F9F9F9]/80 px-6 pb-6 pt-4 lg:px-8 lg:pb-8 lg:pt-5 rounded-[3rem] space-y-6 border border-white">
+              <div className="absolute inset-0 pointer-events-none z-0">
+                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-green-400/20 blur-[80px]" />
+                <div className="absolute -bottom-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-emerald-400/20 blur-[80px]" />
+              </div>
+              <div className="flex justify-between items-center relative z-10">
+                <div>
+                  <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">ประวัติการใช้รหัส</h3>
+                  <p className="text-sm text-gray-500 font-medium">ติดตามและตรวจสอบรหัสโปรโมชั่นหรือคูปองแลกคะแนนที่ถูกใช้งาน</p>
+                </div>
+              </div>
+              <div className="relative z-10 bg-white/60 backdrop-blur-xl rounded-[2rem] border border-white/60 shadow-sm p-4 overflow-x-auto">
+                <div className="min-w-[800px]">
+                  <div className="grid grid-cols-12 gap-4 px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                    <div className="col-span-2">รหัส (Code)</div>
+                    <div className="col-span-3">อ้างอิงจาก</div>
+                    <div className="col-span-2">ส่วนลด</div>
+                    <div className="col-span-2">จำนวนสิทธิ์</div>
+                    <div className="col-span-2">สถานะ</div>
+                    <div className="col-span-1 text-right">จัดการ</div>
+                  </div>
+                  <div className="space-y-2 mt-2">
+                    {couponCodesLoading ? (
+                      <div className="py-20 text-center font-black opacity-20 animate-pulse">Loading Codes...</div>
+                    ) : couponCodes?.length === 0 ? (
+                      <div className="py-20 text-center opacity-20 font-black">No Coupon Codes Found</div>
+                    ) : (
+                      couponCodes?.map((c: any) => {
+                        const template = c.template_type === 'promotion' ? c.promotion_templates : c.coupon_templates;
+                        const discountText = template?.discount_type === 'percent' ? `${template?.discount_value}%` : `${template?.discount_value} THB`;
+                        const statusColor = c.status === 'active' ? 'text-green-600 bg-green-50' : c.status === 'used' ? 'text-gray-600 bg-gray-50' : 'text-red-600 bg-red-50';
+                        
+                        return (
+                          <div key={c.id} className="grid grid-cols-12 gap-4 px-4 py-4 items-center bg-white rounded-2xl shadow-sm border border-gray-50 hover:border-green-100 transition-colors">
+                            <div className="col-span-2 font-black text-[#1A1F3D] uppercase">{c.code}</div>
+                            <div className="col-span-3 font-bold text-sm text-gray-600 line-clamp-1">
+                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2 bg-gray-100 px-2 py-0.5 rounded-full">{c.template_type}</span>
+                              {template?.title}
+                            </div>
+                            <div className="col-span-2 font-black text-green-600">{discountText}</div>
+                            <div className="col-span-2 text-sm font-bold text-gray-500">
+                              {c.used_count} / {c.max_uses === null ? '∞' : c.max_uses}
+                            </div>
+                            <div className="col-span-2">
+                              <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest", statusColor)}>
+                                {c.status}
+                              </span>
+                            </div>
+                            <div className="col-span-1 text-right flex justify-end gap-2">
+                              <button 
+                                onClick={async () => {
+                                  if (window.confirm("ยืนยันการลบประวัตินี้?")) {
+                                    await supabase.from('coupon_codes').delete().eq('id', c.id);
+                                    queryClient.invalidateQueries({ queryKey: ['coupon_codes'] });
+                                  }
+                                }}
+                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </TabsContent>
 
           <TabsContent value="tiers" className="m-0">
             <section className="relative overflow-hidden bg-[#F9F9F9]/80 px-6 pb-6 pt-4 lg:px-8 lg:pb-8 lg:pt-5 rounded-[3rem] space-y-6 border border-white">
@@ -917,6 +1025,7 @@ const Marketing = () => {
       </div>
 
       {isCouponModalOpen && <CouponModal coupon={selectedItem} onClose={() => setIsCouponModalOpen(false)} />}
+      {isCouponCodeModalOpen && <CouponCodeModal onClose={() => setIsCouponCodeModalOpen(false)} />}
       {isPromoModalOpen && <PromotionModal promotion={selectedItem} onClose={() => setIsPromoModalOpen(false)} />}
       {isCreditModalOpen && <CreditPackageModal onClose={() => setIsCreditModalOpen(false)} />}
       {isPackageModalOpen && <PackageModal onClose={() => setIsPackageModalOpen(false)} />}
