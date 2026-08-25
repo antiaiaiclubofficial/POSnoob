@@ -127,9 +127,9 @@ const TierConfigModal = ({ tier, onClose }: TierConfigModalProps) => {
 
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-xl rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+      <div className="bg-white w-full max-w-3xl rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
+        <div className="px-10 py-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
           <div className="flex items-center gap-4">
             <div 
               className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"
@@ -149,138 +149,144 @@ const TierConfigModal = ({ tier, onClose }: TierConfigModalProps) => {
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
-            <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อระดับสมาชิก (Tier Name)</label>
-            <input
-              className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              required
-              placeholder="เช่น Gold, VIP"
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ยอด/คะแนนขั้นต่ำ (Min Spent/Points)</label>
-              <input
-                type="number"
-                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                value={formData.min_points}
-                onChange={e => setFormData({ ...formData, min_points: Number(e.target.value) })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ส่วนลดบริการ % (Discount %)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                value={formData.discount_percentage}
-                onChange={e => setFormData({ ...formData, discount_percentage: Number(e.target.value) })}
-                required
-                placeholder="0"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ไอคอน (Icon)</label>
-              <IconPicker
-                 value={formData.icon_name}
-                 onChange={(iconName) => setFormData({ ...formData, icon_name: iconName })}
-                 triggerClassName="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold shadow-none hover:bg-[#E5E7EB] h-[52px]"
-                 className="z-[250]"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">สี (Color)</label>
-              <Popover>
-                 <PopoverTrigger asChild>
-                   <button type="button" className="w-full flex items-center justify-between bg-[#F5F6FA] px-6 py-4 rounded-2xl border-none shadow-none text-sm font-bold text-[#1A1F3D] hover:bg-[#E5E7EB] transition-colors h-[52px]">
-                     <div className="flex items-center gap-3">
-                       <div 
-                         className="w-5 h-5 rounded-full border shadow-inner" 
-                         style={{ backgroundColor: color }} 
-                       />
-                       <span>เลือกสี</span>
-                     </div>
-                     <ChevronDown size={14} className="text-gray-400" />
-                   </button>
-                 </PopoverTrigger>
-                 <PopoverContent className="w-auto p-0 border-none shadow-xl rounded-2xl overflow-hidden z-[250]" align="end">
-                   <CustomColorPicker 
-                     color={color} 
-                     onChange={(hex) => setFormData({ ...formData, color_class: hex })} 
-                   />
-                 </PopoverContent>
-               </Popover>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">คำอธิบาย (Description)</label>
-            <textarea
-              className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-              value={formData.description}
-              onChange={e => setFormData({ ...formData, description: e.target.value })}
-              placeholder="เช่น สมาชิกเริ่มต้นสำหรับลูกค้าทั่วไป..."
-            />
-          </div>
-
-          <div className="space-y-4">
-            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">สิทธิประโยชน์ (Benefits)</label>
-            
-            <div className="flex gap-2">
-              <input
-                className="flex-1 bg-[#F5F6FA] border-none rounded-2xl px-5 py-3 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
-                value={newBenefit}
-                onChange={e => setNewBenefit(e.target.value)}
-                placeholder="เช่น ส่วนลดบริการ 5%..."
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddBenefit();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={handleAddBenefit}
-                className="bg-[#1A1F3D] text-white p-3.5 rounded-2xl hover:bg-[#2A3152] transition-all shrink-0"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-hide">
-              {formData.benefits.map((benefit, idx) => (
-                <div key={idx} className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100 animate-in slide-in-from-top-2 duration-200">
-                  <div className="flex items-center gap-3">
-                    <Gift size={14} className="text-indigo-500 shrink-0" />
-                    <span className="text-xs font-bold text-gray-700">{benefit}</span>
+          <div className="flex-1 overflow-y-auto px-10 pt-4 pb-8 scrollbar-hide">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              {/* Left Column: Settings */}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ชื่อระดับสมาชิก (Tier Name)</label>
+                  <input
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    required
+                    placeholder="เช่น Gold, VIP"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ยอด/คะแนนขั้นต่ำ (Min Spent/Points)</label>
+                    <input
+                      type="number"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                      value={formData.min_points}
+                      onChange={e => setFormData({ ...formData, min_points: Number(e.target.value) })}
+                      required
+                    />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ส่วนลดบริการ % (Discount %)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                      value={formData.discount_percentage}
+                      onChange={e => setFormData({ ...formData, discount_percentage: Number(e.target.value) })}
+                      required
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">ไอคอน (Icon)</label>
+                    <IconPicker
+                       value={formData.icon_name}
+                       onChange={(iconName) => setFormData({ ...formData, icon_name: iconName })}
+                       triggerClassName="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold shadow-none hover:bg-[#E5E7EB] h-[52px]"
+                       className="z-[250]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">สี (Color)</label>
+                    <Popover>
+                       <PopoverTrigger asChild>
+                         <button type="button" className="w-full flex items-center justify-between bg-[#F5F6FA] px-6 py-4 rounded-2xl border-none shadow-none text-sm font-bold text-[#1A1F3D] hover:bg-[#E5E7EB] transition-colors h-[52px]">
+                           <div className="flex items-center gap-3">
+                             <div 
+                               className="w-5 h-5 rounded-full border shadow-inner" 
+                               style={{ backgroundColor: color }} 
+                             />
+                             <span>เลือกสี</span>
+                           </div>
+                           <ChevronDown size={14} className="text-gray-400" />
+                         </button>
+                       </PopoverTrigger>
+                       <PopoverContent className="w-auto p-0 border-none shadow-xl rounded-2xl overflow-hidden z-[250]" align="end">
+                         <CustomColorPicker 
+                           color={color} 
+                           onChange={(hex) => setFormData({ ...formData, color_class: hex })} 
+                         />
+                       </PopoverContent>
+                     </Popover>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">คำอธิบาย (Description)</label>
+                  <textarea
+                    className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold h-24 resize-none focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                    value={formData.description}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="เช่น สมาชิกเริ่มต้นสำหรับลูกค้าทั่วไป..."
+                  />
+                </div>
+              </div>
+
+              {/* Right Column: Benefits */}
+              <div className="space-y-4 flex flex-col">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">สิทธิประโยชน์ (Benefits)</label>
+                
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 bg-[#F5F6FA] border-none rounded-2xl px-5 py-3 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all"
+                    value={newBenefit}
+                    onChange={e => setNewBenefit(e.target.value)}
+                    placeholder="เช่น ส่วนลดบริการ 5%..."
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddBenefit();
+                      }
+                    }}
+                  />
                   <button
                     type="button"
-                    onClick={() => handleRemoveBenefit(idx)}
-                    className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                    onClick={handleAddBenefit}
+                    className="bg-[#1A1F3D] text-white p-3.5 rounded-2xl hover:bg-[#2A3152] transition-all shrink-0"
                   >
-                    <Trash2 size={14} />
+                    <Plus size={18} />
                   </button>
                 </div>
-              ))}
-              {formData.benefits.length === 0 && (
-                <p className="text-xs text-gray-400 font-bold text-center py-6 italic">ยังไม่มีการเพิ่มสิทธิประโยชน์</p>
-              )}
+
+                <div className="space-y-2 flex-1 overflow-y-auto scrollbar-hide p-1">
+                  {formData.benefits.map((benefit, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100 animate-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-center gap-3 pr-2">
+                        <Gift size={14} className="text-indigo-500 shrink-0" />
+                        <span className="text-xs font-bold text-gray-700">{benefit}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBenefit(idx)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  {formData.benefits.length === 0 && (
+                    <p className="text-xs text-gray-400 font-bold text-center py-6 italic">ยังไม่มีการเพิ่มสิทธิประโยชน์</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-          </div>
 
-          <div className="p-8 pt-4 border-t border-gray-50 bg-white shrink-0 z-10">
+          <div className="p-8 lg:px-10 pt-4 border-t border-gray-50 bg-white shrink-0 z-10 flex justify-end">
             <button
               type="submit"
               disabled={upsertMutation.isPending}

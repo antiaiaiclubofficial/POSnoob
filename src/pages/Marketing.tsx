@@ -275,20 +275,20 @@ const Marketing = () => {
             <TabsTrigger value="coupons" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Ticket size={16} className="mr-2" /> {t.coupons}
             </TabsTrigger>
-            <TabsTrigger value="coupon_codes" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
-              <span className="font-bold">#</span> <span className="ml-2">ประวัติการใช้รหัส</span>
+            <TabsTrigger value="bundles" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
+              <Package size={16} className="mr-2" /> แพ็กเกจบริการ
             </TabsTrigger>
             <TabsTrigger value="credits" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Wallet size={16} className="mr-2" /> แพ็กเกจเครดิต
-            </TabsTrigger>
-            <TabsTrigger value="bundles" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
-              <Package size={16} className="mr-2" /> แพ็กเกจบริการ
             </TabsTrigger>
             <TabsTrigger value="tiers" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Crown size={16} className="mr-2" /> {t.membershipTierLogic}
             </TabsTrigger>
             <TabsTrigger value="points" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
               <Star size={16} className="mr-2" /> ตั้งค่าคะแนนสะสม
+            </TabsTrigger>
+            <TabsTrigger value="coupon_codes" className="flex-1 lg:px-8 py-3 rounded-xl data-[state=active]:bg-[#1A1F3D] data-[state=active]:text-white text-xs font-bold transition-all whitespace-nowrap">
+              <span className="font-bold">#</span> <span className="ml-2">ประวัติการใช้รหัส</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -316,7 +316,7 @@ const Marketing = () => {
               </div>
               <div className="flex justify-between items-center relative z-10">
                 <div>
-                  <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">Promotions</h3>
+                  <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">{t.promotions}</h3>
                   <p className="text-sm text-gray-500 font-medium">สร้างโปรโมชั่นและส่วนลดพิเศษสำหรับลูกค้าของคุณ</p>
                 </div>
               </div>
@@ -406,8 +406,8 @@ const Marketing = () => {
               </div>
               <div className="flex justify-between items-center relative z-10">
                 <div>
-                  <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">Coupons</h3>
-                  <p className="text-sm text-gray-500 font-medium">สร้างคูปองแทนเงินสดหรือสิทธิพิเศษต่างๆ เพื่อดึงดูดลูกค้า</p>
+                  <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">{t.coupons}</h3>
+                  <p className="text-sm text-gray-500 font-medium">ตั้งค่าการแลกคะแนนเป็นส่วนลดหรือสิทธิพิเศษต่างๆ เพื่อมอบรางวัลให้ลูกค้า</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative z-10">
@@ -798,7 +798,7 @@ const Marketing = () => {
               </div>
               <div className="flex justify-between items-center relative z-10">
                 <div>
-                  <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">Credit Packages</h3>
+                  <h3 className="text-2xl font-black text-[#1A1F3D] mb-1">แพ็กเกจเครดิต</h3>
                   <p className="text-sm text-gray-500 font-medium">ตั้งค่าแพ็กเกจเติมเงินล่วงหน้าเพื่อเพิ่มยอดขายและความคุ้มค่าให้ลูกค้า</p>
                 </div>
               </div>

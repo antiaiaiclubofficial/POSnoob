@@ -102,10 +102,10 @@ const PackageModal = ({ onClose, customerId, embedded }: PackageModalProps) => {
   const content = (
     <div className={cn(
       "bg-white w-full flex flex-col overflow-hidden",
-      embedded ? "h-full" : "max-w-2xl rounded-[48px] shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh]"
+      embedded ? "h-full" : "max-w-2xl rounded-[48px] shadow-2xl animate-in zoom-in-95 duration-300 h-[80vh]"
     )}>
       {!embedded && (
-        <div className="p-10 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
+        <div className="px-10 py-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
               <Package size={24} />
@@ -125,10 +125,11 @@ const PackageModal = ({ onClose, customerId, embedded }: PackageModalProps) => {
         </div>
       )}
 
-      <div className={cn("flex-1 overflow-y-auto space-y-8 scrollbar-hide", embedded ? "p-0" : "p-10")}>
+      <div className={cn("flex-1 flex flex-col overflow-y-auto scrollbar-hide", embedded ? "p-0" : "px-10 pt-4 pb-10")}>
           {isCreating ? (
-            <div className="space-y-6 animate-in slide-in-from-top-4">
-              <div className="grid grid-cols-2 gap-6">
+            <div className="flex-1 flex flex-col animate-in slide-in-from-top-4">
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
                 <div className="col-span-2 space-y-2">
                   <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">Package Name</label>
                   <input 
@@ -247,10 +248,11 @@ const PackageModal = ({ onClose, customerId, embedded }: PackageModalProps) => {
                       )}
                     </div>
                   )}
-                </div>
+              </div>
+              </div>
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex gap-4 mt-auto pt-8 shrink-0">
                 <button 
                   onClick={() => setIsCreating(false)}
                   className="flex-1 py-4 text-sm font-black text-gray-400"
@@ -259,7 +261,7 @@ const PackageModal = ({ onClose, customerId, embedded }: PackageModalProps) => {
                 </button>
                 <button 
                   onClick={handleSave}
-                  className="flex-1 bg-[#1A1F3D] text-white py-4 rounded-2xl font-black shadow-xl"
+                  className="flex-[2] bg-[#1A1F3D] text-white py-4 rounded-2xl font-black shadow-xl"
                 >
                   {editingId ? "Update Template" : "Create Template"}
                 </button>
