@@ -21,7 +21,7 @@ const Settings = () => {
   const { 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
     receiptHeader, receiptFooter, receiptPaperSize, serviceChargeEnabled, serviceChargeRate,
-    liffId, liffChannelId, liffChannelSecret, liffEnabled,
+    liffId, liffChannelId, liffChannelSecret, liffEnabled, lineMessagingToken,
     companyName, companyAddress, companyTaxId, companyPhone, companyEmail, vatEnabled, vatRate,
     vatInclusive,
     updateBusinessProfile,
@@ -71,6 +71,7 @@ const Settings = () => {
   const [localLiffChannelId, setLocalLiffChannelId] = useState(liffChannelId);
   const [localLiffChannelSecret, setLocalLiffChannelSecret] = useState(liffChannelSecret);
   const [localLiffEnabled, setLocalLiffEnabled] = useState(liffEnabled);
+  const [localLineMessagingToken, setLocalLineMessagingToken] = useState(lineMessagingToken || '');
 
   // Hardware Local States
   const [localScannerType, setLocalScannerType] = useState(scannerType);
@@ -108,6 +109,7 @@ const Settings = () => {
     setLocalLiffChannelId(liffChannelId);
     setLocalLiffChannelSecret(liffChannelSecret);
     setLocalLiffEnabled(liffEnabled);
+    setLocalLineMessagingToken(lineMessagingToken || '');
     setLocalScannerType(scannerType);
     setLocalPrinterType(printerType);
   }, [
@@ -115,7 +117,7 @@ const Settings = () => {
     updateBusinessProfile,
     receiptHeader, receiptFooter, receiptPaperSize, serviceChargeEnabled, serviceChargeRate,
     slotDuration, maxCapacity, openTime, closeTime, recurringHolidays, specificHolidays, companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
-    vatEnabled, vatRate, vatInclusive, liffId, liffChannelId, liffChannelSecret, liffEnabled,
+    vatEnabled, vatRate, vatInclusive, liffId, liffChannelId, liffChannelSecret, liffEnabled, lineMessagingToken,
     scannerType, printerType
   ]);
 
@@ -150,6 +152,7 @@ const Settings = () => {
       localLiffChannelId !== liffChannelId ||
       localLiffChannelSecret !== liffChannelSecret ||
       localLiffEnabled !== liffEnabled ||
+      localLineMessagingToken !== (lineMessagingToken || '') ||
       localCompanyName !== (companyName || '') ||
       localCompanyAddress !== (companyAddress || '') ||
       localCompanyTaxId !== (companyTaxId || '') ||
@@ -190,6 +193,7 @@ const Settings = () => {
         liffChannelId: localLiffChannelId,
         liffChannelSecret: localLiffChannelSecret,
         liffEnabled: localLiffEnabled,
+        lineMessagingToken: localLineMessagingToken,
         companyName: localCompanyName,
         companyAddress: localCompanyAddress,
         companyTaxId: localCompanyTaxId,
@@ -226,7 +230,7 @@ const Settings = () => {
     localShopName, localShopLogo, localShopAddress, localShopPhone, localShopLineId,
     localReceiptHeader, localReceiptFooter, localReceiptPaperSize,
     localCurrency, localShopIsOpen,
-    localLiffId, localLiffChannelId, localLiffChannelSecret, localLiffEnabled,
+    localLiffId, localLiffChannelId, localLiffChannelSecret, localLiffEnabled, localLineMessagingToken,
     localCompanyName, localCompanyAddress, localCompanyTaxId, localCompanyPhone, localCompanyEmail,
     localVatEnabled, localVatRate, localVatInclusive,
     localServiceChargeEnabled, localServiceChargeRate,
@@ -686,6 +690,40 @@ const Settings = () => {
                           <li>ไปที่แท็บ <b>LIFF</b> แล้วกดสร้าง LIFF App ใหม่</li>
                           <li>คัดลอก <b>LIFF ID</b>, <b>Channel ID</b> และ <b>Channel Secret</b> มากรอกในหน้านี้</li>
                           <li>กำหนด Endpoint URL ใน LINE Developers เป็น URL ของแอปพลิเคชันนี้</li>
+                        </ol>
+                     </div>
+                  </div>
+                </section>
+
+                {/* LINE Messaging API Section */}
+                <section className="bg-white p-10 rounded-[48px] border border-gray-100 shadow-sm space-y-8 mt-10">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-black text-[#1A1F3D] mb-1">LINE Messaging API</h3>
+                      <p className="text-xs text-gray-400 font-medium">เชื่อมต่อสำหรับดูข้อมูลสถิติและการส่งข้อความ (Broadcast)</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Channel Access Token (Long-lived)</label>
+                    <input 
+                      type="password"
+                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                      value={localLineMessagingToken} 
+                      onChange={e => setLocalLineMessagingToken(e.target.value)} 
+                      placeholder="••••••••••••••••••••••••••••••••"
+                    />
+                  </div>
+
+                  <div className="p-8 bg-blue-50/50 rounded-[40px] border border-blue-100 flex items-start gap-4">
+                     <div className="p-3 bg-white rounded-2xl shadow-sm text-blue-600"><MessageSquare size={20} /></div>
+                     <div>
+                        <p className="text-xs font-black text-blue-900 mb-1">ขั้นตอนการรับ Token</p>
+                        <ol className="list-decimal list-inside text-[11px] text-blue-800/80 leading-relaxed font-medium space-y-1.5 mt-2">
+                          <li>สร้าง Channel ประเภท <b>Messaging API</b> ใน LINE Developers</li>
+                          <li>ไปที่แท็บ <b>Messaging API</b> เลื่อนลงมาล่างสุด</li>
+                          <li>กดปุ่ม <b>Issue</b> ที่หัวข้อ Channel access token (long-lived)</li>
+                          <li>คัดลอก Token นำมาวางที่ช่องด้านบน</li>
                         </ol>
                      </div>
                   </div>

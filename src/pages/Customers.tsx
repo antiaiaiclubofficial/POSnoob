@@ -2,15 +2,17 @@ import { format } from 'date-fns';
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2, Package, Clock, Star, Gift, LayoutDashboard } from 'lucide-react';
+import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2, Package, Clock, Star, Gift, LayoutDashboard, Send, ShieldAlert } from 'lucide-react';
 import { useStore, Customer, Pet, MembershipLevel } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import CustomerModal from '@/components/CustomerModal';
 import PetModal from '@/components/PetModal';
 import PetProfileRecord from '@/components/PetProfileRecord';
 import CustomerDashboard from '@/components/customers/CustomerDashboard';
+import LineOADashboard from '../components/customers/LineOADashboard';
 import LineBindingModal from '@/components/LineBindingModal';
 import PackageModal from '@/components/PackageModal';
+import { fetchLineFollowers } from '@/lib/lineApi';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { translations } from '@/utils/translations';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,6 +52,18 @@ const Customers = () => {
       if (error) return [];
       return data;
     }
+  });
+
+  const { data: lineValidation, isLoading: isLineValidating } = useQuery({
+    queryKey: ['line-validation', selectedCustomerId],
+    queryFn: async () => {
+      const customer = customers.find(c => c.id === selectedCustomerId);
+      if (!customer?.lineId || !storeId) return null;
+      const data = await fetchLineFollowers(storeId, [customer.lineId]);
+      return data?.userStatusMap?.[customer.lineId] ?? false;
+    },
+    enabled: !!selectedCustomerId && !!storeId && !!customers.find(c => c.id === selectedCustomerId)?.lineId,
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
   });
 
   const { isLoading, refetch } = useQuery({
@@ -321,7 +335,7 @@ const Customers = () => {
           <button
             onClick={() => { setSelectedCustomerId(null); if (isMobile) setShowDetailOnMobile(true); }}
             className={cn(
-              "w-full text-left p-4 rounded-2xl mb-4 transition-all flex items-center justify-between group",
+              "w-full text-left p-4 rounded-2xl mb-2 transition-all flex items-center justify-between group",
               selectedCustomerId === null ? "bg-[#1A1F3D] text-white shadow-lg" : "bg-[#F5F6FA] hover:bg-gray-100 text-[#1A1F3D]"
             )}
           >
@@ -335,6 +349,34 @@ const Customers = () => {
               <p className="font-bold text-sm">{language === 'th' ? 'ภาพรวม (Dashboard)' : 'Dashboard'}</p>
             </div>
           </button>
+          
+          <button
+            onClick={() => { setSelectedCustomerId('line-oa'); if (isMobile) setShowDetailOnMobile(true); }}
+            className={cn(
+              "w-full text-left p-4 rounded-2xl mb-4 transition-all flex items-center justify-between group border border-transparent",
+              selectedCustomerId === 'line-oa' ? "bg-green-500 text-white shadow-lg shadow-green-500/20" : "bg-green-50/50 hover:bg-green-50 text-green-700 hover:border-green-100"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                selectedCustomerId === 'line-oa' ? "bg-white/20 text-white" : "bg-green-100 text-green-600 shadow-sm"
+              )}>
+                <MessageSquare size={20} />
+              </div>
+              <div>
+                <p className="font-bold text-sm">{language === 'th' ? 'ข้อมูล LINE OA' : 'LINE OA Insights'}</p>
+                <p className={cn("text-[10px] font-semibold tracking-wider uppercase", selectedCustomerId === 'line-oa' ? "text-green-100" : "text-green-500")}>Marketing</p>
+              </div>
+            </div>
+          </button>
+
+          <div className="flex items-center gap-4 mb-4 mt-2 px-2 opacity-50">
+            <div className="flex-1 h-px bg-gray-300"></div>
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{language === 'th' ? 'ลูกค้าทั้งหมด' : 'All Customers'}</p>
+            <div className="flex-1 h-px bg-gray-300"></div>
+          </div>
+
           {filteredCustomers.map(customer => (
             <button
               key={customer.id}
@@ -383,19 +425,22 @@ const Customers = () => {
         isMobile && !showDetailOnMobile ? "translate-x-full absolute" : "translate-x-0"
       )}>
         {selectedCustomer ? (
-          <div className="p-6 lg:p-10 max-w-5xl mx-auto">
-            <button 
-              onClick={() => {
-                setSelectedCustomerId(null);
-                if (isMobile) setShowDetailOnMobile(false);
-              }} 
-              className={cn(
-                "flex items-center gap-2 text-gray-400 font-bold text-xs mb-6 hover:text-[#1A1F3D] transition-colors",
-                isMobile ? "pt-14" : ""
-              )}
-            >
-              <ChevronLeft size={16} /> {language === 'th' ? 'ย้อนกลับ' : 'Back'}
-            </button>
+          <div className="p-6 lg:p-10 max-w-[1600px] mx-auto w-full">
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_450px] 2xl:grid-cols-[1fr_500px] gap-6 lg:gap-10">
+              {/* Left Column: Customer Profile & Pets */}
+              <div className="flex flex-col min-w-0">
+                <button 
+                  onClick={() => {
+                    setSelectedCustomerId(null);
+                    if (isMobile) setShowDetailOnMobile(false);
+                  }} 
+                  className={cn(
+                    "flex items-center gap-2 text-gray-400 font-bold text-xs mb-6 hover:text-[#1A1F3D] transition-colors",
+                    isMobile ? "pt-14" : ""
+                  )}
+                >
+                  <ChevronLeft size={16} /> {language === 'th' ? 'ย้อนกลับ' : 'Back'}
+                </button>
 
             <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 mb-8 flex flex-col sm:flex-row justify-between items-start gap-6 group">
               <div className="flex gap-6">
@@ -440,11 +485,23 @@ const Customers = () => {
                     <span className="flex items-center gap-1.5 text-xs text-gray-400 font-bold"><Mail size={14}/> {selectedCustomer.email}</span>
                   </div>
                   {selectedCustomer.lineId ? (
-                    <div className="flex items-center gap-2 bg-green-50 text-green-600 px-4 py-2 rounded-xl border border-green-100 w-fit">
-                      <MessageSquare size={14} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">LINE Connected</span>
-                      <BadgeCheck size={14} />
-                    </div>
+                    isLineValidating ? (
+                      <div className="flex items-center gap-2 bg-gray-50 text-gray-400 px-4 py-2 rounded-xl border border-gray-100 w-fit">
+                        <Clock size={14} className="animate-spin" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{language === 'th' ? 'กำลังตรวจสอบ...' : 'Verifying...'}</span>
+                      </div>
+                    ) : lineValidation ? (
+                      <div className="flex items-center gap-2 bg-green-50 text-green-600 px-4 py-2 rounded-xl border border-green-100 w-fit">
+                        <MessageSquare size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">LINE Connected</span>
+                        <BadgeCheck size={14} />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 bg-red-50 text-red-500 px-4 py-2 rounded-xl border border-red-100 w-fit">
+                        <ShieldAlert size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{language === 'th' ? 'ไม่ได้เชื่อมต่อ Line' : 'Not Connected'}</span>
+                      </div>
+                    )
                   ) : (
                     <button onClick={() => setIsLineModalOpen(true)} className="text-[10px] font-black uppercase text-gray-400 hover:text-green-600 flex items-center gap-2 transition-colors">
                       <MessageSquare size={14} /> Connect LINE OA
@@ -500,6 +557,66 @@ const Customers = () => {
               )}
             </div>
           </div>
+
+          {/* Right Column: LINE OA Chat Placeholder */}
+          <div className="hidden xl:flex flex-col h-[calc(100vh-80px)] sticky top-10">
+            <div className="bg-white border border-gray-100 rounded-[40px] shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col h-full overflow-hidden">
+              {/* Chat Header */}
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-[#00B900] to-[#009900] text-white">
+                 <div className="flex items-center gap-4">
+                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0 backdrop-blur-md">
+                     <MessageSquare size={24} className="text-white" />
+                   </div>
+                   <div>
+                     <h3 className="font-black text-lg">LINE OA Chat</h3>
+                     <p className="text-xs font-medium text-green-50 opacity-90">{language === 'th' ? `สนทนากับ ${selectedCustomer.name}` : `Chatting with ${selectedCustomer.name}`}</p>
+                   </div>
+                 </div>
+              </div>
+              
+              {/* Chat Messages Placeholder */}
+              <div className="flex-1 bg-[#F5F6FA] p-6 flex flex-col justify-center items-center overflow-y-auto relative">
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+                  <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-[#00B900] shadow-[0_8px_32px_rgba(24,35,74,0.08)] mb-6 animate-pulse">
+                    <MessageSquare size={40} />
+                  </div>
+                  <p className="font-black text-lg text-[#1A1F3D] mb-2">{language === 'th' ? 'ระบบแชทกำลังจะมาเร็วๆ นี้...' : 'Chat system coming soon...'}</p>
+                  <p className="text-xs font-medium text-gray-400 max-w-[250px] text-center">
+                    {language === 'th' ? 'เมื่อลูกค้าส่งข้อความมาผ่าน LINE OA ข้อความจะปรากฏที่นี่แบบ Real-time' : 'When customers send a message via LINE OA, it will appear here in real-time.'}
+                  </p>
+                </div>
+                
+                {/* Fake chat bubbles in background */}
+                <div className="w-full flex flex-col gap-4 opacity-30 pointer-events-none filter blur-sm">
+                  <div className="self-start max-w-[80%] bg-white p-4 rounded-2xl rounded-tl-sm text-sm text-gray-500">
+                    สวัสดีค่ะ สอบถามราคาอาบน้ำตัดขนค่ะ
+                  </div>
+                  <div className="self-end max-w-[80%] bg-[#00B900] text-white p-4 rounded-2xl rounded-tr-sm text-sm">
+                    สวัสดีครับ น้องหมาพันธุ์อะไรและน้ำหนักประมาณกี่กิโลกรัมครับ?
+                  </div>
+                </div>
+              </div>
+              
+              {/* Chat Input Placeholder */}
+              <div className="p-4 bg-white border-t border-gray-100 flex gap-3 relative z-20">
+                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 shrink-0 cursor-not-allowed">
+                  <Plus size={20} />
+                </div>
+                <input 
+                  disabled
+                  placeholder={language === 'th' ? 'พิมพ์ข้อความตอบกลับ...' : 'Type a reply...'} 
+                  className="flex-1 bg-[#F5F6FA] rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none cursor-not-allowed placeholder:text-gray-400"
+                />
+                <button disabled className="w-12 h-12 bg-[#00B900] rounded-2xl flex items-center justify-center text-white shrink-0 opacity-50 cursor-not-allowed shadow-lg shadow-[#00B900]/20">
+                  <Send size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+        ) : selectedCustomerId === 'line-oa' ? (
+          <LineOADashboard />
         ) : (
           <div className="p-6 lg:p-10">
             <CustomerDashboard onSelectCustomer={handleSelectCustomer} initialSegment={savedSegment} />

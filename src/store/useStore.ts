@@ -78,6 +78,7 @@ export const useStore = create<AppState>()((set, get) => ({
   liffChannelId: (typeof window !== 'undefined' ? localStorage.getItem('liff_channel_id') : null) || '',
   liffChannelSecret: (typeof window !== 'undefined' ? localStorage.getItem('liff_channel_secret') : null) || '',
   liffEnabled: (typeof window !== 'undefined' ? localStorage.getItem('liff_enabled') === 'true' : false),
+  lineMessagingToken: (typeof window !== 'undefined' ? localStorage.getItem('line_messaging_token') : null) || '',
   scannerType: (typeof window !== 'undefined' ? localStorage.getItem('scanner_type') as any : null) || 'hid',
   printerType: (typeof window !== 'undefined' ? localStorage.getItem('printer_type') as any : null) || 'none',
   maxUsers: 5,
@@ -204,6 +205,7 @@ export const useStore = create<AppState>()((set, get) => ({
       if (profile.liffChannelId !== undefined) localStorage.setItem('liff_channel_id', profile.liffChannelId);
       if (profile.liffChannelSecret !== undefined) localStorage.setItem('liff_channel_secret', profile.liffChannelSecret);
       if (profile.liffEnabled !== undefined) localStorage.setItem('liff_enabled', String(profile.liffEnabled));
+      if (profile.lineMessagingToken !== undefined) localStorage.setItem('line_messaging_token', profile.lineMessagingToken);
     }
     const storeId = get().storeId;
     if (storeId && storeId !== 'default-store') {
@@ -237,6 +239,7 @@ export const useStore = create<AppState>()((set, get) => ({
             liff_channel_id: profile.liffChannelId !== undefined ? profile.liffChannelId : undefined,
             liff_channel_secret: profile.liffChannelSecret !== undefined ? profile.liffChannelSecret : undefined,
             liff_enabled: profile.liffEnabled !== undefined ? profile.liffEnabled : undefined,
+            line_channel_access_token: profile.lineMessagingToken !== undefined ? profile.lineMessagingToken : undefined,
           })
           .eq('id', storeId);
         if (error) throw error;

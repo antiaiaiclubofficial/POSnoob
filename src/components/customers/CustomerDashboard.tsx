@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DateRangeDropdown, DateRange } from '@/components/ui/date-range-dropdown';
+import { fetchLineFollowers } from '@/lib/lineApi';
 
 interface CustomerDashboardProps {
   onSelectCustomer?: (id: string, segment?: any) => void;
@@ -43,6 +44,15 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer,
 
       if (error) throw error;
       return data || [];
+    },
+    enabled: !!storeId,
+  });
+
+  const { data: lineFollowers } = useQuery({
+    queryKey: ['line_followers_dashboard', storeId],
+    queryFn: () => {
+      if (!storeId) return null;
+      return fetchLineFollowers(storeId);
     },
     enabled: !!storeId,
   });
@@ -254,28 +264,37 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer,
     const totalWithVisits = customerStats.filter(c => c.visits > 0).length;
     const retentionRate = totalWithVisits > 0 ? (regularCustomers + loyalCustomers) / totalWithVisits * 100 : 0;
 
-    const frequentCustomers = [...customerStats].sort((a, b) => b.visits - a.visits).slice(0, 5);
-    const topSpenders = [...customerStats].sort((a, b) => b.spent - a.spent).slice(0, 5);
+    const frequentCustomers = [...customerStats].filter(c => c.visits > 0).sort((a, b) => b.visits - a.visits).slice(0, 5);
+    const topSpenders = [...customerStats].filter(c => c.spent > 0).sort((a, b) => b.spent - a.spent).slice(0, 5);
+
+    // --- All-time Funnel Calculation ---
+    const allTimeVisitMap: Record<string, number> = {};
+    if (transactions) {
+      transactions.forEach(tx => {
+        if (tx.customerId && tx.customerId !== 'walk-in' && tx.customerId !== 'walk-id') {
+          allTimeVisitMap[tx.customerId] = (allTimeVisitMap[tx.customerId] || 0) + 1;
+        }
+      });
+    }
+
+    let allTimeConversion = 0;
+    let allTimeRetention = 0;
+    let allTimeLoyalty = 0;
+    
+    customers.forEach(c => {
+       const visits = allTimeVisitMap[c.id] || 0;
+       if (visits >= 1) allTimeConversion++;
+       if (visits >= 2) allTimeRetention++;
+       if (c.membership !== 'Standard' || visits >= 5) allTimeLoyalty++;
+    });
 
     const funnelStages = [
-      { id: 'awareness', label: language === 'th' ? 'ลูกค้าทั้งหมดในระบบ' : 'Total Customers', count: 0 },
-      { id: 'activation', label: language === 'th' ? 'มีสัตว์เลี้ยง' : 'With Pets', count: 0 },
-      { id: 'conversion', label: language === 'th' ? 'เคยมาใช้บริการแล้ว' : 'First Visit', count: 0 },
-      { id: 'retention', label: language === 'th' ? 'กลับมาใช้ซ้ำ (Retention)' : 'Retained', count: 0 },
-      { id: 'loyalty', label: language === 'th' ? 'ลูกค้า Loyalty' : 'Loyalty Customers', count: 0 },
+      { id: 'awareness', label: language === 'th' ? 'เพื่อนใน LINE OA (Followers)' : 'LINE OA Followers', count: lineFollowers?.followers || 0 },
+      { id: 'activation', label: language === 'th' ? 'สมัครสมาชิกในระบบ' : 'Registered Members', count: customers.length },
+      { id: 'conversion', label: language === 'th' ? 'เคยมาใช้บริการแล้ว' : 'First Visit', count: allTimeConversion },
+      { id: 'retention', label: language === 'th' ? 'กลับมาใช้ซ้ำ (Retention)' : 'Retained', count: allTimeRetention },
+      { id: 'loyalty', label: language === 'th' ? 'ลูกค้า Loyalty' : 'Loyalty Customers', count: allTimeLoyalty },
     ];
-
-    let awareness = customerStats.length;
-    let activation = customerStats.filter(c => c.pets && c.pets.length > 0).length;
-    let conversion = customerStats.filter(c => c.visits >= 1).length;
-    let retention = customerStats.filter(c => c.visits >= 2).length;
-    let loyalty = customerStats.filter(c => c.membership !== 'Standard' || c.visits >= 5).length;
-
-    funnelStages[0].count = awareness;
-    funnelStages[1].count = activation;
-    funnelStages[2].count = conversion;
-    funnelStages[3].count = retention;
-    funnelStages[4].count = loyalty;
 
     return {
       totalCustomers: customers.length,
@@ -291,7 +310,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer,
       tierDataArray,
       customerStats,
     };
-  }, [customers, language, filteredTransactions, tierRules, dbTiers]);
+  }, [customers, language, filteredTransactions, tierRules, dbTiers, lineFollowers]);
 
   const getFilteredItems = () => {
     if (!selectedSegment) return [];
@@ -642,7 +661,10 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer,
                       <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-white/0 via-white/[0.03] to-white/[0.2] pointer-events-none" />
                       <div className="flex items-baseline gap-2">
                         <span className={cn("text-[11px] md:text-xs font-semibold tracking-wide", style.text)}>{stage.label}</span>
-                        <span className={cn("text-xl md:text-2xl font-black tracking-tight leading-none", style.num)}>{stage.count.toLocaleString()}</span>
+                        <span className={cn("text-xl md:text-2xl font-black tracking-tight leading-none flex items-baseline gap-1", style.num)}>
+                          {stage.count.toLocaleString()}
+                          <span className="text-sm font-bold opacity-80">{language === 'th' ? 'คน' : 'users'}</span>
+                        </span>
                         {idx > 0 && <span className={cn("text-[9px] md:text-[10px] font-semibold", style.text)}>({conversionRate}.0%)</span>}
                       </div>
                     </div>
@@ -684,7 +706,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer,
               </div>
             ))}
             {stats.frequentCustomers.length === 0 && (
-              <div className="text-center py-6 text-gray-400 text-sm font-medium">No data available</div>
+              <div className="text-center py-6 text-gray-400 text-sm font-medium">{language === 'th' ? 'ไม่มีข้อมูล' : 'No data available'}</div>
             )}
           </div>
         </div>
@@ -720,7 +742,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onSelectCustomer,
               </div>
             ))}
             {stats.topSpenders.length === 0 && (
-              <div className="text-center py-6 text-gray-400 text-sm font-medium">No data available</div>
+              <div className="text-center py-6 text-gray-400 text-sm font-medium">{language === 'th' ? 'ไม่มีข้อมูล' : 'No data available'}</div>
             )}
           </div>
         </div>
