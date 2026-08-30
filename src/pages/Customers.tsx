@@ -12,7 +12,7 @@ import CustomerDashboard from '@/components/customers/CustomerDashboard';
 import LineOADashboard from '../components/customers/LineOADashboard';
 import LineBindingModal from '@/components/LineBindingModal';
 import PackageModal from '@/components/PackageModal';
-import { fetchLineFollowers } from '@/lib/lineApi';
+import { fetchLineFollowers, sendLineMessage } from '@/lib/lineApi';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { translations } from '@/utils/translations';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 
 const Customers = () => {
   const isMobile = useIsMobile();
-  const { customers, setCustomers, deleteCustomer, currency, language, storeId } = useStore();
+  const { customers, setCustomers, deleteCustomer, currency, language, storeId, lineOaManagerUrl } = useStore();
   const t = translations[language];
   
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -35,6 +35,11 @@ const Customers = () => {
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
   const [isLineModalOpen, setIsLineModalOpen] = useState(false);
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+  
+  // Chat States
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [isSendingChat, setIsSendingChat] = useState(false);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   // ดึงข้อมูลระดับสมาชิกจากฐานข้อมูลโดยตรงเพื่อนำสีมาใช้
   const { data: membershipTiers } = useQuery({
@@ -225,6 +230,7 @@ const Customers = () => {
           district: item.district || '',
           province: item.province || '',
           postalCode: item.postal_code || '',
+          lineOaChatUrl: (item as any).line_oa_chat_url || '',
           createdAt: item.created_at || '',
           creditHistory: [],
           packages: [],
@@ -283,6 +289,112 @@ const Customers = () => {
     }
     if (isMobile) setShowDetailOnMobile(true);
   };
+
+  // Real-time Chat Subscription
+  useEffect(() => {
+    if (!selectedCustomer?.lineId || !storeId) {
+      setChatMessages([]);
+      return;
+    }
+
+    const lineId = selectedCustomer.lineId;
+
+    const fetchMessages = async () => {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('store_id', storeId)
+        .eq('customer_line_uid', lineId)
+        .order('created_at', { ascending: true });
+      if (!error && data) {
+        setChatMessages(data);
+      }
+    };
+
+    fetchMessages();
+
+    // Use a unique channel name per customer to avoid cross-talk
+    const channel = supabase
+      .channel(`chat_${storeId}_${lineId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        (payload) => {
+          // Double check in JS to ensure it's for this store and customer
+          if (payload.new.store_id === storeId && payload.new.customer_line_uid === lineId) {
+            setChatMessages((prev) => {
+              // Prevent duplicates from optimistic updates
+              // Check if there's an outgoing message with same text sent within the last 5 seconds
+              const isDuplicateOptimistic = prev.find(m => 
+                m.direction === 'out' && 
+                m.message_text === payload.new.message_text && 
+                Math.abs(new Date(m.created_at).getTime() - new Date(payload.new.created_at).getTime()) < 5000
+              );
+              
+              if (isDuplicateOptimistic && payload.new.direction === 'out') {
+                // Replace the temporary optimistic message with the real one from DB
+                return prev.map(m => m === isDuplicateOptimistic ? payload.new : m);
+              }
+              
+              return [...prev, payload.new];
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedCustomer?.lineId, storeId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const handleQuickAction = async (textToSend: string) => {
+    if (!selectedCustomer?.lineId || !storeId) return;
+    
+    // Optimistic Update: Add message to UI instantly
+    const optimisticMsg = {
+      id: `temp_${Date.now()}`,
+      store_id: storeId,
+      customer_line_uid: selectedCustomer.lineId,
+      message_type: 'text',
+      message_text: textToSend,
+      direction: 'out',
+      created_at: new Date().toISOString()
+    };
+    
+    setChatMessages(prev => [...prev, optimisticMsg]);
+    setIsSendingChat(true);
+    
+    try {
+      const success = await sendLineMessage(storeId, selectedCustomer.lineId, textToSend);
+      if (!success) {
+        toast.error("Failed to send message. Please check LINE API settings.");
+        setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("An error occurred while sending the message.");
+      setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
+  const handleOpenLineOA = () => {
+    if (lineOaManagerUrl) {
+      window.open(lineOaManagerUrl, "_blank");
+    } else {
+      window.open("https://manager.line.biz/", "_blank");
+    }
+  };
+
 
   const getTierColorClass = (tier: string) => {
     if (!membershipTiers || membershipTiers.length === 0) {
@@ -558,7 +670,7 @@ const Customers = () => {
             </div>
           </div>
 
-          {/* Right Column: LINE OA Chat Placeholder */}
+          {/* Right Column: LINE OA Chat */}
           <div className="hidden xl:flex flex-col h-[calc(100vh-80px)] sticky top-10">
             <div className="bg-white border border-gray-100 rounded-[40px] shadow-[0_8px_32px_rgba(24,35,74,0.04)] flex flex-col h-full overflow-hidden">
               {/* Chat Header */}
@@ -568,49 +680,96 @@ const Customers = () => {
                      <MessageSquare size={24} className="text-white" />
                    </div>
                    <div>
-                     <h3 className="font-black text-lg">LINE OA Chat</h3>
-                     <p className="text-xs font-medium text-green-50 opacity-90">{language === 'th' ? `สนทนากับ ${selectedCustomer.name}` : `Chatting with ${selectedCustomer.name}`}</p>
+                     <h3 className="font-black text-lg">LINE Notification History</h3>
+                     <p className="text-xs font-medium text-green-50 opacity-90">{language === 'th' ? `ประวัติการส่งข้อความถึง ${selectedCustomer.name}` : `Message history with ${selectedCustomer.name}`}</p>
                    </div>
                  </div>
+                 <button 
+                   onClick={handleOpenLineOA}
+                   className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 backdrop-blur-md"
+                 >
+                   {language === 'th' ? 'เปิดแชทใน LINE OA' : 'Open LINE OA'} <span className="text-[10px]">↗</span>
+                 </button>
               </div>
               
-              {/* Chat Messages Placeholder */}
-              <div className="flex-1 bg-[#F5F6FA] p-6 flex flex-col justify-center items-center overflow-y-auto relative">
-                <div className="absolute inset-0 bg-white/40 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
-                  <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-[#00B900] shadow-[0_8px_32px_rgba(24,35,74,0.08)] mb-6 animate-pulse">
-                    <MessageSquare size={40} />
+              {!selectedCustomer.lineId ? (
+                /* Not Connected State */
+                <div className="flex-1 bg-[#F5F6FA] p-6 flex flex-col justify-center items-center overflow-y-auto">
+                  <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-gray-300 shadow-[0_8px_32px_rgba(24,35,74,0.04)] mb-6">
+                    <User size={40} />
                   </div>
-                  <p className="font-black text-lg text-[#1A1F3D] mb-2">{language === 'th' ? 'ระบบแชทกำลังจะมาเร็วๆ นี้...' : 'Chat system coming soon...'}</p>
-                  <p className="text-xs font-medium text-gray-400 max-w-[250px] text-center">
-                    {language === 'th' ? 'เมื่อลูกค้าส่งข้อความมาผ่าน LINE OA ข้อความจะปรากฏที่นี่แบบ Real-time' : 'When customers send a message via LINE OA, it will appear here in real-time.'}
+                  <p className="font-black text-lg text-[#1A1F3D] mb-2">{language === 'th' ? 'ยังไม่ได้เชื่อมต่อ LINE' : 'Not Connected to LINE'}</p>
+                  <p className="text-xs font-medium text-gray-400 max-w-[250px] text-center mb-6">
+                    {language === 'th' ? 'ลูกค้าท่านนี้ยังไม่ได้ผูกบัญชี LINE OA กับระบบ' : 'This customer has not linked their LINE account to the system yet.'}
                   </p>
+                  <button 
+                    onClick={() => setIsLineModalOpen(true)}
+                    className="bg-white border border-gray-200 text-[#1A1F3D] px-6 py-3 rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm"
+                  >
+                    <Plus size={16} /> {language === 'th' ? 'ผูกบัญชี LINE' : 'Link LINE Account'}
+                  </button>
                 </div>
-                
-                {/* Fake chat bubbles in background */}
-                <div className="w-full flex flex-col gap-4 opacity-30 pointer-events-none filter blur-sm">
-                  <div className="self-start max-w-[80%] bg-white p-4 rounded-2xl rounded-tl-sm text-sm text-gray-500">
-                    สวัสดีค่ะ สอบถามราคาอาบน้ำตัดขนค่ะ
+              ) : (
+                <>
+                  {/* Chat Messages */}
+                  <div className="flex-1 bg-[#F5F6FA] p-6 flex flex-col gap-4 overflow-y-auto relative">
+                    {chatMessages.length === 0 ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                        <MessageSquare size={32} className="mb-2 opacity-20" />
+                        <p className="text-xs font-bold uppercase tracking-widest">{language === 'th' ? 'ยังไม่มีประวัติการสนทนา' : 'No chat history'}</p>
+                      </div>
+                    ) : (
+                      chatMessages.map((msg, index) => {
+                        const isOut = msg.direction === 'out';
+                        return (
+                          <div key={msg.id || index} className={cn("flex flex-col max-w-[80%]", isOut ? "self-end items-end" : "self-start items-start")}>
+                            <div className={cn(
+                              "p-4 rounded-2xl text-sm shadow-sm",
+                              isOut 
+                                ? "bg-[#00B900] text-white rounded-tr-sm" 
+                                : "bg-white text-gray-700 rounded-tl-sm border border-gray-100"
+                            )}>
+                              {msg.message_text}
+                            </div>
+                            <span className="text-[10px] text-gray-400 mt-1 font-medium px-1">
+                              {format(new Date(msg.created_at), 'HH:mm')}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div ref={messagesEndRef} />
                   </div>
-                  <div className="self-end max-w-[80%] bg-[#00B900] text-white p-4 rounded-2xl rounded-tr-sm text-sm">
-                    สวัสดีครับ น้องหมาพันธุ์อะไรและน้ำหนักประมาณกี่กิโลกรัมครับ?
+                  
+                  {/* Quick Actions */}
+                  <div className="p-4 bg-white border-t border-gray-100 relative z-20">
+                    <p className="text-xs font-bold text-gray-500 mb-3">{language === 'th' ? 'ส่งข้อความด่วน (Quick Actions)' : 'Quick Actions'}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button 
+                        onClick={() => handleQuickAction('อาบน้ำตัดขนเสร็จแล้ว มารับน้องได้เลยครับ 🐶✨')}
+                        disabled={isSendingChat}
+                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                      >
+                        🚿 {language === 'th' ? 'อาบน้ำเสร็จแล้ว' : 'Grooming Done'}
+                      </button>
+                      <button 
+                        onClick={() => handleQuickAction(`คะแนนสะสมของคุณตอนนี้คือ ${(selectedCustomer.points || 0).toLocaleString()} คะแนน 🌟`)}
+                        disabled={isSendingChat}
+                        className="bg-purple-50 text-purple-600 hover:bg-purple-100 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                      >
+                        🏆 {language === 'th' ? 'แจ้งยอดคะแนน' : 'Send Points'}
+                      </button>
+                      <button 
+                        onClick={() => handleQuickAction('ฝากโรงแรมเรียบร้อย น้องเข้าพักสบายดีครับ 🏨')}
+                        disabled={isSendingChat}
+                        className="bg-orange-50 text-orange-600 hover:bg-orange-100 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                      >
+                        🏨 {language === 'th' ? 'ฝากโรงแรม' : 'Hotel Check-in'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </div>
-              
-              {/* Chat Input Placeholder */}
-              <div className="p-4 bg-white border-t border-gray-100 flex gap-3 relative z-20">
-                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 shrink-0 cursor-not-allowed">
-                  <Plus size={20} />
-                </div>
-                <input 
-                  disabled
-                  placeholder={language === 'th' ? 'พิมพ์ข้อความตอบกลับ...' : 'Type a reply...'} 
-                  className="flex-1 bg-[#F5F6FA] rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none cursor-not-allowed placeholder:text-gray-400"
-                />
-                <button disabled className="w-12 h-12 bg-[#00B900] rounded-2xl flex items-center justify-center text-white shrink-0 opacity-50 cursor-not-allowed shadow-lg shadow-[#00B900]/20">
-                  <Send size={20} />
-                </button>
-              </div>
+                </>
+              )}
             </div>
           </div>
           </div>

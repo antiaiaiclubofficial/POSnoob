@@ -237,6 +237,9 @@ const AuthInitializer = () => {
               liffChannelId: storeData.liff_channel_id || (typeof window !== 'undefined' ? localStorage.getItem('liff_channel_id') : null) || '',
               liffChannelSecret: storeData.liff_channel_secret || (typeof window !== 'undefined' ? localStorage.getItem('liff_channel_secret') : null) || '',
               liffEnabled: storeData.liff_enabled !== undefined ? storeData.liff_enabled : (typeof window !== 'undefined' ? localStorage.getItem('liff_enabled') === 'true' : false),
+              lineMessagingToken: storeData.line_channel_access_token || (typeof window !== 'undefined' ? localStorage.getItem('line_messaging_token') : null) || '',
+              lineOaManagerUrl: storeData.line_oa_manager_url || (typeof window !== 'undefined' ? localStorage.getItem('line_oa_manager_url') : null) || '',
+              lineChannelSecret: storeData.line_channel_secret || (typeof window !== 'undefined' ? localStorage.getItem('line_channel_secret') : null) || '',
               openTime: storeData.open_time || '09:00',
               closeTime: storeData.close_time || '18:00',
               slotDuration: storeData.slot_duration || 60,
@@ -402,6 +405,7 @@ const AuthInitializer = () => {
               district: c.district || '',
               province: c.province || '',
               postalCode: c.postal_code || '',
+              lineOaChatUrl: (c as any).line_oa_chat_url || '',
               creditHistory: [],
               packages: [],
               pets: (c.pets || []).map((p: any) => {

@@ -466,6 +466,8 @@ export interface AppState {
   liffChannelSecret: string;
   liffEnabled: boolean;
   lineMessagingToken?: string;
+  lineOaManagerUrl?: string;
+  lineChannelSecret?: string;
 
   // Hardware Settings
   scannerType: 'hid' | 'serial';

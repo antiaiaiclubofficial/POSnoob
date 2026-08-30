@@ -265,15 +265,20 @@ const LineOADashboard = () => {
           <BarChart3 className="text-indigo-500" size={24} />
           {language === 'th' ? 'ข้อมูลประชากรศาสตร์ (Demographics)' : 'Demographics'}
         </h3>
-        <div className="bg-yellow-50 text-yellow-700 px-4 py-2 rounded-xl border border-yellow-200 text-xs font-bold flex items-center gap-2 shadow-sm">
-          <ShieldAlert size={14} /> 
-          {language === 'th' 
-            ? 'ต้องมีผู้ที่เข้าถึงได้ (Target Reach) มากกว่า 20 คนจึงจะดึงข้อมูลจริงได้ (ปัจจุบันใช้ข้อมูลจำลอง)' 
-            : 'Target Reach > 20 required for real data (Currently showing mock data)'}
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
+      <div className="relative flex-1">
+        {/* Overlay Warning */}
+        <div className="absolute -inset-4 z-10 flex items-center justify-center bg-white/10 backdrop-blur-[8px] rounded-[3rem]">
+          <div className="bg-white/95 text-[#1A1F3D] px-6 py-4 rounded-2xl border border-white/60 text-sm font-bold flex items-center gap-3 shadow-[0_20px_40px_rgba(24,35,74,0.1)] max-w-lg text-left leading-relaxed">
+            <ShieldAlert size={24} className="shrink-0 text-yellow-500" /> 
+            {language === 'th' 
+              ? 'ต้องมีผู้ที่เข้าถึงได้ (Target Reach) มากกว่า 20 คน จึงจะแสดงข้อมูลประชากรศาสตร์จริงได้ (ข้อมูลด้านหลังเป็นข้อมูลจำลอง)' 
+              : 'Target Reach > 20 required for real demographics (Currently showing mock data)'}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 opacity-40 select-none pointer-events-none">
         {/* Gender Donut */}
         <div className="rounded-[2.5rem] bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-3xl border border-white/80 p-8 shadow-[0_10px_40px_rgba(24,35,74,0.03)] flex flex-col">
           <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6 text-center">
@@ -351,6 +356,7 @@ const LineOADashboard = () => {
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ const Settings = () => {
   const { 
     shopName, shopLogo, shopAddress, shopPhone, shopLineId, currency, shopIsOpen,
     receiptHeader, receiptFooter, receiptPaperSize, serviceChargeEnabled, serviceChargeRate,
-    liffId, liffChannelId, liffChannelSecret, liffEnabled, lineMessagingToken,
+    liffId, liffChannelId, liffChannelSecret, liffEnabled, lineMessagingToken, lineChannelSecret, lineOaManagerUrl,
     companyName, companyAddress, companyTaxId, companyPhone, companyEmail, vatEnabled, vatRate,
     vatInclusive,
     updateBusinessProfile,
@@ -72,6 +72,8 @@ const Settings = () => {
   const [localLiffChannelSecret, setLocalLiffChannelSecret] = useState(liffChannelSecret);
   const [localLiffEnabled, setLocalLiffEnabled] = useState(liffEnabled);
   const [localLineMessagingToken, setLocalLineMessagingToken] = useState(lineMessagingToken || '');
+  const [localLineChannelSecret, setLocalLineChannelSecret] = useState(lineChannelSecret || '');
+  const [localLineOaManagerUrl, setLocalLineOaManagerUrl] = useState(lineOaManagerUrl || '');
 
   // Hardware Local States
   const [localScannerType, setLocalScannerType] = useState(scannerType);
@@ -110,6 +112,8 @@ const Settings = () => {
     setLocalLiffChannelSecret(liffChannelSecret);
     setLocalLiffEnabled(liffEnabled);
     setLocalLineMessagingToken(lineMessagingToken || '');
+    setLocalLineChannelSecret(lineChannelSecret || '');
+    setLocalLineOaManagerUrl(lineOaManagerUrl || '');
     setLocalScannerType(scannerType);
     setLocalPrinterType(printerType);
   }, [
@@ -117,7 +121,7 @@ const Settings = () => {
     updateBusinessProfile,
     receiptHeader, receiptFooter, receiptPaperSize, serviceChargeEnabled, serviceChargeRate,
     slotDuration, maxCapacity, openTime, closeTime, recurringHolidays, specificHolidays, companyName, companyAddress, companyTaxId, companyPhone, companyEmail,
-    vatEnabled, vatRate, vatInclusive, liffId, liffChannelId, liffChannelSecret, liffEnabled, lineMessagingToken,
+    vatEnabled, vatRate, vatInclusive, liffId, liffChannelId, liffChannelSecret, liffEnabled, lineMessagingToken, lineChannelSecret, lineOaManagerUrl,
     scannerType, printerType
   ]);
 
@@ -153,6 +157,8 @@ const Settings = () => {
       localLiffChannelSecret !== liffChannelSecret ||
       localLiffEnabled !== liffEnabled ||
       localLineMessagingToken !== (lineMessagingToken || '') ||
+      localLineChannelSecret !== (lineChannelSecret || '') ||
+      localLineOaManagerUrl !== (lineOaManagerUrl || '') ||
       localCompanyName !== (companyName || '') ||
       localCompanyAddress !== (companyAddress || '') ||
       localCompanyTaxId !== (companyTaxId || '') ||
@@ -194,6 +200,8 @@ const Settings = () => {
         liffChannelSecret: localLiffChannelSecret,
         liffEnabled: localLiffEnabled,
         lineMessagingToken: localLineMessagingToken,
+        lineChannelSecret: localLineChannelSecret,
+        lineOaManagerUrl: localLineOaManagerUrl,
         companyName: localCompanyName,
         companyAddress: localCompanyAddress,
         companyTaxId: localCompanyTaxId,
@@ -230,7 +238,7 @@ const Settings = () => {
     localShopName, localShopLogo, localShopAddress, localShopPhone, localShopLineId,
     localReceiptHeader, localReceiptFooter, localReceiptPaperSize,
     localCurrency, localShopIsOpen,
-    localLiffId, localLiffChannelId, localLiffChannelSecret, localLiffEnabled, localLineMessagingToken,
+    localLiffId, localLiffChannelId, localLiffChannelSecret, localLiffEnabled, localLineMessagingToken, localLineChannelSecret, localLineOaManagerUrl,
     localCompanyName, localCompanyAddress, localCompanyTaxId, localCompanyPhone, localCompanyEmail,
     localVatEnabled, localVatRate, localVatInclusive,
     localServiceChargeEnabled, localServiceChargeRate,
@@ -704,15 +712,38 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Channel Access Token (Long-lived)</label>
-                    <input 
-                      type="password"
-                      className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
-                      value={localLineMessagingToken} 
-                      onChange={e => setLocalLineMessagingToken(e.target.value)} 
-                      placeholder="••••••••••••••••••••••••••••••••"
-                    />
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Channel Secret (สำหรับ Webhook)</label>
+                      <input 
+                        type="password"
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                        value={localLineChannelSecret} 
+                        onChange={e => setLocalLineChannelSecret(e.target.value)} 
+                        placeholder="••••••••••••••••••••••••••••••••"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Channel Access Token (Long-lived)</label>
+                      <input 
+                        type="password"
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                        value={localLineMessagingToken} 
+                        onChange={e => setLocalLineMessagingToken(e.target.value)} 
+                        placeholder="••••••••••••••••••••••••••••••••"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">LINE OA Manager URL (ลิงก์ห้องแชทรวมของร้าน)</label>
+                      <input 
+                        className="w-full bg-[#F5F6FA] border-none rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-[#1A1F3D]/5 transition-all" 
+                        value={localLineOaManagerUrl} 
+                        onChange={e => setLocalLineOaManagerUrl(e.target.value)} 
+                        placeholder="https://chat.line.biz/Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      />
+                    </div>
                   </div>
 
                   <div className="p-8 bg-blue-50/50 rounded-[40px] border border-blue-100 flex items-start gap-4">

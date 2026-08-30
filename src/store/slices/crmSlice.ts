@@ -106,7 +106,8 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         sub_district: customerData.subDistrict,
         district: customerData.district,
         province: customerData.province,
-        postal_code: customerData.postalCode
+        postal_code: customerData.postalCode,
+        line_oa_chat_url: customerData.lineOaChatUrl
       }])
       .select()
       .single();
@@ -137,6 +138,11 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
           lastName: data.last_name,
           phone: data.phone || '',
           email: data.email || '',
+          subDistrict: data.sub_district || '',
+          district: data.district || '',
+          province: data.province || '',
+          postalCode: data.postal_code || '',
+          lineOaChatUrl: data.line_oa_chat_url || '',
           membership: 'Standard',
           createdAt: data.created_at,
           points: 0,
@@ -168,7 +174,8 @@ export const createCRMSlice: StateCreator<AppState, [], [], Pick<AppState, 'cust
         sub_district: customerData.subDistrict,
         district: customerData.district,
         province: customerData.province,
-        postal_code: customerData.postalCode
+        postal_code: customerData.postalCode,
+        line_oa_chat_url: customerData.lineOaChatUrl
       })
       .eq('id', id);
 
