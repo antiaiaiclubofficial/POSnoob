@@ -1,6 +1,7 @@
 "use client";
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Printer, Scissors, QrCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -61,13 +62,40 @@ const ReceiptPreview = ({
   // Thai year format for demo
   const txDate = transaction ? format(new Date(transaction.createdAt || transaction.date), 'dd/MM/yyyy HH:mm') : format(new Date(), 'dd/MM/yyyy HH:mm');
 
-  let defaultTxId = "000101000109";
+  const paymentMethod = transaction?.paymentMethod || "TFB CARD";
+  const isPackage = paymentMethod === 'Package';
+  const isStoreCredit = paymentMethod === 'Store Credit';
+
+  let defaultTxId = isPackage ? "PKG-000101000109" : isStoreCredit ? "CRD-000101000109" : "ABB-000101000109";
   if (transaction && transaction.id) {
-    const dateStr = format(new Date(transaction.createdAt || transaction.date || new Date()), 'yyyyMMdd');
-    const shortId = transaction.id.substring(0, 6);
-    defaultTxId = `REC-${dateStr}-${shortId}`;
+    if (transaction.id.startsWith('ABB-') || transaction.id.startsWith('TAX-') || transaction.id.startsWith('PKG-') || transaction.id.startsWith('CRD-')) {
+      defaultTxId = transaction.id;
+    } else if (transaction.id.startsWith('REC-')) {
+      defaultTxId = transaction.id.replace(/^REC-/, isPackage ? 'PKG-' : isStoreCredit ? 'CRD-' : 'ABB-');
+    } else {
+      const dateStr = format(new Date(transaction.createdAt || transaction.date || new Date()), 'yyyyMMdd');
+      const cleanId = transaction.id.replace(/[^a-zA-Z0-9]/g, '');
+      const shortId = cleanId.substring(0, 4).toUpperCase();
+      const prefix = isPackage ? 'PKG' : isStoreCredit ? 'CRD' : 'ABB';
+      defaultTxId = `${prefix}-${dateStr}-${shortId}`;
+    }
   }
-  const txId = transaction?.details?.receiptNo || defaultTxId;
+  let txId = transaction?.details?.receiptNo || defaultTxId;
+  if (txId && txId.startsWith('REC-')) {
+    txId = txId.replace(/^REC-/, isPackage ? 'PKG-' : isStoreCredit ? 'CRD-' : 'ABB-');
+  }
+
+  const receiptTitle = isPackage 
+    ? 'ใบตัดสิทธิ์แพ็กเกจ' 
+    : isStoreCredit 
+    ? 'ใบหักเครดิตสมาชิก' 
+    : (header && header.trim() ? header : 'ใบเสร็จรับเงิน/ใบกำกับภาษี');
+
+  const docNoLabel = isPackage 
+    ? 'ใบตัดสิทธิ์เลขที่:' 
+    : isStoreCredit 
+    ? 'ใบหักเครดิตเลขที่:' 
+    : 'ใบเสร็จรับเงินเลขที่:';
 
   const customerName = transaction?.customerName || "นายบัณฑิตา มีเจริญ";
 
@@ -81,7 +109,6 @@ const ReceiptPreview = ({
   const pointsEarned = transaction?.details?.pointsEarned ?? transaction?.pointsEarned ?? (customerInfo ? calculatedPointsEarned : (isDemo ? 2020.00 : 0));
   const accumulatedPoints = transaction?.details?.accumulatedPoints ?? transaction?.accumulatedPoints ?? (customerInfo?.points ?? (isDemo ? 0.00 : 0));
 
-  const paymentMethod = transaction?.paymentMethod || "TFB CARD";
   const cardNumber = transaction?.cardNumber || "1234543215667";
   const cardExp = transaction?.cardExp || "1223";
   const appCode = transaction?.appCode || "8888";
@@ -141,13 +168,63 @@ const ReceiptPreview = ({
     window.print();
   };
 
-  return (
+  const modalRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const modal = modalRef.current;
+    const scrollContainer = scrollContainerRef.current;
+    if (!modal) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Stop wheel event from propagating to document/window where Radix UI's react-remove-scroll
+      // blocks/cancels scrolling for background drawers (e.g. Sales History Sheet).
+      e.stopPropagation();
+
+      if (scrollContainer) {
+        // Prevent default on the modal outer layer and manually scroll the receipt content smoothly
+        e.preventDefault();
+        scrollContainer.scrollTop += e.deltaY;
+      }
+    };
+
+    let touchStartY = 0;
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        touchStartY = e.touches[0].clientY;
+      }
+      e.stopPropagation();
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      e.stopPropagation();
+      if (scrollContainer && e.touches.length > 0) {
+        const touchY = e.touches[0].clientY;
+        const diff = touchStartY - touchY;
+        touchStartY = touchY;
+        scrollContainer.scrollTop += diff;
+      }
+    };
+
+    modal.addEventListener('wheel', handleWheel, { passive: false });
+    modal.addEventListener('touchstart', handleTouchStart, { passive: true });
+    modal.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    return () => {
+      modal.removeEventListener('wheel', handleWheel);
+      modal.removeEventListener('touchstart', handleTouchStart);
+      modal.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, []);
+
+  const modalContent = (
     <div
+      ref={modalRef}
       className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[200] flex items-center justify-center p-6 print:p-0 print:bg-white pointer-events-auto"
       onClick={onClose}
     >
       <div
-        className="bg-[#E5E7EB] w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:shadow-none print:rounded-none print:w-auto print:h-auto print:max-h-none"
+        className="bg-[#E5E7EB] w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] min-h-0 print:shadow-none print:rounded-none print:w-auto print:h-auto print:max-h-none"
         onClick={(e) => e.stopPropagation()}
       >
 
@@ -175,10 +252,13 @@ const ReceiptPreview = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-10 flex justify-center bg-[#D1D5DB] scrollbar-hide print:bg-white print:p-0">
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 min-h-0 overflow-y-auto p-6 md:p-10 flex justify-center items-start bg-[#D1D5DB] overscroll-contain print:bg-white print:p-0"
+        >
           <div
             className={cn(
-              "bg-white shadow-xl h-fit min-h-full p-4 flex flex-col font-sans text-black transition-all duration-500 print:shadow-none relative overflow-hidden",
+              "bg-white shadow-xl shrink-0 p-4 flex flex-col font-sans text-black transition-all duration-500 print:shadow-none relative overflow-hidden",
               is80mm ? "w-[380px]" : "w-[300px]"
             )}
             style={{ fontSize: is80mm ? '15px' : '13px', fontFamily: "'IBM Plex Sans Thai', sans-serif" }}
@@ -201,12 +281,12 @@ const ReceiptPreview = ({
             </div>
 
             <div className="border-t border-b border-black py-1 my-2 text-center font-bold">
-              ใบเสร็จรับเงิน/ใบกำกับภาษี
+              {receiptTitle}
             </div>
 
             {/* Meta Info */}
             <div className="grid grid-cols-[130px_1fr] gap-x-2 w-full mb-2">
-              <span>ใบเสร็จรับเงินเลขที่:</span>
+              <span>{docNoLabel}</span>
               <span className="text-right">{txId}</span>
               <span>วันที่:</span>
               <span className="text-right">{txDate}</span>
@@ -284,14 +364,49 @@ const ReceiptPreview = ({
                 <span>Grand Total(Amount Inc. VAT)</span>
                 <span className="text-base">{formatNumber(totalAmount)}</span>
               </div>
-              <div className="flex justify-between items-center pb-2 text-gray-600">
+              <div className="flex justify-between items-center pb-1 text-gray-600">
                 <span>Paid by {paymentMethod}</span>
                 <span>{formatNumber(totalAmount)}</span>
               </div>
+              {paymentMethod === 'Package' && (
+                <>
+                  {transaction?.details?.packageName && (
+                    <div className="grid grid-cols-[120px_1fr] text-gray-600">
+                      <span>แพ็กเกจที่ใช้:</span>
+                      <span className="text-right truncate font-medium">{transaction.details.packageName}</span>
+                    </div>
+                  )}
+                  {transaction?.details?.packageRemainingSlots !== undefined && (
+                    <div className="grid grid-cols-[120px_1fr] text-gray-600 pb-1">
+                      <span>สิทธิ์คงเหลือ:</span>
+                      <span className="text-right font-bold text-[#1A1F3D]">{transaction.details.packageRemainingSlots} ครั้ง</span>
+                    </div>
+                  )}
+                </>
+              )}
+              {paymentMethod === 'Store Credit' && (
+                <>
+                  {transaction?.details?.deductedCredit !== undefined && (
+                    <div className="grid grid-cols-[120px_1fr] text-gray-600">
+                      <span>หักจากเครดิต:</span>
+                      <span className="text-right font-medium">-{formatNumber(transaction.details.deductedCredit)}</span>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-[120px_1fr] text-gray-600 pb-1">
+                    <span>เครดิตคงเหลือ:</span>
+                    <span className="text-right font-bold text-[#1A1F3D]">
+                      ฿{formatNumber(transaction?.details?.remainingCredit ?? customerInfo?.creditBalance ?? 0)}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Member Details */}
-            {((customerName && customerName !== 'ลูกค้าทั่วไป' && customerName !== 'Walk-in Customer') || (memberCode && memberCode !== '-') || pointsEarned > 0 || accumulatedPoints > 0) && (
+            {((customerName && customerName !== 'ลูกค้าทั่วไป' && customerName !== 'Walk-in Customer') || 
+              (memberCode && memberCode !== '-') || 
+              pointsEarned > 0 || 
+              accumulatedPoints > 0) && (
               <div className="border-t border-dashed border-gray-400 my-2" />
             )}
             <div className="space-y-1 w-full mb-2">
@@ -346,6 +461,12 @@ const ReceiptPreview = ({
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 };
 
 export default ReceiptPreview;

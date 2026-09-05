@@ -2,7 +2,8 @@ import { format } from 'date-fns';
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2, Package, Clock, Star, Gift, LayoutDashboard, Send, ShieldAlert } from 'lucide-react';
+import { Search, Mail, Phone, Plus, User, Edit3, ChevronLeft, MessageSquare, BadgeCheck, Trash2, Package, Clock, Star, Gift, LayoutDashboard, Send, ShieldAlert, ChevronDown, Sparkles } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useStore, Customer, Pet, MembershipLevel } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import CustomerModal from '@/components/CustomerModal';
@@ -101,6 +102,21 @@ const Customers = () => {
             points,
             tier,
             store_id
+          ),
+          customer_packages (
+            id,
+            template_id,
+            total_sessions,
+            remaining_sessions,
+            created_at,
+            status,
+            package_templates (
+              title,
+              service_id,
+              bonus_type,
+              bonus_name,
+              bonus_count
+            )
           ),
           pets (
             id,
@@ -233,7 +249,18 @@ const Customers = () => {
           lineOaChatUrl: (item as any).line_oa_chat_url || '',
           createdAt: item.created_at || '',
           creditHistory: [],
-          packages: [],
+          packages: (item.customer_packages || []).map((pkg: any) => ({
+            id: pkg.id,
+            templateId: pkg.template_id,
+            name: pkg.package_templates?.title || 'Unknown Package',
+            targetServiceId: pkg.package_templates?.service_id || '',
+            totalSlots: pkg.total_sessions || 0,
+            remainingSlots: pkg.remaining_sessions || 0,
+            bonusType: pkg.package_templates?.bonus_type || 'none',
+            bonusName: pkg.package_templates?.bonus_name || '',
+            bonusCount: pkg.package_templates?.bonus_count || 1,
+            purchaseDate: pkg.created_at ? format(new Date(pkg.created_at), 'yyyy-MM-dd') : ''
+          })),
           pets: (item.pets || []).map((p: any) => {
             const wh = p.pet_weight_history || [];
             let weightHistory = wh.map((w: any) => ({
@@ -623,7 +650,7 @@ const Customers = () => {
               </div>
               
               {/* Horizontal Layout for Membership, Credit, and Points */}
-              <div className="flex flex-wrap items-center gap-6 bg-[#F5F6FA] p-6 rounded-[32px] w-full xl:w-auto">
+              <div className="flex flex-wrap items-center gap-4 xl:gap-5 bg-[#F5F6FA] px-5 py-4 lg:px-6 lg:py-5 rounded-[32px] w-full xl:w-auto">
                 {membershipTiers && membershipTiers.length > 0 && (
                   <>
                     <div className="text-center sm:text-left">
@@ -646,6 +673,43 @@ const Customers = () => {
                   <p className="text-[10px] text-gray-400 font-black uppercase mb-0.5">Point Balance</p>
                   <p className="text-xl font-black text-indigo-600">{(selectedCustomer.points || 0).toLocaleString()} <span className="text-xs text-gray-400 font-bold">PTS</span></p>
                 </div>
+
+                {selectedCustomer.packages && selectedCustomer.packages.length > 0 && (
+                  <>
+                    <div className="h-8 w-px bg-gray-200 hidden sm:block" />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="flex flex-col outline-none group text-left">
+                        <p className="text-[10px] text-gray-400 font-black uppercase mb-0.5 group-hover:text-indigo-600 transition-colors flex items-center gap-1">
+                          PKG <ChevronDown size={12} className="opacity-50" />
+                        </p>
+                        <p className="text-xl font-black text-[#1A1F3D]">
+                          {selectedCustomer.packages.length} <span className="text-xs text-gray-400 font-bold">PKG</span>
+                        </p>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-80 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-2 max-h-[400px] overflow-y-auto">
+                        <div className="px-3 py-2 mb-2 border-b border-gray-50 flex items-center gap-2">
+                          <Package size={14} className="text-indigo-600" />
+                          <p className="text-xs font-black text-[#1A1F3D]">{language === 'th' ? 'รายละเอียดแพ็กเกจ' : 'Package Details'}</p>
+                        </div>
+                        {selectedCustomer.packages.map(pkg => (
+                          <div key={pkg.id} className="p-3 mb-1 bg-gray-50/50 rounded-xl hover:bg-indigo-50/50 transition-colors">
+                            <div className="flex justify-between items-start mb-1 gap-2">
+                              <h4 className="font-bold text-[#1A1F3D] text-xs line-clamp-2 leading-tight">{pkg.name}</h4>
+                              <span className="text-[9px] font-black uppercase text-indigo-600 shrink-0 bg-indigo-100 px-2 py-0.5 rounded-full whitespace-nowrap">{pkg.remainingSlots} / {pkg.totalSlots}</span>
+                            </div>
+                            {pkg.bonusType && pkg.bonusType !== 'none' && (
+                              <p className="text-[9px] text-indigo-600 font-bold flex items-center gap-1 mb-1.5 mt-1.5">
+                                <Sparkles size={10} /> 
+                                {pkg.bonusType === 'recurring' ? `แถม ${pkg.bonusName}` : `แถม ${pkg.bonusName} (${pkg.bonusCount})`}
+                              </p>
+                            )}
+                            {pkg.purchaseDate && <p className="text-[9px] text-gray-400 font-bold uppercase mt-2 pt-2 border-t border-gray-100/50">{language === 'th' ? 'วันที่ซื้อ:' : 'Purchased:'} {pkg.purchaseDate}</p>}
+                          </div>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
               </div>
             </div>
 

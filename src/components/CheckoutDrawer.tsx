@@ -127,6 +127,10 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
     return cart.some(item => pkg.targetServiceId === item.id && pkg.remainingSlots > 0);
   }) || [];
 
+  const currentSelectedPkg = paymentMethod === 'Package'
+    ? selectedOwner?.packages?.find(p => p.id === selectedPackageId) || availablePackages[0]
+    : null;
+
   useEffect(() => {
     if (!isOpen) {
       setPaymentMethod(null);
@@ -163,9 +167,11 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
       return;
     }
     
-    if (paymentMethod === 'Package' && !selectedPackageId) {
-      toast.error("Please select a service package to use");
-      return;
+    if (paymentMethod === 'Package') {
+      if (!selectedPackageId) {
+        toast.error("Please select a service package to use");
+        return;
+      }
     }
 
     if (paymentMethod === 'Store Credit') {
@@ -179,14 +185,31 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
     setIsPaymentModalOpen(true);
   };
 
-  const handleCompletePayment = (details: any) => {
+  const handleCompletePayment = async (details: any) => {
     if (!selectedOwner || !paymentMethod) return;
     const txDate = isBackdated ? new Date(customDate) : new Date();
-    const txId = `ABB-${format(txDate, 'yyyyMMdd')}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const isPackage = paymentMethod === 'Package';
+    const isStoreCredit = paymentMethod === 'Store Credit';
+    const prefix = isPackage ? 'PKG' : isStoreCredit ? 'CRD' : 'ABB';
+    const txId = `${prefix}-${format(txDate, 'yyyyMMdd')}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const isPrepaid = isPackage || isStoreCredit;
+    const selectedPkg = isPackage ? selectedOwner.packages?.find(p => p.id === selectedPackageId) : null;
+    const finalAmount = isPrepaid ? 0 : total;
+    const finalSubtotal = isPrepaid ? 0 : subtotalBeforeTax;
+    const finalVat = isPrepaid ? 0 : tax;
+    const finalDiscount = isPrepaid ? 0 : (totalItemDiscounts + tierDiscountAmount + couponDiscountAmount);
+
     const finalDetails = {
       ...details,
+      receiptNo: txId,
       note: orderNote,
-      packageId: paymentMethod === 'Package' ? selectedPackageId : undefined,
+      packageId: isPackage ? selectedPackageId : undefined,
+      packageName: selectedPkg?.name,
+      packageRemainingSlots: selectedPkg ? Math.max(0, selectedPkg.remainingSlots - 1) : undefined,
+      packageTotalSlots: selectedPkg?.totalSlots,
+      deductedCredit: isStoreCredit ? total : undefined,
+      remainingCredit: isStoreCredit ? Math.max(0, (selectedOwner.creditBalance || 0) - total) : undefined,
+      originalAmount: total,
       memberDiscount: tierDiscountAmount,
       couponDiscount: couponDiscountAmount,
       usedCouponCode: appliedCoupon?.code,
@@ -199,7 +222,7 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
     }));
 
     const earnRate = useStore.getState().pointsEarnRate || 10;
-    const earnedPoints = selectedOwner.id !== 'walk-in' ? Math.floor(total / earnRate) : 0;
+    const earnedPoints = (selectedOwner.id !== 'walk-in' && !isPrepaid) ? Math.floor(finalAmount / earnRate) : 0;
     const accumulatedPoints = selectedOwner.id !== 'walk-in' ? (selectedOwner.points || 0) + earnedPoints : 0;
 
     const txData = {
@@ -209,11 +232,11 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
       customerName: selectedOwner.name,
       customerPhone: selectedOwner.phone,
       items: finalCart,
-      amount: total,
-      discountAmount: totalItemDiscounts + tierDiscountAmount + couponDiscountAmount,
-      subtotal: subtotalBeforeTax,
-      vatAmount: tax,
-      vatRate: vatRateVal,
+      amount: finalAmount,
+      discountAmount: finalDiscount,
+      subtotal: finalSubtotal,
+      vatAmount: finalVat,
+      vatRate: isPrepaid ? 0 : vatRateVal,
       isTaxInvoice: isTaxInvoice,
       paymentMethod: paymentMethod,
       details: {
@@ -224,29 +247,34 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
       }
     };
 
-    processPayment(
-      selectedOwner.id, 
-      total, 
-      totalItemDiscounts + tierDiscountAmount + couponDiscountAmount, 
-      finalCart, 
-      paymentMethod, 
-      finalDetails, 
-      isTaxInvoice,
-      undefined, 
-      subtotalBeforeTax,
-      tax,
-      vatRateVal,
-      isBackdated ? format(txDate, "yyyy-MM-dd'T'HH:mm:ssXXX") : undefined,
-      appliedCoupon?.id
-    );
-    cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
-    
-    toast.success("Transaction Complete!");
-    
-    setCompletedTransaction(txData);
-    
-    clearCart();
-    setIsPaymentModalOpen(false);
+    try {
+      await processPayment(
+        selectedOwner.id, 
+        finalAmount, 
+        finalDiscount, 
+        finalCart, 
+        paymentMethod, 
+        finalDetails, 
+        isTaxInvoice,
+        undefined, 
+        finalSubtotal,
+        finalVat,
+        isPrepaid ? 0 : vatRateVal,
+        isBackdated ? format(txDate, "yyyy-MM-dd'T'HH:mm:ssXXX") : undefined,
+        appliedCoupon?.id
+      );
+      cart.forEach(item => { if (item.queueItemId) markAsPaid(item.queueItemId); });
+      
+      toast.success("Transaction Complete!");
+      
+      setCompletedTransaction(txData);
+      
+      clearCart();
+      setIsPaymentModalOpen(false);
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      toast.error("Payment failed: " + (err?.message || "Unknown error"));
+    }
   };
 
   return (
@@ -373,89 +401,55 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
                 </div>
               )}
 
-              <div className="bg-white p-4 rounded-2xl flex items-center justify-between border border-gray-100 shadow-sm">
-                 <div className="flex items-center gap-2">
-                    <FileText size={18} className="text-gray-400" />
+              <div className="bg-white p-4 rounded-2xl flex items-center justify-between shadow-[0_8px_24px_rgba(2,13,53,0.03)]">
+                 <div className="flex items-center gap-3">
+                    <FileText size={18} className="text-[#45464E]" />
                     <div>
-                      <span className="text-[12px] font-black uppercase text-[#1A1F3D] tracking-widest block">{language === 'th' ? 'ขอใบกำกับภาษี' : 'Tax Invoice'}</span>
-                      <span className="text-[10px] font-medium text-gray-400">Issue full tax invoice</span>
+                      <span className="text-[11px] font-bold uppercase text-[#020D35] tracking-wider block">{language === 'th' ? 'ขอใบกำกับภาษี' : 'Tax Invoice'}</span>
+                      <span className="text-[10px] font-medium text-[#76767F]">Issue full tax invoice</span>
                     </div>
                  </div>
-                 <Switch checked={isTaxInvoice && vatEnabled} onCheckedChange={setIsTaxInvoice} disabled={!vatEnabled} className="data-[state=checked]:bg-[#1A1F3D]" />
+                 <Switch checked={isTaxInvoice && vatEnabled} onCheckedChange={setIsTaxInvoice} disabled={!vatEnabled} className="data-[state=checked]:bg-[#020D35]" />
               </div>
 
-              <div>
-                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1 mb-3">{t.paymentMethod}</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['Cash', 'Transfer', 'Credit Card', 'Package', 'Store Credit'] as const).map((method) => {
-                    const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Landmark : method === 'Credit Card' ? CreditCard : method === 'Package' ? Package : Wallet;
-                    const isDisabled = (method === 'Package' && availablePackages.length === 0) || (method === 'Store Credit' && (!selectedOwner || (selectedOwner.creditBalance || 0) < total));
-                    return (
-                      <motion.button 
-                        key={method} 
-                        disabled={isDisabled} 
-                        onClick={() => {
-                          setPaymentMethod(method);
-                          setPaymentError(false);
-                        }} 
-                        animate={paymentError ? { x: [-4, 4, -4, 4, -4, 4, 0] } : { x: 0 }}
-                        transition={{ duration: 0.4 }}
-                        className={cn(
-                          "flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border-2 transition-colors", 
-                          paymentMethod === method 
-                            ? "bg-[#1A1F3D] border-[#1A1F3D] text-[#D9ED5F] shadow-lg" 
-                            : paymentError
-                              ? "bg-red-50 border-red-500 text-red-500 shadow-sm"
-                              : "bg-white border-transparent shadow-sm text-gray-400 hover:border-gray-200", 
-                          isDisabled && "opacity-30 cursor-not-allowed grayscale"
-                        )}
-                      >
-                        <Icon size={20} />
-                        <span className="text-[9px] font-black uppercase whitespace-nowrap">{method === 'Package' ? "PKG" : method === 'Store Credit' ? "CREDIT" : method.split(' ')[0]}</span>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1 mb-2 block">{language === 'th' ? 'หมายเหตุ' : 'Note'}</label>
+              <div className="pt-1">
+                <label className="text-[11px] font-bold uppercase text-[#45464E] tracking-wider px-1 mb-2 block">{language === 'th' ? 'หมายเหตุ' : 'Note'}</label>
                 <input 
                   type="text"
                   value={orderNote}
                   onChange={e => setOrderNote(e.target.value)}
                   placeholder={language === 'th' ? 'เพิ่มหมายเหตุสำหรับบิลนี้...' : 'Add a note for this bill...'}
-                  className="w-full bg-white border-none shadow-sm rounded-2xl px-4 py-4 text-sm font-bold focus:ring-2 focus:ring-[#1A1F3D] outline-none"
+                  className="w-full bg-white border-none shadow-[0_4px_20px_rgba(2,13,53,0.03)] rounded-2xl px-4 py-3.5 text-sm font-medium text-[#1A1C1C] placeholder:text-[#76767F] focus:ring-2 focus:ring-[#18234A]/15 outline-none transition-all"
                 />
               </div>
 
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-3">
-                <div className="flex justify-between items-center text-sm font-bold text-gray-500">
+              <div className="bg-white rounded-[2rem] p-6 shadow-[0_12px_36px_rgba(2,13,53,0.04)] space-y-3.5">
+                <div className="flex justify-between items-center text-sm font-medium text-[#45464E]">
                   <span>{language === 'th' ? 'ยอดรวม' : 'Subtotal'}</span>
-                  <span>{currency}{round2(cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)).toFixed(2)}</span>
+                  <span className="text-[#1A1C1C] font-bold">{currency}{round2(cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)).toFixed(2)}</span>
                 </div>
 
                 {totalItemDiscounts > 0 && (
-                  <div className="flex justify-between items-center text-sm text-red-500 font-bold">
+                  <div className="flex justify-between items-center text-sm text-[#8E171D] font-bold">
                     <span className="flex items-center gap-1.5"><Tag size={14}/> {language === 'th' ? 'ส่วนลดสินค้า' : 'Item Discounts'}</span>
                     <span>-{currency}{totalItemDiscounts.toFixed(2)}</span>
                   </div>
                 )}
 
                 {tierDiscountPercent > 0 && paymentMethod !== 'Package' && (
-                  <div className={cn("flex justify-between items-center text-sm font-bold", applyTierDiscount ? "text-green-600" : "text-gray-400")}>
+                  <div className={cn("flex justify-between items-center text-sm font-bold", applyTierDiscount ? "text-[#18234A]" : "text-[#76767F]")}>
                     <div className="flex items-center gap-2">
                       <span className="flex items-center gap-1.5"><ArrowDownCircle size={14}/> {t.discount} ({tierDiscountPercent}%)</span>
                       <Switch 
                         checked={applyTierDiscount} 
                         onCheckedChange={setApplyTierDiscount} 
-                        className="data-[state=checked]:bg-green-500 border border-black/10 scale-75 origin-left" 
+                        className="data-[state=checked]:bg-[#18234A] scale-75 origin-left" 
                       />
                     </div>
                     {applyTierDiscount ? (
-                      <span>-{currency}{tierDiscountAmount.toFixed(2)}</span>
+                      <span className="text-[#18234A]">-{currency}{tierDiscountAmount.toFixed(2)}</span>
                     ) : (
-                      <span className="line-through">-{currency}{calculatedTierDiscount.toFixed(2)}</span>
+                      <span className="line-through text-[#76767F]">-{currency}{calculatedTierDiscount.toFixed(2)}</span>
                     )}
                   </div>
                 )}
@@ -464,10 +458,10 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
                 {paymentMethod !== 'Package' && (
                   <div className="py-2">
                     {appliedCoupon ? (
-                      <div className="flex justify-between items-center bg-green-50 p-3 rounded-2xl border border-green-100">
+                      <div className="flex justify-between items-center bg-[#F3F3F3] p-3 rounded-2xl">
                         <div>
-                          <div className="text-xs font-bold text-green-700 flex items-center gap-1.5"><Tag size={12}/> {appliedCoupon.code}</div>
-                          <div className="text-[10px] text-green-600">
+                          <div className="text-xs font-bold text-[#18234A] flex items-center gap-1.5"><Tag size={12}/> {appliedCoupon.code}</div>
+                          <div className="text-[10px] text-[#45464E]">
                             {(() => {
                               const template = appliedCoupon.template_type === 'promotion' ? appliedCoupon.promotion_templates : appliedCoupon.coupon_templates;
                               const t = Array.isArray(template) ? template[0] : template;
@@ -476,8 +470,8 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-green-700">-{currency}{Number(couponDiscountAmount || 0).toFixed(2)}</span>
-                          <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="p-1 hover:bg-green-100 rounded-full text-green-700">
+                          <span className="text-sm font-bold text-[#18234A]">-{currency}{Number(couponDiscountAmount || 0).toFixed(2)}</span>
+                          <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="p-1 hover:bg-[#e2e2e2] rounded-full text-[#45464E]">
                             <X size={14} />
                           </button>
                         </div>
@@ -492,72 +486,189 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
                             onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
                             onKeyDown={(e) => { if(e.key === 'Enter') handleApplyCoupon(); }}
                             className={cn(
-                              "flex-1 bg-[#F5F6FA] border-none rounded-2xl px-4 py-2.5 text-xs font-bold uppercase",
-                              couponError ? "ring-2 ring-red-500/20 text-red-500" : ""
+                              "flex-1 bg-[#F3F3F3] border-none rounded-2xl px-4 py-2.5 text-xs font-bold uppercase placeholder:text-[#76767F] outline-none",
+                              couponError ? "ring-2 ring-[#8E171D]/30 text-[#8E171D]" : "focus:bg-white focus:ring-2 focus:ring-[#18234A]/15"
                             )}
                           />
                           <button 
                             onClick={handleApplyCoupon}
                             disabled={!couponCode || isApplyingCoupon}
-                            className="bg-[#1A1F3D] text-white px-4 py-2.5 rounded-2xl text-xs font-bold disabled:opacity-50"
+                            className="bg-[#18234A] text-white px-4 py-2.5 rounded-2xl text-xs font-bold disabled:opacity-50"
                           >
                             {isApplyingCoupon ? (language === 'th' ? 'กำลังตรวจสอบ...' : 'Applying...') : (language === 'th' ? 'ใช้คูปอง' : 'Apply')}
                           </button>
                         </div>
-                        {couponError && <div className="text-[10px] text-red-500 font-bold px-2">{couponError}</div>}
+                        {couponError && <div className="text-[10px] text-[#8E171D] font-bold px-2">{couponError}</div>}
                       </div>
                     )}
                   </div>
                 )}
 
-                {serviceChargeEnabled && paymentMethod !== 'Package' && (
-                  <div className="flex justify-between items-center text-sm text-indigo-500 font-bold">
+                {serviceChargeEnabled && paymentMethod !== 'Package' && paymentMethod !== 'Store Credit' && (
+                  <div className="flex justify-between items-center text-sm text-[#45464E] font-medium">
                     <span className="flex items-center gap-1.5">Service Charge ({serviceChargeRate || 10}%)</span>
-                    <span>+{currency}{serviceChargeAmount.toFixed(2)}</span>
+                    <span className="font-bold text-[#1A1C1C]">+{currency}{serviceChargeAmount.toFixed(2)}</span>
                   </div>
                 )}
 
                 {vatEnabled && (
-                  <div className="flex justify-between items-center text-sm text-gray-500">
+                  <div className="flex justify-between items-center text-sm text-[#76767F]">
                     <span>{language === 'th' ? 'ยอดก่อนภาษี' : 'Subtotal Before VAT'}</span>
-                    <span>{currency}{subtotalBeforeTax.toFixed(2)}</span>
+                    <span className="font-medium text-[#45464E]">{currency}{paymentMethod === 'Package' || paymentMethod === 'Store Credit' ? '0.00' : subtotalBeforeTax.toFixed(2)}</span>
                   </div>
                 )}
 
                 {vatEnabled && (
-                  <div className="flex justify-between items-center text-sm text-gray-400">
+                  <div className="flex justify-between items-center text-xs text-[#76767F]">
                     <span>{vatInclusive ? (language === 'th' ? `VAT (${vatRateVal}% รวมในราคา)` : `VAT (${vatRateVal}% Incl.)`) : (language === 'th' ? `ภาษีมูลค่าเพิ่ม VAT (${vatRateVal}%)` : `VAT (${vatRateVal}%)`)}</span>
-                    <span>{currency}{tax.toFixed(2)}</span>
+                    <span className="font-medium">{currency}{paymentMethod === 'Package' || paymentMethod === 'Store Credit' ? '0.00' : tax.toFixed(2)}</span>
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-gray-100 flex justify-between items-end mt-2">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{language === 'th' ? 'ยอดสุทธิ' : 'Total'}</span>
+                {/* Package Deduction Breakdown */}
+                {paymentMethod === 'Package' && (
+                  <div className="flex justify-between items-center bg-[#F4F3FD] p-3.5 rounded-2xl mt-2 transition-all gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-9 h-9 rounded-xl bg-[#D9D6FE] flex items-center justify-center text-[#5D5C7E] shrink-0 shadow-sm">
+                        <Package size={17} />
+                      </div>
+                      <div className="flex flex-col text-left min-w-0 flex-1">
+                        <span className="text-xs font-extrabold text-[#1A1C1C] truncate">{language === 'th' ? 'หักสิทธิ์แพ็กเกจ' : 'Deduct from Package'}</span>
+                        {currentSelectedPkg && (
+                          <span className="text-[11px] text-[#45464E] font-medium truncate" title={`${currentSelectedPkg.name} (คงเหลือ ${currentSelectedPkg.remainingSlots} ครั้ง)`}>
+                            {currentSelectedPkg.name} ({language === 'th' ? `คงเหลือ ${currentSelectedPkg.remainingSlots} ครั้ง` : `${currentSelectedPkg.remainingSlots} left`})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-sm font-black text-[#18234A] bg-white px-3 py-1.5 rounded-xl shadow-xs whitespace-nowrap shrink-0">
+                      -{currency}{total.toFixed(2)}
+                    </span>
                   </div>
-                  <span className="text-4xl font-black text-[#1A1F3D] tracking-tight">{paymentMethod === 'Package' ? "0.00" : `${currency}${total.toFixed(2)}`}</span>
+                )}
+
+                {/* Store Credit Deduction Breakdown */}
+                {paymentMethod === 'Store Credit' && (
+                  <div className="flex justify-between items-center bg-[#F9FAEC] p-3.5 rounded-2xl mt-2 transition-all gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-9 h-9 rounded-xl bg-[#DAED5B] flex items-center justify-center text-[#1A1E00] shrink-0 shadow-sm">
+                        <Wallet size={17} />
+                      </div>
+                      <div className="flex flex-col text-left min-w-0 flex-1">
+                        <span className="text-xs font-extrabold text-[#1A1C1C] truncate">{language === 'th' ? 'หักจากเครดิต' : 'Deduct from Credit'}</span>
+                        <span className="text-[11px] text-[#45464E] font-medium truncate">
+                          {language === 'th' 
+                            ? `คงเหลือหลังหัก: ${currency}${Math.max(0, (selectedOwner?.creditBalance || 0) - total).toLocaleString()}` 
+                            : `Remaining: ${currency}${Math.max(0, (selectedOwner?.creditBalance || 0) - total).toLocaleString()}`}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black text-[#1A1E00] bg-white px-3 py-1.5 rounded-xl shadow-xs whitespace-nowrap shrink-0">
+                      -{currency}{Math.min(total, selectedOwner?.creditBalance || 0).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-[#18234A]/8 flex justify-between items-end mt-2">
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold uppercase text-[#45464E] tracking-wider">
+                      {language === 'th' ? 'ยอดสุทธิ' : 'Total'}
+                    </span>
+                    {paymentMethod === 'Package' && (
+                      <span className="inline-flex items-center w-fit px-2 py-0.5 mt-1 rounded-full bg-[#D9D6FE]/70 text-[#5D5C7E] text-[10px] font-bold">
+                        {language === 'th' ? 'ใช้ 1 สิทธิ์ (ไม่ต้องชำระเพิ่ม)' : '1 session used (0 cash due)'}
+                      </span>
+                    )}
+                    {paymentMethod === 'Store Credit' && (
+                      <span className="inline-flex items-center w-fit px-2 py-0.5 mt-1 rounded-full bg-[#DAED5B]/70 text-[#1A1E00] text-[10px] font-bold">
+                        {language === 'th' ? 'หักเครดิตเต็มจำนวน (ไม่ต้องชำระเพิ่ม)' : 'Paid by credit (0 cash due)'}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-4xl font-extrabold text-[#020D35] tracking-tight">
+                    {paymentMethod === 'Package' || paymentMethod === 'Store Credit'
+                      ? "0.00" 
+                      : `${currency}${total.toFixed(2)}`}
+                  </span>
                 </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold uppercase text-[#45464E] tracking-wider px-1 mb-3">{t.paymentMethod}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['Cash', 'Transfer', 'Credit Card', 'Package', 'Store Credit'] as const).map((method) => {
+                    const Icon = method === 'Cash' ? Wallet : method === 'Transfer' ? Landmark : method === 'Credit Card' ? CreditCard : method === 'Package' ? Package : Wallet;
+                    const isDisabled = (method === 'Package' && availablePackages.length === 0) || (method === 'Store Credit' && (!selectedOwner || (selectedOwner.creditBalance || 0) < total));
+                    return (
+                      <motion.button 
+                        key={method} 
+                        disabled={isDisabled} 
+                        onClick={() => {
+                          setPaymentMethod(method);
+                          setPaymentError(false);
+                          if (method === 'Package' && availablePackages.length > 0 && !selectedPackageId) {
+                            setSelectedPackageId(availablePackages[0].id);
+                          }
+                        }} 
+                        animate={paymentError ? { x: [-4, 4, -4, 4, -4, 4, 0] } : { x: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-2 py-4 rounded-2xl transition-all", 
+                          paymentMethod === method 
+                            ? "bg-[#020D35] text-[#DAED5B] shadow-[0_8px_24px_rgba(2,13,53,0.15)]" 
+                            : paymentError
+                              ? "bg-red-50 text-red-500 shadow-sm"
+                              : "bg-white text-[#45464E] hover:bg-[#F3F3F3] shadow-[0_4px_16px_rgba(2,13,53,0.02)]", 
+                          isDisabled && "opacity-30 cursor-not-allowed grayscale"
+                        )}
+                      >
+                        <Icon size={20} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                          {method === 'Credit Card' ? 'CARD' : method === 'Package' ? 'PKG' : method === 'Store Credit' ? 'CREDIT' : method.toUpperCase()}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                {paymentMethod === 'Package' && availablePackages.length > 0 && (
+                  <div className="mt-4">
+                    <label className="text-[11px] font-bold uppercase text-[#45464E] tracking-wider px-1 mb-2 block">{language === 'th' ? 'เลือกแพ็กเกจ' : 'Select Package'}</label>
+                    <select
+                      value={selectedPackageId || ''}
+                      onChange={(e) => setSelectedPackageId(e.target.value)}
+                      className="w-full bg-[#F3F3F3] border-none rounded-2xl px-4 py-3.5 text-sm font-semibold text-[#1A1C1C] focus:bg-white focus:ring-2 focus:ring-[#18234A]/20 outline-none transition-all"
+                    >
+                      {availablePackages.map(pkg => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.name} ({pkg.remainingSlots} {language === 'th' ? 'ครั้ง' : 'slots left'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="p-6 bg-white border-t border-gray-100 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+          <div className="p-6 bg-white border-t border-[#18234A]/8 shrink-0 shadow-[0_-8px_24px_rgba(2,13,53,0.03)]">
             <motion.button 
               onClick={handleInitiatePayment} 
               disabled={cart.length === 0} 
               animate={paymentError ? { x: [-4, 4, -4, 4, -4, 4, 0] } : { x: 0 }}
               transition={{ duration: 0.4 }}
               className={cn(
-                "w-full font-extrabold py-5 rounded-3xl flex items-center justify-center gap-3 shadow-lg transition-colors",
-                paymentError ? "bg-red-500 text-white shadow-red-500/20" : "bg-[#D9ED5F] text-[#1A1F3D] shadow-[#D9ED5F]/20 hover:scale-[1.02] active:scale-[0.98]"
+                "w-full font-black py-5 rounded-3xl flex items-center justify-center gap-3 transition-all",
+                paymentError 
+                  ? "bg-[#8E171D] text-white shadow-[#8E171D]/20" 
+                  : "bg-[#DAED5B] text-[#020D35] shadow-[0_12px_28px_rgba(218,237,91,0.25)] hover:bg-[#EAFD69] hover:scale-[1.02] active:scale-[0.98]"
               )}
             >
               <Banknote size={24} /> 
               <span className="text-lg">
                 {paymentMethod === 'Package' 
-                  ? "Deduct from Package" 
+                  ? (language === 'th' ? 'หักสิทธิ์แพ็กเกจ (0 บาท)' : 'Deduct from Package')
                   : paymentMethod === 'Store Credit' 
-                    ? "Deduct Credit" 
+                    ? (language === 'th' ? 'หักเครดิตร้านค้า (0 บาท)' : 'Deduct Store Credit (0 due)')
                     : paymentMethod
                       ? (language === 'th' ? `ชำระด้วย ${paymentMethod}` : `Pay with ${paymentMethod}`)
                       : (language === 'th' ? 'เลือกวิธีชำระเงิน' : 'Select Method')}
@@ -572,8 +683,9 @@ export default function CheckoutDrawer({ isOpen, onClose, isBackdated }: Checkou
 
       {isPaymentModalOpen && (
         <PaymentModal 
-          total={paymentMethod === 'Package' || paymentMethod === 'Store Credit' ? 0 : total} 
-          method={paymentMethod === 'Store Credit' ? 'Cash' : paymentMethod!} 
+          total={total} 
+          method={paymentMethod!} 
+          packageInfo={currentSelectedPkg}
           onClose={() => setIsPaymentModalOpen(false)} 
           onComplete={handleCompletePayment} 
         />

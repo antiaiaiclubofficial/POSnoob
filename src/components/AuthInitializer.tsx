@@ -194,6 +194,248 @@ const AuthInitializer = () => {
 
   // CRM & Services Data Sync Logic - Runs whenever authenticated
   useEffect(() => {
+    // Helper to fetch and update customers in state & keep selectedOwner in sync
+    const fetchCustomersData = async () => {
+      try {
+        let customersQuery = supabase
+          .from('customers')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            display_name,
+            phone,
+            email,
+            line_user_id,
+            avatar_url,
+            gender,
+            age,
+            house_no,
+            village_no,
+            soi,
+            road,
+            sub_district,
+            district,
+            province,
+            postal_code,
+            credit_balance,
+            points,
+            store_customers!inner (
+              points,
+              tier,
+              store_id
+            ),
+            customer_packages (
+              id,
+              template_id,
+              total_sessions,
+              remaining_sessions,
+              created_at,
+              status,
+              package_templates (
+                title,
+                service_id,
+                bonus_type,
+                bonus_name,
+                bonus_count
+              )
+            ),
+            pets (
+              id,
+              name,
+              type,
+              breed,
+              birth_date,
+              gender,
+              weight,
+              medical_condition,
+              precautions,
+              fur_length,
+              custom_preferences,
+              image_url,
+              created_at,
+              pet_weight_history (
+                date,
+                weight,
+                created_at
+              )
+            )
+          `);
+
+        if (storeId && storeId !== 'default-store') {
+          customersQuery = customersQuery.eq('store_customers.store_id', storeId);
+        }
+
+        const { data: customersData, error: customersError } = await customersQuery;
+
+        if (customersError) throw customersError;
+
+        // Fetch Intake History separately to avoid join errors
+        const { data: intakeHistoryData } = await supabase
+          .from('pet_health_logs')
+          .select('*')
+          .eq('type', 'intake');
+          
+        const intakeHistoryMap: Record<string, any[]> = {};
+        if (intakeHistoryData) {
+          intakeHistoryData.forEach(log => {
+            if (log.pet_id) {
+              if (!intakeHistoryMap[log.pet_id]) intakeHistoryMap[log.pet_id] = [];
+              let parsedDetails: any = {};
+              if (log.description) {
+                try { parsedDetails = JSON.parse(log.description); } catch (e) {}
+              }
+              intakeHistoryMap[log.pet_id].push({
+                id: log.id,
+                date: log.date || (log.created_at ? format(new Date(log.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')),
+                time: log.created_at ? format(new Date(log.created_at), 'HH:mm') : '-',
+                details: parsedDetails,
+                staffName: parsedDetails.staffName || log.staff_name,
+                signature: parsedDetails.signature || log.signature_url,
+                weight: parsedDetails.weight || log.weight,
+                queueItemId: parsedDetails.queueItemId
+              });
+            }
+          });
+        }
+
+        if (customersData && customersData.length > 0) {
+          const formattedCustomers = customersData.map(c => {
+            const storeCustomer = (c.store_customers?.[0] || {}) as any;
+            return {
+              id: c.id,
+              name: c.display_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unnamed',
+              firstName: c.first_name || '',
+              lastName: c.last_name || '',
+              phone: c.phone || '-',
+              email: c.email || '-',
+              lineId: c.line_user_id || '',
+              avatarUrl: c.avatar_url || '',
+              membership: storeCustomer.tier || 'Standard',
+              points: c.points || storeCustomer.points || 0,
+              totalSpent: 0,
+              creditBalance: c.credit_balance || 0,
+              gender: c.gender || 'Male',
+              age: c.age || '',
+              houseNo: c.house_no || '',
+              villageNo: c.village_no || '',
+              soi: c.soi || '',
+              road: c.road || '',
+              subDistrict: c.sub_district || '',
+              district: c.district || '',
+              province: c.province || '',
+              postalCode: c.postal_code || '',
+              lineOaChatUrl: (c as any).line_oa_chat_url || '',
+              creditHistory: [],
+              packages: (c.customer_packages || []).map((pkg: any) => ({
+                id: pkg.id,
+                templateId: pkg.template_id,
+                name: pkg.package_templates?.title || 'Unknown Package',
+                targetServiceId: pkg.package_templates?.service_id || '',
+                totalSlots: pkg.total_sessions || 0,
+                remainingSlots: pkg.remaining_sessions || 0,
+                bonusType: pkg.package_templates?.bonus_type || 'none',
+                bonusName: pkg.package_templates?.bonus_name || '',
+                bonusCount: pkg.package_templates?.bonus_count || 1,
+                purchaseDate: pkg.created_at ? format(new Date(pkg.created_at), 'yyyy-MM-dd') : ''
+              })),
+              pets: (c.pets || []).map((p: any) => {
+                const wh = p.pet_weight_history || [];
+                let weightHistory = wh.map((w: any) => ({
+                  date: w.date || (w.created_at ? format(new Date(w.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')),
+                  value: Number(w.weight)
+                })).sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+                if (weightHistory.length === 0 && p.weight) {
+                  weightHistory = [{ date: p.created_at ? format(new Date(p.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }];
+                }
+
+                const intakeHistory = intakeHistoryMap[p.id] || [];
+
+                return {
+                  id: p.id,
+                  name: p.name,
+                  species: (p.type || 'Dog') as BookingType,
+                  breed: p.breed || '-',
+                  birthday: p.birth_date || '',
+                  weightHistory,
+                  serviceHistory: [],
+                  intakeHistory,
+                  notes: p.custom_preferences?.notes || '',
+                  image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop',
+                  coatType: p.fur_length,
+                  color: p.custom_preferences?.color,
+                  gender: p.gender || 'Unknown',
+                  temperament: p.custom_preferences?.temperament,
+                  precautions: p.precautions || p.custom_preferences?.precautions || '',
+                  medicalCondition: p.medical_condition || p.custom_preferences?.medicalCondition || p.custom_preferences?.medical_condition || ''
+                };
+              })
+            };
+          });
+
+          const curSelected = useStore.getState().selectedOwner;
+          if (curSelected) {
+            const updatedSelected = formattedCustomers.find(c => c.id === curSelected.id);
+            useStore.setState({ 
+              customers: formattedCustomers,
+              selectedOwner: updatedSelected || null
+            });
+          } else {
+            useStore.setState({ customers: formattedCustomers });
+          }
+        } else {
+          useStore.setState({ customers: [], selectedOwner: null });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch customers from Supabase:", err);
+      }
+    };
+
+    // Helper to fetch and update transactions in state
+    const fetchTransactionsData = async () => {
+      try {
+        let txQuery = supabase.from('sales_transactions').select('*').order('created_at', { ascending: false });
+        if (storeId && storeId !== 'default-store') {
+          txQuery = txQuery.eq('store_id', storeId);
+        }
+        const { data: txData } = await txQuery;
+
+        if (txData) {
+          const formattedTransactions = txData.map((tx: any) => ({
+            id: tx.id,
+            date: format(new Date(tx.created_at), 'yyyy-MM-dd'),
+            createdAt: tx.created_at,
+            amount: Number(tx.amount || 0),
+            discountAmount: Number(tx.discount_amount || 0),
+            subtotal: Number(tx.subtotal || 0),
+            vatAmount: Number(tx.vat_amount || 0),
+            vatRate: Number(tx.vat_rate || 0),
+            isTaxInvoice: tx.is_tax_invoice || false,
+            details: tx.details || {},
+            customerId: tx.customer_id || 'walk-in',
+            customerName: tx.customer_name,
+            items: tx.items,
+            paymentMethod: tx.payment_method as PaymentMethod,
+            staffName: tx.staff_name || 'Admin',
+            staffId: tx.staff_id,
+            species: [],
+            bookingType: 'Walk-in' as BookingType,
+            status: tx.status || 'completed',
+            voidReason: tx.void_reason,
+            voidedBy: tx.voided_by,
+            voidedAt: tx.voided_at,
+            note: tx.details?.note
+          }));
+          useStore.setState({ transactions: formattedTransactions });
+        } else {
+          useStore.setState({ transactions: [] });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch transactions from Supabase:", err);
+      }
+    };
+
     const fetchInitialData = async () => {
       if (!isAuthenticated) return;
 
@@ -291,164 +533,7 @@ const AuthInitializer = () => {
       }
 
       // 1. Fetch Customers & Service History
-      try {
-        let customersQuery = supabase
-          .from('customers')
-          .select(`
-            id,
-            first_name,
-            last_name,
-            display_name,
-            phone,
-            email,
-            line_user_id,
-            avatar_url,
-            gender,
-            age,
-            house_no,
-            village_no,
-            soi,
-            road,
-            sub_district,
-            district,
-            province,
-            postal_code,
-            credit_balance,
-            points,
-            store_customers!inner (
-              points,
-              tier,
-              store_id
-            ),
-            pets (
-              id,
-              name,
-              type,
-              breed,
-              birth_date,
-              gender,
-              weight,
-              medical_condition,
-              precautions,
-              fur_length,
-              custom_preferences,
-              image_url,
-              created_at,
-              pet_weight_history (
-                date,
-                weight,
-                created_at
-              )
-            )
-          `);
-
-        if (storeId && storeId !== 'default-store') {
-          customersQuery = customersQuery.eq('store_customers.store_id', storeId);
-        }
-
-        const { data: customersData, error: customersError } = await customersQuery;
-
-        if (customersError) throw customersError;
-
-        // Fetch Intake History separately to avoid join errors
-        const { data: intakeHistoryData } = await supabase
-          .from('pet_health_logs')
-          .select('*')
-          .eq('type', 'intake');
-          
-        const intakeHistoryMap: Record<string, any[]> = {};
-        if (intakeHistoryData) {
-          intakeHistoryData.forEach(log => {
-            if (log.pet_id) {
-              if (!intakeHistoryMap[log.pet_id]) intakeHistoryMap[log.pet_id] = [];
-              let parsedDetails: any = {};
-              if (log.description) {
-                try { parsedDetails = JSON.parse(log.description); } catch (e) {}
-              }
-              intakeHistoryMap[log.pet_id].push({
-                id: log.id,
-                date: log.date || (log.created_at ? format(new Date(log.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')),
-                time: log.created_at ? format(new Date(log.created_at), 'HH:mm') : '-',
-                details: parsedDetails,
-                staffName: parsedDetails.staffName || log.staff_name,
-                signature: parsedDetails.signature || log.signature_url,
-                weight: parsedDetails.weight || log.weight,
-                queueItemId: parsedDetails.queueItemId
-              });
-            }
-          });
-        }
-
-        if (customersData && customersData.length > 0) {
-          const formattedCustomers = customersData.map(c => {
-            const storeCustomer = (c.store_customers?.[0] || {}) as any;
-            return {
-              id: c.id,
-              name: c.display_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unnamed',
-              firstName: c.first_name || '',
-              lastName: c.last_name || '',
-              phone: c.phone || '-',
-              email: c.email || '-',
-              lineId: c.line_user_id || '',
-              avatarUrl: c.avatar_url || '',
-              membership: storeCustomer.tier || 'Standard',
-              points: c.points || storeCustomer.points || 0,
-              totalSpent: 0,
-              creditBalance: c.credit_balance || 0,
-              gender: c.gender || 'Male',
-              age: c.age || '',
-              houseNo: c.house_no || '',
-              villageNo: c.village_no || '',
-              soi: c.soi || '',
-              road: c.road || '',
-              subDistrict: c.sub_district || '',
-              district: c.district || '',
-              province: c.province || '',
-              postalCode: c.postal_code || '',
-              lineOaChatUrl: (c as any).line_oa_chat_url || '',
-              creditHistory: [],
-              packages: [],
-              pets: (c.pets || []).map((p: any) => {
-                const wh = p.pet_weight_history || [];
-                let weightHistory = wh.map((w: any) => ({
-                  date: w.date || (w.created_at ? format(new Date(w.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')),
-                  value: Number(w.weight)
-                })).sort((a: any, b: any) => a.date.localeCompare(b.date));
-
-                if (weightHistory.length === 0 && p.weight) {
-                  weightHistory = [{ date: p.created_at ? format(new Date(p.created_at), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'), value: Number(p.weight) }];
-                }
-
-                const intakeHistory = intakeHistoryMap[p.id] || [];
-
-                return {
-                  id: p.id,
-                  name: p.name,
-                  species: (p.type || 'Dog') as BookingType,
-                  breed: p.breed || '-',
-                  birthday: p.birth_date || '',
-                  weightHistory,
-                  serviceHistory: [],
-                  intakeHistory,
-                  notes: p.custom_preferences?.notes || '',
-                  image: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&h=200&fit=crop',
-                  coatType: p.fur_length,
-                  color: p.custom_preferences?.color,
-                  gender: p.gender || 'Unknown',
-                  temperament: p.custom_preferences?.temperament,
-                  precautions: p.precautions || p.custom_preferences?.precautions || '',
-                  medicalCondition: p.medical_condition || p.custom_preferences?.medicalCondition || p.custom_preferences?.medical_condition || ''
-                };
-              })
-            };
-          });
-          useStore.setState({ customers: formattedCustomers });
-        } else {
-          useStore.setState({ customers: [] });
-        }
-      } catch (err) {
-        console.warn("Failed to fetch customers from Supabase:", err);
-      }
+      await fetchCustomersData();
 
       // 1.5 Fetch Appointments (Queue)
       try {
@@ -671,46 +756,7 @@ const AuthInitializer = () => {
       }
 
       // 6. Fetch Sales Transactions
-      try {
-        let txQuery = supabase.from('sales_transactions').select('*').order('created_at', { ascending: false });
-        if (storeId && storeId !== 'default-store') {
-          txQuery = txQuery.eq('store_id', storeId);
-        }
-        const { data: txData } = await txQuery;
-
-        if (txData) {
-          const formattedTransactions = txData.map((tx: any) => ({
-            id: tx.id,
-            date: format(new Date(tx.created_at), 'yyyy-MM-dd'),
-            createdAt: tx.created_at,
-            amount: Number(tx.amount || 0),
-            discountAmount: Number(tx.discount_amount || 0),
-            subtotal: Number(tx.subtotal || 0),
-            vatAmount: Number(tx.vat_amount || 0),
-            vatRate: Number(tx.vat_rate || 0),
-            isTaxInvoice: tx.is_tax_invoice || false,
-            details: tx.details || {},
-            customerId: tx.customer_id || 'walk-in',
-            customerName: tx.customer_name,
-            items: tx.items,
-            paymentMethod: tx.payment_method as PaymentMethod,
-            staffName: tx.staff_name || 'Admin',
-            staffId: tx.staff_id,
-            species: [],
-            bookingType: 'Walk-in' as BookingType,
-            status: tx.status || 'completed',
-            voidReason: tx.void_reason,
-            voidedBy: tx.voided_by,
-            voidedAt: tx.voided_at,
-            note: tx.details?.note
-          }));
-          useStore.setState({ transactions: formattedTransactions });
-        } else {
-          useStore.setState({ transactions: [] });
-        }
-      } catch (err) {
-        console.warn("Failed to fetch transactions from Supabase:", err);
-      }
+      await fetchTransactionsData();
 
       // 7. Fetch Package Templates
       try {
@@ -1071,8 +1117,63 @@ const AuthInitializer = () => {
         )
         .subscribe();
 
+      // Setup realtime subscription for CRM & Packages (customer_packages, customers, store_customers, sales_transactions)
+      const crmChannel = supabase
+        .channel('realtime-crm-data')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'customer_packages'
+          },
+          (payload) => {
+            console.log('Realtime customer_packages update detected:', payload);
+            fetchCustomersData();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'customers'
+          },
+          (payload) => {
+            console.log('Realtime customers update detected:', payload);
+            fetchCustomersData();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'store_customers'
+          },
+          (payload) => {
+            console.log('Realtime store_customers update detected:', payload);
+            fetchCustomersData();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'sales_transactions'
+          },
+          (payload) => {
+            console.log('Realtime sales_transactions update detected:', payload);
+            fetchTransactionsData();
+            fetchCustomersData();
+          }
+        )
+        .subscribe();
+
       return () => {
         supabase.removeChannel(journalChannel);
+        supabase.removeChannel(crmChannel);
       };
     }
   }, [isAuthenticated, setCustomers, setServices, storeId]);

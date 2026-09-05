@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Wallet, Banknote, CreditCard, QrCode, Check, ArrowRight, DollarSign, Delete } from 'lucide-react';
+import { X, Wallet, Banknote, CreditCard, QrCode, Check, ArrowRight, DollarSign, Delete, Package } from 'lucide-react';
 import { useStore, PaymentMethod } from '@/store/useStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -10,11 +10,12 @@ import { translations } from '@/utils/translations';
 interface PaymentModalProps {
   total: number;
   method: PaymentMethod;
+  packageInfo?: any;
   onClose: () => void;
   onComplete: (details: any) => void;
 }
 
-const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps) => {
+const PaymentModal = ({ total, method, packageInfo, onClose, onComplete }: PaymentModalProps) => {
   const { currency, language } = useStore();
   const t = translations[language];
   
@@ -59,7 +60,15 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
     onComplete(details);
   };
 
-  const methodLabel = method === 'Cash' ? t.cash : method === 'Transfer' ? t.transfer : t.creditCard;
+  const methodLabel = method === 'Cash' ? t.cash : method === 'Transfer' ? t.transfer : method === 'Store Credit' ? (language === 'th' ? 'หักเครดิตสมาชิก' : 'Store Credit') : method === 'Package' ? (language === 'th' ? 'หักแพ็กเกจ' : 'Package') : t.creditCard;
+
+  const selectedOwner = useStore(state => state.selectedOwner);
+  const currentCredit = selectedOwner?.creditBalance || 0;
+  const remainingCredit = currentCredit - total;
+
+  const targetPackage = packageInfo || selectedOwner?.packages?.[0];
+  const currentSlots = targetPackage?.remainingSlots ?? 0;
+  const remainingSlots = Math.max(0, currentSlots - 1);
 
   return (
     <div className="fixed inset-0 bg-[#1A1F3D]/60 backdrop-blur-md z-[110] flex items-center justify-center p-6">
@@ -69,9 +78,16 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
           <div className="flex items-center gap-4">
             <div className={cn(
               "w-12 h-12 rounded-[1.25rem] flex items-center justify-center shadow-sm",
-              method === 'Cash' ? "bg-[#daed5b] text-[#1a1e00]" : method === 'Transfer' ? "bg-[#020d35] text-white" : "bg-[#18234a] text-white"
+              method === 'Cash' ? "bg-[#daed5b] text-[#1a1e00]" : 
+              method === 'Transfer' ? "bg-[#020d35] text-white" : 
+              method === 'Store Credit' || method === 'Package' ? "bg-[#D9ED5F] text-[#1a1e00]" :
+              "bg-[#18234a] text-white"
             )}>
-              {method === 'Cash' ? <Banknote size={24}/> : method === 'Transfer' ? <QrCode size={24}/> : <CreditCard size={24}/>}
+              {method === 'Cash' ? <Banknote size={24}/> : 
+               method === 'Transfer' ? <QrCode size={24}/> : 
+               method === 'Store Credit' ? <Wallet size={24}/> :
+               method === 'Package' ? <Package size={24}/> :
+               <CreditCard size={24}/>}
             </div>
             <div>
               <h3 className="text-[20px] font-black text-[#1a1c1c] leading-tight">{methodLabel}</h3>
@@ -85,10 +101,12 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
 
         <div className="p-8 pt-0 space-y-8">
           {/* Total Amount Display */}
-          <div className="text-center mt-2">
-            <p className="text-[10px] font-bold text-gray-400 tracking-[0.2em] mb-2">{t.total}</p>
-            <h2 className="text-[48px] font-black text-[#020d35] tracking-tight">{currency}{total.toFixed(2)}</h2>
-          </div>
+          {method !== 'Package' && (
+            <div className="text-center mt-2">
+              <p className="text-[10px] font-bold text-gray-400 tracking-[0.2em] mb-2">{t.total}</p>
+              <h2 className="text-[48px] font-black text-[#020d35] tracking-tight">{currency}{total.toFixed(2)}</h2>
+            </div>
+          )}
 
           {/* Dynamic Payment Content */}
           <div className="space-y-6">
@@ -225,6 +243,87 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
                 </div>
               </div>
             )}
+
+            {method === 'Store Credit' && (
+              <div className="space-y-4">
+                <div className="bg-[#F5F6FA] p-6 rounded-[28px] border border-gray-100 shadow-sm relative overflow-hidden mb-6">
+                  <div className="flex justify-between items-start mb-6">
+                    <Wallet size={32} className="text-[#1A1F3D]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{language === 'th' ? 'เครดิตสมาชิก' : 'Store Credit'}</span>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                      <span className="text-sm font-bold text-gray-500">{language === 'th' ? 'ยอดคงเหลือปัจจุบัน' : 'Current Balance'}</span>
+                      <span className="text-lg font-black text-[#1A1F3D]">{currency}{currentCredit.toFixed(2)}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                      <span className="text-sm font-bold text-red-500">{language === 'th' ? 'ยอดที่ต้องชำระ' : 'Amount to Deduct'}</span>
+                      <span className="text-lg font-black text-red-500">-{currency}{total.toFixed(2)}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center pt-2">
+                      <span className="text-sm font-bold text-gray-500">{language === 'th' ? 'คงเหลือหลังหัก' : 'Remaining Balance'}</span>
+                      <span className="text-2xl font-black text-green-600">{currency}{remainingCredit.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {method === 'Package' && (
+              <div className="space-y-4">
+                <div className="bg-[#F5F6FA] p-6 rounded-[28px] border border-gray-100 shadow-sm relative overflow-hidden mb-6">
+                  <div className="flex justify-between items-start mb-6">
+                    <Package size={32} className="text-[#1A1F3D]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      {language === 'th' ? 'แพ็กเกจสมาชิก' : 'Customer Package'}
+                    </span>
+                  </div>
+                  
+                  {targetPackage && (
+                    <div className="mb-4 pb-4 border-b border-gray-200">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block mb-1">
+                        {language === 'th' ? 'แพ็กเกจที่เลือก' : 'Selected Package'}
+                      </span>
+                      <span className="text-base font-extrabold text-[#1A1F3D] block leading-snug">
+                        {targetPackage.name}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                      <span className="text-sm font-bold text-gray-500">
+                        {language === 'th' ? 'สิทธิ์คงเหลือปัจจุบัน' : 'Current Balance'}
+                      </span>
+                      <span className="text-lg font-black text-[#1A1F3D]">
+                        {currentSlots} {language === 'th' ? 'ครั้ง' : 'slots'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                      <span className="text-sm font-bold text-red-500">
+                        {language === 'th' ? 'จำนวนที่หัก' : 'Amount to Deduct'}
+                      </span>
+                      <span className="text-lg font-black text-red-500">
+                        -1 {language === 'th' ? 'ครั้ง' : 'slot'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center pt-2">
+                      <span className="text-sm font-bold text-gray-500">
+                        {language === 'th' ? 'คงเหลือหลังหัก' : 'Remaining Balance'}
+                      </span>
+                      <span className="text-2xl font-black text-green-600">
+                        {remainingSlots} {language === 'th' ? 'ครั้ง' : 'slots'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Confirm Button */}
@@ -232,10 +331,10 @@ const PaymentModal = ({ total, method, onClose, onComplete }: PaymentModalProps)
             onClick={handleFinish}
             className={cn(
               "w-full font-bold text-[16px] py-5 rounded-[2rem] flex items-center justify-center gap-3 shadow-lg transition-all active:scale-95",
-              method === 'Cash' ? "bg-[#daed5b] text-[#1a1e00] shadow-[#daed5b]/30" : method === 'Transfer' ? "bg-[#020d35] text-white shadow-[#020d35]/30" : "bg-[#18234a] text-white shadow-[#18234a]/30"
+              method === 'Cash' || method === 'Store Credit' || method === 'Package' ? "bg-[#daed5b] text-[#1a1e00] shadow-[#daed5b]/30" : method === 'Transfer' ? "bg-[#020d35] text-white shadow-[#020d35]/30" : "bg-[#18234a] text-white shadow-[#18234a]/30"
             )}
           >
-            <Check size={20} strokeWidth={3} /> {t.confirmPayment}
+            <Check size={20} strokeWidth={3} /> {method === 'Package' ? (language === 'th' ? 'ยืนยันหักแพ็กเกจ' : 'Confirm Package Deduction') : method === 'Store Credit' ? (language === 'th' ? 'ยืนยันตัดเครดิต' : 'Confirm Credit Deduction') : t.confirmPayment}
           </button>
         </div>
       </div>

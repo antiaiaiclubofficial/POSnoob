@@ -204,8 +204,15 @@ const Dashboard = () => {
 
   const metrics = useMemo(() => {
     const validTransactions = todayTransactions.filter(t => t.status !== 'voided');
-    const revenue = validTransactions.reduce((acc, t) => acc + t.amount, 0);
-    const avgTicket = validTransactions.length > 0 ? revenue / validTransactions.length : 0;
+    // Exclude Package and Store Credit redemptions from today's revenue (already recognized on purchase/top-up)
+    const revenueTransactions = validTransactions.filter(
+      t => t.paymentMethod !== 'Package' && t.paymentMethod !== 'Store Credit'
+    );
+    const revenue = revenueTransactions.reduce((acc, t) => acc + t.amount, 0);
+    const avgTicket = revenueTransactions.length > 0 ? revenue / revenueTransactions.length : 0;
+    const redemptionsCount = validTransactions.filter(
+      t => t.paymentMethod === 'Package' || t.paymentMethod === 'Store Credit'
+    ).length;
     const activePets = todayQueue.filter(q => q.status === 'Checked-in' || q.status === 'In Progress').length;
     const completed = todayQueue.filter(q => q.status === 'Completed').length;
 
@@ -214,7 +221,8 @@ const Dashboard = () => {
       activePets,
       completed,
       revenue,
-      avgTicket
+      avgTicket,
+      redemptionsCount
     };
   }, [todayQueue, todayTransactions]);
 
@@ -497,7 +505,12 @@ const Dashboard = () => {
               </div>
               <div className="relative z-10">
                 <h2 className="text-3xl font-black text-[#1A1F3D]">{currency}{metrics.revenue.toLocaleString()}</h2>
-                <p className="text-[9px] text-gray-400 font-bold mt-1">Avg. Revenue per Transaction: {currency}{Math.round(metrics.avgTicket).toLocaleString()}</p>
+                <div className="flex flex-col gap-0.5 mt-1">
+                  <p className="text-[9px] text-gray-400 font-bold">Avg. Revenue per Transaction: {currency}{Math.round(metrics.avgTicket).toLocaleString()}</p>
+                  {metrics.redemptionsCount > 0 && (
+                    <p className="text-[9px] text-indigo-500 font-bold">ตัดจาก Credit / PKG: {metrics.redemptionsCount} รายการ (ไม่นับเป็นรายรับซ้ำ)</p>
+                  )}
+                </div>
               </div>
             </div>
 

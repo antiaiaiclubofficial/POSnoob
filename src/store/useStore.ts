@@ -1682,6 +1682,8 @@ export const useStore = create<AppState>()((set, get) => ({
         ]
       } : s.selectedOwner
     }));
+
+    await get().recalculateCustomerTier(customerId);
   },
 
   toggleSlotStatus: (time) => set(state => ({
@@ -1831,6 +1833,7 @@ export const useStore = create<AppState>()((set, get) => ({
     const staffId = get().currentUser?.id;
 
     const newDocNo = details?.receiptNo || `ABB-${format(new Date(), 'yyyy-MM-dd').replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const createdCustomerPackageIds: string[] = [];
 
     // Calculate points before insert to save in transaction details
     let earnedPoints = 0;
@@ -1888,7 +1891,8 @@ export const useStore = create<AppState>()((set, get) => ({
 
         // Deduct store credit if payment method is Store Credit
         if (method === 'Store Credit') {
-          newCreditBalance = Math.max(0, newCreditBalance - total);
+          const creditToDeduct = details?.deductedCredit ?? details?.originalAmount ?? total;
+          newCreditBalance = Math.max(0, newCreditBalance - creditToDeduct);
         }
 
         // Add credit balance if purchasing credit packages
@@ -1913,10 +1917,76 @@ export const useStore = create<AppState>()((set, get) => ({
         if (method === 'Package' && details.packageId) {
           updatedPackages = updatedPackages.map(pkg => {
             if (pkg.id === details.packageId) {
-              return { ...pkg, remainingSlots: Math.max(0, pkg.remainingSlots - 1) };
+              const newRemaining = Math.max(0, pkg.remainingSlots - 1);
+              // Update in Supabase
+              supabase
+                .from('customer_packages')
+                .update({ remaining_sessions: newRemaining })
+                .eq('id', pkg.id)
+                .then(({ error }) => {
+                  if (error) console.error("Error updating customer package slots:", error);
+                });
+                
+              return { ...pkg, remainingSlots: newRemaining };
             }
             return pkg;
           });
+        }
+        
+        // Insert into customer_packages if purchasing packages
+        for (const pkgItem of items.filter(i => i.type === 'Package')) {
+          // Find template details from packageTemplates (id has 'package-' prefix)
+          const rawId = pkgItem.id.startsWith('package-') ? pkgItem.id.replace('package-', '') : pkgItem.id;
+          const template = get().packageTemplates.find(t => t.id === rawId);
+          if (template) {
+            const totalSlots = template.paidSlots + template.freeSlots;
+            const quantity = pkgItem.quantity || 1;
+            
+            for (let i = 0; i < quantity; i++) {
+              const { data: newPkgData, error: pkgError } = await supabase
+                .from('customer_packages')
+                .insert([{
+                  customer_id: customerId,
+                  store_id: currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null,
+                  template_id: template.id,
+                  total_sessions: totalSlots,
+                  remaining_sessions: totalSlots,
+                  status: 'active'
+                }])
+                .select()
+                .single();
+                
+              if (pkgError) {
+                console.error("Error creating customer package:", pkgError);
+              } else if (newPkgData) {
+                createdCustomerPackageIds.push(newPkgData.id);
+                updatedPackages.push({
+                  id: newPkgData.id,
+                  templateId: template.id,
+                  name: template.name || template.title, // useStore uses name usually, but db uses title
+                  targetServiceId: template.serviceId,
+                  totalSlots: totalSlots,
+                  remainingSlots: totalSlots,
+                  bonusType: template.bonusType,
+                  bonusName: template.bonusName,
+                  bonusCount: template.bonusCount,
+                  purchaseDate: format(new Date(), 'yyyy-MM-dd')
+                });
+              }
+            }
+          }
+        }
+
+        if (createdCustomerPackageIds.length > 0 && data?.id) {
+          await supabase
+            .from('sales_transactions')
+            .update({
+              details: {
+                ...(data.details || {}),
+                createdCustomerPackageIds
+              }
+            })
+            .eq('id', data.id);
         }
 
         newPoints = accumulatedPoints;
@@ -2004,7 +2074,10 @@ export const useStore = create<AppState>()((set, get) => ({
         vatAmount: Number(data.vat_amount || 0),
         vatRate: Number(data.vat_rate || 0),
         isTaxInvoice: data.is_tax_invoice || false,
-        details: data.details || {},
+        details: {
+          ...(data.details || {}),
+          ...(createdCustomerPackageIds.length > 0 ? { createdCustomerPackageIds } : {})
+        },
         customerId: data.customer_id || 'walk-in',
         customerName: data.customer_name,
         items: data.items,
@@ -2024,12 +2097,13 @@ export const useStore = create<AppState>()((set, get) => ({
       }));
 
       // 5. Create a short receipt in the billing system
+      const isPkg = data.payment_method === 'Package';
       const shortReceiptItems = items.map((item: any) => ({
         productId: item.id || '',
         productName: item.title || item.name || 'Unknown',
         quantity: item.quantity || 1,
-        unitPrice: item.price || 0,
-        total: (item.quantity || 1) * (item.price || 0),
+        unitPrice: isPkg ? 0 : (item.price || 0),
+        total: isPkg ? 0 : ((item.quantity || 1) * (item.price || 0)),
         itemType: item.type?.toLowerCase() as any
       }));
 
@@ -2040,13 +2114,13 @@ export const useStore = create<AppState>()((set, get) => ({
         customerId: data.customer_id && data.customer_id !== 'walk-in' ? data.customer_id : undefined,
         customerName: data.customer_name || 'Walk-in Customer',
         items: shortReceiptItems,
-        subtotal: Number(data.subtotal || total),
-        vatAmount: Number(data.vat_amount || 0),
-        totalAmount: Number(data.amount || total),
+        subtotal: isPkg ? 0 : Number(data.subtotal || total),
+        vatAmount: isPkg ? 0 : Number(data.vat_amount || 0),
+        totalAmount: isPkg ? 0 : Number(data.amount || total),
         paymentMethod: data.payment_method,
         status: 'Paid',
         createdBy: data.staff_name || 'Admin',
-        remarks: `Auto-generated from POS`,
+        remarks: isPkg ? 'Auto-generated from POS (Package Redemption)' : `Auto-generated from POS`,
         referenceDocumentNo: data.id
       });
     }
@@ -2128,7 +2202,8 @@ export const useStore = create<AppState>()((set, get) => ({
         let updatedPackages = [...(customer.packages || [])];
 
         if (transaction.paymentMethod === 'Store Credit') {
-          newCreditBalance += transaction.amount;
+          const creditToRestore = transaction.details?.deductedCredit ?? transaction.details?.originalAmount ?? transaction.amount;
+          newCreditBalance += creditToRestore;
         }
 
         // Revert added credit if the voided transaction included credit packages
@@ -2148,13 +2223,74 @@ export const useStore = create<AppState>()((set, get) => ({
         }
         newCreditBalance = Math.max(0, newCreditBalance - revertedCreditValue);
 
+        // Revert package deduction if the transaction paid with a package
         if (transaction.paymentMethod === 'Package' && transaction.details?.packageId) {
+          const targetPkg = updatedPackages.find(pkg => pkg.id === transaction.details.packageId);
+          const restoredSlots = (targetPkg?.remainingSlots || 0) + 1;
+          await supabase
+            .from('customer_packages')
+            .update({ remaining_sessions: restoredSlots })
+            .eq('id', transaction.details.packageId);
+
           updatedPackages = updatedPackages.map(pkg => {
             if (pkg.id === transaction.details.packageId) {
-              return { ...pkg, remainingSlots: pkg.remainingSlots + 1 };
+              return { ...pkg, remainingSlots: restoredSlots };
             }
             return pkg;
           });
+        }
+
+        // Revert purchased packages if the voided transaction included package purchases
+        const packagePurchaseItems = (transaction.items || []).filter(item => item.type === 'Package');
+        if (packagePurchaseItems.length > 0) {
+          const explicitIds: string[] = transaction.details?.createdCustomerPackageIds || [];
+          if (explicitIds.length > 0) {
+            const { error: delPkgErr } = await supabase
+              .from('customer_packages')
+              .delete()
+              .in('id', explicitIds);
+            if (delPkgErr) console.error("Error deleting customer packages on void:", delPkgErr);
+
+            const idSet = new Set(explicitIds);
+            updatedPackages = updatedPackages.filter(p => !idSet.has(p.id));
+          } else {
+            // Fallback for older transactions or transactions without explicit IDs stored
+            for (const pkgItem of packagePurchaseItems) {
+              const rawId = pkgItem.id?.startsWith('package-') ? pkgItem.id.replace('package-', '') : pkgItem.id;
+              const template = get().packageTemplates.find(t => t.id === rawId || t.name === pkgItem.name);
+              const targetTemplateId = template?.id || rawId;
+              const quantity = pkgItem.quantity || 1;
+
+              // Find most recent customer_packages matching this template
+              const { data: matchedPkgs, error: fetchErr } = await supabase
+                .from('customer_packages')
+                .select('id, created_at')
+                .eq('customer_id', customerId)
+                .eq('template_id', targetTemplateId)
+                .order('created_at', { ascending: false });
+
+              if (!fetchErr && matchedPkgs && matchedPkgs.length > 0) {
+                const idsToDelete = matchedPkgs.slice(0, quantity).map(p => p.id);
+                await supabase
+                  .from('customer_packages')
+                  .delete()
+                  .in('id', idsToDelete);
+
+                const idSet = new Set(idsToDelete);
+                updatedPackages = updatedPackages.filter(p => !idSet.has(p.id));
+              } else {
+                // If not matched in DB, remove from local customer packages state
+                let removeCount = quantity;
+                updatedPackages = updatedPackages.filter(p => {
+                  if (removeCount > 0 && (p.templateId === targetTemplateId || p.name === pkgItem.name)) {
+                    removeCount--;
+                    return false;
+                  }
+                  return true;
+                });
+              }
+            }
+          }
         }
 
         const earnRate = get().pointsEarnRate || 10;
@@ -2171,6 +2307,10 @@ export const useStore = create<AppState>()((set, get) => ({
           .eq('customer_id', customerId)
           .eq('store_id', currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null);
 
+        if (updateError) {
+          console.error("Error reverting store customer points:", updateError);
+        }
+
         const { error: creditError } = await supabase
           .from('customers')
           .update({ credit_balance: newCreditBalance })
@@ -2180,19 +2320,18 @@ export const useStore = create<AppState>()((set, get) => ({
           console.error("Error reverting credit balance:", creditError);
         }
 
-        if (!updateError) {
-          set(state => ({
-            customers: state.customers.map(c => {
-              if (c.id === customerId) {
-                return { ...c, points: newPoints, creditBalance: newCreditBalance, packages: updatedPackages };
-              }
-              return c;
-            }),
-            selectedOwner: state.selectedOwner?.id === customerId ? {
-              ...state.selectedOwner, points: newPoints, creditBalance: newCreditBalance, packages: updatedPackages
-            } : state.selectedOwner
-          }));
-        }
+        // Always update Zustand state with newPoints, newCreditBalance, and updatedPackages
+        set(state => ({
+          customers: state.customers.map(c => {
+            if (c.id === customerId) {
+              return { ...c, points: newPoints, creditBalance: newCreditBalance, packages: updatedPackages };
+            }
+            return c;
+          }),
+          selectedOwner: state.selectedOwner?.id === customerId ? {
+            ...state.selectedOwner, points: newPoints, creditBalance: newCreditBalance, packages: updatedPackages
+          } : state.selectedOwner
+        }));
       }
     }
 
@@ -2272,43 +2411,42 @@ export const useStore = create<AppState>()((set, get) => ({
     if (!tierRules || tierRules.length === 0) return;
 
     // 3. Find the highest qualifying tier
-    let newTier = 'Standard';
+    let matchingRule = tierRules[0];
     let maxMinSpent = -1;
     for (const rule of tierRules) {
       if (totalSpent >= rule.minSpent && rule.minSpent > maxMinSpent) {
-        newTier = rule.level;
+        matchingRule = rule;
         maxMinSpent = rule.minSpent;
       }
     }
 
-    // 4. Get current tier
-    const customer = get().customers.find(c => c.id === customerId);
-    if (!customer) return;
-    
-    if (customer.membership !== newTier) {
-      // 5. Update Supabase
-      const currentStoreId = get().storeId;
-      const { error: updateError } = await supabase
-        .from('store_customers')
-        .update({ tier: newTier })
-        .eq('customer_id', customerId)
-        .eq('store_id', currentStoreId && currentStoreId !== 'default-store' ? currentStoreId : null);
+    const newTier = matchingRule?.tier_key || matchingRule?.level || 'Standard';
 
-      if (updateError) {
-        console.error("Error updating customer tier:", updateError);
-        return;
-      }
+    // 4. Update Supabase store_customers
+    const currentStoreId = get().storeId;
+    let updateQuery = supabase
+      .from('store_customers')
+      .update({ tier: newTier })
+      .eq('customer_id', customerId);
 
-      // 6. Update local state
-      set(state => ({
-        customers: state.customers.map(c => 
-          c.id === customerId ? { ...c, membership: newTier as any } : c
-        ),
-        selectedOwner: state.selectedOwner?.id === customerId ? {
-          ...state.selectedOwner, membership: newTier as any
-        } : state.selectedOwner
-      }));
+    if (currentStoreId && currentStoreId !== 'default-store') {
+      updateQuery = updateQuery.eq('store_id', currentStoreId);
     }
+
+    const { error: updateError } = await updateQuery;
+    if (updateError) {
+      console.error("Error updating customer tier in database:", updateError);
+    }
+
+    // 5. Update local state immediately
+    set(state => ({
+      customers: state.customers.map(c => 
+        c.id === customerId ? { ...c, membership: newTier as any, totalSpent } : c
+      ),
+      selectedOwner: state.selectedOwner?.id === customerId ? {
+        ...state.selectedOwner, membership: newTier as any, totalSpent
+      } : state.selectedOwner
+    }));
   },
 
   updateStaffSettings: async (settings) => {
